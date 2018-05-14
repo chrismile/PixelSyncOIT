@@ -5,7 +5,7 @@
 *.slo
 *.lo
 *.o
-*.obj
+#*.obj Commented out, as project uses .obj model files
 
 # Precompiled Headers
 *.gch
