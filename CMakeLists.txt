@@ -11,4 +11,6 @@ include_directories(src)
 
 find_package(SGL REQUIRED)
 find_package(Boost COMPONENTS system filesystem REQUIRED)
+target_link_libraries(PixelSyncOIT GL)
+target_link_libraries(PixelSyncOIT GLEW)
 target_link_libraries(PixelSyncOIT sgl)

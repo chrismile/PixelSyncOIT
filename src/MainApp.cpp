@@ -63,7 +63,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	}
 	ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
 
-	transparentObject = parseObjMesh("Data/Models/MonkeyLessPolygons.obj", transparencyShader);
+	transparentObject = parseObjMesh("Data/Models/Monkey.obj", transparencyShader);
 	//transparentObject = parseObjMesh("Data/Models/Cube.obj", transparencyShader);
 	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0));
 	rotation = glm::mat4(1.0f);
