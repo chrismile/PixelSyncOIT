@@ -18,11 +18,11 @@ struct FragmentNode
 	// Depth value of the fragment (in view space)
 	float depth;
 	// Whether the node is empty or used
-	uint used;
+	uint32_t used;
 
 	// Padding to 2*vec4
-	//uint padding1;
-	//uint padding2;
+	uint32_t padding1;
+	uint32_t padding2;
 };
 
 /**
@@ -39,6 +39,7 @@ public:
 	 */
 	virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
 
+	OIT_PixelSync();
 	virtual void create();
 	virtual void resolutionChanged();
 
@@ -54,10 +55,12 @@ private:
 
 	sgl::ShaderProgramPtr gatherShader;
 	sgl::ShaderProgramPtr blitShader;
+	sgl::ShaderProgramPtr clearShader;
 	sgl::GeometryBufferPtr fragmentNodes;
 
-	// Blits data (ignores model-view-projection matrix and uses normalized device coordinates)
+	// Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
 	sgl::ShaderAttributesPtr blitRenderData;
+	sgl::ShaderAttributesPtr clearRenderData;
 };
 
 #endif /* OIT_OIT_PIXELSYNC_HPP_ */

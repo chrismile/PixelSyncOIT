@@ -49,13 +49,13 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	camera->setPosition(glm::vec3(-0.5f, -0.5f, -5.0f));
 
 	//Renderer->enableDepthTest(); TODO
-	glEnable(GL_DEPTH_TEST);
+	//glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
 
 	resolutionChanged(EventPtr());
 
-	bool renderTransparent = false;
+	bool renderTransparent = true;
 	if (renderTransparent) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_PixelSync);
 	} else {
@@ -86,10 +86,6 @@ void PixelSyncApp::render()
 	}
 
 	Renderer->setCamera(camera);
-
-	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
-	Renderer->setViewMatrix(camera->getViewMatrix());
-	Renderer->setModelMatrix(matrixIdentity());
 
 	oitRenderer->gatherBegin();
 	renderScene();
