@@ -41,7 +41,7 @@ layout(early_fragment_tests, pixel_interlock_unordered) in;
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 // A fragment node stores rendering information about one specific fragment
-layout (std430) struct FragmentNode
+struct FragmentNode
 {
 	// RGBA color of the node
 	vec4 color;
