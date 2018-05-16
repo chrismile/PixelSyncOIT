@@ -61,7 +61,9 @@ void main()
 	// Iterate over all fragments for this pixel
 	for (int i = 0; i < nodesPerPixel; i++)
 	{
-		nodes[index].used = 1;
+		//if (mod(i, 4) == 0)
+			//nodes[index].color = vec4(mod(float(index)/float(viewportW*nodesPerPixel), 1.0),0.0,0.0,1.0);
+		nodes[index].used = 0;
 		nodes[index].color = vec4(1.0, 1.0, 0.0, 1.0);
 		index++;
 	}

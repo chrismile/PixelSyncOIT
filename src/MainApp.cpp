@@ -50,10 +50,9 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	//Renderer->enableDepthTest(); TODO
 	//glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
 
-	resolutionChanged(EventPtr());
 
 	bool renderTransparent = true;
 	if (renderTransparent) {
@@ -63,9 +62,11 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	}
 	ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
 
+	resolutionChanged(EventPtr());
+
 	transparentObject = parseObjMesh("Data/Models/Monkey.obj", transparencyShader);
 	//transparentObject = parseObjMesh("Data/Models/Cube.obj", transparencyShader);
-	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0));
+	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 127));
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
 }
@@ -114,7 +115,8 @@ void PixelSyncApp::renderScene()
 	Renderer->setViewMatrix(camera->getViewMatrix());
 	//Renderer->setModelMatrix(matrixIdentity());
 	Renderer->setModelMatrix(rotation * scaling);
-
+	Renderer->render(transparentObject);
+	Renderer->setModelMatrix(matrixTranslation(glm::vec3(0.5f,0.0f,-2.0f)));
 	Renderer->render(transparentObject);
 }
 
@@ -122,6 +124,7 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 {
 	camera->onResolutionChanged(event);
 	camera->onResolutionChanged(event);
+	oitRenderer->resolutionChanged();
 }
 
 void PixelSyncApp::update(float dt)

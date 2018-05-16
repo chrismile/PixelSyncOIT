@@ -103,7 +103,7 @@ void OIT_PixelSync::gatherBegin()
 	//Renderer->setProjectionMatrix(matrixIdentity());
 	Renderer->setViewMatrix(matrixIdentity());
 	Renderer->setModelMatrix(matrixIdentity());
-	glEnable(GL_RASTERIZER_DISCARD);
+	//glEnable(GL_RASTERIZER_DISCARD);
 	Renderer->render(clearRenderData);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	//glMemoryBarrier(GL_ALL_BARRIER_BITS);
@@ -127,7 +127,8 @@ void OIT_PixelSync::renderToScreen()
 	Renderer->setViewMatrix(matrixIdentity());
 	Renderer->setModelMatrix(matrixIdentity());
 
-	glDisable(GL_RASTERIZER_DISCARD);
+	//glDisable(GL_RASTERIZER_DISCARD);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	Renderer->render(blitRenderData);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // GL_SHADER_IMAGE_ACCESS_BARRIER_BIT

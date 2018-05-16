@@ -61,25 +61,28 @@ void main()
 	int index = nodesPerPixel*(viewportW*y + x) + nodesPerPixel-1;
 	
 	// Color accumulator
-	//vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
-	vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
+	vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
+	//vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
 	
 	// Back-to-front blending
 	// Iterate over all stored (transparent) fragments for this pixel
 	for (int i = nodesPerPixel-1; i >= 0; i--)
 	{
-		color = nodes[index].color;
+		//color = nodes[index].color;
+		//if (mod(i, 4) == 0)
+			//nodes[index].color = vec4(mod(float(index)/float(viewportW*nodesPerPixel), 1.0),0.0,0.0,1.0);
 	
 		if (nodes[index].used == 0)
 		{
+			index--;
 			continue;
 		}
 		
 		// Blend the accumulated color with the color of the fragment node
 		float alpha = nodes[index].color.a;
 		float alphaOut = nodes[index].color.a + color.a * (1.0 - nodes[index].color.a);
-		//color.rgb = (alpha * nodes[index].color.rgb + (1.0 - alpha) * color.a * color.rgb) / alphaOut;
-		//color.a = alphaOut;
+		color.rgb = (alpha * nodes[index].color.rgb + (1.0 - alpha) * color.a * color.rgb) / alphaOut;
+		color.a = alphaOut;
 		index--;
 	}
 	
