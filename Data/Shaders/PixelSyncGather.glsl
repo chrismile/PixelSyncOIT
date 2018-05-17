@@ -86,6 +86,8 @@ void main()
 	// Area of mutual exclusion for fragments mapping to same pixel
 	beginInvocationInterlockARB();
 	
+	memoryBarrierBuffer();
+	
 	// Use bubble sort to insert new fragment
 	for (int i = 0; i < nodesPerPixel; i++)
 	{
@@ -105,6 +107,6 @@ void main()
 	
 	// If no space was left to store the last fragment, simply discard it.
 	// TODO: Merge nodes with least visual impact.
-	
+		
 	endInvocationInterlockARB();
 }

@@ -18,7 +18,7 @@
 using namespace sgl;
 
 // Number of transparent pixels we can store per node
-const int nodesPerPixel = 16;
+const int nodesPerPixel = 1;
 
 OIT_PixelSync::OIT_PixelSync()
 {

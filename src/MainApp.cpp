@@ -49,7 +49,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	camera->setPosition(glm::vec3(-0.5f, -0.5f, -5.0f));
 
 	//Renderer->enableDepthTest(); TODO
-	//glEnable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
 
@@ -65,8 +65,9 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	resolutionChanged(EventPtr());
 
 	transparentObject = parseObjMesh("Data/Models/Monkey.obj", transparencyShader);
+	//transparentObject = parseObjMesh("Data/Models/dragon.obj", transparencyShader);
 	//transparentObject = parseObjMesh("Data/Models/Cube.obj", transparencyShader);
-	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 127));
+	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 80));
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
 }
@@ -87,6 +88,10 @@ void PixelSyncApp::render()
 	}
 
 	Renderer->setCamera(camera);
+
+	//Renderer->setBlendMode(BLEND_ALPHA);
+	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+	glBlendEquation(GL_FUNC_ADD);
 
 	oitRenderer->gatherBegin();
 	renderScene();
@@ -114,9 +119,13 @@ void PixelSyncApp::renderScene()
 	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
 	Renderer->setViewMatrix(camera->getViewMatrix());
 	//Renderer->setModelMatrix(matrixIdentity());
+
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	Renderer->setModelMatrix(rotation * scaling);
 	Renderer->render(transparentObject);
+
 	Renderer->setModelMatrix(matrixTranslation(glm::vec3(0.5f,0.0f,-2.0f)));
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	Renderer->render(transparentObject);
 }
 

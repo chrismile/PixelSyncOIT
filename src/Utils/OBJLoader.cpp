@@ -81,6 +81,10 @@ ShaderAttributesPtr parseObjMesh(const char *filename, ShaderProgramPtr shader)
 
 	std::string lineString;
 	while (getline(file, lineString)) {
+		while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
+			// Remove '\r' of Windows line ending
+			lineString = lineString.substr(0, lineString.size() - 1);
+		}
 		std::vector<std::string> line;
 		boost::algorithm::split(line, lineString, boost::is_any_of("\t "), boost::token_compress_on);
 
@@ -114,14 +118,16 @@ ShaderAttributesPtr parseObjMesh(const char *filename, ShaderProgramPtr shader)
 				std::vector<std::string> indices;
 				boost::algorithm::split(indices, line.at(i), boost::is_any_of("/"));
 				vertexIndices.push_back(atof(indices.at(0).c_str()));
-				tecoordIndices.push_back(atof(indices.at(1).c_str()));
-				normalIndices.push_back(atof(indices.at(2).c_str()));
+				if (indices.size() > 1)
+					tecoordIndices.push_back(atof(indices.at(1).c_str()));
+				if (indices.size() > 2)
+					normalIndices.push_back(atof(indices.at(2).c_str()));
 			}
 			triangleStripToTriangles(tempVertexIndices, vertexIndices);
 			triangleStripToTriangles(tempTecoordIndices, tecoordIndices);
 			triangleStripToTriangles(tempNormalIndices, normalIndices);
-		} else if (command == "#") {
-			// Ignore comments
+		} else if (boost::starts_with(command, "#") || command == "") {
+			// Ignore comments and empty lines
 		} else {
 			Logfile::get()->writeError(string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
 		}
@@ -133,8 +139,18 @@ ShaderAttributesPtr parseObjMesh(const char *filename, ShaderProgramPtr shader)
 
 	for (size_t i = 0; i < vertexIndices.size(); i++) {
 		vertices.push_back(tempVertices.at(vertexIndices.at(i)-1));
-		//texcoords.push_back(tempTexcoords.at(tecoordIndices.at(i)-1));
-		normals.push_back(tempNormals.at(normalIndices.at(i)-1));
+		//if (tecoordIndices.size() > 0)
+		//	texcoords.push_back(tempTexcoords.at(tecoordIndices.at(i)-1));
+		if (normalIndices.size() > 0)
+			normals.push_back(tempNormals.at(normalIndices.at(i)-1));
+	}
+
+	if (normalIndices.size() == 0) {
+		// Compute manually
+		for (size_t i = 0; i < vertices.size(); i += 3) {
+			glm::vec3 normal = glm::cross(vertices.at(i) - vertices.at(i+1), vertices.at(i) - vertices.at(i+2));
+			normals.push_back(normal);
+		}
 	}
 
 	if (!shader) {

@@ -64,9 +64,27 @@ void main()
 	vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
 	//vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
 	
+	memoryBarrierBuffer();
+	// Front-to-back blending
+	// Iterate over all stored (transparent) fragments for this pixel
+	for (int i = 0; i < nodesPerPixel; i++)
+	{
+		if (nodes[index].used == 0)
+		{
+			index++;
+			continue;
+		}
+
+		// Blend the accumulated color with the color of the fragment node
+		float alpha = nodes[index].color.a;
+		color.rgb = color.rgb + (1.0 - color.a) * alpha * nodes[index].color.rgb;
+		//color.rgb = vec3(1.0, 0.0, 1.0);
+		color.a = color.a + (1.0 - color.a) * alpha;
+		index++;
+	}
 	// Back-to-front blending
 	// Iterate over all stored (transparent) fragments for this pixel
-	for (int i = nodesPerPixel-1; i >= 0; i--)
+	/*for (int i = nodesPerPixel-1; i >= 0; i--)
 	{
 		//color = nodes[index].color;
 		//if (mod(i, 4) == 0)
@@ -80,11 +98,12 @@ void main()
 		
 		// Blend the accumulated color with the color of the fragment node
 		float alpha = nodes[index].color.a;
-		float alphaOut = nodes[index].color.a + color.a * (1.0 - nodes[index].color.a);
+		float alphaOut = alpha + color.a * (1.0 - alpha);
 		color.rgb = (alpha * nodes[index].color.rgb + (1.0 - alpha) * color.a * color.rgb) / alphaOut;
+		//color.rgb = (alpha * nodes[index].color.rgb + (1.0 - alpha) * color.a * color.rgb);
 		color.a = alphaOut;
 		index--;
-	}
+	}*/
 	
-	fragColor = color;
+	fragColor = vec4(color.rgb, 1.0);
 }
