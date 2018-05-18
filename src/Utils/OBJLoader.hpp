@@ -11,10 +11,16 @@
 #include <Graphics/Shader/ShaderAttributes.hpp>
 
 /**
- * Simple .obj file parser. Not very robust, but sufficient for testing purposes.
- * @param shader: The shader to use for the mesh.
+ * Simple .obj file parser converting a mesh to a binary format.
+ * Not very robust, but sufficient for testing purposes.
+ * Stores the parsed .obj mesh to "binaryFilename" using "writeMesh3D" (see MeshSerializer.hpp).
+ *
+ * @param objFilename: The input .obj file.
+ * @param binaryFilename: The filename of the binary output file output.
  * @return: The loaded mesh stores in a ShaderAttributes object.
  */
-sgl::ShaderAttributesPtr parseObjMesh(const char *filename, sgl::ShaderProgramPtr shader = sgl::ShaderProgramPtr());
+void convertObjMeshToBinary(
+		const std::string &objFilename,
+		const std::string &binaryFilename);
 
 #endif /* OBJLOADER_HPP_ */

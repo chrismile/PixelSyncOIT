@@ -20,6 +20,8 @@
 #include <Graphics/Shader/ShaderAttributes.hpp>
 #include <Graphics/Renderer.hpp>
 
+#include "MeshSerializer.hpp"
+
 using namespace std;
 using namespace sgl;
 
@@ -63,13 +65,15 @@ void triangleFanToTriangles(vector<uint32_t> trifan, vector<uint32_t> &triangles
 	}
 }
 
-ShaderAttributesPtr parseObjMesh(const char *filename, ShaderProgramPtr shader)
+void convertObjMeshToBinary(
+		const std::string &objFilename,
+		const std::string &binaryFilename)
 {
-	std::ifstream file(filename);
+	std::ifstream file(objFilename.c_str());
 
 	if (!file.is_open()) {
-		Logfile::get()->writeError(string() + "Error in parseObjMesh: File \"" + filename + "\" does not exist.");
-		return ShaderAttributesPtr();
+		Logfile::get()->writeError(string() + "Error in parseObjMesh: File \"" + objFilename + "\" does not exist.");
+		return;
 	}
 
 	std::vector<glm::vec3> tempVertices;
@@ -79,6 +83,7 @@ ShaderAttributesPtr parseObjMesh(const char *filename, ShaderProgramPtr shader)
 	std::vector<uint32_t> tecoordIndices;
 	std::vector<uint32_t> normalIndices;
 
+	bool smooth = false;
 	std::string lineString;
 	while (getline(file, lineString)) {
 		while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
@@ -100,6 +105,7 @@ ShaderAttributesPtr parseObjMesh(const char *filename, ShaderProgramPtr shader)
 			//  Materials not supported for now
 		} else if (command == "s") {
 			// Smooth shading is always assumed for now
+			smooth = true; // TODO
 		} else if (command == "v") {
 			// Vertex position
 			tempVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)), fromString<float>(line.at(3))));
@@ -133,36 +139,57 @@ ShaderAttributesPtr parseObjMesh(const char *filename, ShaderProgramPtr shader)
 		}
 	}
 
+
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec2> texcoords;
 	std::vector<glm::vec3> normals;
+	std::vector<uint32_t> indices;
 
-	for (size_t i = 0; i < vertexIndices.size(); i++) {
-		vertices.push_back(tempVertices.at(vertexIndices.at(i)-1));
-		//if (tecoordIndices.size() > 0)
-		//	texcoords.push_back(tempTexcoords.at(tecoordIndices.at(i)-1));
-		if (normalIndices.size() > 0)
-			normals.push_back(tempNormals.at(normalIndices.at(i)-1));
-	}
 
-	if (normalIndices.size() == 0) {
-		// Compute manually
-		for (size_t i = 0; i < vertices.size(); i += 3) {
-			glm::vec3 normal = glm::cross(vertices.at(i) - vertices.at(i+1), vertices.at(i) - vertices.at(i+2));
-			normals.push_back(normal);
+	if (!smooth) {
+		for (size_t i = 0; i < vertexIndices.size(); i++) {
+			vertices.push_back(tempVertices.at(vertexIndices.at(i)-1));
+			//if (tecoordIndices.size() > 0)
+			//	texcoords.push_back(tempTexcoords.at(tecoordIndices.at(i)-1));
+			if (normalIndices.size() > 0)
+				normals.push_back(tempNormals.at(normalIndices.at(i)-1));
+		}
+
+		if (normalIndices.size() == 0) {
+			// Compute manually
+			for (size_t i = 0; i < vertices.size(); i += 3) {
+				glm::vec3 normal = glm::cross(vertices.at(i) - vertices.at(i+1), vertices.at(i) - vertices.at(i+2));
+				normal = glm::normalize(normal);
+				normals.push_back(normal);
+				normals.push_back(normal);
+				normals.push_back(normal);
+			}
+		}
+	} else {
+		for (size_t i = 0; i < vertexIndices.size(); i++) {
+			indices.push_back(vertexIndices.at(i)-1);
+		}
+		vertices = tempVertices;
+		for (size_t i = 0; i < vertices.size(); i++) {
+			glm::vec3 normal(0.0f, 0.0f, 0.0f);
+			int numTrianglesSharedBy = 0;
+			for (size_t j = 0; j < indices.size(); j += 3) {
+				// Does this triangle contain vertex #i?
+				if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
+					size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+					glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+					faceNormal = glm::normalize(faceNormal);
+					normal += faceNormal;
+					numTrianglesSharedBy++;
+				}
+			}
+
+			if (numTrianglesSharedBy == 0) {
+				Logfile::get()->writeError("Error in parseObjMesh: numTrianglesSharedBy == 0");
+			}
+			normals.push_back(normal / (float)numTrianglesSharedBy);
 		}
 	}
 
-	if (!shader) {
-		shader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-	}
-	ShaderAttributesPtr renderData = ShaderManager->createShaderAttributes(shader);
-	//GeometryBufferPtr indexBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t)*indices.size(), (void*)&indices.front(), INDEX_BUFFER);
-	GeometryBufferPtr positionBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*vertices.size(), (void*)&vertices.front(), VERTEX_BUFFER);
-	GeometryBufferPtr normalBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*normals.size(), (void*)&normals.front(), VERTEX_BUFFER);
-	renderData->addGeometryBuffer(positionBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
-	renderData->addGeometryBuffer(normalBuffer, "vertexNormal", ATTRIB_FLOAT, 3);
-	//renderData->setIndexGeometryBuffer(indexBuffer, ATTRIB_UNSIGNED_INT);
-
-	return renderData;
+	writeMesh3D(binaryFilename, indices, vertices, texcoords, normals);
 }

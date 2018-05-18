@@ -7,9 +7,12 @@ layout(location = 1) in vec3 vertexNormal;
 
 out vec4 fragmentColor;
 out vec3 fragmentNormal;
+out vec3 fragmentPositonLocal;
 
 // Model-view-projection matrix
 uniform mat4 mvpMatrix;
+uniform mat4 mMatrix;
+uniform mat4 vMatrix;
 
 // Color of the object
 uniform vec4 color;
@@ -18,6 +21,8 @@ void main()
 {
 	fragmentColor = color;
 	fragmentNormal = vertexNormal;
+	fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
+	//fragmentPosView = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
 	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
@@ -35,6 +40,7 @@ void main()
 // Use early z-test to cull transparent fragments occluded by opaque fragments.
 // Additionaly, use fragment interlock.
 layout(early_fragment_tests, pixel_interlock_unordered) in;
+// NOTE to myself: early_fragment_tests is evil :(
 
 // gl_FragCoord will be used for pixel centers at integer coordinates.
 // See https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_FragCoord.xhtml
@@ -64,6 +70,10 @@ layout (std430, binding = 0) buffer FragmentNodes
 
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
+in vec3 fragmentPositonLocal;
+//in vec3 fragmentPosView;
+
+//out vec4 fragColor;
 
 // Number of transparent pixels we can store per node
 uniform int nodesPerPixel;
@@ -76,10 +86,17 @@ void main()
 	int x = int(gl_FragCoord.x);
 	int y = int(gl_FragCoord.y);
 	int index = nodesPerPixel*(viewportW*y + x);
+	//int index = nodesPerPixel*int(viewportW*gl_FragCoord.y + gl_FragCoord.x);
 
 	FragmentNode frag;
 	// Pseudo Phong shading
-	frag.color = vec4(fragmentColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	vec4 bandColor = fragmentColor;
+	float stripWidth = 2.0;
+	if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
+		bandColor = vec4(1.0,1.0,1.0,1.0);
+	}
+	frag.color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	//frag.depth = fragmentPosView.z;
 	frag.depth = gl_FragCoord.z;
 	frag.used = 1;
 	
@@ -94,6 +111,7 @@ void main()
 		if (nodes[index].used == 0)
 		{
 			nodes[index] = frag;
+			frag.used = 0;
 			break;
 		}
 		else if (frag.depth < nodes[index].depth)
@@ -107,6 +125,17 @@ void main()
 	
 	// If no space was left to store the last fragment, simply discard it.
 	// TODO: Merge nodes with least visual impact.
+	if (frag.used == 1) {
+		int lastIndex = index-1;
+	
+		// Blend with last fragment
+		float alpha = nodes[lastIndex].color.a;
+		float alphaOut = alpha + frag.color.a * (1.0 - alpha);
+		nodes[lastIndex].color.rgb = (alpha * nodes[lastIndex].color.rgb + (1.0 - alpha) * frag.color.a * frag.color.rgb) / alphaOut;
+		//color.rgb = (alpha * nodes[lastIndex].color.rgb + (1.0 - alpha) * frag.color.a * frag.color.rgb);
+		nodes[lastIndex].color.a = alphaOut;
+	}
 		
 	endInvocationInterlockARB();
+	//fragColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }

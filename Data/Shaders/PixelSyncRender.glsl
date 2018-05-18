@@ -58,21 +58,20 @@ void main()
 {
 	int x = int(gl_FragCoord.x);
 	int y = int(gl_FragCoord.y);
-	int index = nodesPerPixel*(viewportW*y + x) + nodesPerPixel-1;
 	
 	// Color accumulator
 	vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
-	//vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
 	
 	memoryBarrierBuffer();
 	// Front-to-back blending
 	// Iterate over all stored (transparent) fragments for this pixel
+	/*int index = nodesPerPixel*(viewportW*y + x);
 	for (int i = 0; i < nodesPerPixel; i++)
 	{
 		if (nodes[index].used == 0)
 		{
 			index++;
-			continue;
+			break;
 		}
 
 		// Blend the accumulated color with the color of the fragment node
@@ -81,15 +80,12 @@ void main()
 		//color.rgb = vec3(1.0, 0.0, 1.0);
 		color.a = color.a + (1.0 - color.a) * alpha;
 		index++;
-	}
+	}*/
 	// Back-to-front blending
 	// Iterate over all stored (transparent) fragments for this pixel
-	/*for (int i = nodesPerPixel-1; i >= 0; i--)
+	int index = nodesPerPixel*(viewportW*y + x) + nodesPerPixel-1;
+	for (int i = nodesPerPixel-1; i >= 0; i--)
 	{
-		//color = nodes[index].color;
-		//if (mod(i, 4) == 0)
-			//nodes[index].color = vec4(mod(float(index)/float(viewportW*nodesPerPixel), 1.0),0.0,0.0,1.0);
-	
 		if (nodes[index].used == 0)
 		{
 			index--;
@@ -103,7 +99,8 @@ void main()
 		//color.rgb = (alpha * nodes[index].color.rgb + (1.0 - alpha) * color.a * color.rgb);
 		color.a = alphaOut;
 		index--;
-	}*/
+	}
 	
-	fragColor = vec4(color.rgb, 1.0);
+	fragColor = color;//vec4(color.rgb, 1.0);
+	//fragColor = nodes[nodesPerPixel*(viewportW*y + x)].color;
 }

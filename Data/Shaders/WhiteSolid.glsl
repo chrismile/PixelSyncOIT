@@ -1,11 +1,11 @@
 -- Vertex
 
 uniform mat4 mvpMatrix;
-attribute vec4 position;
+attribute vec4 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * position;
+	gl_Position = mvpMatrix * vertexPosition;
 }
 
 -- Fragment

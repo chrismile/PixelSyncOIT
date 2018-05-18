@@ -1,11 +1,11 @@
 -- Vertex.Plain
 
 uniform mat4 mvpMatrix;
-attribute vec4 position;
+attribute vec4 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * position;
+	gl_Position = mvpMatrix * vertexPosition;
 }
 
 -- Fragment.Plain
@@ -22,14 +22,14 @@ void main()
 -- Vertex.Textured
 
 uniform mat4 mvpMatrix;
-attribute vec4 position;
+attribute vec4 vertexPosition;
 attribute vec2 texcoord;
 varying vec2 fragTexCoord;
 
 void main()
 {
 	fragTexCoord = texcoord;
-	gl_Position = mvpMatrix * position;
+	gl_Position = mvpMatrix * vertexPosition;
 }
 
 -- Fragment.Textured

@@ -22,6 +22,7 @@
 #include <Utils/Events/EventManager.hpp>
 #include <Utils/Random/Xorshift.hpp>
 #include <Utils/Timer.hpp>
+#include <Utils/File/FileUtils.hpp>
 #include <Input/Mouse.hpp>
 #include <Input/Keyboard.hpp>
 #include <Utils/File/Logfile.hpp>
@@ -29,6 +30,7 @@
 #include <Graphics/Renderer.hpp>
 #include <Graphics/Shader/ShaderManager.hpp>
 
+#include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
 #include "OIT/OIT_Dummy.hpp"
 #include "OIT/OIT_PixelSync.hpp"
@@ -43,13 +45,13 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	camera->setNearClipDistance(0.01f);
 	camera->setFarClipDistance(100.0f);
-	camera->setOrientation(glm::quat());
+	camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 	float fovy = atanf(1.0f / 2.0f) * 2.0f;
 	camera->setFOVy(fovy);
-	camera->setPosition(glm::vec3(-0.5f, -0.5f, -5.0f));
+	camera->setPosition(glm::vec3(-0.5f, -0.5f, -20.0f));
 
-	//Renderer->enableDepthTest(); TODO
-	glEnable(GL_DEPTH_TEST);
+	//Renderer->enableDepthTest();
+	//glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
 
@@ -64,10 +66,15 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	resolutionChanged(EventPtr());
 
-	transparentObject = parseObjMesh("Data/Models/Monkey.obj", transparencyShader);
-	//transparentObject = parseObjMesh("Data/Models/dragon.obj", transparencyShader);
-	//transparentObject = parseObjMesh("Data/Models/Cube.obj", transparencyShader);
-	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 80));
+	//std::string modelFilenamePure = "Data/Models/Monkey";
+	std::string modelFilenamePure = "Data/Models/dragon";
+	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
+	std::string modelFilenameObj = modelFilenamePure + ".obj";
+	if (!FileUtils::get()->exists(modelFilenameOptimized)) {
+		convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
+	}
+	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
+	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 120));
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
 }
@@ -92,6 +99,7 @@ void PixelSyncApp::render()
 	//Renderer->setBlendMode(BLEND_ALPHA);
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	glBlendEquation(GL_FUNC_ADD);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	oitRenderer->gatherBegin();
 	renderScene();
@@ -122,15 +130,23 @@ void PixelSyncApp::renderScene()
 
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	Renderer->setModelMatrix(rotation * scaling);
+	//transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 120));
+	transparentObject->getShaderProgram()->setUniform("color", Color(165, 220, 84, 120));
 	Renderer->render(transparentObject);
 
-	Renderer->setModelMatrix(matrixTranslation(glm::vec3(0.5f,0.0f,-2.0f)));
+	Renderer->setModelMatrix(matrixTranslation(glm::vec3(0.5f,0.0f,-4.0f)));
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	Renderer->render(transparentObject);
+	transparentObject->getShaderProgram()->setUniform("color", Color(0, 255, 128, 120));
+	//Renderer->render(transparentObject);
 }
 
 void PixelSyncApp::resolutionChanged(EventPtr event)
 {
+	Window *window = AppSettings::get()->getMainWindow();
+	int width = window->getWidth();
+	int height = window->getHeight();
+	glViewport(0, 0, width, height);
+
 	camera->onResolutionChanged(event);
 	camera->onResolutionChanged(event);
 	oitRenderer->resolutionChanged();
@@ -140,19 +156,45 @@ void PixelSyncApp::update(float dt)
 {
 	AppLogic::update(dt);
 
+	const float ROT_SPEED = 0.001f;
+
 	// Rotate object around its origin
 	if (Keyboard->isKeyDown(SDLK_x)) {
-		rotation = rotation*glm::eulerAngleYXZ(dt*0.001f, 0.0f, 0.0f);
+		glm::quat rot = glm::quat(glm::vec3(dt*ROT_SPEED, 0.0f, 0.0f));
+		camera->rotate(rot);
 	}
 	if (Keyboard->isKeyDown(SDLK_y)) {
-		rotation = rotation*glm::eulerAngleYXZ(0.0f, dt*0.001f, 0.0f);
+		glm::quat rot = glm::quat(glm::vec3(0.0f, dt*ROT_SPEED, 0.0f));
+		camera->rotate(rot);
 	}
 	if (Keyboard->isKeyDown(SDLK_z)) {
-		rotation = rotation*glm::eulerAngleYXZ(0.0f, 0.0f, dt*0.001f);
+		glm::quat rot = glm::quat(glm::vec3(0.0f, 0.0f, dt*ROT_SPEED));
+		camera->rotate(rot);
+	}
+
+	const float MOVE_SPEED = 0.005f;
+
+	if (Keyboard->isKeyDown(SDLK_PAGEDOWN)) {
+		camera->translate(glm::vec3(0.0f, dt*MOVE_SPEED, 0.0f));
+	}
+	if (Keyboard->isKeyDown(SDLK_PAGEUP)) {
+		camera->translate(glm::vec3(0.0f, -dt*MOVE_SPEED, 0.0f));
+	}
+	if (Keyboard->isKeyDown(SDLK_DOWN)) {
+		camera->translate(glm::vec3(0.0f, 0.0f, -dt*MOVE_SPEED));
+	}
+	if (Keyboard->isKeyDown(SDLK_UP)) {
+		camera->translate(glm::vec3(0.0f, 0.0f, +dt*MOVE_SPEED));
+	}
+	if (Keyboard->isKeyDown(SDLK_LEFT)) {
+		camera->translate(glm::vec3(dt*MOVE_SPEED, 0.0f, 0.0f));
+	}
+	if (Keyboard->isKeyDown(SDLK_RIGHT)) {
+		camera->translate(glm::vec3(-dt*MOVE_SPEED, 0.0f, 0.0f));
 	}
 
 	// Zoom in/out
 	if (Mouse->getScrollWheel() > 0.1 || Mouse->getScrollWheel() < 0.1) {
-		scaling = scaling*glm::scale((1+Mouse->getScrollWheel()*dt*0.005f)*glm::vec3(1.0,1.0,1.0));
+		camera->scale((1+Mouse->getScrollWheel()*dt*0.5f)*glm::vec3(1.0,1.0,1.0));
 	}
 }
