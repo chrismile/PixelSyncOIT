@@ -11,6 +11,7 @@
 
 #include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
+#include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
 
@@ -20,6 +21,9 @@ using namespace sgl;
 
 // Number of transparent pixels we can store per node
 const int nodesPerPixel = 8;
+
+// Use stencil buffer to mask unused pixels
+const bool useStencilBuffer = true;
 
 OIT_PixelSync::OIT_PixelSync()
 {
@@ -40,7 +44,7 @@ void OIT_PixelSync::create()
 	blitShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	clearShader = ShaderManager->getShaderProgram({"PixelSyncClear.Vertex", "PixelSyncClear.Fragment"});
-	clearShader->setUniform("nodesPerPixel", nodesPerPixel);
+	//clearShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	// Create blitting data (fullscreen rectangle in normalized device coordinates)
 	blitRenderData = ShaderManager->createShaderAttributes(blitShader);
@@ -69,20 +73,26 @@ void OIT_PixelSync::resolutionChanged()
 
 	fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
 	fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, data, SHADER_STORAGE_BUFFER);
+	free(data);
+
+	size_t numFragmentsBufferSizeBytes = sizeof(int32_t) * width * height;
+	numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
+	numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
 	gatherShader->setUniform("viewportW", width);
 	//gatherShader->setUniform("viewportH", height); // Not needed
 	gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+	gatherShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
 	blitShader->setUniform("viewportW", width);
 	//blitShader->setUniform("viewportH", height); // Not needed
 	blitShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+	blitShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
 	clearShader->setUniform("viewportW", width);
 	//clearShader->setUniform("viewportH", height); // Not needed
 	clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-
-	free(data);
+	clearShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 }
 
 void OIT_PixelSync::gatherBegin()
@@ -99,11 +109,21 @@ void OIT_PixelSync::gatherBegin()
 	Renderer->setModelMatrix(matrixIdentity());
 	//glEnable(GL_RASTERIZER_DISCARD);
 	Renderer->render(clearRenderData);
+	/*GLuint bufferID = static_cast<GeometryBufferGL*>(fragmentNodes.get())->getBuffer();
+	GLubyte val = 0;
+	glClearNamedBufferData(bufferID, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (const void*)&val);*/
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_FALSE);
+
+	if (useStencilBuffer) {
+		glClear(GL_STENCIL_BUFFER_BIT);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0xFF);
+	}
 }
 
 void OIT_PixelSync::gatherEnd()
@@ -121,6 +141,11 @@ void OIT_PixelSync::renderToScreen()
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDisable(GL_DEPTH_TEST);
+
+	if (useStencilBuffer) {
+		glStencilFunc(GL_EQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+	}
 
 	Renderer->render(blitRenderData);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

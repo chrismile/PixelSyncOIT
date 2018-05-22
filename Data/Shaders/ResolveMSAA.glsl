@@ -1,5 +1,7 @@
 -- Vertex
 
+#version 150
+
 uniform mat4 mvpMatrix;
 attribute vec4 position;
 attribute vec2 texcoord;
@@ -12,6 +14,8 @@ void main()
 }
 
 -- Fragment
+
+#version 150
 
 uniform sampler2DMS texture;
 uniform int numSamples;

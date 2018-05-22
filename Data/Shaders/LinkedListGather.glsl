@@ -31,7 +31,7 @@ void main()
 
 #version 430 core
 
-#include "PixelSyncHeader.glsl"
+#include "LinkedListHeader.glsl"
 
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
@@ -45,10 +45,8 @@ void main()
 	int x = int(gl_FragCoord.x);
 	int y = int(gl_FragCoord.y);
 	int pixelIndex = viewportW*y + x;
-	// Fragment index (in nodes buffer):
-	int index = nodesPerPixel*(viewportW*y + x);
 
-	FragmentNode frag;
+	LinkedListFragmentNode frag;
 	// Pseudo Phong shading
 	vec4 bandColor = fragmentColor;
 	float stripWidth = 2.0;
@@ -56,41 +54,40 @@ void main()
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
 	frag.color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	//frag.depth = fragmentPosView.z;
 	frag.depth = gl_FragCoord.z;
 	frag.used = 1;
+	frag.next = -1;
 	
 	// Area of mutual exclusion for fragments mapping to same pixel
 	beginInvocationInterlockARB();
 	
-	memoryBarrierBuffer();
+	//memoryBarrierBuffer();
 	
-	// Use insertion sort to insert new fragment
-	int numFragments = numFragmentsBuffer[pixelIndex];
-	for (int i = 0; i < numFragments; i++)
+	uint insertIndex = atomicCounterIncrement(fragCounter);
+	linkedList[insertIndex] = item;
+	frag.next = atomicExchange(header[int(pixelIndex)], insertIndex);
+	
+	// Use bubble sort to insert new fragment
+	/*for (int i = 0; i < nodesPerPixel; i++)
 	{
-		if (frag.depth < nodes[index].depth)
+		if (nodes[index].used == 0)
+		{
+			nodes[index] = frag;
+			frag.used = 0;
+			break;
+		}
+		else if (frag.depth < nodes[index].depth)
 		{
 			FragmentNode temp = frag;
 			frag = nodes[index];
 			nodes[index] = temp;
 		}
 		index++;
-	}
-	
-	// Store the fragment at the end of the list if capacity is left
-	if (numFragments < nodesPerPixel) {
-		atomicAdd(numFragmentsBuffer[pixelIndex], 1);
-		//numFragmentsBuffer[pixelIndex]++;
-		nodes[index] = frag;
-		frag.used = 0;
-		//atomicCounterIncrement(numFragmentsBuffer[pixelIndex]);
-		//numFragmentsBuffer[pixelIndex]++; // Race conditon on Intel if used here. Why?
-	}
-	
-	memoryBarrierBuffer();
+	}*/
 	
 	// If no space was left to store the last fragment, simply discard it.
-	// TODO: Merge nodes with least visual impact?
+	// TODO: Merge nodes with least visual impact.
 	/*if (frag.used == 1) {
 		int lastIndex = index-1;
 	
@@ -103,4 +100,5 @@ void main()
 	}*/
 		
 	endInvocationInterlockARB();
+	//fragColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }

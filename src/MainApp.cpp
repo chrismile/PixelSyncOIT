@@ -66,8 +66,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	resolutionChanged(EventPtr());
 
-	//std::string modelFilenamePure = "Data/Models/Monkey";
-	std::string modelFilenamePure = "Data/Models/dragon";
+	std::string modelFilenamePure = "Data/Models/Monkey";
+	//std::string modelFilenamePure = "Data/Models/dragon";
 	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
 	std::string modelFilenameObj = modelFilenamePure + ".obj";
 	if (!FileUtils::get()->exists(modelFilenameOptimized)) {

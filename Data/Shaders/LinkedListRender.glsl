@@ -17,7 +17,7 @@ void main()
 
 #version 430 core
 
-#include "PixelSyncHeader.glsl"
+#include "LinkedListHeader.glsl"
 
 out vec4 fragColor;
 
@@ -27,44 +27,42 @@ void main()
 	int y = int(gl_FragCoord.y);
 	int pixelIndex = viewportW*y + x;
 	
+	// Get start offset from array
+	uint fragOffset = startOffset[pixelIndex];
+	
 	// Color accumulator
 	vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
 	
-	memoryBarrierBuffer();
 	// Front-to-back blending
 	// Iterate over all stored (transparent) fragments for this pixel
-	/*int index = nodesPerPixel*(viewportW*y + x);
-	int numFragments = numFragmentsBuffer[pixelIndex];
-	for (int i = 0; i < numFragments; i++)
+	/*while (fragOffset != -1)
 	{
-		if (nodes[index].used == 0)
-		{
-			index++;
-			break;
-		}
+		LinkedListFragmentNode fragment = fragmentBuffer[fragOffset];
 
 		// Blend the accumulated color with the color of the fragment node
-		float alpha = nodes[index].color.a;
-		color.rgb = color.rgb + (1.0 - color.a) * alpha * nodes[index].color.rgb;
+		float alpha = fragment.color.a;
+		color.rgb = color.rgb + (1.0 - color.a) * alpha * fragment.color.rgb;
 		//color.rgb = vec3(1.0, 0.0, 1.0);
 		color.a = color.a + (1.0 - color.a) * alpha;
-		index++;
+		
+		fragOffset = fragment.next;
 	}*/
 	// Back-to-front blending
 	// Iterate over all stored (transparent) fragments for this pixel
-	int offset = numFragmentsBuffer[pixelIndex]-1;
-	int index = nodesPerPixel*(viewportW*y + x) + offset;
-	for (int i = offset; i >= 0; i--)
+	while (fragOffset != -1)
 	{
+		LinkedListFragmentNode fragment = fragmentBuffer[fragOffset];
+		
 		// Blend the accumulated color with the color of the fragment node
-		float alpha = nodes[index].color.a;
+		float alpha = fragment.color.a;
 		float alphaOut = alpha + color.a * (1.0 - alpha);
-		color.rgb = (alpha * nodes[index].color.rgb + (1.0 - alpha) * color.a * color.rgb) / alphaOut;
-		//color.rgb = (alpha * nodes[index].color.rgb + (1.0 - alpha) * color.a * color.rgb);
+		color.rgb = (alpha * fragment.color.rgb + (1.0 - alpha) * color.a * color.rgb) / alphaOut;
+		//color.rgb = (alpha * fragment.color.rgb + (1.0 - alpha) * color.a * color.rgb);
 		color.a = alphaOut;
-		index--;
+		
+		fragOffset = fragment.next;
 	}
 	
-	fragColor = color;//vec4(color.rgb, 1.0)
+	fragColor = color;//vec4(color.rgb, 1.0);
 	//fragColor = nodes[nodesPerPixel*(viewportW*y + x)].color;
 }

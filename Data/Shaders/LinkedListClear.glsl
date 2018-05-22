@@ -17,11 +17,13 @@ void main()
 
 #version 430 core
 
-#include "PixelSyncHeader.glsl"
+#include "LinkedListHeader.glsl"
 
 void main()
 {
 	int x = int(gl_FragCoord.x);
 	int y = int(gl_FragCoord.y);
-	numFragmentsBuffer[viewportW*y + x] = 0;
+	int index = viewportW*y + x;
+	
+	startOffset[index] = -1;
 }
