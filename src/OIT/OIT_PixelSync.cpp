@@ -98,7 +98,7 @@ void OIT_PixelSync::resolutionChanged()
 void OIT_PixelSync::gatherBegin()
 {
 	//glClearDepth(0.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glDepthMask(GL_FALSE);
 	glDisable(GL_DEPTH_TEST);
@@ -115,8 +115,8 @@ void OIT_PixelSync::gatherBegin()
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_FALSE);
+	//glDepthFunc(GL_LESS);
+	//glDepthMask(GL_FALSE);
 
 	if (useStencilBuffer) {
 		glClear(GL_STENCIL_BUFFER_BIT);
