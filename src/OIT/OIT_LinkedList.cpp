@@ -29,19 +29,9 @@ OIT_LinkedList::OIT_LinkedList()
 
 void OIT_LinkedList::create()
 {
-	if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-		Logfile::get()->writeError("Error in OIT_LinkedList::create: GL_ARB_fragment_shader_interlock unsupported.");
-		exit(1);
-	}
-
-	gatherShader = ShaderManager->getShaderProgram({"PixelSyncGather.Vertex", "PixelSyncGather.Fragment"});
-	gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
-
-	blitShader = ShaderManager->getShaderProgram({"PixelSyncRender.Vertex", "PixelSyncRender.Fragment"});
-	blitShader->setUniform("nodesPerPixel", nodesPerPixel);
-
-	clearShader = ShaderManager->getShaderProgram({"PixelSyncClear.Vertex", "PixelSyncClear.Fragment"});
-	clearShader->setUniform("nodesPerPixel", nodesPerPixel);
+	gatherShader = ShaderManager->getShaderProgram({"LinkedListGather.Vertex", "LinkedListGather.Fragment"});
+	blitShader = ShaderManager->getShaderProgram({"LinkedListRender.Vertex", "LinkedListRender.Fragment"});
+	clearShader = ShaderManager->getShaderProgram({"LinkedListClear.Vertex", "LinkedListClear.Fragment"});
 
 	// Create blitting data (fullscreen rectangle in normalized device coordinates)
 	blitRenderData = ShaderManager->createShaderAttributes(blitShader);
@@ -76,21 +66,30 @@ void OIT_LinkedList::resolutionChanged()
 	startOffsetBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
 	startOffsetBuffer = Renderer->createGeometryBuffer(startOffsetBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
+	atomicCounterBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
+	atomicCounterBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t), NULL, SHADER_STORAGE_BUFFER);
+
 
 	gatherShader->setUniform("viewportW", width);
 	//gatherShader->setUniform("viewportH", height); // Not needed
-	gatherShader->setShaderStorageBuffer(0, "LinkedListFragmentNode", fragmentBuffer);
+	gatherShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
 	gatherShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
+	gatherShader->setAtomicCounterBuffer(0, "fragCounter", atomicCounterBuffer);
+	gatherShader->setUniform("linkedListSize", (int)fragmentBufferSize);
 
 	blitShader->setUniform("viewportW", width);
 	//blitShader->setUniform("viewportH", height); // Not needed
-	blitShader->setShaderStorageBuffer(0, "LinkedListFragmentNode", fragmentBuffer);
+	blitShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
 	blitShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
+	blitShader->setAtomicCounterBuffer(0, "fragCounter", atomicCounterBuffer);
+	//blitShader->setUniform("linkedListSize", (int)fragmentBufferSize);
 
 	clearShader->setUniform("viewportW", width);
 	//clearShader->setUniform("viewportH", height); // Not needed
-	clearShader->setShaderStorageBuffer(0, "LinkedListFragmentNode", fragmentBuffer);
+	clearShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
 	clearShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
+	clearShader->setAtomicCounterBuffer(0, "fragCounter", atomicCounterBuffer);
+	//clearShader->setUniform("linkedListSize", (int)fragmentBufferSize);
 }
 
 void OIT_LinkedList::gatherBegin()
@@ -110,6 +109,9 @@ void OIT_LinkedList::gatherBegin()
 	/*GLuint bufferID = static_cast<GeometryBufferGL*>(fragmentNodes.get())->getBuffer();
 	GLubyte val = 0;
 	glClearNamedBufferData(bufferID, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (const void*)&val);*/
+	GLuint bufferID = static_cast<GeometryBufferGL*>(atomicCounterBuffer.get())->getBuffer();
+	GLubyte val = 0;
+	glClearNamedBufferData(bufferID, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (const void*)&val);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	glEnable(GL_DEPTH_TEST);

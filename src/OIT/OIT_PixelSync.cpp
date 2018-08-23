@@ -27,7 +27,7 @@ const bool useStencilBuffer = true;
 
 OIT_PixelSync::OIT_PixelSync()
 {
-	create();
+    create();
 }
 
 void OIT_PixelSync::create()

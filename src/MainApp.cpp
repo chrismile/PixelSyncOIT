@@ -34,6 +34,8 @@
 #include "Utils/OBJLoader.hpp"
 #include "OIT/OIT_Dummy.hpp"
 #include "OIT/OIT_PixelSync.hpp"
+#include "OIT/OIT_LinkedList.hpp"
+#include "OIT/OIT_DepthComplexity.hpp"
 #include "MainApp.hpp"
 
 PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWriter(NULL)
@@ -48,7 +50,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 	float fovy = atanf(1.0f / 2.0f) * 2.0f;
 	camera->setFOVy(fovy);
-	camera->setPosition(glm::vec3(-0.5f, -0.5f, -20.0f));
+	//camera->setPosition(glm::vec3(-0.5f, -0.5f, -20.0f));
+	camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 
 	//Renderer->enableDepthTest();
 	//glEnable(GL_DEPTH_TEST);
@@ -56,11 +59,15 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	//glCullFace(GL_FRONT);
 
 
-	bool renderTransparent = true;
-	if (renderTransparent) {
+	int mode = 2;
+	if (mode == 0) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_PixelSync);
-	} else {
-		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
+	} else if (mode == 1) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_LinkedList);
+    } else if (mode == 2) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
+    } else {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
 	}
 	ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
 
@@ -81,10 +88,18 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 PixelSyncApp::~PixelSyncApp()
 {
+	timer.printTimeMS("gatherBegin");
+	timer.printTimeMS("renderScene");
+	timer.printTimeMS("gatherEnd");
+	timer.printTimeMS("renderToScreen");
+	timer.deleteAll();
+
 	if (videoWriter != NULL) {
 		delete videoWriter;
 	}
 }
+
+#define PROFILING_MODE
 
 void PixelSyncApp::render()
 {
@@ -100,12 +115,30 @@ void PixelSyncApp::render()
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	glBlendEquation(GL_FUNC_ADD);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#ifdef PROFILING_MODE
+	timer.start("gatherBegin");
+	oitRenderer->gatherBegin();
+	timer.end();
 
+	timer.start("renderScene");
+	renderScene();
+	timer.end();
+
+	timer.start("gatherEnd");
+	oitRenderer->gatherEnd();
+	timer.end();
+
+	timer.start("renderToScreen");
+	oitRenderer->renderToScreen();
+	timer.end();
+#else
 	oitRenderer->gatherBegin();
 	renderScene();
 	oitRenderer->gatherEnd();
 
 	oitRenderer->renderToScreen();
+#endif
+
 
 	// Wireframe mode
 	if (wireframe) {
@@ -172,7 +205,7 @@ void PixelSyncApp::update(float dt)
 		camera->rotate(rot);
 	}
 
-	const float MOVE_SPEED = 0.005f;
+	const float MOVE_SPEED = 0.001f;
 
 	if (Keyboard->isKeyDown(SDLK_PAGEDOWN)) {
 		camera->translate(glm::vec3(0.0f, dt*MOVE_SPEED, 0.0f));

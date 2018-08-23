@@ -59,46 +59,10 @@ void main()
 	frag.used = 1;
 	frag.next = -1;
 	
-	// Area of mutual exclusion for fragments mapping to same pixel
-	beginInvocationInterlockARB();
-	
 	//memoryBarrierBuffer();
-	
 	uint insertIndex = atomicCounterIncrement(fragCounter);
-	linkedList[insertIndex] = item;
-	frag.next = atomicExchange(header[int(pixelIndex)], insertIndex);
-	
-	// Use bubble sort to insert new fragment
-	/*for (int i = 0; i < nodesPerPixel; i++)
-	{
-		if (nodes[index].used == 0)
-		{
-			nodes[index] = frag;
-			frag.used = 0;
-			break;
-		}
-		else if (frag.depth < nodes[index].depth)
-		{
-			FragmentNode temp = frag;
-			frag = nodes[index];
-			nodes[index] = temp;
-		}
-		index++;
-	}*/
-	
-	// If no space was left to store the last fragment, simply discard it.
-	// TODO: Merge nodes with least visual impact.
-	/*if (frag.used == 1) {
-		int lastIndex = index-1;
-	
-		// Blend with last fragment
-		float alpha = nodes[lastIndex].color.a;
-		float alphaOut = alpha + frag.color.a * (1.0 - alpha);
-		nodes[lastIndex].color.rgb = (alpha * nodes[lastIndex].color.rgb + (1.0 - alpha) * frag.color.a * frag.color.rgb) / alphaOut;
-		//color.rgb = (alpha * nodes[lastIndex].color.rgb + (1.0 - alpha) * frag.color.a * frag.color.rgb);
-		nodes[lastIndex].color.a = alphaOut;
-	}*/
-		
-	endInvocationInterlockARB();
-	//fragColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    if (insertIndex < linkedListSize) {
+        frag.next = atomicExchange(startOffset[pixelIndex], insertIndex);
+        fragmentBuffer[insertIndex] = frag;
+    }
 }

@@ -21,7 +21,7 @@ void main()
 
 void main()
 {
-	int x = int(gl_FragCoord.x);
-	int y = int(gl_FragCoord.y);
-	numFragmentsBuffer[viewportW*y + x] = 0;
+	uint x = uint(gl_FragCoord.x);
+	uint y = uint(gl_FragCoord.y);
+	numFragmentsBuffer[addrGen(uvec2(x,y))] = 0;
 }

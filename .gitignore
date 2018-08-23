@@ -56,3 +56,7 @@ docs/latex/*
 
 /Debug/
 /build/*
+
+# CLion
+.idea/*
+cmake-build-*/

@@ -65,6 +65,7 @@ private:
 	sgl::ShaderProgramPtr clearShader;
 	sgl::GeometryBufferPtr fragmentBuffer;
 	sgl::GeometryBufferPtr startOffsetBuffer;
+	sgl::GeometryBufferPtr atomicCounterBuffer;
 
 	// Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
 	sgl::ShaderAttributesPtr blitRenderData;

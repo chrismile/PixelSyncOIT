@@ -32,6 +32,7 @@ void main()
 #version 430 core
 
 #include "PixelSyncHeader.glsl"
+#include "ColorPack.glsl"
 
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
@@ -42,11 +43,11 @@ in vec3 fragmentPositonLocal;
 
 void main()
 {
-	int x = int(gl_FragCoord.x);
-	int y = int(gl_FragCoord.y);
-	int pixelIndex = viewportW*y + x;
+	uint x = uint(gl_FragCoord.x);
+	uint y = uint(gl_FragCoord.y);
+	uint pixelIndex = addrGen(uvec2(x,y));
 	// Fragment index (in nodes buffer):
-	int index = nodesPerPixel*(viewportW*y + x);
+	uint index = nodesPerPixel*pixelIndex;
 
 	FragmentNode frag;
 	// Pseudo Phong shading
@@ -55,18 +56,18 @@ void main()
 	if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
-	frag.color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	frag.color = packColor(color);
 	frag.depth = gl_FragCoord.z;
-	frag.used = 1;
-	
+
 	// Area of mutual exclusion for fragments mapping to same pixel
 	beginInvocationInterlockARB();
 	
 	memoryBarrierBuffer();
 	
 	// Use insertion sort to insert new fragment
-	int numFragments = numFragmentsBuffer[pixelIndex];
-	for (int i = 0; i < numFragments; i++)
+	uint numFragments = numFragmentsBuffer[pixelIndex];
+	for (uint i = 0; i < numFragments; i++)
 	{
 		if (frag.depth < nodes[index].depth)
 		{
@@ -82,7 +83,6 @@ void main()
 		atomicAdd(numFragmentsBuffer[pixelIndex], 1);
 		//numFragmentsBuffer[pixelIndex]++;
 		nodes[index] = frag;
-		frag.used = 0;
 		//atomicCounterIncrement(numFragmentsBuffer[pixelIndex]);
 		//numFragmentsBuffer[pixelIndex]++; // Race conditon on Intel if used here. Why?
 	}

@@ -16,15 +16,9 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 struct FragmentNode
 {
 	// RGBA color of the node
-	vec4 color;
+	uint color;
 	// Depth value of the fragment (in view space)
 	float depth;
-	// Whether the node is empty or used
-	uint used;
-	
-	// Padding to 2*vec4
-	uint padding1;
-	uint padding2;
 };
 
 // Stores viewportW * viewportH * nodesPerPixel fragments.
@@ -38,7 +32,7 @@ layout (std430, binding = 0) buffer FragmentNodes
 // Size: viewportW * viewportH.
 layout (std430, binding = 1) buffer NumFragmentsBuffer
 {
-	int numFragmentsBuffer[];
+	uint numFragmentsBuffer[];
 };
 
 // Number of transparent pixels we can store per node
@@ -46,3 +40,23 @@ uniform int nodesPerPixel;
 
 uniform int viewportW;
 //uniform int viewportH; // Not needed
+
+
+#define ADDRESSING_TILED
+
+// Address 1D structured buffers as tiled to better data exploit locality
+// "OIT to Volumetric Shadow Mapping, 101 Uses for Raster Ordered Views using DirectX 12",
+// by Leigh Davies (Intel), March 05, 2015
+uint addrGen(uvec2 addr2D)
+{
+#ifdef ADDRESSING_TILED
+	uint surfaceWidth = viewportW >> 1U;
+	uvec2 tileAddr2D = addr2D >> 1U;
+	uint tileAddr1D = (tileAddr2D.x + surfaceWidth * tileAddr2D.y) << 2U;
+	uvec2 pixelAddr2D = addr2D & 0x1U;
+	uint pixelAddr1D = (pixelAddr2D.x << 1U) + pixelAddr2D.y;
+	return tileAddr1D | pixelAddr1D;
+#else
+	return addr2D.x + viewportW * addr2D.y;
+#endif
+}

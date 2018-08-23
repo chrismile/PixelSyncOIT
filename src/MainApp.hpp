@@ -13,10 +13,11 @@
 
 #include <Utils/AppLogic.hpp>
 #include <Utils/Random/Xorshift.hpp>
-#include <Graphics/Shader/ShaderAttributes.hpp>
 #include <Math/Geometry/Point2.hpp>
+#include <Graphics/Shader/ShaderAttributes.hpp>
 #include <Graphics/Mesh/Mesh.hpp>
 #include <Graphics/Scene/Camera.hpp>
+#include <Graphics/OpenGL/TimerGL.hpp>
 
 #include "Utils/VideoWriter.hpp"
 #include "OIT/OIT_Renderer.hpp"
@@ -45,6 +46,9 @@ private:
 	ShaderAttributesPtr transparentObject;
 	glm::mat4 rotation;
 	glm::mat4 scaling;
+
+	// Profiling events
+	sgl::TimerGL timer;
 
 	// Save video stream to file
 	bool recording;

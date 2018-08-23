@@ -44,7 +44,7 @@ layout (std430, binding = 1) buffer StartOffsetBuffer
 
 
 // Position of the first free fragment node in the linked list
-uniform atomic_uint fragCounter;
+layout(binding = 0, offset = 0) uniform atomic_uint fragCounter;
 
 // Number of fragments we can store in total
 uniform int linkedListSize;
