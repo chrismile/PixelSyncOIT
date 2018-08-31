@@ -7,13 +7,15 @@
 
 #include "OIT_Renderer.hpp"
 
+#define MLAB_NUM_FRAGMENTS 8
+
 // A fragment node stores rendering information about one specific fragment
 struct MLABFragmentNode_compressed
 {
-    // RGB color (3 bytes), translucency (1 byte)
-    uint premulColor;
     // Linear depth, i.e. distance to viewer
-    float depth;
+    float depth[MLAB_NUM_FRAGMENTS];
+    // RGB color (3 bytes), translucency (1 byte)
+    uint premulColor[MLAB_NUM_FRAGMENTS];
 };
 
 /**
@@ -53,6 +55,8 @@ private:
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
     sgl::ShaderAttributesPtr clearRenderData;
+
+    bool clearBitSet;
 };
 
 #endif //PIXELSYNCOIT_OIT_MLAB_HPP

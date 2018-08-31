@@ -16,26 +16,53 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 uniform int viewportW;
 
-#define MAX_NUM_NODES 8
+#define MAX_NUM_NODES 4
 
 // Distance of infinitely far away fragments (used for initialization)
 #define DISTANCE_INFINITE (1E30)
 
+// Data structure for 4 nodes, packed in vectors for faster access
+#if MAX_NUM_NODES == 1
 struct MLABFragmentNode_compressed
 {
-	// RGB color (3 bytes), translucency (1 byte)
-	uint premulColor;
 	// Linear depth, i.e. distance to viewer
-	float depth;
+	float depth[1];
+	// RGB color (3 bytes), translucency (1 byte)
+	uint premulColor[1];
 };
+#elif MAX_NUM_NODES == 2
+struct MLABFragmentNode_compressed
+{
+	// Linear depth, i.e. distance to viewer
+	vec2 depth;
+	// RGB color (3 bytes), translucency (1 byte)
+	uvec2 premulColor;
+};
+#elif MAX_NUM_NODES == 4
+struct MLABFragmentNode_compressed
+{
+	// Linear depth, i.e. distance to viewer
+	vec4 depth;
+	// RGB color (3 bytes), translucency (1 byte)
+	uvec4 premulColor;
+};
+#elif MAX_NUM_NODES == 8
+struct MLABFragmentNode_compressed
+{
+	// Linear depth, i.e. distance to viewer
+	vec4 depth[2];
+	// RGB color (3 bytes), translucency (1 byte)
+	uvec4 premulColor[2];
+};
+#else
+#endif
 
 struct MLABFragmentNode
 {
-	// RGB color, premul. alpha
-	vec4 premulColor;
-	//float translucency; // Stored in alpha channel
 	// Linear depth, i.e. distance to viewer
 	float depth;
+	// RGB color (3 bytes), translucency (1 byte)
+	uint premulColor;
 };
 
 // Stores viewportW * viewportH * nodesPerPixel fragments.
@@ -45,30 +72,64 @@ layout (std430, binding = 0) buffer FragmentNodes
 	MLABFragmentNode_compressed nodes[];
 };
 
-// States how many fragment nodes are stored in the nodes buffer for each pixel.
-// Size: viewportW * viewportH.
-layout (std430, binding = 1) buffer NumFragmentsBuffer
-{
-	uint numFragmentsBuffer[];
-};
 
 
-void unpackFragmentNode(in MLABFragmentNode_compressed inputNode, out MLABFragmentNode outputNode)
-{
-    outputNode.premulColor = unpackColorRGBA(inputNode.premulColor);
-    outputNode.depth = inputNode.depth;
+// Load the fragments into "nodeArray"
+void loadFragmentNodes(in uint pixelIndex, out MLABFragmentNode nodeArray[MAX_NUM_NODES+1]) {
+    MLABFragmentNode_compressed fragmentNode = nodes[pixelIndex];
+
+#if MAX_NUM_NODES == 8
+    // Should be easier to unroll by compiler than adding an outer loop for first/second array
+    for(int i = 0; i < 4; i++) {
+        MLABFragmentNode node = { fragmentNode.depth[0][i], fragmentNode.premulColor[0][i] };
+        nodeArray[0 + i] = node;
+    }
+    for(int i = 0; i < 4; i++) {
+        MLABFragmentNode node = { fragmentNode.depth[1][i], fragmentNode.premulColor[1][i] };
+        nodeArray[4 + i] = node;
+    }
+#else
+    for (int i = 0; i < MAX_NUM_NODES; i++) {
+        MLABFragmentNode node = { fragmentNode.depth[i], fragmentNode.premulColor[i] };
+        nodeArray[i] = node;
+    }
+#endif
+
+    // For merging to see if last node is unused
+    nodeArray[MAX_NUM_NODES].depth = DISTANCE_INFINITE;
 }
 
-void packFragmentNode(in MLABFragmentNode inputNode, out MLABFragmentNode_compressed outputNode)
-{
-    outputNode.premulColor = packColorRGBA(inputNode.premulColor);
-    outputNode.depth = inputNode.depth;
+// Store the fragments from "nodeArray" into VRAM
+void storeFragmentNodes(in uint pixelIndex, in MLABFragmentNode nodeArray[MAX_NUM_NODES+1]) {
+    MLABFragmentNode_compressed fragmentNode;
+
+#if MAX_NUM_NODES == 8
+    for(int i = 0; i < 4; i++) {
+        fragmentNode.depth[0][i] =  nodeArray[0 + i].depth;
+        fragmentNode.premulColor[0][i] = nodeArray[0 + i].premulColor;
+    }
+    for(int i = 0; i < 4; i++) {
+        fragmentNode.depth[1][i] =  nodeArray[4 + i].depth;
+        fragmentNode.premulColor[1][i] = nodeArray[4 + i].premulColor;
+    }
+#else
+    for (int i = 0; i < MAX_NUM_NODES; i++) {
+        fragmentNode.depth[i] = nodeArray[i].depth;
+        fragmentNode.premulColor[i] = nodeArray[i].premulColor;
+    }
+#endif
+
+    nodes[pixelIndex] = fragmentNode;
 }
 
+// Reset the data for the passed fragment position
 void clearPixel(uint pixelIndex)
 {
+    // TODO: Compressed?
+    MLABFragmentNode nodeArray[MAX_NUM_NODES+1];
     for (uint i = 0; i < MAX_NUM_NODES; i++) {
-        nodes[pixelIndex+i].depth = DISTANCE_INFINITE;
-        nodes[pixelIndex+i].premulColor = 0x000000FFu; // 100% translucency, i.e. 0% opacity
+        nodeArray[i].depth = DISTANCE_INFINITE;
+        nodeArray[i].premulColor = 0xFF000000u; // 100% translucency, i.e. 0% opacity
     }
+    storeFragmentNodes(pixelIndex, nodeArray);
 }

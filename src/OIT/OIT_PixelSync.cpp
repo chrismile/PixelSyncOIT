@@ -40,7 +40,7 @@ void OIT_PixelSync::create()
 	gatherShader = ShaderManager->getShaderProgram({"PixelSyncGather.Vertex", "PixelSyncGather.Fragment"});
 	gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
 
-	blitShader = ShaderManager->getShaderProgram({"PixelSyncRender.Vertex", "PixelSyncRender.Fragment"});
+	blitShader = ShaderManager->getShaderProgram({"PixelSyncResolve.Vertex", "PixelSyncResolve.Fragment"});
 	blitShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	clearShader = ShaderManager->getShaderProgram({"PixelSyncClear.Vertex", "PixelSyncClear.Fragment"});

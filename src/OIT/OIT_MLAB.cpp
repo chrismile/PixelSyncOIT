@@ -17,13 +17,14 @@
 using namespace sgl;
 
 // Number of transparent pixels we can store per node
-const int nodesPerPixel = 8;
+const int nodesPerPixel = 1;
 
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
 
 OIT_MLAB::OIT_MLAB()
 {
+    clearBitSet = true;
     create();
 }
 
@@ -35,13 +36,8 @@ void OIT_MLAB::create()
     }
 
     gatherShader = ShaderManager->getShaderProgram({"MLABGather.Vertex", "MLABGather.Fragment"});
-    gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
-
-    blitShader = ShaderManager->getShaderProgram({"MLABRender.Vertex", "MLABRender.Fragment"});
-    blitShader->setUniform("nodesPerPixel", nodesPerPixel);
-
+    blitShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
-    //clearShader->setUniform("nodesPerPixel", nodesPerPixel);
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
     blitRenderData = ShaderManager->createShaderAttributes(blitShader);
@@ -79,17 +75,17 @@ void OIT_MLAB::resolutionChanged()
     gatherShader->setUniform("viewportW", width);
     //gatherShader->setUniform("viewportH", height); // Not needed
     gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-    gatherShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
     blitShader->setUniform("viewportW", width);
     //blitShader->setUniform("viewportH", height); // Not needed
     blitShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-    blitShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
     clearShader->setUniform("viewportW", width);
     //clearShader->setUniform("viewportH", height); // Not needed
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-    clearShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
+
+    // Buffer has to be cleared again
+    clearBitSet = true;
 }
 
 void OIT_MLAB::gatherBegin()
@@ -105,7 +101,10 @@ void OIT_MLAB::gatherBegin()
     Renderer->setViewMatrix(matrixIdentity());
     Renderer->setModelMatrix(matrixIdentity());
     //glEnable(GL_RASTERIZER_DISCARD);
-    Renderer->render(clearRenderData);
+    if (clearBitSet) {
+        Renderer->render(clearRenderData);
+        clearBitSet = false;
+    }
     /*GLuint bufferID = static_cast<GeometryBufferGL*>(fragmentNodes.get())->getBuffer();
     GLubyte val = 0;
     glClearNamedBufferData(bufferID, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (const void*)&val);*/

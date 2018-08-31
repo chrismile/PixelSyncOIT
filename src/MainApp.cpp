@@ -76,8 +76,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	resolutionChanged(EventPtr());
 
-    std::string modelFilenamePure = "Data/Models/Ship_04";
-    //std::string modelFilenamePure = "Data/Models/Monkey";
+	std::string modelFilenamePure = "Data/Models/Ship_04";
+	//std::string modelFilenamePure = "Data/Models/Monkey";
 	//std::string modelFilenamePure = "Data/Models/dragon";
 	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
 	std::string modelFilenameObj = modelFilenamePure + ".obj";
@@ -96,6 +96,7 @@ PixelSyncApp::~PixelSyncApp()
 	timer.printTimeMS("renderScene");
 	timer.printTimeMS("gatherEnd");
 	timer.printTimeMS("renderToScreen");
+	timer.printTotalAvgTime();
 	timer.deleteAll();
 
 	if (videoWriter != NULL) {

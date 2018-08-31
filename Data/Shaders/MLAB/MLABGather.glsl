@@ -38,16 +38,13 @@ void main()
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
-//in vec3 fragmentPosView;
 
-//out vec4 fragColor;
-
-// Adapted version of Multi-Layer Alpha Blending [Salvi and Vaidyanathan 2014]
-void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES],
-        inout uint numFragments)
+// Adapted version of "Multi-Layer Alpha Blending" [Salvi and Vaidyanathan 2014]
+void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
 {
-	MLABFragmentNode temp;
-	for (int i = 0; i < int(numFragments)-1; i++) {
+	MLABFragmentNode temp, merge;
+	// Use bubble sort to insert new fragment node (single pass)
+	for (int i = 0; i < MAX_NUM_NODES+1; i++) {
 		if (frag.depth <= list[i].depth) {
 			temp = list[i];
 			list[i] = frag;
@@ -55,18 +52,17 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
 		}
 	}
 
-	MLABFragmentNode merge;
-    if (numFragments == MAX_NUM_NODES-1u) {
-    	// Merge last two nodes
-        merge.premulColor.rgb = list[MAX_NUM_NODES-1].premulColor.rgb
-                + frag.premulColor.rgb * list[MAX_NUM_NODES-1].premulColor.a;
-        merge.premulColor.a = list[MAX_NUM_NODES-1].premulColor.a * frag.premulColor.a;
+    // Merge last two nodes if necessary
+    if (list[MAX_NUM_NODES].depth != DISTANCE_INFINITE) {
+        vec4 src = unpackColorRGBA(list[MAX_NUM_NODES-1].premulColor);
+        vec4 dst = unpackColorRGBA(list[MAX_NUM_NODES].premulColor);
+        vec4 mergedColor;
+        mergedColor.rgb = src.rgb + dst.rgb * src.a;
+        mergedColor.a = src.a * dst.a; // Transmittance
+        merge.premulColor = packColorRGBA(mergedColor);
         merge.depth = list[MAX_NUM_NODES-1].depth;
-    } else {
-        merge = frag;
-        numFragments++;
-    }
-	list[numFragments-1u] = merge;
+        list[MAX_NUM_NODES-1] = merge;
+	}
 }
 
 
@@ -77,7 +73,6 @@ void main()
 	uint pixelIndex = addrGen(uvec2(x,y));
 	uint offset = MAX_NUM_NODES*pixelIndex;
 
-	MLABFragmentNode frag;
 	// Pseudo Phong shading
 	vec4 bandColor = fragmentColor;
 	float stripWidth = 2.0;
@@ -85,30 +80,25 @@ void main()
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
 	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
-	frag.premulColor = vec4(color.rgb * color.a, color.a);
+
+	MLABFragmentNode frag;
 	frag.depth = gl_FragCoord.z;
+	frag.premulColor = packColorRGBA(vec4(color.rgb * color.a, 1.0 - color.a));
 
 
     // Begin of actual algorithm code
-	MLABFragmentNode localFragmentList[MAX_NUM_NODES];
+	MLABFragmentNode nodeArray[MAX_NUM_NODES+1];
 
 	beginInvocationInterlockARB();
 
-    uint numFragments = numFragmentsBuffer[pixelIndex];
-
 	// Read data from SSBO
-	for (int i = 0; i < numFragments; i++) {
-		 unpackFragmentNode(nodes[i+offset], localFragmentList[i]);
-	}
+	loadFragmentNodes(pixelIndex, nodeArray);
 
 	// Insert node to list (or merge last two nodes)
-	multiLayerAlphaBlending(frag, localFragmentList, numFragments);
-	numFragmentsBuffer[pixelIndex] = numFragments;
+	multiLayerAlphaBlending(frag, nodeArray);
 
 	// Write back data to SSBO
-	for (int i = 0; i < numFragments; i++) {
-		packFragmentNode(localFragmentList[i], nodes[i+offset]);
-	}
+	storeFragmentNodes(pixelIndex, nodeArray);
 
 	endInvocationInterlockARB();
 }
