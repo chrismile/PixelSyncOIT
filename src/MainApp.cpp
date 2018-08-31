@@ -35,6 +35,7 @@
 #include "OIT/OIT_Dummy.hpp"
 #include "OIT/OIT_PixelSync.hpp"
 #include "OIT/OIT_LinkedList.hpp"
+#include "OIT/OIT_MLAB.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "MainApp.hpp"
 
@@ -65,6 +66,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	} else if (mode == 1) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_LinkedList);
     } else if (mode == 2) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLAB);
+    } else if (mode == 3) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
     } else {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
@@ -73,7 +76,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	resolutionChanged(EventPtr());
 
-	std::string modelFilenamePure = "Data/Models/Monkey";
+    std::string modelFilenamePure = "Data/Models/Ship_04";
+    //std::string modelFilenamePure = "Data/Models/Monkey";
 	//std::string modelFilenamePure = "Data/Models/dragon";
 	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
 	std::string modelFilenameObj = modelFilenamePure + ".obj";

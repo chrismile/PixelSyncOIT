@@ -21,6 +21,7 @@
 #include <Graphics/Renderer.hpp>
 
 #include "MeshSerializer.hpp"
+#include "KDTree.hpp"
 
 using namespace std;
 using namespace sgl;
@@ -169,11 +170,27 @@ void convertObjMeshToBinary(
 		for (size_t i = 0; i < vertexIndices.size(); i++) {
 			indices.push_back(vertexIndices.at(i)-1);
 		}
+
+		// For finding all triangles with a specific index. Maps vertex index -> first triangle index.
+		std::multimap<size_t, size_t> indexMap;
+		for (size_t j = 0; j < indices.size(); j++) {
+			indexMap.insert(make_pair(indices.at(j), (j%3)*3));
+		}
+
 		vertices = tempVertices;
 		for (size_t i = 0; i < vertices.size(); i++) {
 			glm::vec3 normal(0.0f, 0.0f, 0.0f);
 			int numTrianglesSharedBy = 0;
-			for (size_t j = 0; j < indices.size(); j += 3) {
+			auto triangleRange = indexMap.equal_range(i);
+			for (auto it = triangleRange.first; it != triangleRange.second; it++) {
+				size_t j = it->second;
+				size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+				glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+				faceNormal = glm::normalize(faceNormal);
+				normal += faceNormal;
+				numTrianglesSharedBy++;
+			}
+			/*for (size_t j = 0; j < indices.size(); j += 3) {
 				// Does this triangle contain vertex #i?
 				if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
 					size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
@@ -182,7 +199,7 @@ void convertObjMeshToBinary(
 					normal += faceNormal;
 					numTrianglesSharedBy++;
 				}
-			}
+			}*/
 
 			if (numTrianglesSharedBy == 0) {
 				Logfile::get()->writeError("Error in parseObjMesh: numTrianglesSharedBy == 0");

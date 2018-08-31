@@ -16,16 +16,11 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 struct LinkedListFragmentNode
 {
 	// RGBA color of the node
-	vec4 color;
+	uint color;
 	// Depth value of the fragment (in view space)
 	float depth;
-	// Whether the node is empty or used
-	uint used;
 	// The index of the next node in "nodes" array
 	uint next;
-
-	// Padding to 2*vec4
-	uint padding;
 };
 
 // fragment-and-link buffer and a start-offset buffer

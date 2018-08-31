@@ -32,6 +32,7 @@ void main()
 #version 430 core
 
 #include "LinkedListHeader.glsl"
+#include "ColorPack.glsl"
 
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
@@ -53,10 +54,9 @@ void main()
 	if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
-	frag.color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
-	//frag.depth = fragmentPosView.z;
+	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	frag.color = packColorRGBA(color);
 	frag.depth = gl_FragCoord.z;
-	frag.used = 1;
 	frag.next = -1;
 	
 	//memoryBarrierBuffer();

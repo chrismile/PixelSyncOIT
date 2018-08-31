@@ -18,6 +18,7 @@ void main()
 #version 430 core
 
 #include "LinkedListHeader.glsl"
+#include "ColorPack.glsl"
 
 out vec4 fragColor;
 
@@ -74,7 +75,7 @@ void main()
 
 		// FTB
 		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = fragment.color;
+		vec4 colorSrc = unpackColorRGBA(fragment.color);
 		float alphaSrc = colorSrc.a;
 		color.rgb = color.rgb + (1.0 - color.a) * alphaSrc * colorSrc.rgb;
 		color.a = color.a + (1.0 - color.a) * alphaSrc;

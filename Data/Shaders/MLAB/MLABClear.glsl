@@ -17,7 +17,8 @@ void main()
 
 #version 430 core
 
-#include "PixelSyncHeader.glsl"
+#include "ColorPack.glsl"
+#include "MLABHeader.glsl"
 #include "TiledAdress.glsl"
 
 void main()

@@ -74,21 +74,21 @@ void OIT_LinkedList::resolutionChanged()
 	//gatherShader->setUniform("viewportH", height); // Not needed
 	gatherShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
 	gatherShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
-	gatherShader->setAtomicCounterBuffer(0, "fragCounter", atomicCounterBuffer);
+	gatherShader->setAtomicCounterBuffer(0, /*"fragCounter",*/ atomicCounterBuffer);
 	gatherShader->setUniform("linkedListSize", (int)fragmentBufferSize);
 
 	blitShader->setUniform("viewportW", width);
 	//blitShader->setUniform("viewportH", height); // Not needed
 	blitShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
 	blitShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
-	blitShader->setAtomicCounterBuffer(0, "fragCounter", atomicCounterBuffer);
+	//blitShader->setAtomicCounterBuffer(0, /*"fragCounter",*/ atomicCounterBuffer);
 	//blitShader->setUniform("linkedListSize", (int)fragmentBufferSize);
 
 	clearShader->setUniform("viewportW", width);
 	//clearShader->setUniform("viewportH", height); // Not needed
-	clearShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
+	//clearShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
 	clearShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
-	clearShader->setAtomicCounterBuffer(0, "fragCounter", atomicCounterBuffer);
+	//clearShader->setAtomicCounterBuffer(0, /*"fragCounter",*/ atomicCounterBuffer);
 	//clearShader->setUniform("linkedListSize", (int)fragmentBufferSize);
 }
 

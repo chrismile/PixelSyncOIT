@@ -16,16 +16,11 @@
 struct LinkedListFragmentNode
 {
 	// RGBA color of the node
-	glm::vec4 color;
+	uint32_t color;
 	// Depth value of the fragment (in view space)
 	float depth;
-	// Whether the node is empty or used
-	uint32_t used;
 	// The index of the next node in "nodes" array
 	uint32_t next;
-
-	// Padding to 2*vec4
-	uint32_t padding;
 };
 
 /**

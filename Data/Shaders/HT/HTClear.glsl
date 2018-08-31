@@ -17,12 +17,21 @@ void main()
 
 #version 430 core
 
-#include "PixelSyncHeader.glsl"
+#include "ColorPack.glsl"
+#include "HTHeader.glsl"
 #include "TiledAdress.glsl"
 
 void main()
 {
 	uint x = uint(gl_FragCoord.x);
 	uint y = uint(gl_FragCoord.y);
-	numFragmentsBuffer[addrGen(uvec2(x,y))] = 0;
+	uint pixelIndex = addrGen(uvec2(x,y));
+
+	numFragmentsBuffer[pixelIndex] = 0;
+
+    // TODO: Clear mask?
+	HTFragmentTail_compressed tail;
+	tail.accumColor = 0u;
+	tail.accumAlphaAndCount = 0u;
+	nodes[pixelIndex].tail = tail;
 }

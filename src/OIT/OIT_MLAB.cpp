@@ -1,9 +1,6 @@
-/*
- * OIT_DepthComplexity.cpp
- *
- *  Created on: 23.08.2018
- *      Author: Christoph Neuhauser
- */
+//
+// Created by christoph on 29.08.18.
+//
 
 #include <cstdlib>
 #include <cstring>
@@ -14,9 +11,8 @@
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
-#include <Utils/Timer.hpp>
 
-#include "OIT_DepthComplexity.hpp"
+#include "OIT_MLAB.hpp"
 
 using namespace sgl;
 
@@ -26,25 +22,26 @@ const int nodesPerPixel = 8;
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
 
-OIT_DepthComplexity::OIT_DepthComplexity()
+OIT_MLAB::OIT_MLAB()
 {
     create();
 }
 
-void OIT_DepthComplexity::create()
+void OIT_MLAB::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
         Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
-    gatherShader = ShaderManager->getShaderProgram({"DepthComplexityGather.Vertex", "DepthComplexityGather.Fragment"});
+    gatherShader = ShaderManager->getShaderProgram({"MLABGather.Vertex", "MLABGather.Fragment"});
+    gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
 
-    blitShader = ShaderManager->getShaderProgram({"DepthComplexityRender.Vertex", "DepthComplexityRender.Fragment"});
-    blitShader->setUniform("color", Color(0, 255, 255));
-    blitShader->setUniform("numFragmentsMaxColor", 8u);
+    blitShader = ShaderManager->getShaderProgram({"MLABRender.Vertex", "MLABRender.Fragment"});
+    blitShader->setUniform("nodesPerPixel", nodesPerPixel);
 
-    clearShader = ShaderManager->getShaderProgram({"DepthComplexityClear.Vertex", "DepthComplexityClear.Fragment"});
+    clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
+    //clearShader->setUniform("nodesPerPixel", nodesPerPixel);
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
     blitRenderData = ShaderManager->createShaderAttributes(blitShader);
@@ -58,34 +55,44 @@ void OIT_DepthComplexity::create()
     clearRenderData = ShaderManager->createShaderAttributes(clearShader);
     geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(), (void*)&fullscreenQuad.front());
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
-
-    //Renderer->errorCheck();
 }
 
-void OIT_DepthComplexity::resolutionChanged()
+void OIT_MLAB::resolutionChanged()
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
 
-    size_t numFragmentsBufferSizeBytes = sizeof(uint32_t) * width * height;
+    size_t bufferSize = nodesPerPixel * width * height;
+    size_t bufferSizeBytes = sizeof(MLABFragmentNode_compressed) * bufferSize;
+    void *data = (void*)malloc(bufferSizeBytes);
+    memset(data, 0, bufferSizeBytes);
+
+    fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
+    fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, data, SHADER_STORAGE_BUFFER);
+    free(data);
+
+    size_t numFragmentsBufferSizeBytes = sizeof(int32_t) * width * height;
     numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
     gatherShader->setUniform("viewportW", width);
     //gatherShader->setUniform("viewportH", height); // Not needed
+    gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
     gatherShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
     blitShader->setUniform("viewportW", width);
     //blitShader->setUniform("viewportH", height); // Not needed
+    blitShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
     blitShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
     clearShader->setUniform("viewportW", width);
     //clearShader->setUniform("viewportH", height); // Not needed
+    clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
     clearShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 }
 
-void OIT_DepthComplexity::gatherBegin()
+void OIT_MLAB::gatherBegin()
 {
     //glClearDepth(0.0);
     //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -116,20 +123,12 @@ void OIT_DepthComplexity::gatherBegin()
     }
 }
 
-void OIT_DepthComplexity::gatherEnd()
+void OIT_MLAB::gatherEnd()
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-    // Print statistics if enough time has passed
-    static float counterPrintFrags = 0.0f;
-    counterPrintFrags += Timer->getElapsed();
-    if (counterPrintFrags > 1.0f) {
-        computeStatistics();
-        counterPrintFrags = 0.0f;
-    }
 }
 
-void OIT_DepthComplexity::renderToScreen()
+void OIT_MLAB::renderToScreen()
 {
     Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());
@@ -149,30 +148,4 @@ void OIT_DepthComplexity::renderToScreen()
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     glDepthMask(GL_TRUE);
-}
-
-void OIT_DepthComplexity::computeStatistics()
-{
-    Window *window = AppSettings::get()->getMainWindow();
-    int width = window->getWidth();
-    int height = window->getHeight();
-    int size = width * height;
-
-    uint32_t *data = (uint32_t*)numFragmentsBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
-
-    int totalNumFragments = 0;
-    int usedLocations = 0;
-    #pragma omp parallel for reduction(sum:totalNumFragments, sum:usedLocations) schedule(static)
-    for (int i = 0; i < size; i++) {
-        totalNumFragments += data[i];
-        if (data[i] > 0) {
-            usedLocations++;
-        }
-    }
-
-    numFragmentsBuffer->unmapBuffer();
-
-
-    std::cout << "Depth complexity: Used fragments: " << ((float) totalNumFragments / usedLocations)
-              << ", all fragments: " << ((float) totalNumFragments / size) << std::endl;
 }

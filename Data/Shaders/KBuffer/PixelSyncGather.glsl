@@ -33,6 +33,7 @@ void main()
 
 #include "PixelSyncHeader.glsl"
 #include "ColorPack.glsl"
+#include "TiledAdress.glsl"
 
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
@@ -47,7 +48,7 @@ void main()
 	uint y = uint(gl_FragCoord.y);
 	uint pixelIndex = addrGen(uvec2(x,y));
 	// Fragment index (in nodes buffer):
-	uint index = nodesPerPixel*pixelIndex;
+	uint index = MAX_NUM_NODES*pixelIndex;
 
 	FragmentNode frag;
 	// Pseudo Phong shading
@@ -57,14 +58,14 @@ void main()
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
 	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
-	frag.color = packColor(color);
+	frag.color = packColorRGBA(color);
 	frag.depth = gl_FragCoord.z;
 
 	// Area of mutual exclusion for fragments mapping to same pixel
 	beginInvocationInterlockARB();
-	
+
 	memoryBarrierBuffer();
-	
+
 	// Use insertion sort to insert new fragment
 	uint numFragments = numFragmentsBuffer[pixelIndex];
 	for (uint i = 0; i < numFragments; i++)
@@ -79,14 +80,14 @@ void main()
 	}
 	
 	// Store the fragment at the end of the list if capacity is left
-	if (numFragments < nodesPerPixel) {
+	if (numFragments < MAX_NUM_NODES) {
 		atomicAdd(numFragmentsBuffer[pixelIndex], 1);
 		//numFragmentsBuffer[pixelIndex]++;
 		nodes[index] = frag;
 		//atomicCounterIncrement(numFragmentsBuffer[pixelIndex]);
 		//numFragmentsBuffer[pixelIndex]++; // Race conditon on Intel if used here. Why?
 	}
-	
+
 	memoryBarrierBuffer();
 	
 	// If no space was left to store the last fragment, simply discard it.
