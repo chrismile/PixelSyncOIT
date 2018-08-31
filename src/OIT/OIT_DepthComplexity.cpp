@@ -162,7 +162,7 @@ void OIT_DepthComplexity::computeStatistics()
 
     int totalNumFragments = 0;
     int usedLocations = 0;
-    #pragma omp parallel for reduction(sum:totalNumFragments, sum:usedLocations) schedule(static)
+    #pragma omp parallel for reduction(+:totalNumFragments,usedLocations) schedule(static)
     for (int i = 0; i < size; i++) {
         totalNumFragments += data[i];
         if (data[i] > 0) {

@@ -40,6 +40,7 @@ std::shared_ptr<KDNode> KDTree::_build(std::vector<Point*> points, int depth)
     node->location = points.at(medianIndex);
     node->left = _build(leftPoints, depth + 1);
     node->right = _build(rightPoints, depth + 1);
+    return node;
 }
 
 
@@ -56,14 +57,14 @@ void KDTree::_findPointsInRectangle(const Rectangle &rect, std::vector<Point*> &
         points.push_back(node->location);
     }
 
-    if (node->axis == 0 && rect.min.x <= node->location->position.x
-        || node->axis == 1 && rect.min.y <= node->location->position.y
-        || node->axis == 2 && rect.min.z <= node->location->position.z) {
+    if ((node->axis == 0 && rect.min.x <= node->location->position.x)
+        || (node->axis == 1 && rect.min.y <= node->location->position.y)
+        || (node->axis == 2 && rect.min.z <= node->location->position.z)) {
         _findPointsInRectangle(rect, points, node->left);
     }
-    if (node->axis == 0 && rect.max.x >= node->location->position.x
-        || node->axis == 1 && rect.max.y >= node->location->position.y
-        || node->axis == 2 && rect.max.z >= node->location->position.z) {
+    if ((node->axis == 0 && rect.max.x >= node->location->position.x)
+        || (node->axis == 1 && rect.max.y >= node->location->position.y)
+        || (node->axis == 2 && rect.max.z >= node->location->position.z)) {
         _findPointsInRectangle(rect, points, node->right);
     }
 };
