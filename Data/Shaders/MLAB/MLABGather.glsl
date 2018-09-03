@@ -41,6 +41,12 @@ in vec3 fragmentPositonLocal;
 
 out vec4 fragColor;
 
+uniform vec3 ambientColor;
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float specularExponent;
+uniform float opacity;
+
 // Adapted version of "Multi-Layer Alpha Blending" [Salvi and Vaidyanathan 2014]
 void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
 {
@@ -68,6 +74,8 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
 }
 
 
+uniform int bandedColorShading = 1;
+
 void main()
 {
 	uint x = uint(gl_FragCoord.x);
@@ -81,6 +89,14 @@ void main()
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
 	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+
+	if (bandedColorShading == 0) {
+	    vec3 lightDirection = vec3(1.0,0.0,0.0);
+	    vec3 ambientShading = ambientColor * 0.1;
+	    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
+	    vec3 specularShading = specularColor * specularExponent * 0.00001; // In order to not get an unused warning
+	    color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
+	}
 
 	MLABFragmentNode frag;
 	frag.depth = gl_FragCoord.z;

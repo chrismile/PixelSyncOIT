@@ -20,6 +20,7 @@
 #include <Graphics/OpenGL/TimerGL.hpp>
 
 #include "Utils/VideoWriter.hpp"
+#include "Utils/MeshSerializer.hpp"
 #include "OIT/OIT_Renderer.hpp"
 
 using namespace std;
@@ -43,7 +44,7 @@ private:
 
 	// Objects in the scene
 	boost::shared_ptr<OIT_Renderer> oitRenderer;
-	ShaderAttributesPtr transparentObject;
+	MeshRenderer transparentObject;
 	glm::mat4 rotation;
 	glm::mat4 scaling;
 

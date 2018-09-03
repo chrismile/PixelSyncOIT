@@ -80,8 +80,9 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	resolutionChanged(EventPtr());
 
-	std::string modelFilenamePure = "Data/Models/Ship_04";
-	//std::string modelFilenamePure = "Data/Models/Monkey";
+    std::string modelFilenamePure = "Data/Models/Ship_04";
+    //std::string modelFilenamePure = "Data/Models/Monkey";
+    //std::string modelFilenamePure = "Data/Models/Box";
 	//std::string modelFilenamePure = "Data/Models/dragon";
 	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
 	std::string modelFilenameObj = modelFilenamePure + ".obj";
@@ -89,9 +90,12 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 		convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
 	}
 	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
-	transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 120));
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
+
+	if (modelFilenamePure == "Data/Models/Ship_04") {
+		transparencyShader->setUniform("bandedColorShading", 0);
+	}
 }
 
 PixelSyncApp::~PixelSyncApp()
@@ -166,19 +170,24 @@ void PixelSyncApp::render()
 
 void PixelSyncApp::renderScene()
 {
+    ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
+
 	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
 	Renderer->setViewMatrix(camera->getViewMatrix());
 	//Renderer->setModelMatrix(matrixIdentity());
 
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	Renderer->setModelMatrix(rotation * scaling);
-	//transparentObject->getShaderProgram()->setUniform("color", Color(255, 255, 0, 120));
-	transparentObject->getShaderProgram()->setUniform("color", Color(165, 220, 84, 120));
-	Renderer->render(transparentObject);
+    //transparencyShader->setUniform("diffuseColor", glm::vec3(165, 220, 84, 120)/255.0f/4.0f);
+    //transparencyShader->setUniform("ambientColor", Color(0.75f, 0.75f, 0.75f));
+    //transparencyShader->setUniform("opacity", 120.0f/255.0f); // TODO for monkey mesh
+    transparencyShader->setUniform("color", Color(165, 220, 84, 120)); // TODO for monkey mesh
+	//Renderer->render(transparentObject);
+    transparentObject.render();
 
 	Renderer->setModelMatrix(matrixTranslation(glm::vec3(0.5f,0.0f,-4.0f)));
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	transparentObject->getShaderProgram()->setUniform("color", Color(0, 255, 128, 120));
+	//transparentObject->getShaderProgram()->setUniform("color", Color(0, 255, 128, 120));
 	//Renderer->render(transparentObject);
 }
 

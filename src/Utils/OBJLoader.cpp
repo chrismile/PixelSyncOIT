@@ -15,6 +15,7 @@
 #include <glm/glm.hpp>
 
 #include <Utils/File/Logfile.hpp>
+#include <Utils/File/FileUtils.hpp>
 #include <Utils/Convert.hpp>
 #include <Graphics/Shader/ShaderManager.hpp>
 #include <Graphics/Shader/ShaderAttributes.hpp>
@@ -66,6 +67,97 @@ void triangleFanToTriangles(vector<uint32_t> trifan, vector<uint32_t> &triangles
 	}
 }
 
+struct TempSubmesh
+{
+	TempSubmesh() : smooth(false) {}
+
+	ObjMaterial material;
+	bool smooth;
+
+	std::vector<glm::vec3> tempVertices;
+	std::vector<glm::vec2> tempTexcoords;
+	std::vector<glm::vec3> tempNormals;
+	std::vector<uint32_t> vertexIndices;
+	std::vector<uint32_t> tecoordIndices;
+	std::vector<uint32_t> normalIndices;
+};
+
+void processTempSubmesh(ObjMesh &mesh, TempSubmesh &tempSubmesh);
+
+void addMaterialsFromFile(const std::string &filename, const std::string &objFilename,
+        std::map<std::string, ObjMaterial> &materials)
+{
+    std::string absFilename = filename;
+    if (!FileUtils::get()->exists(absFilename)) {
+        absFilename = FileUtils::get()->getPathToFile(objFilename) + FileUtils::get()->getPureFilename(absFilename);
+    }
+
+    std::ifstream file(absFilename.c_str());
+
+    if (!file.is_open()) {
+        Logfile::get()->writeError(string() + "Error in parseObjMesh: File \"" + filename + "\" does not exist.");
+        return;
+    }
+
+    std::string materialName;
+    ObjMaterial currMaterial;
+
+
+    std::string lineString;
+    while (getline(file, lineString)) {
+        while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
+            // Remove '\r' of Windows line ending
+            lineString = lineString.substr(0, lineString.size() - 1);
+        }
+        std::vector<std::string> line;
+        boost::algorithm::split(line, lineString, boost::is_any_of("\t "), boost::token_compress_on);
+
+        std::string command = line.at(0);
+
+        if (command == "newmtl") {
+            // New object
+            if (materialName.length() != 0) {
+                materials.insert(make_pair(materialName, currMaterial));
+            }
+            materialName = line.at(1);
+            currMaterial = ObjMaterial();
+        } else if (command == "Ka") {
+            // Ambient color
+            currMaterial.ambientColor = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+                                                  fromString<float>(line.at(3)));
+        }  else if (command == "Kd") {
+            // Diffuse color
+            currMaterial.diffuseColor = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+                                                  fromString<float>(line.at(3)));
+        } else if (command == "Ks") {
+            // Specular color
+            currMaterial.specularColor = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+                                                   fromString<float>(line.at(3)));
+        } else if (command == "Ns") {
+            // Specular exponent
+            currMaterial.specularExponent = fromString<float>(line.at(1));
+        } else if (command == "d") {
+            // Opacity
+            currMaterial.opacity = fromString<float>(line.at(1));
+        } else if (command == "tr") {
+            // Transparency (= 1 - opacity)
+            currMaterial.opacity = 1.0f - fromString<float>(line.at(1));
+        } else if (command == "illum") {
+            // TODO
+        } else if (boost::starts_with(command, "#") || command == "") {
+            // Ignore comments and empty lines
+        } else {
+            //Logfile::get()->writeError(string() + "Error in addMaterialsFromFile: Unknown command \"" + command + "\".");
+        }
+    }
+
+    if (materialName.length() != 0) {
+        materials.insert(make_pair(materialName, currMaterial));
+    }
+
+    file.close();
+}
+
 void convertObjMeshToBinary(
 		const std::string &objFilename,
 		const std::string &binaryFilename)
@@ -77,14 +169,11 @@ void convertObjMeshToBinary(
 		return;
 	}
 
-	std::vector<glm::vec3> tempVertices;
-	std::vector<glm::vec2> tempTexcoords;
-	std::vector<glm::vec3> tempNormals;
-	std::vector<uint32_t> vertexIndices;
-	std::vector<uint32_t> tecoordIndices;
-	std::vector<uint32_t> normalIndices;
+	vector<TempSubmesh> tempMesh;
+	TempSubmesh currSubmesh;
+	uint32_t indexOffset = 1;
+	std::map<std::string, ObjMaterial> materials;
 
-	bool smooth = false;
 	std::string lineString;
 	while (getline(file, lineString)) {
 		while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
@@ -98,24 +187,40 @@ void convertObjMeshToBinary(
 
 		if (command == "o") {
 			// New object
+			if (currSubmesh.tempVertices.size() != 0) {
+				tempMesh.push_back(currSubmesh);
+                indexOffset += currSubmesh.tempVertices.size();
+				currSubmesh = TempSubmesh();
+			}
 		} else if (command == "g") {
 			// Groups not supported for now
 		}  else if (command == "mtllib") {
-			// Materials not supported for now
+            //  Load material definition file
+            addMaterialsFromFile(line.at(1), objFilename, materials);
 		} else if (command == "usemtl") {
-			//  Materials not supported for now
+            // Use new material
+            auto it = materials.find(line.at(1));
+            if (it != materials.end()) {
+                currSubmesh.material = it->second;
+            } else if (materials.size() > 0) {
+                Logfile::get()->writeError(string() + "Error in parseObjMesh: Material \""
+                        + line.at(1) + "\" does not exist.");
+            }
 		} else if (command == "s") {
 			// Smooth shading is always assumed for now
-			smooth = true; // TODO
+			currSubmesh.smooth = true; // TODO
 		} else if (command == "v") {
 			// Vertex position
-			tempVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)), fromString<float>(line.at(3))));
+			currSubmesh.tempVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+			        fromString<float>(line.at(3))));
 		} else if (command == "vt") {
 			// Texture coordinate
-			tempTexcoords.push_back(glm::vec2(fromString<float>(line.at(1)), fromString<float>(line.at(2))));
+			currSubmesh.tempTexcoords.push_back(glm::vec2(fromString<float>(line.at(1)),
+			        fromString<float>(line.at(2))));
 		} else if (command == "vn") {
 			// Vertex normal
-			tempNormals.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)), fromString<float>(line.at(3))));
+			currSubmesh.tempNormals.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+			        fromString<float>(line.at(3))));
 		} else if (command == "f") {
 			// Face indices
 			std::vector<uint32_t> tempVertexIndices;
@@ -124,15 +229,15 @@ void convertObjMeshToBinary(
 			for (size_t i = 1; i < line.size(); i++) {
 				std::vector<std::string> indices;
 				boost::algorithm::split(indices, line.at(i), boost::is_any_of("/"));
-				vertexIndices.push_back(atof(indices.at(0).c_str()));
+				currSubmesh.vertexIndices.push_back(atoi(indices.at(0).c_str()) - indexOffset);
 				if (indices.size() > 1)
-					tecoordIndices.push_back(atof(indices.at(1).c_str()));
+					currSubmesh.tecoordIndices.push_back(atoi(indices.at(1).c_str()) - indexOffset);
 				if (indices.size() > 2)
-					normalIndices.push_back(atof(indices.at(2).c_str()));
+					currSubmesh.normalIndices.push_back(atoi(indices.at(2).c_str()) - indexOffset);
 			}
-			triangleStripToTriangles(tempVertexIndices, vertexIndices);
-			triangleStripToTriangles(tempTecoordIndices, tecoordIndices);
-			triangleStripToTriangles(tempNormalIndices, normalIndices);
+			triangleStripToTriangles(tempVertexIndices, currSubmesh.vertexIndices);
+			triangleStripToTriangles(tempTecoordIndices, currSubmesh.tecoordIndices);
+			triangleStripToTriangles(tempNormalIndices, currSubmesh.normalIndices);
 		} else if (boost::starts_with(command, "#") || command == "") {
 			// Ignore comments and empty lines
 		} else {
@@ -140,20 +245,51 @@ void convertObjMeshToBinary(
 		}
 	}
 
+	if (currSubmesh.tempVertices.size() != 0) {
+		tempMesh.push_back(currSubmesh);
+	}
 
-	std::vector<glm::vec3> vertices;
-	std::vector<glm::vec2> texcoords;
-	std::vector<glm::vec3> normals;
-	std::vector<uint32_t> indices;
+
+
+	ObjMesh mesh;
+	mesh.submeshes.reserve(tempMesh.size());
+	for (TempSubmesh tempSubmesh : tempMesh) {
+		processTempSubmesh(mesh, tempSubmesh);
+	}
+
+	file.close();
+
+	writeMesh3D(binaryFilename, mesh);
+}
+
+
+void processTempSubmesh(ObjMesh &mesh, TempSubmesh &tempSubmesh)
+{
+	// Input
+	bool smooth = tempSubmesh.smooth;
+	std::vector<glm::vec3> &tempVertices = tempSubmesh.tempVertices;
+	std::vector<glm::vec2> &tempTexcoords = tempSubmesh.tempTexcoords;
+	std::vector<glm::vec3> &tempNormals = tempSubmesh.tempNormals;
+	std::vector<uint32_t> &vertexIndices = tempSubmesh.vertexIndices;
+	std::vector<uint32_t> &tecoordIndices = tempSubmesh.tecoordIndices;
+	std::vector<uint32_t> &normalIndices = tempSubmesh.normalIndices;
+
+	// Output
+	ObjSubmesh submesh;
+	std::vector<uint32_t> &indices = submesh.indices;
+	std::vector<glm::vec3> &vertices = submesh.vertices;
+	std::vector<glm::vec2> &texcoords = submesh.texcoords;
+	std::vector<glm::vec3> &normals = submesh.normals;
+	submesh.material = tempSubmesh.material;
 
 
 	if (!smooth) {
 		for (size_t i = 0; i < vertexIndices.size(); i++) {
-			vertices.push_back(tempVertices.at(vertexIndices.at(i)-1));
+			vertices.push_back(tempVertices.at(vertexIndices.at(i))); // TODO: -1
 			//if (tecoordIndices.size() > 0)
-			//	texcoords.push_back(tempTexcoords.at(tecoordIndices.at(i)-1));
+			//	texcoords.push_back(tempTexcoords.at(tecoordIndices.at(i)-1)); // TODO: -1
 			if (normalIndices.size() > 0)
-				normals.push_back(tempNormals.at(normalIndices.at(i)-1));
+				normals.push_back(tempNormals.at(normalIndices.at(i))); // TODO: -1
 		}
 
 		if (normalIndices.size() == 0) {
@@ -168,14 +304,14 @@ void convertObjMeshToBinary(
 		}
 	} else {
 		for (size_t i = 0; i < vertexIndices.size(); i++) {
-			indices.push_back(vertexIndices.at(i)-1);
+			indices.push_back(vertexIndices.at(i)); // TODO: -1
 		}
 
 		// For finding all triangles with a specific index. Maps vertex index -> first triangle index.
 		std::multimap<size_t, size_t> indexMap;
 		for (size_t j = 0; j < indices.size(); j++) {
-			indexMap.insert(make_pair(indices.at(j), (j%3)*3));
-		}
+			indexMap.insert(make_pair(indices.at(j), (j/3)*3));
+        }
 
 		vertices = tempVertices;
 		for (size_t i = 0; i < vertices.size(); i++) {
@@ -202,11 +338,13 @@ void convertObjMeshToBinary(
 			}*/
 
 			if (numTrianglesSharedBy == 0) {
-				Logfile::get()->writeError("Error in parseObjMesh: numTrianglesSharedBy == 0");
+                Logfile::get()->writeError("Error in parseObjMesh: numTrianglesSharedBy == 0");
+				//exit(1); // TODO: Global vertex buffer
 			}
-			normals.push_back(normal / (float)numTrianglesSharedBy);
+            normal /= (float)numTrianglesSharedBy;
+			normals.push_back(normal);
 		}
 	}
 
-	writeMesh3D(binaryFilename, indices, vertices, texcoords, normals);
+	mesh.submeshes.push_back(submesh);
 }
