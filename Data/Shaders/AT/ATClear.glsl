@@ -17,13 +17,13 @@ void main()
 
 #version 430 core
 
+#include "ATHeader.glsl"
 #include "ColorPack.glsl"
-#include "MLABHeader.glsl"
 #include "TiledAdress.glsl"
 
 void main()
 {
 	uint x = uint(gl_FragCoord.x);
 	uint y = uint(gl_FragCoord.y);
-	numFragmentsBuffer[addrGen(uvec2(x,y))] = 0;
+	clearNode(addrGen(uvec2(x,y)));
 }

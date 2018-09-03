@@ -1,21 +1,21 @@
 //
-// Created by christoph on 29.08.18.
+// Created by christoph on 02.09.18.
 //
 
-#ifndef PIXELSYNCOIT_OIT_MLAB_HPP
-#define PIXELSYNCOIT_OIT_MLAB_HPP
+#ifndef PIXELSYNCOIT_OIT_AT_HPP
+#define PIXELSYNCOIT_OIT_AT_HPP
 
 #include "OIT_Renderer.hpp"
 
-#define MLAB_NUM_FRAGMENTS 8
+#define AT_NUM_FRAGMENTS 8
 
 // A fragment node stores rendering information about a list of fragments
-struct MLABFragmentNode_compressed
+struct ATFragmentNode_compressed
 {
     // Linear depth, i.e. distance to viewer
-    float depth[MLAB_NUM_FRAGMENTS];
+    float depth[AT_NUM_FRAGMENTS];
     // RGB color (3 bytes), translucency (1 byte)
-    uint premulColor[MLAB_NUM_FRAGMENTS];
+    uint premulColor[AT_NUM_FRAGMENTS];
 };
 
 /**
@@ -24,7 +24,7 @@ struct MLABFragmentNode_compressed
  * (To be precise, it doesn't use the Intel-specific Pixel Sync extension
  * INTEL_fragment_shader_ordering, but the vendor-independent ARB_fragment_shader_interlock).
  */
-class OIT_MLAB : public OIT_Renderer {
+class OIT_AT : public OIT_Renderer {
 public:
     /**
      *  The gather shader is used to render our transparent objects.
@@ -32,7 +32,7 @@ public:
      */
     virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
 
-    OIT_MLAB();
+    OIT_AT();
     virtual void create();
     virtual void resolutionChanged();
 
@@ -59,4 +59,4 @@ private:
     bool clearBitSet;
 };
 
-#endif //PIXELSYNCOIT_OIT_MLAB_HPP
+#endif //PIXELSYNCOIT_OIT_AT_HPP

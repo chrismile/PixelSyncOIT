@@ -38,16 +38,16 @@ void main()
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
-//in vec3 fragmentPosView;
 
-//out vec4 fragColor;
+out vec4 fragColor;
 
 // Adapted version of Hybrid Transparency [Maule et al. 2014]
 void hybridTransparencyBlending(in HTFragmentNode frag, inout HTFragmentNode list[MAX_NUM_NODES],
-        inout HTFragmentTail tail, inout uint numFragments)
+        inout HTFragmentTail tail)
 {
 	HTFragmentNode temp;
-	for (int i = 0; i < int(numFragments)-1; i++) {
+	// Use bubble sort to insert new fragment node (single pass)
+	for (int i = 0; i < MAX_NUM_NODES; i++) {
 		if (frag.depth <= list[i].depth) {
 			temp = list[i];
 			list[i] = frag;
@@ -55,14 +55,12 @@ void hybridTransparencyBlending(in HTFragmentNode frag, inout HTFragmentNode lis
 		}
 	}
 
-    if (numFragments == MAX_NUM_NODES-1u) {
+    if (frag.depth != DISTANCE_INFINITE) {
     	// Update tail (accumulates result)
-        tail.accumColor.rgb += frag.premulColor.rgb;
-        tail.accumAlpha += frag.premulColor.a;
-        tail.accumFragCount++;
-    } else {
-        list[numFragments-1u] = merge;
-        numFragments++;
+    	vec4 fragColor = unpackColorRGBA(frag.premulColor);
+        tail.accumColor.rgb += fragColor.rgb;
+        tail.accumColor.a += 1.0 - fragColor.a;
+        tail.accumFragCount += 1u;
     }
 }
 
@@ -73,7 +71,6 @@ void main()
 	uint y = uint(gl_FragCoord.y);
 	uint pixelIndex = addrGen(uvec2(x,y));
 
-	HTFragmentNode_compressed frag;
 	// Pseudo Phong shading
 	vec4 bandColor = fragmentColor;
 	float stripWidth = 2.0;
@@ -81,34 +78,30 @@ void main()
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
 	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
-	frag.premulColor = packColorRGBA(vec4(color.rgb * color.a, color.a));
+
+	HTFragmentNode frag;
 	frag.depth = gl_FragCoord.z;
+	frag.premulColor = packColorRGBA(vec4(color.rgb * color.a, 1.0 - color.a));
 
 
     // Begin of actual algorithm code
-	HTFragmentNode localFragmentList[MAX_NUM_NODES];
-	HTFragmentTail localTailFragment;
+	HTFragmentNode nodeArray[MAX_NUM_NODES];
+	HTFragmentTail tail;
 
 	beginInvocationInterlockARB();
 
-    uint numFragments = numFragmentsBuffer[pixelIndex];
-
 	// Read data from SSBO
-	for (int i = 0; i < numFragments; i++) {
-		 unpackFragmentNode(nodes[pixelIndex].nodes[i], localFragmentList[i]);
-	}
-	unpackFragmentTail(nodes[pixelIndex].tail, localTailFragment);
+	loadFragmentNodes(pixelIndex, nodeArray);
+	unpackFragmentTail(tails[pixelIndex], tail);
 
-	// Insert node to list (or merge last two nodes)
-	hybridTransparencyBlending(frag, localFragmentList, localTailFragment, numFragments);
-	numFragmentsBuffer[pixelIndex] = numFragments;
+	// Insert node to list
+	hybridTransparencyBlending(frag, nodeArray, tail);
 
 	// Write back data to SSBO
-	for (int i = 0; i < numFragments; i++) {
-		packFragmentNode(localFragmentList[i], nodes[i+offset]);
-	}
-	packFragmentTail(localTailFragment, nodes[pixelIndex].tail);
+	storeFragmentNodes(pixelIndex, nodeArray);
+	packFragmentTail(tail, tails[pixelIndex]);
 
 	endInvocationInterlockARB();
-}
 
+	fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+}

@@ -36,6 +36,8 @@
 #include "OIT/OIT_PixelSync.hpp"
 #include "OIT/OIT_LinkedList.hpp"
 #include "OIT/OIT_MLAB.hpp"
+#include "OIT/OIT_HT.hpp"
+#include "OIT/OIT_MB.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "MainApp.hpp"
 
@@ -68,6 +70,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
     } else if (mode == 2) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLAB);
     } else if (mode == 3) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_HT);
+    } else if (mode == 4) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
     } else {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);

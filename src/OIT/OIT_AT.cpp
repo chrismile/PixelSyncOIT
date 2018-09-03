@@ -1,5 +1,5 @@
 //
-// Created by christoph on 29.08.18.
+// Created by christoph on 02.09.18.
 //
 
 #include <cstdlib>
@@ -12,29 +12,29 @@
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
 
-#include "OIT_MLAB.hpp"
+#include "OIT_AT.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
 
-OIT_MLAB::OIT_MLAB()
+OIT_AT::OIT_AT()
 {
     clearBitSet = true;
     create();
 }
 
-void OIT_MLAB::create()
+void OIT_AT::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
         Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
-    gatherShader = ShaderManager->getShaderProgram({"MLABGather.Vertex", "MLABGather.Fragment"});
-    blitShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
-    clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
+    gatherShader = ShaderManager->getShaderProgram({"ATGather.Vertex", "ATGather.Fragment"});
+    blitShader = ShaderManager->getShaderProgram({"ATResolve.Vertex", "ATResolve.Fragment"});
+    clearShader = ShaderManager->getShaderProgram({"ATClear.Vertex", "ATClear.Fragment"});
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
     blitRenderData = ShaderManager->createShaderAttributes(blitShader);
@@ -50,14 +50,14 @@ void OIT_MLAB::create()
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_MLAB::resolutionChanged()
+void OIT_AT::resolutionChanged()
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
 
     size_t bufferSize = width * height;
-    size_t bufferSizeBytes = sizeof(MLABFragmentNode_compressed) * bufferSize;
+    size_t bufferSizeBytes = sizeof(ATFragmentNode_compressed) * bufferSize;
     void *data = (void*)malloc(bufferSizeBytes);
     memset(data, 0, bufferSizeBytes);
 
@@ -82,7 +82,7 @@ void OIT_MLAB::resolutionChanged()
     clearBitSet = true;
 }
 
-void OIT_MLAB::gatherBegin()
+void OIT_AT::gatherBegin()
 {
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
@@ -110,12 +110,12 @@ void OIT_MLAB::gatherBegin()
     }
 }
 
-void OIT_MLAB::gatherEnd()
+void OIT_AT::gatherEnd()
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void OIT_MLAB::renderToScreen()
+void OIT_AT::renderToScreen()
 {
     Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());

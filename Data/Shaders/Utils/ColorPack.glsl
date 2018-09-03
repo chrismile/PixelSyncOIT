@@ -20,6 +20,21 @@ vec4 unpackColorRGBA(uint packedColor)
     return vecColor;
 }
 
+// Decompression equivalent (only alpha!) to function above
+float unpackColorAlpha(uint packedColor)
+{
+    return float((packedColor >> 24) & 0xFFu) / 255.0;
+}
+
+// Replace alpha with new value. Mainly used in Adaptive Transparency
+// to update alpha of packed color without decompressing.
+void updatePackedColorAlpha(inout uint packedColor, in float newAlpha)
+{
+    packedColor &= 0xFFFFFFu;
+    packedColor |= (uint(newAlpha * 255.0) & 0xFFu) << 24;
+}
+
+
 
 // --- Functions below used for Hybrid Transparency algorithm ---
 
@@ -48,7 +63,7 @@ vec4 unpackColor30bit(uint packedColor)
 uint packAccumAlphaAndFragCount(float accumAlpha, uint fragCount)
 {
     uint packedValue = uint(accumAlpha * 255.0) & 0xFFFFu;
-    packedValue |= (fragCount << 16) & 0xFFFFu;
+    packedValue |= (fragCount & 0xFFFFu) << 16;
     return packedValue;
 }
 

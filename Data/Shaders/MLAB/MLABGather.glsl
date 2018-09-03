@@ -39,6 +39,8 @@ in vec4 fragmentColor;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
 
+out vec4 fragColor;
+
 // Adapted version of "Multi-Layer Alpha Blending" [Salvi and Vaidyanathan 2014]
 void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
 {
@@ -71,7 +73,6 @@ void main()
 	uint x = uint(gl_FragCoord.x);
 	uint y = uint(gl_FragCoord.y);
 	uint pixelIndex = addrGen(uvec2(x,y));
-	uint offset = MAX_NUM_NODES*pixelIndex;
 
 	// Pseudo Phong shading
 	vec4 bandColor = fragmentColor;
@@ -101,5 +102,6 @@ void main()
 	storeFragmentNodes(pixelIndex, nodeArray);
 
 	endInvocationInterlockARB();
+	fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 }
 

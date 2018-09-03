@@ -1,5 +1,5 @@
 //
-// Created by christoph on 29.08.18.
+// Created by christoph on 02.09.18.
 //
 
 #include <cstdlib>
@@ -12,29 +12,29 @@
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
 
-#include "OIT_MLAB.hpp"
+#include "OIT_HT.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
 
-OIT_MLAB::OIT_MLAB()
+OIT_HT::OIT_HT()
 {
     clearBitSet = true;
     create();
 }
 
-void OIT_MLAB::create()
+void OIT_HT::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
         Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
-    gatherShader = ShaderManager->getShaderProgram({"MLABGather.Vertex", "MLABGather.Fragment"});
-    blitShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
-    clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
+    gatherShader = ShaderManager->getShaderProgram({"HTGather.Vertex", "HTGather.Fragment"});
+    blitShader = ShaderManager->getShaderProgram({"HTResolve.Vertex", "HTResolve.Fragment"});
+    clearShader = ShaderManager->getShaderProgram({"HTClear.Vertex", "HTClear.Fragment"});
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
     blitRenderData = ShaderManager->createShaderAttributes(blitShader);
@@ -50,14 +50,13 @@ void OIT_MLAB::create()
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_MLAB::resolutionChanged()
+void OIT_HT::resolutionChanged()
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
 
-    size_t bufferSize = width * height;
-    size_t bufferSizeBytes = sizeof(MLABFragmentNode_compressed) * bufferSize;
+    size_t bufferSizeBytes = sizeof(HTFragmentNode_compressed) * width * height;
     void *data = (void*)malloc(bufferSizeBytes);
     memset(data, 0, bufferSizeBytes);
 
@@ -65,24 +64,27 @@ void OIT_MLAB::resolutionChanged()
     fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, data, SHADER_STORAGE_BUFFER);
     free(data);
 
-    size_t numFragmentsBufferSizeBytes = sizeof(int32_t) * width * height;
-    numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
-    numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+    size_t fragmentTailsSizeBytes = sizeof(HTFragmentTail_compressed) * width * height;
+    fragmentTails = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
+    fragmentTails = Renderer->createGeometryBuffer(fragmentTailsSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+    gatherShader->setShaderStorageBuffer(1, "FragmentTails", fragmentTails);
 
     blitShader->setUniform("viewportW", width);
     blitShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+    blitShader->setShaderStorageBuffer(1, "FragmentTails", fragmentTails);
 
     clearShader->setUniform("viewportW", width);
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+    clearShader->setShaderStorageBuffer(1, "FragmentTails", fragmentTails);
 
     // Buffer has to be cleared again
     clearBitSet = true;
 }
 
-void OIT_MLAB::gatherBegin()
+void OIT_HT::gatherBegin()
 {
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
@@ -110,12 +112,12 @@ void OIT_MLAB::gatherBegin()
     }
 }
 
-void OIT_MLAB::gatherEnd()
+void OIT_HT::gatherEnd()
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void OIT_MLAB::renderToScreen()
+void OIT_HT::renderToScreen()
 {
     Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());

@@ -20,6 +20,8 @@
 using namespace std;
 using namespace sgl;
 
+const uint32_t MESH_FORMAT_VERSION = 0;
+
 void writeMesh3D(
 		const std::string &filename,
 		const std::vector<uint32_t> &indices,
@@ -29,6 +31,7 @@ void writeMesh3D(
 	std::ofstream file(filename.c_str(), std::ofstream::binary);
 
 	sgl::BinaryWriteStream stream;
+	//stream.write((uint32_t)MESH_FORMAT_VERSION);
 	stream.writeArray(indices);
 	stream.writeArray(vertices);
 	stream.writeArray(texcoords);

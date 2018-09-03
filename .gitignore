@@ -61,3 +61,8 @@ Data/Models/Ship*
 # CLion
 .idea/*
 cmake-build-*/
+
+# Custom for models
+*.blend
+*.mtl
+*.obj

@@ -1,21 +1,28 @@
 //
-// Created by christoph on 29.08.18.
+// Created by christoph on 02.09.18.
 //
 
-#ifndef PIXELSYNCOIT_OIT_MLAB_HPP
-#define PIXELSYNCOIT_OIT_MLAB_HPP
+#ifndef PIXELSYNCOIT_OIT_HT_HPP
+#define PIXELSYNCOIT_OIT_HT_HPP
 
 #include "OIT_Renderer.hpp"
 
-#define MLAB_NUM_FRAGMENTS 8
+#define HT_NUM_FRAGMENTS 8
 
 // A fragment node stores rendering information about a list of fragments
-struct MLABFragmentNode_compressed
+struct HTFragmentNode_compressed
 {
     // Linear depth, i.e. distance to viewer
-    float depth[MLAB_NUM_FRAGMENTS];
+    float depth[HT_NUM_FRAGMENTS];
     // RGB color (3 bytes), translucency (1 byte)
-    uint premulColor[MLAB_NUM_FRAGMENTS];
+    uint premulColor[HT_NUM_FRAGMENTS];
+};
+struct HTFragmentTail_compressed
+{
+    // Accumulated alpha (16 bit) and fragment count (16 bit)
+    uint accumAlphaAndCount;
+    // RGB Color (30 bit, i.e. 10 bits per component)
+    uint accumColor;
 };
 
 /**
@@ -24,7 +31,7 @@ struct MLABFragmentNode_compressed
  * (To be precise, it doesn't use the Intel-specific Pixel Sync extension
  * INTEL_fragment_shader_ordering, but the vendor-independent ARB_fragment_shader_interlock).
  */
-class OIT_MLAB : public OIT_Renderer {
+class OIT_HT : public OIT_Renderer {
 public:
     /**
      *  The gather shader is used to render our transparent objects.
@@ -32,7 +39,7 @@ public:
      */
     virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
 
-    OIT_MLAB();
+    OIT_HT();
     virtual void create();
     virtual void resolutionChanged();
 
@@ -50,7 +57,7 @@ private:
     sgl::ShaderProgramPtr blitShader;
     sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr fragmentNodes;
-    sgl::GeometryBufferPtr numFragmentsBuffer;
+    sgl::GeometryBufferPtr fragmentTails;
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
@@ -59,4 +66,4 @@ private:
     bool clearBitSet;
 };
 
-#endif //PIXELSYNCOIT_OIT_MLAB_HPP
+#endif //PIXELSYNCOIT_OIT_HT_HPP

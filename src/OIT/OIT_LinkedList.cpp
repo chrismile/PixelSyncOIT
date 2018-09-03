@@ -22,6 +22,9 @@ using namespace sgl;
 // Number of transparent pixels we can store per node
 const int nodesPerPixel = 8;
 
+// Use stencil buffer to mask unused pixels
+const bool useStencilBuffer = true;
+
 OIT_LinkedList::OIT_LinkedList()
 {
 	create();
@@ -117,6 +120,14 @@ void OIT_LinkedList::gatherBegin()
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_FALSE);
+
+    if (useStencilBuffer) {
+        glEnable(GL_STENCIL_TEST);
+        glClear(GL_STENCIL_BUFFER_BIT);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        glStencilMask(0xFF);
+    }
 }
 
 void OIT_LinkedList::gatherEnd()
@@ -135,7 +146,12 @@ void OIT_LinkedList::renderToScreen()
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDisable(GL_DEPTH_TEST);
 
-	Renderer->render(blitRenderData);
+    if (useStencilBuffer) {
+        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+    }
+
+    Renderer->render(blitRenderData);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	glDepthMask(GL_TRUE);
