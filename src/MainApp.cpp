@@ -207,9 +207,9 @@ void PixelSyncApp::update(float dt)
 {
 	AppLogic::update(dt);
 
-	const float ROT_SPEED = 0.001f;
+    const float ROT_SPEED = 0.001f;
 
-	// Rotate object around its origin
+	// Rotate scene around camera origin
 	if (Keyboard->isKeyDown(SDLK_x)) {
 		glm::quat rot = glm::quat(glm::vec3(dt*ROT_SPEED, 0.0f, 0.0f));
 		camera->rotate(rot);
@@ -225,27 +225,44 @@ void PixelSyncApp::update(float dt)
 
 	const float MOVE_SPEED = 0.001f;
 
+
+	glm::mat4 rotationMatrix = glm::mat4(camera->getOrientation());
+    glm::mat4 invRotationMatrix = glm::inverse(rotationMatrix);
 	if (Keyboard->isKeyDown(SDLK_PAGEDOWN)) {
-		camera->translate(glm::vec3(0.0f, dt*MOVE_SPEED, 0.0f));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, dt*MOVE_SPEED, 0.0f)));
 	}
 	if (Keyboard->isKeyDown(SDLK_PAGEUP)) {
-		camera->translate(glm::vec3(0.0f, -dt*MOVE_SPEED, 0.0f));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, -dt*MOVE_SPEED, 0.0f)));
 	}
 	if (Keyboard->isKeyDown(SDLK_DOWN)) {
-		camera->translate(glm::vec3(0.0f, 0.0f, -dt*MOVE_SPEED));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, -dt*MOVE_SPEED)));
 	}
 	if (Keyboard->isKeyDown(SDLK_UP)) {
-		camera->translate(glm::vec3(0.0f, 0.0f, +dt*MOVE_SPEED));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, +dt*MOVE_SPEED)));
 	}
 	if (Keyboard->isKeyDown(SDLK_LEFT)) {
-		camera->translate(glm::vec3(dt*MOVE_SPEED, 0.0f, 0.0f));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(dt*MOVE_SPEED, 0.0f, 0.0f)));
 	}
 	if (Keyboard->isKeyDown(SDLK_RIGHT)) {
-		camera->translate(glm::vec3(-dt*MOVE_SPEED, 0.0f, 0.0f));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(-dt*MOVE_SPEED, 0.0f, 0.0f)));
 	}
 
 	// Zoom in/out
 	if (Mouse->getScrollWheel() > 0.1 || Mouse->getScrollWheel() < 0.1) {
 		camera->scale((1+Mouse->getScrollWheel()*dt*0.5f)*glm::vec3(1.0,1.0,1.0));
+	}
+
+    const float MOUSE_ROT_SPEED = 0.05f;
+
+    // Mouse rotation
+	if (Mouse->isButtonDown(1) && Mouse->mouseMoved()) {
+	    sgl::Point2 pixelMovement = Mouse->mouseMovement();
+        float yaw = dt*MOUSE_ROT_SPEED*pixelMovement.x;
+        float pitch = dt*MOUSE_ROT_SPEED*pixelMovement.y;
+
+        glm::quat rotYaw = glm::quat(glm::vec3(0.0f, yaw, 0.0f));
+        glm::quat rotPitch = glm::quat(pitch*glm::vec3(rotationMatrix[0][0], rotationMatrix[1][0], rotationMatrix[2][0]));
+        //glm::quat rot = glm::quat(glm::vec3(pitch, yaw, 0.0f));
+        camera->rotate(rotYaw*rotPitch);
 	}
 }
