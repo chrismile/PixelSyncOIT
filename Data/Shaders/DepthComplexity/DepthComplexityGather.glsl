@@ -43,10 +43,12 @@ void main()
 
 	// Area of mutual exclusion for fragments mapping to same pixel
 	beginInvocationInterlockARB();
+	memoryBarrierBuffer();
 	atomicAdd(numFragmentsBuffer[addrGen(uvec2(x,y))], 1);
 	endInvocationInterlockARB();
 
-    // Just compute something so that normal and color uniform variables aren't optimized out
+    // Just compute something so that normal and color uniform variables aren't optimized out.
+    // Color buffer write is disabled anyway.
 	fragColor = vec4(color + vec4(fragmentNormal, 1.0) + vec4(ambientColor, opacity) + vec4(diffuseColor, opacity)
 	        + vec4(specularExponent*specularColor, opacity));
 }

@@ -107,6 +107,7 @@ void main()
 	beginInvocationInterlockARB();
 
 	// Read data from SSBO
+	memoryBarrierBuffer();
 	loadFragmentNodes(pixelIndex, nodeArray);
 	unpackFragmentTail(tails[pixelIndex], tail);
 

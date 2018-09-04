@@ -21,7 +21,7 @@ uniform int viewportW;
 // Distance of infinitely far away fragments (used for initialization)
 #define DISTANCE_INFINITE (1E30)
 
-// Data structure for 4 nodes, packed in vectors for faster access
+// Data structure for MAX_NUM_NODES nodes, packed in vectors for faster access
 #if MAX_NUM_NODES == 1
 struct MLABFragmentNode_compressed
 {
@@ -65,7 +65,7 @@ struct MLABFragmentNode
 	uint premulColor;
 };
 
-// Stores viewportW * viewportH * nodesPerPixel fragments.
+// Stores viewportW * viewportH * MAX_NUM_NODES fragments.
 // Access fragment i at screen position (x,y) using "nodes[w*npp*y + npp*x + i]".
 layout (std430, binding = 0) buffer FragmentNodes
 {

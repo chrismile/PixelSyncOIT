@@ -36,18 +36,21 @@ void main()
 	// Color accumulator
 	vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
 
+    // Collect all fragments for this pixel
 	int numFrags = 0;
 	LinkedListFragmentNode frags[MAX_NUM_FRAGS];
 	LinkedListFragmentNode fragment;
 	for (int i = 0; i < MAX_NUM_FRAGS; i++)
 	{
         if (fragOffset == -1) {
+            // End of list reached
             break;
         }
 
         fragment = fragmentBuffer[fragOffset];
 		fragOffset = fragment.next;
 
+        // Insert using 1-pass bubble sort
         for (int index = 0; index < numFrags; index++)
         {
             if (fragment.depth < frags[index].depth)
@@ -62,10 +65,11 @@ void main()
 		numFrags++;
 	}
 
+    // Blend all fragments in the right order
 	for (int i = 0; i < numFrags; i++) {
 		fragment = frags[i];
 
-        // BTF
+        // Back-to-Front (BTF)
 		// Blend the accumulated color with the color of the fragment node
 		/*float alpha = fragment.color.a;
 		float alphaOut = alpha + color.a * (1.0 - alpha);
@@ -73,7 +77,7 @@ void main()
 		//color.rgb = (alpha * fragment.color.rgb + (1.0 - alpha) * color.a * color.rgb);
 		color.a = alphaOut;*/
 
-		// FTB
+		// Front-to-Back (FTB)
 		// Blend the accumulated color with the color of the fragment node
 		vec4 colorSrc = unpackColorRGBA(fragment.color);
 		float alphaSrc = colorSrc.a;
@@ -82,36 +86,6 @@ void main()
 	}
 	color = vec4(color.rgb / color.a, color.a);
 
-	// Front-to-back blending
-	// Iterate over all stored (transparent) fragments for this pixel
-	/*while (fragOffset != -1)
-	{
-		LinkedListFragmentNode fragment = fragmentBuffer[fragOffset];
 
-		// Blend the accumulated color with the color of the fragment node
-		float alpha = fragment.color.a;
-		color.rgb = color.rgb + (1.0 - color.a) * alpha * fragment.color.rgb;
-		//color.rgb = vec3(1.0, 0.0, 1.0);
-		color.a = color.a + (1.0 - color.a) * alpha;
-		
-		fragOffset = fragment.next;
-	}*/
-	// Back-to-front blending
-	// Iterate over all stored (transparent) fragments for this pixel
-	/*while (fragOffset != -1)
-	{
-		LinkedListFragmentNode fragment = fragmentBuffer[fragOffset];
-		
-		// Blend the accumulated color with the color of the fragment node
-		float alpha = fragment.color.a;
-		float alphaOut = alpha + color.a * (1.0 - alpha);
-		color.rgb = (alpha * fragment.color.rgb + (1.0 - alpha) * color.a * color.rgb) / alphaOut;
-		//color.rgb = (alpha * fragment.color.rgb + (1.0 - alpha) * color.a * color.rgb);
-		color.a = alphaOut;
-		
-		fragOffset = fragment.next;
-	}*/
-	
-	fragColor = color;//vec4(color.rgb, 1.0);
-	//fragColor = nodes[nodesPerPixel*(viewportW*y + x)].color;
+	fragColor = color;
 }

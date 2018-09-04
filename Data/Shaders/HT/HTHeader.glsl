@@ -81,7 +81,7 @@ struct HTFragmentTail
 	vec4 accumColor;
 };
 
-// Stores viewportW * viewportH * nodesPerPixel fragments.
+// Stores viewportW * viewportH * MAX_NUM_NODES fragments.
 // Access fragment i at screen position (x,y) using "nodes[w*npp*y + npp*x + i]".
 layout (std430, binding = 0) buffer FragmentNodes
 {

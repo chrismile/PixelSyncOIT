@@ -108,6 +108,7 @@ void main()
 	beginInvocationInterlockARB();
 
 	// Read data from SSBO
+	memoryBarrierBuffer();
 	loadFragmentNodes(pixelIndex, nodeArray);
 
 	// Insert node to list (or merge last two nodes)

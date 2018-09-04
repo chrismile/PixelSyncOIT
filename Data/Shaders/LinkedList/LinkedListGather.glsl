@@ -74,9 +74,10 @@ void main()
 	frag.color = packColorRGBA(color);
 	frag.depth = gl_FragCoord.z;
 	frag.next = -1;
-	
+
 	uint insertIndex = atomicCounterIncrement(fragCounter);
     if (insertIndex < linkedListSize) {
+    	// Insert the fragment into the linked list
         frag.next = atomicExchange(startOffset[pixelIndex], insertIndex);
         fragmentBuffer[insertIndex] = frag;
     }
