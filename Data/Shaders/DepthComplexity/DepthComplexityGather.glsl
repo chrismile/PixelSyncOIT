@@ -5,18 +5,13 @@
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
 
-out vec4 fragmentColor;
 out vec3 fragmentNormal;
 
 // Model-view-projection matrix
 uniform mat4 mvpMatrix;
 
-// Color of the object
-uniform vec4 color;
-
 void main()
 {
-	fragmentColor = color;
 	fragmentNormal = vertexNormal;
 	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
@@ -28,10 +23,17 @@ void main()
 
 #include "DepthComplexityHeader.glsl"
 
-in vec4 fragmentColor;
 in vec3 fragmentNormal;
 
 out vec4 fragColor;
+
+// Color of the object
+uniform vec4 color;
+uniform vec3 ambientColor;
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float specularExponent;
+uniform float opacity;
 
 void main()
 {
@@ -45,5 +47,6 @@ void main()
 	endInvocationInterlockARB();
 
     // Just compute something so that normal and color uniform variables aren't optimized out
-	fragColor = vec4(fragmentColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	fragColor = vec4(color + vec4(fragmentNormal, 1.0) + vec4(ambientColor, opacity) + vec4(diffuseColor, opacity)
+	        + vec4(specularExponent*specularColor, opacity));
 }

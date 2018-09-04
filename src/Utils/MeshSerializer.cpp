@@ -20,7 +20,7 @@
 using namespace std;
 using namespace sgl;
 
-const uint32_t MESH_FORMAT_VERSION = 3u;
+const uint32_t MESH_FORMAT_VERSION = 2u;
 
 void writeMesh3D(const std::string &filename, const ObjMesh &mesh) {
 	std::ofstream file(filename.c_str(), std::ofstream::binary);

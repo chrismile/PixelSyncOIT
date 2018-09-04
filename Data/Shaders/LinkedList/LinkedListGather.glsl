@@ -37,9 +37,15 @@ void main()
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
-//in vec3 fragmentPosView;
 
-//out vec4 fragColor;
+out vec4 fragColor;
+
+uniform vec3 ambientColor;
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float specularExponent;
+uniform float opacity;
+uniform int bandedColorShading = 1;
 
 void main()
 {
@@ -47,7 +53,6 @@ void main()
 	int y = int(gl_FragCoord.y);
 	int pixelIndex = viewportW*y + x;
 
-	LinkedListFragmentNode frag;
 	// Pseudo Phong shading
 	vec4 bandColor = fragmentColor;
 	float stripWidth = 2.0;
@@ -55,14 +60,26 @@ void main()
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
 	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+
+	if (bandedColorShading == 0) {
+	    vec3 lightDirection = vec3(1.0,0.0,0.0);
+	    vec3 ambientShading = ambientColor * 0.1;
+	    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
+	    vec3 specularShading = specularColor * specularExponent * 0.00001; // In order to not get an unused warning
+	    color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
+	}
+
+
+	LinkedListFragmentNode frag;
 	frag.color = packColorRGBA(color);
 	frag.depth = gl_FragCoord.z;
 	frag.next = -1;
 	
-	//memoryBarrierBuffer();
 	uint insertIndex = atomicCounterIncrement(fragCounter);
     if (insertIndex < linkedListSize) {
         frag.next = atomicExchange(startOffset[pixelIndex], insertIndex);
         fragmentBuffer[insertIndex] = frag;
     }
+
+    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 }

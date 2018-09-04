@@ -46,6 +46,7 @@ uniform vec3 diffuseColor;
 uniform vec3 specularColor;
 uniform float specularExponent;
 uniform float opacity;
+uniform int bandedColorShading = 1;
 
 // Adapted version of "Multi-Layer Alpha Blending" [Salvi and Vaidyanathan 2014]
 void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
@@ -73,8 +74,6 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
 	}
 }
 
-
-uniform int bandedColorShading = 1;
 
 void main()
 {

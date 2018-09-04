@@ -74,15 +74,120 @@ struct TempSubmesh
 	ObjMaterial material;
 	bool smooth;
 
-	std::vector<glm::vec3> tempVertices;
-	std::vector<glm::vec2> tempTexcoords;
-	std::vector<glm::vec3> tempNormals;
 	std::vector<uint32_t> vertexIndices;
 	std::vector<uint32_t> tecoordIndices;
 	std::vector<uint32_t> normalIndices;
 };
 
-void processTempSubmesh(ObjMesh &mesh, TempSubmesh &tempSubmesh);
+void globalIndicesToLocal(std::vector<uint32_t> &globalIndexBuffer, std::vector<glm::vec3> &globalVertexBuffer,
+                          std::vector<uint32_t> &localIndexBuffer, std::vector<glm::vec3> &localVertexBuffer)
+{
+    // Create global indices <-> local indices mapping
+    std::vector<uint32_t> sortedIndexBuffer = globalIndexBuffer;
+    std::sort(sortedIndexBuffer.begin(), sortedIndexBuffer.end());
+    std::map<uint32_t, uint32_t> mappingGlobalToLocal;
+    std::map<uint32_t, uint32_t> mappingLocalToGlobal;
+    size_t index = 0;
+    for (size_t i = 0; i < globalIndexBuffer.size(); i++) {
+        if (i == 0 || sortedIndexBuffer.at(i) != sortedIndexBuffer.at(i-1)) {
+            mappingGlobalToLocal.insert(make_pair(sortedIndexBuffer.at(i), index));
+            mappingLocalToGlobal.insert(make_pair(index, sortedIndexBuffer.at(i)));
+            index++;
+        }
+    }
+
+    localVertexBuffer.resize(index);
+    for (size_t i = 0; i < index; i++) {
+        localVertexBuffer.at(i) = globalVertexBuffer.at(mappingLocalToGlobal[i]);
+    }
+    localIndexBuffer.resize(globalIndexBuffer.size());
+    for (size_t i = 0; i < globalIndexBuffer.size(); i++) {
+        localIndexBuffer.at(i) = mappingGlobalToLocal[globalIndexBuffer.at(i)];
+    }
+}
+
+void processTempSubmesh(ObjMesh &mesh, TempSubmesh &tempSubmesh, std::vector<glm::vec3> &globalVertices,
+        std::vector<glm::vec2> &globalTexcoords, std::vector<glm::vec3> &globalNormals)
+{
+    // Input
+    bool smooth = tempSubmesh.smooth;
+    std::vector<uint32_t> &vertexIndices = tempSubmesh.vertexIndices;
+    std::vector<uint32_t> &tecoordIndices = tempSubmesh.tecoordIndices;
+    std::vector<uint32_t> &normalIndices = tempSubmesh.normalIndices;
+
+    // Output
+    ObjSubmesh submesh;
+    std::vector<uint32_t> &indices = submesh.indices;
+    std::vector<glm::vec3> &vertices = submesh.vertices;
+    std::vector<glm::vec2> &texcoords = submesh.texcoords;
+    std::vector<glm::vec3> &normals = submesh.normals;
+    submesh.material = tempSubmesh.material;
+
+
+    if (!smooth) {
+        for (size_t i = 0; i < vertexIndices.size(); i++) {
+            vertices.push_back(globalVertices.at(vertexIndices.at(i))); // TODO: -1
+            //if (tecoordIndices.size() > 0)
+            //	texcoords.push_back(globalTexcoords.at(tecoordIndices.at(i))); // TODO: -1
+            if (normalIndices.size() > 0)
+                normals.push_back(globalNormals.at(normalIndices.at(i))); // TODO: -1
+        }
+
+        if (normalIndices.size() == 0) {
+            // Compute manually
+            for (size_t i = 0; i < vertices.size(); i += 3) {
+                glm::vec3 normal = glm::cross(vertices.at(i) - vertices.at(i+1), vertices.at(i) - vertices.at(i+2));
+                normal = glm::normalize(normal);
+                normals.push_back(normal);
+                normals.push_back(normal);
+                normals.push_back(normal);
+            }
+        }
+    } else {
+        std::vector<uint32_t> &globalIndices = vertexIndices;
+        globalIndicesToLocal(globalIndices, globalVertices, indices, vertices);
+
+
+        // For finding all triangles with a specific index. Maps vertex index -> first triangle index.
+        std::multimap<size_t, size_t> indexMap;
+        for (size_t j = 0; j < indices.size(); j++) {
+            indexMap.insert(make_pair(indices.at(j), (j/3)*3));
+        }
+
+        for (size_t i = 0; i < vertices.size(); i++) {
+            glm::vec3 normal(0.0f, 0.0f, 0.0f);
+            int numTrianglesSharedBy = 0;
+            auto triangleRange = indexMap.equal_range(i);
+            for (auto it = triangleRange.first; it != triangleRange.second; it++) {
+                size_t j = it->second;
+                size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+                glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+                faceNormal = glm::normalize(faceNormal);
+                normal += faceNormal;
+                numTrianglesSharedBy++;
+            }
+            /*for (size_t j = 0; j < indices.size(); j += 3) {
+                // Does this triangle contain vertex #i?
+                if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
+                    size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+                    glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+                    faceNormal = glm::normalize(faceNormal);
+                    normal += faceNormal;
+                    numTrianglesSharedBy++;
+                }
+            }*/
+
+            if (numTrianglesSharedBy == 0) {
+                Logfile::get()->writeError("Error in parseObjMesh: numTrianglesSharedBy == 0");
+                exit(1); // TODO: Global vertex buffer
+            }
+            normal /= (float)numTrianglesSharedBy;
+            normals.push_back(normal);
+        }
+    }
+
+    mesh.submeshes.push_back(submesh);
+}
 
 void addMaterialsFromFile(const std::string &filename, const std::string &objFilename,
         std::map<std::string, ObjMaterial> &materials)
@@ -174,6 +279,10 @@ void convertObjMeshToBinary(
 	uint32_t indexOffset = 1;
 	std::map<std::string, ObjMaterial> materials;
 
+    std::vector<glm::vec3> globalVertices;
+    std::vector<glm::vec2> globalTexcoords;
+    std::vector<glm::vec3> globalNormals;
+
 	std::string lineString;
 	while (getline(file, lineString)) {
 		while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
@@ -187,9 +296,8 @@ void convertObjMeshToBinary(
 
 		if (command == "o") {
 			// New object
-			if (currSubmesh.tempVertices.size() != 0) {
+			if (globalVertices.size() != 0) {
 				tempMesh.push_back(currSubmesh);
-                indexOffset += currSubmesh.tempVertices.size();
 				currSubmesh = TempSubmesh();
 			}
 		} else if (command == "g") {
@@ -211,15 +319,15 @@ void convertObjMeshToBinary(
 			currSubmesh.smooth = true; // TODO
 		} else if (command == "v") {
 			// Vertex position
-			currSubmesh.tempVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+            globalVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
 			        fromString<float>(line.at(3))));
 		} else if (command == "vt") {
 			// Texture coordinate
-			currSubmesh.tempTexcoords.push_back(glm::vec2(fromString<float>(line.at(1)),
+            globalTexcoords.push_back(glm::vec2(fromString<float>(line.at(1)),
 			        fromString<float>(line.at(2))));
 		} else if (command == "vn") {
 			// Vertex normal
-			currSubmesh.tempNormals.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+            globalNormals.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
 			        fromString<float>(line.at(3))));
 		} else if (command == "f") {
 			// Face indices
@@ -245,7 +353,7 @@ void convertObjMeshToBinary(
 		}
 	}
 
-	if (currSubmesh.tempVertices.size() != 0) {
+	if (globalVertices.size() != 0) {
 		tempMesh.push_back(currSubmesh);
 	}
 
@@ -254,7 +362,7 @@ void convertObjMeshToBinary(
 	ObjMesh mesh;
 	mesh.submeshes.reserve(tempMesh.size());
 	for (TempSubmesh tempSubmesh : tempMesh) {
-		processTempSubmesh(mesh, tempSubmesh);
+		processTempSubmesh(mesh, tempSubmesh, globalVertices, globalTexcoords, globalNormals);
 	}
 
 	file.close();
@@ -263,88 +371,3 @@ void convertObjMeshToBinary(
 }
 
 
-void processTempSubmesh(ObjMesh &mesh, TempSubmesh &tempSubmesh)
-{
-	// Input
-	bool smooth = tempSubmesh.smooth;
-	std::vector<glm::vec3> &tempVertices = tempSubmesh.tempVertices;
-	std::vector<glm::vec2> &tempTexcoords = tempSubmesh.tempTexcoords;
-	std::vector<glm::vec3> &tempNormals = tempSubmesh.tempNormals;
-	std::vector<uint32_t> &vertexIndices = tempSubmesh.vertexIndices;
-	std::vector<uint32_t> &tecoordIndices = tempSubmesh.tecoordIndices;
-	std::vector<uint32_t> &normalIndices = tempSubmesh.normalIndices;
-
-	// Output
-	ObjSubmesh submesh;
-	std::vector<uint32_t> &indices = submesh.indices;
-	std::vector<glm::vec3> &vertices = submesh.vertices;
-	std::vector<glm::vec2> &texcoords = submesh.texcoords;
-	std::vector<glm::vec3> &normals = submesh.normals;
-	submesh.material = tempSubmesh.material;
-
-
-	if (!smooth) {
-		for (size_t i = 0; i < vertexIndices.size(); i++) {
-			vertices.push_back(tempVertices.at(vertexIndices.at(i))); // TODO: -1
-			//if (tecoordIndices.size() > 0)
-			//	texcoords.push_back(tempTexcoords.at(tecoordIndices.at(i)-1)); // TODO: -1
-			if (normalIndices.size() > 0)
-				normals.push_back(tempNormals.at(normalIndices.at(i))); // TODO: -1
-		}
-
-		if (normalIndices.size() == 0) {
-			// Compute manually
-			for (size_t i = 0; i < vertices.size(); i += 3) {
-				glm::vec3 normal = glm::cross(vertices.at(i) - vertices.at(i+1), vertices.at(i) - vertices.at(i+2));
-				normal = glm::normalize(normal);
-				normals.push_back(normal);
-				normals.push_back(normal);
-				normals.push_back(normal);
-			}
-		}
-	} else {
-		for (size_t i = 0; i < vertexIndices.size(); i++) {
-			indices.push_back(vertexIndices.at(i)); // TODO: -1
-		}
-
-		// For finding all triangles with a specific index. Maps vertex index -> first triangle index.
-		std::multimap<size_t, size_t> indexMap;
-		for (size_t j = 0; j < indices.size(); j++) {
-			indexMap.insert(make_pair(indices.at(j), (j/3)*3));
-        }
-
-		vertices = tempVertices;
-		for (size_t i = 0; i < vertices.size(); i++) {
-			glm::vec3 normal(0.0f, 0.0f, 0.0f);
-			int numTrianglesSharedBy = 0;
-			auto triangleRange = indexMap.equal_range(i);
-			for (auto it = triangleRange.first; it != triangleRange.second; it++) {
-				size_t j = it->second;
-				size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
-				glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
-				faceNormal = glm::normalize(faceNormal);
-				normal += faceNormal;
-				numTrianglesSharedBy++;
-			}
-			/*for (size_t j = 0; j < indices.size(); j += 3) {
-				// Does this triangle contain vertex #i?
-				if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
-					size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
-					glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
-					faceNormal = glm::normalize(faceNormal);
-					normal += faceNormal;
-					numTrianglesSharedBy++;
-				}
-			}*/
-
-			if (numTrianglesSharedBy == 0) {
-                Logfile::get()->writeError("Error in parseObjMesh: numTrianglesSharedBy == 0");
-				//exit(1); // TODO: Global vertex buffer
-			}
-            normal /= (float)numTrianglesSharedBy;
-			normals.push_back(normal);
-		}
-	}
-
-	mesh.submeshes.push_back(submesh);
-}

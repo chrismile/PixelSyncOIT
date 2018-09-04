@@ -66,3 +66,4 @@ cmake-build-*/
 *.blend
 *.mtl
 *.obj
+*.binmesh

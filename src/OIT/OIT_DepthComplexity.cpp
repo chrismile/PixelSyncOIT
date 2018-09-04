@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 
 #include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
@@ -42,7 +43,7 @@ void OIT_DepthComplexity::create()
 
     blitShader = ShaderManager->getShaderProgram({"DepthComplexityResolve.Vertex", "DepthComplexityResolve.Fragment"});
     blitShader->setUniform("color", Color(0, 255, 255));
-    blitShader->setUniform("numFragmentsMaxColor", 8u);
+    blitShader->setUniform("numFragmentsMaxColor", 16u);
 
     clearShader = ShaderManager->getShaderProgram({"DepthComplexityClear.Vertex", "DepthComplexityClear.Fragment"});
 
@@ -162,17 +163,20 @@ void OIT_DepthComplexity::computeStatistics()
 
     int totalNumFragments = 0;
     int usedLocations = 0;
-    #pragma omp parallel for reduction(+:totalNumFragments,usedLocations) schedule(static)
+    int maxComplexity = 0;
+    #pragma omp parallel for reduction(+:totalNumFragments,usedLocations) reduction(max:maxComplexity) schedule(static)
     for (int i = 0; i < size; i++) {
         totalNumFragments += data[i];
         if (data[i] > 0) {
             usedLocations++;
         }
+        maxComplexity = std::max(maxComplexity, (int)data[i]);
     }
 
     numFragmentsBuffer->unmapBuffer();
 
 
-    std::cout << "Depth complexity: Used fragments: " << ((float) totalNumFragments / usedLocations)
-              << ", all fragments: " << ((float) totalNumFragments / size) << std::endl;
+    std::cout << "Depth complexity: avg used: " << ((float) totalNumFragments / usedLocations)
+              << ", avg all: " << ((float) totalNumFragments / size) << ", max:" << maxComplexity
+              << ", #fragments: " << totalNumFragments << std::endl;
 }
