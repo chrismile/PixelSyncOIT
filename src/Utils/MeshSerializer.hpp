@@ -65,6 +65,8 @@ class MeshRenderer
 {
 public:
 	void render();
+	void setNewShader(sgl::ShaderProgramPtr newShader);
+	bool isLoaded() { return shaderAttributes.size() > 0; }
 
 	std::vector<sgl::ShaderAttributesPtr> shaderAttributes;
 	std::vector<ObjMaterial> materials;

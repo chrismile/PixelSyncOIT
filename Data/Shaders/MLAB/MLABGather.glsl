@@ -22,7 +22,6 @@ void main()
 	fragmentColor = color;
 	fragmentNormal = vertexNormal;
 	fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
-	//fragmentPosView = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
 	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 

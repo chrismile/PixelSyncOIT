@@ -44,6 +44,10 @@ void writeMesh3D(const std::string &filename, const ObjMesh &mesh) {
 
 void readMesh3D(const std::string &filename, ObjMesh &mesh) {
 	std::ifstream file(filename.c_str(), std::ifstream::binary);
+	if (!file.is_open()) {
+		Logfile::get()->writeError(std::string() + "Error in readMesh3D: File \"" + filename + "\" not found.");
+		return;
+	}
 
 	file.seekg(0, file.end);
 	size_t size = file.tellg();
@@ -93,6 +97,15 @@ void MeshRenderer::render()
 	}
 }
 
+void MeshRenderer::setNewShader(sgl::ShaderProgramPtr newShader)
+{
+	for (size_t i = 0; i < shaderAttributes.size(); i++) {
+		shaderAttributes.at(i) = shaderAttributes.at(i)->copy(newShader);
+	}
+}
+
+
+
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader)
 {
 	//std::vector<uint32_t> indices;
@@ -125,11 +138,11 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 					(void*)&vertices.front(), VERTEX_BUFFER);
 			renderData->addGeometryBuffer(positionBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 		}
-		if (texcoords.size() > 0) {
+		/*if (texcoords.size() > 0) {
 			GeometryBufferPtr texcoordBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec2)*texcoords.size(),
 					(void*)&texcoords.front(), VERTEX_BUFFER);
 			renderData->addGeometryBuffer(texcoordBuffer, "textureCoordinates", ATTRIB_FLOAT, 2);
-		}
+		}*/ // TODO
 		if (normals.size() > 0) {
 			GeometryBufferPtr normalBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*normals.size(),
 					(void*)&normals.front(), VERTEX_BUFFER);

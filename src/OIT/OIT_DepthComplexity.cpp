@@ -38,12 +38,13 @@ void OIT_DepthComplexity::create()
         Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
+    numFragmentsMaxColor = 16;
 
     gatherShader = ShaderManager->getShaderProgram({"DepthComplexityGather.Vertex", "DepthComplexityGather.Fragment"});
 
     blitShader = ShaderManager->getShaderProgram({"DepthComplexityResolve.Vertex", "DepthComplexityResolve.Fragment"});
     blitShader->setUniform("color", Color(0, 255, 255));
-    blitShader->setUniform("numFragmentsMaxColor", 16u);
+    blitShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
 
     clearShader = ShaderManager->getShaderProgram({"DepthComplexityClear.Vertex", "DepthComplexityClear.Fragment"});
 
@@ -175,7 +176,12 @@ void OIT_DepthComplexity::computeStatistics()
 
     numFragmentsBuffer->unmapBuffer();
 
+    if ((uint32_t)maxComplexity > numFragmentsMaxColor) {
+        numFragmentsMaxColor = maxComplexity;
+        blitShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
+    }
 
+    if (totalNumFragments == 0) usedLocations = 1; // Avoid dividing by zero in code below
     std::cout << "Depth complexity: avg used: " << ((float) totalNumFragments / usedLocations)
               << ", avg all: " << ((float) totalNumFragments / size) << ", max:" << maxComplexity
               << ", #fragments: " << totalNumFragments << std::endl;

@@ -44,6 +44,7 @@ private:
     sgl::ShaderProgramPtr blitShader;
     sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr numFragmentsBuffer;
+    uint32_t numFragmentsMaxColor; // = max(16, max. depth complexity of scene)
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;

@@ -70,7 +70,7 @@ void OIT_LinkedList::resolutionChanged()
 	startOffsetBuffer = Renderer->createGeometryBuffer(startOffsetBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
 	atomicCounterBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
-	atomicCounterBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t), NULL, SHADER_STORAGE_BUFFER);
+	atomicCounterBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t), NULL, ATOMIC_COUNTER_BUFFER);
 
 
 	gatherShader->setUniform("viewportW", width);

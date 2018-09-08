@@ -19,9 +19,8 @@ class OIT_Dummy : public OIT_Renderer
 public:
 	virtual sgl::ShaderProgramPtr getGatherShader() { return renderShader; }
 
-	virtual void create() {
-		renderShader = sgl::ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-	}
+	OIT_Dummy();
+	virtual void create();
 	virtual void resolutionChanged() {}
 
 	virtual void gatherBegin() {}

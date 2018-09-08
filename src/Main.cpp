@@ -16,7 +16,7 @@ using namespace sgl;
 
 int main(int argc, char *argv[]) {
 	// Initialize the filesystem utilities
-	FileUtils::get()->initialize("shadow-volumes-2d", argc, argv);
+	FileUtils::get()->initialize("pixel-sync-oit", argc, argv);
 
 	// Load the file containing the app settings
 	string settingsFile = FileUtils::get()->getConfigDirectory() + "settings.txt";

@@ -22,7 +22,7 @@ void main()
 
 out vec4 fragColor;
 
-#define MAX_NUM_FRAGS 8
+#define MAX_NUM_FRAGS 256
 
 void main()
 {

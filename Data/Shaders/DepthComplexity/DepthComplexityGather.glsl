@@ -34,6 +34,7 @@ uniform vec3 diffuseColor;
 uniform vec3 specularColor;
 uniform float specularExponent;
 uniform float opacity;
+uniform int bandedColorShading = 1;
 
 void main()
 {
@@ -50,5 +51,5 @@ void main()
     // Just compute something so that normal and color uniform variables aren't optimized out.
     // Color buffer write is disabled anyway.
 	fragColor = vec4(color + vec4(fragmentNormal, 1.0) + vec4(ambientColor, opacity) + vec4(diffuseColor, opacity)
-	        + vec4(specularExponent*specularColor, opacity));
+	        + vec4(specularExponent*specularColor, opacity)) + bandedColorShading * 0.00001;
 }

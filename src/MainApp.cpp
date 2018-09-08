@@ -13,6 +13,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <GL/glew.h>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <Input/Keyboard.hpp>
 #include <Math/Math.hpp>
@@ -32,6 +33,7 @@
 
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
+#include "Utils/TrajectoryLoader.hpp"
 #include "OIT/OIT_Dummy.hpp"
 #include "OIT/OIT_PixelSync.hpp"
 #include "OIT/OIT_LinkedList.hpp"
@@ -40,6 +42,11 @@
 #include "OIT/OIT_MB.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "MainApp.hpp"
+
+void openglErrorCallback()
+{
+    std::cout << "Application callback" << std::endl;
+}
 
 PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWriter(NULL)
 {
@@ -60,34 +67,26 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	//glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_CULL_FACE);
 	//glCullFace(GL_FRONT);
+	Renderer->setErrorCallback(&openglErrorCallback);
+	Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
-
-	int mode = 2;
-	if (mode == 0) {
-		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_PixelSync);
-	} else if (mode == 1) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_LinkedList);
-    } else if (mode == 2) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLAB);
-    } else if (mode == 3) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_HT);
-    } else if (mode == 4) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
-    } else {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
-	}
-	ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
-
-	resolutionChanged(EventPtr());
-
-    std::string modelFilenamePure = "Data/Models/Ship_04";
-    //std::string modelFilenamePure = "Data/Models/Monkey";
-    //std::string modelFilenamePure = "Data/Models/Box";
-    //std::string modelFilenamePure = "Data/Models/dragon";
+	// RENDER_MODE_OIT_KBUFFER = 0, RENDER_MODE_OIT_LINKED_LIST, RENDER_MODE_OIT_MLAB,
+	// RENDER_MODE_OIT_HT, RENDER_MODE_OIT_DEPTH_COMPLEXITY, RENDER_MODE_OIT_DUMMY
+	setRenderMode(RENDER_MODE_OIT_MLAB);
+    //modelFilenamePure = "Data/Trajectories/single_streamline";
+    modelFilenamePure = "Data/Trajectories/9213_streamlines";
+	//modelFilenamePure = "Data/Models/Ship_04";
+    //modelFilenamePure = "Data/Models/Monkey";
+    //modelFilenamePure = "Data/Models/Box";
+    //modelFilenamePure = "Data/Models/dragon";
 	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
 	std::string modelFilenameObj = modelFilenamePure + ".obj";
 	if (!FileUtils::get()->exists(modelFilenameOptimized)) {
-		convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
+	    if (boost::starts_with(modelFilenamePure, "Data/Models")) {
+            convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
+	    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+            convertObjTrajectoryDataToBinaryMesh(modelFilenameObj, modelFilenameOptimized);
+	    }
 	}
 	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
 	rotation = glm::mat4(1.0f);
@@ -96,6 +95,48 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	if (modelFilenamePure == "Data/Models/Ship_04") {
 		transparencyShader->setUniform("bandedColorShading", 0);
 	}
+}
+
+void PixelSyncApp::setRenderMode(RenderModeOIT newMode)
+{
+	if (mode == newMode) {
+		return;
+	}
+
+	mode = newMode;
+	if (mode == RENDER_MODE_OIT_KBUFFER) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_PixelSync);
+	} else if (mode == RENDER_MODE_OIT_LINKED_LIST) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_LinkedList);
+	} else if (mode == RENDER_MODE_OIT_MLAB) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLAB);
+	} else if (mode == RENDER_MODE_OIT_HT) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_HT);
+	} else if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
+	} else if (mode == RENDER_MODE_OIT_DUMMY) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
+	} else {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
+		Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
+		mode = RENDER_MODE_OIT_DUMMY;
+	}
+	transparencyShader = oitRenderer->getGatherShader();
+
+	/*if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+		Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
+	} else {
+		Renderer->setDebugVerbosity(DEBUG_OUTPUT_MEDIUM_AND_ABOVE);
+	}*/
+
+	if (transparentObject.isLoaded()) {
+		transparentObject.setNewShader(transparencyShader);
+		if (modelFilenamePure == "Data/Models/Ship_04") {
+			transparencyShader->setUniform("bandedColorShading", 0);
+		}
+	}
+
+    resolutionChanged(EventPtr());
 }
 
 PixelSyncApp::~PixelSyncApp()
@@ -182,6 +223,7 @@ void PixelSyncApp::renderScene()
     //transparencyShader->setUniform("ambientColor", Color(0.75f, 0.75f, 0.75f));
     //transparencyShader->setUniform("opacity", 120.0f/255.0f); // TODO for monkey mesh
     transparencyShader->setUniform("color", Color(165, 220, 84, 120)); // TODO for monkey mesh
+    transparencyShader->setUniform("color", Color(165, 220, 84, 10)); // TODO for monkey mesh
 	//Renderer->render(transparentObject);
     transparentObject.render();
 
@@ -207,7 +249,21 @@ void PixelSyncApp::update(float dt)
 {
 	AppLogic::update(dt);
 
-    const float ROT_SPEED = 0.001f;
+	if (Keyboard->keyPressed(SDLK_0)) {
+        setRenderMode((RenderModeOIT)0);
+	} else if (Keyboard->keyPressed(SDLK_1)) {
+        setRenderMode((RenderModeOIT)1);
+	} else if (Keyboard->keyPressed(SDLK_2)) {
+        setRenderMode((RenderModeOIT)2);
+	} else if (Keyboard->keyPressed(SDLK_3)) {
+        setRenderMode((RenderModeOIT)3);
+	} else if (Keyboard->keyPressed(SDLK_4)) {
+        setRenderMode((RenderModeOIT)4);
+	} else if (Keyboard->keyPressed(SDLK_5)) {
+        setRenderMode((RenderModeOIT)5);
+	}
+
+	const float ROT_SPEED = 0.001f;
 
 	// Rotate scene around camera origin
 	if (Keyboard->isKeyDown(SDLK_x)) {

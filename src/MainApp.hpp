@@ -26,11 +26,21 @@
 using namespace std;
 using namespace sgl;
 
+enum RenderModeOIT {
+	RENDER_MODE_OIT_KBUFFER = 0,
+	RENDER_MODE_OIT_LINKED_LIST,
+	RENDER_MODE_OIT_MLAB, // Mutli-layer Alpha Blending
+	RENDER_MODE_OIT_HT, // Hybrid Transparency
+	RENDER_MODE_OIT_DEPTH_COMPLEXITY,
+	RENDER_MODE_OIT_DUMMY
+};
+
 class PixelSyncApp : public AppLogic
 {
 public:
 	PixelSyncApp();
 	~PixelSyncApp();
+	void setRenderMode(RenderModeOIT newMode);
 	void render();
 	void renderScene(); // Renders lighted scene
 	void update(float dt);
@@ -39,11 +49,14 @@ public:
 private:
 	// Lighting & rendering
 	boost::shared_ptr<Camera> camera;
+	RenderModeOIT mode;
+	ShaderProgramPtr transparencyShader;
 	ShaderProgramPtr plainShader;
 	ShaderProgramPtr whiteSolidShader;
 
 	// Objects in the scene
 	boost::shared_ptr<OIT_Renderer> oitRenderer;
+	std::string modelFilenamePure;
 	MeshRenderer transparentObject;
 	glm::mat4 rotation;
 	glm::mat4 scaling;
