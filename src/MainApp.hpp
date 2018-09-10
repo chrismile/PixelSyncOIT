@@ -31,6 +31,7 @@ enum RenderModeOIT {
 	RENDER_MODE_OIT_LINKED_LIST,
 	RENDER_MODE_OIT_MLAB, // Mutli-layer Alpha Blending
 	RENDER_MODE_OIT_HT, // Hybrid Transparency
+    RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
 	RENDER_MODE_OIT_DEPTH_COMPLEXITY,
 	RENDER_MODE_OIT_DUMMY
 };

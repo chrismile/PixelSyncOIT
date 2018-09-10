@@ -1,6 +1,8 @@
 //
-// Created by christoph on 02.09.18.
+// Created by christoph on 09.09.18.
 //
+
+#include "OIT_MBOIT.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -12,31 +14,31 @@
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
 
-#include "OIT_AT.hpp"
+#include "OIT_MBOIT.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
 
-OIT_AT::OIT_AT()
+OIT_MBOIT::OIT_MBOIT()
 {
     clearBitSet = true;
     create();
 }
 
-void OIT_AT::create()
+void OIT_MBOIT::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
         Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
-    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"ATGather.glsl\"");
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITGather.glsl\"");
 
     gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-    blitShader = ShaderManager->getShaderProgram({"ATResolve.Vertex", "ATResolve.Fragment"});
-    clearShader = ShaderManager->getShaderProgram({"ATClear.Vertex", "ATClear.Fragment"});
+    blitShader = ShaderManager->getShaderProgram({"MBOITResolve.Vertex", "MBOITResolve.Fragment"});
+    clearShader = ShaderManager->getShaderProgram({"MBOITClear.Vertex", "MBOITClear.Fragment"});
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
     blitRenderData = ShaderManager->createShaderAttributes(blitShader);
@@ -52,14 +54,14 @@ void OIT_AT::create()
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_AT::resolutionChanged()
+void OIT_MBOIT::resolutionChanged()
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
 
     size_t bufferSize = width * height;
-    size_t bufferSizeBytes = sizeof(ATFragmentNode_compressed) * bufferSize;
+    size_t bufferSizeBytes = sizeof(MBOITFragmentNode_compressed) * bufferSize;
     void *data = (void*)malloc(bufferSizeBytes);
     memset(data, 0, bufferSizeBytes);
 
@@ -84,7 +86,7 @@ void OIT_AT::resolutionChanged()
     clearBitSet = true;
 }
 
-void OIT_AT::gatherBegin()
+void OIT_MBOIT::gatherBegin()
 {
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
@@ -102,6 +104,7 @@ void OIT_AT::gatherBegin()
     glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
     //glDepthMask(GL_FALSE);
+    GL_R8_SNORM;
 
     if (useStencilBuffer) {
         glEnable(GL_STENCIL_TEST);
@@ -112,12 +115,12 @@ void OIT_AT::gatherBegin()
     }
 }
 
-void OIT_AT::gatherEnd()
+void OIT_MBOIT::gatherEnd()
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void OIT_AT::renderToScreen()
+void OIT_MBOIT::renderToScreen()
 {
     Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());

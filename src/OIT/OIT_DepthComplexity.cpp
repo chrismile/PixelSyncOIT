@@ -40,7 +40,9 @@ void OIT_DepthComplexity::create()
     }
     numFragmentsMaxColor = 16;
 
-    gatherShader = ShaderManager->getShaderProgram({"DepthComplexityGather.Vertex", "DepthComplexityGather.Fragment"});
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthComplexityGather.glsl\"");
+
+    gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
 
     blitShader = ShaderManager->getShaderProgram({"DepthComplexityResolve.Vertex", "DepthComplexityResolve.Fragment"});
     blitShader->setUniform("color", Color(0, 255, 255));

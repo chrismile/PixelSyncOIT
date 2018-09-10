@@ -32,7 +32,9 @@ void OIT_HT::create()
         exit(1);
     }
 
-    gatherShader = ShaderManager->getShaderProgram({"HTGather.Vertex", "HTGather.Fragment"});
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"HTGather.glsl\"");
+
+    gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
     blitShader = ShaderManager->getShaderProgram({"HTResolve.Vertex", "HTResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"HTClear.Vertex", "HTClear.Fragment"});
 

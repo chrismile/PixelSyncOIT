@@ -25,15 +25,22 @@ void main()
 	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
+
 -- Fragment
 
 #version 430 core
+
+#ifndef DIRECT_BLIT_GATHER
+#include OIT_GATHER_HEADER
+#endif
 
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
 
+#ifdef DIRECT_BLIT_GATHER
 out vec4 fragColor;
+#endif
 
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
@@ -56,9 +63,21 @@ void main()
 	    vec3 lightDirection = vec3(1.0,0.0,0.0);
 	    vec3 ambientShading = ambientColor * 0.1;
 	    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
-	    vec3 specularShading = specularColor * specularExponent * 0.00001; // In order to not get an unused warning
+	    vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
 	    color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
 	}
 
+#ifdef DIRECT_BLIT_GATHER
+	// Direct rendering
 	fragColor = color;
+#else
+#ifdef REQUIRE_INVOCATION_INTERLOCK
+	// Area of mutual exclusion for fragments mapping to the same pixel
+	beginInvocationInterlockARB();
+	gatherFragment(color);
+	endInvocationInterlockARB();
+#else
+	gatherFragment(color);
+#endif
+#endif
 }

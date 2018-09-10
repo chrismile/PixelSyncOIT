@@ -3,6 +3,7 @@
 //
 
 #include <GL/glew.h>
+#include <Graphics/Shader/ShaderManager.hpp>
 
 #include "OIT_Dummy.hpp"
 
@@ -13,6 +14,8 @@ OIT_Dummy::OIT_Dummy()
 
 void OIT_Dummy::create()
 {
+    sgl::ShaderManager->addPreprocessorDefine("DIRECT_BLIT_GATHER", "true");
     renderShader = sgl::ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
+    sgl::ShaderManager->removePreprocessorDefine("DIRECT_BLIT_GATHER"); // Remove for case that renderer is switched
     glDisable(GL_STENCIL_TEST);
 }

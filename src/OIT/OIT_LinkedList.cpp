@@ -32,7 +32,9 @@ OIT_LinkedList::OIT_LinkedList()
 
 void OIT_LinkedList::create()
 {
-	gatherShader = ShaderManager->getShaderProgram({"LinkedListGather.Vertex", "LinkedListGather.Fragment"});
+	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"LinkedListGather.glsl\"");
+
+	gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
 	blitShader = ShaderManager->getShaderProgram({"LinkedListResolve.Vertex", "LinkedListResolve.Fragment"});
 	clearShader = ShaderManager->getShaderProgram({"LinkedListClear.Vertex", "LinkedListClear.Fragment"});
 

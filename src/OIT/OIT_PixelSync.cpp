@@ -37,7 +37,9 @@ void OIT_PixelSync::create()
 		exit(1);
 	}
 
-	gatherShader = ShaderManager->getShaderProgram({"PixelSyncGather.Vertex", "PixelSyncGather.Fragment"});
+	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"PixelSyncGather.glsl\"");
+
+	gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
 	gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	blitShader = ShaderManager->getShaderProgram({"PixelSyncResolve.Vertex", "PixelSyncResolve.Fragment"});

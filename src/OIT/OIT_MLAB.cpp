@@ -32,7 +32,9 @@ void OIT_MLAB::create()
         exit(1);
     }
 
-    gatherShader = ShaderManager->getShaderProgram({"MLABGather.Vertex", "MLABGather.Fragment"});
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABGather.glsl\"");
+
+    gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
     blitShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
 

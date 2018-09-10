@@ -39,7 +39,7 @@
 #include "OIT/OIT_LinkedList.hpp"
 #include "OIT/OIT_MLAB.hpp"
 #include "OIT/OIT_HT.hpp"
-#include "OIT/OIT_MB.hpp"
+#include "OIT/OIT_MBOIT.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "MainApp.hpp"
 
@@ -73,9 +73,9 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	// RENDER_MODE_OIT_KBUFFER = 0, RENDER_MODE_OIT_LINKED_LIST, RENDER_MODE_OIT_MLAB,
 	// RENDER_MODE_OIT_HT, RENDER_MODE_OIT_DEPTH_COMPLEXITY, RENDER_MODE_OIT_DUMMY
 	setRenderMode(RENDER_MODE_OIT_MLAB);
-    //modelFilenamePure = "Data/Trajectories/single_streamline";
-    modelFilenamePure = "Data/Trajectories/9213_streamlines";
-	//modelFilenamePure = "Data/Models/Ship_04";
+	//modelFilenamePure = "Data/Trajectories/single_streamline";
+    //modelFilenamePure = "Data/Trajectories/9213_streamlines";
+	modelFilenamePure = "Data/Models/Ship_04";
     //modelFilenamePure = "Data/Models/Monkey";
     //modelFilenamePure = "Data/Models/Box";
     //modelFilenamePure = "Data/Models/dragon";
@@ -103,6 +103,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode)
 		return;
 	}
 
+	ShaderManager->invalidateShaderCache();
+
 	mode = newMode;
 	if (mode == RENDER_MODE_OIT_KBUFFER) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_PixelSync);
@@ -111,8 +113,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode)
 	} else if (mode == RENDER_MODE_OIT_MLAB) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLAB);
 	} else if (mode == RENDER_MODE_OIT_HT) {
-		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_HT);
-	} else if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_HT);
+    } else if (mode == RENDER_MODE_OIT_MBOIT) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MBOIT);
+    } else if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
 	} else if (mode == RENDER_MODE_OIT_DUMMY) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
@@ -223,7 +227,9 @@ void PixelSyncApp::renderScene()
     //transparencyShader->setUniform("ambientColor", Color(0.75f, 0.75f, 0.75f));
     //transparencyShader->setUniform("opacity", 120.0f/255.0f); // TODO for monkey mesh
     transparencyShader->setUniform("color", Color(165, 220, 84, 120)); // TODO for monkey mesh
-    transparencyShader->setUniform("color", Color(165, 220, 84, 10)); // TODO for monkey mesh
+    if (modelFilenamePure == "Data/Trajectories/9213_streamlines") {
+        transparencyShader->setUniform("color", Color(165, 220, 84, 10));
+    }
 	//Renderer->render(transparentObject);
     transparentObject.render();
 
@@ -260,7 +266,9 @@ void PixelSyncApp::update(float dt)
 	} else if (Keyboard->keyPressed(SDLK_4)) {
         setRenderMode((RenderModeOIT)4);
 	} else if (Keyboard->keyPressed(SDLK_5)) {
-        setRenderMode((RenderModeOIT)5);
+		setRenderMode((RenderModeOIT)5);
+	} else if (Keyboard->keyPressed(SDLK_6)) {
+		setRenderMode((RenderModeOIT)6);
 	}
 
 	const float ROT_SPEED = 0.001f;
