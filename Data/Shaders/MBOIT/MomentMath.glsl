@@ -65,16 +65,15 @@ vec3 SolveCubic(vec4 Coefficient) {
 		);
 	// Take the cubic root of a normalized complex number
 	float Theta = atan(-Depressed.x, sqrt(Discriminant)) / 3.0f;
-	vec2 CubicRoot;
-	sincos(Theta, CubicRoot.y, CubicRoot.x);
-	// Compute the three roots, scale appropriately and 
+	vec2 CubicRoot = vec2(cos(Theta), sin(Theta));
+	// Compute the three roots, scale appropriately and
 	// revert the depression transform
 	vec3 Root = vec3(
 		CubicRoot.x,
 		dot(vec2(-0.5f, -0.5f*sqrt(3.0f)), CubicRoot),
 		dot(vec2(-0.5f, 0.5f*sqrt(3.0f)), CubicRoot)
 		);
-	Root = fma(2.0f*sqrt(-Depressed.y), Root, -Coefficient.z);
+	Root = fma(vec3(2.0f*sqrt(-Depressed.y)), Root, vec3(-Coefficient.z));
 	return Root;
 }
 
@@ -91,8 +90,7 @@ float solveCubicBlinnSmallest(vec4 coeffs)
 
 	vec2 depressed = vec2(delta.z, -coeffs.x * delta.y + 2.0 * coeffs.y * delta.z);
 	float theta = abs(atan(-depressed.y, coeffs.x * sqrt(discriminant))) / 3.0;
-	vec2 sin_cos;
-	sincos(theta, sin_cos.x, sin_cos.y);
+	vec2 sin_cos = vec2(sin(theta), cos(theta));
 	float tmp = 2.0 * sqrt(-depressed.x);
 	vec2 x = vec2(tmp * sin_cos.y, tmp * (-0.5 * sin_cos.y - 0.5 * sqrt(3.0) * sin_cos.x));
 	vec2 s = (x.x + x.y < 2.0 * coeffs.y) ? vec2(-coeffs.x, x.x + coeffs.y) : vec2(-coeffs.x, x.y + coeffs.y);
@@ -162,15 +160,15 @@ void offsetMoments(inout vec2 b_even, inout vec2 b_odd, float sign)
 
 void quantizeMoments(out vec2 b_even_q, out vec2 b_odd_q, vec2 b_even, vec2 b_odd)
 {
-	b_odd_q = mul(b_odd, mat2(1.5f, sqrt(3.0f)*0.5f, -2.0f, -sqrt(3.0f)*2.0f / 9.0f));
-	b_even_q = mul(b_even, mat2(4.0f, 0.5f, -4.0f, 0.5f));
+	b_odd_q = mat2(1.5f, -2.0f, sqrt(3.0f)*0.5f, -sqrt(3.0f)*2.0f / 9.0f) * b_odd;
+	b_even_q = mat2(4.0f, -4.0f, 0.5f, 0.5f) * b_even;
 }
 
 void offsetAndDequantizeMoments(out vec2 b_even, out vec2 b_odd, vec2 b_even_q, vec2 b_odd_q)
 {
 	offsetMoments(b_even_q, b_odd_q, -1.0);
-	b_odd = mul(b_odd_q, mat2(-1.0f / 3.0f, -0.75f, sqrt(3.0f), 0.75f*sqrt(3.0f)));
-	b_even = mul(b_even_q, mat2(0.125f, -0.125f, 1.0f, 1.0f));
+	b_odd = mat2(-1.0f / 3.0f, sqrt(3.0f), -0.75f, 0.75f*sqrt(3.0f)) * b_odd_q;
+	b_even = mat2(0.125f, 1.0f, -0.125f, 1.0f) * b_even_q;
 }
 
 void offsetMoments(inout vec3 b_even, inout vec3 b_odd, float sign)
@@ -189,8 +187,8 @@ void quantizeMoments(out vec3 b_even_q, out vec3 b_odd_q, vec3 b_even, vec3 b_od
         4.0, -4.0, 0.0,
         9.0, -24.0, 16.0,
         -0.57759806484, 4.61936647543, -3.07953906655);
-	b_odd_q = mul(b_odd, QuantizationMatrixOdd);
-	b_even_q = mul(b_even, QuantizationMatrixEven);
+	b_odd_q = QuantizationMatrixOdd * b_odd;
+	b_even_q = QuantizationMatrixEven * b_even;
 }
 
 void offsetAndDequantizeMoments(out vec3 b_even, out vec3 b_odd, vec3 b_even_q, vec3 b_odd_q)
@@ -204,8 +202,8 @@ void offsetAndDequantizeMoments(out vec3 b_even, out vec3 b_odd, vec3 b_even_q, 
     	-0.24998746956, 0.16668494186, 0.86602540579,
     	-0.37498825271, 0.21876713299, 0.81189881793);
 	offsetMoments(b_even_q, b_odd_q, -1.0);
-	b_odd = mul(b_odd_q, QuantizationMatrixOdd);
-	b_even = mul(b_even_q, QuantizationMatrixEven);
+	b_odd = QuantizationMatrixOdd * b_odd_q;
+	b_even = QuantizationMatrixEven * b_even_q;
 }
 
 void offsetMoments(inout vec4 b_even, inout vec4 b_odd, float sign)
@@ -226,8 +224,8 @@ void quantizeMoments(out vec4 b_even_q, out vec4 b_odd_q, vec4 b_even, vec4 b_od
     	-0.757633844606942, 0.221551373038988, 13.9855979699139, 79.6186327084103,
     	0.392179589334688, -1.06107954265125, -0.114305766176437, -127.457278992502,
     	-0.887531871812237, 2.83887201588367, -7.4361899359832, 63.7349456687829);
-	b_odd_q = mul(mat_odd, b_odd);
-	b_even_q = mul(mat_even, b_even);
+	b_odd_q = b_odd * mat_odd;
+	b_even_q = b_even * mat_even;
 }
 
 void offsetAndDequantizeMoments(out vec4 b_even, out vec4 b_odd, vec4 b_even_q, vec4 b_odd_q)
@@ -243,8 +241,8 @@ void offsetAndDequantizeMoments(out vec4 b_even, out vec4 b_odd, vec4 b_even_q, 
         -0.0504335521016742, 0.0259608334616091, 0.00443408851014257, -0.0361414253243963,
         0.000838800390651085, -0.00133632693205861, -0.0103744938457406, -0.00317839994022725);
 	offsetMoments(b_even_q, b_odd_q, -1.0);
-	b_odd = mul(mat_odd, b_odd_q);
-	b_even = mul(mat_even, b_even_q);
+	b_odd = b_odd_q * mat_odd;
+	b_even = b_even_q * mat_even;
 }
 
 /*! This function reconstructs the transmittance at the given depth from four 
@@ -359,7 +357,11 @@ float computeTransmittanceAtDepthFrom6PowerMoments(float b_0, vec3 b_even, vec3 
 	vec4 weigth_factor;
 	weigth_factor[0] = overestimation;
 	//weigth_factor.yzw = (z.yzw > z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f);
-	weigth_factor.yzw = greaterThan(z.yzw, z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f);
+	//weigth_factor.yzw = greaterThan(z.yzw, z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f);
+	// Unfortunately, the ternary operator doesn't work with vectors in GLSL :(
+	weigth_factor.y = z.y > z.x ? 0.0f : 1.0f;
+	weigth_factor.z = z.z > z.x ? 0.0f : 1.0f;
+	weigth_factor.w = z.w > z.x ? 0.0f : 1.0f;
 	// Construct an interpolation polynomial
 	float f0 = weigth_factor[0];
 	float f1 = weigth_factor[1];
@@ -466,7 +468,7 @@ float computeTransmittanceAtDepthFrom8PowerMoments(float b_0, vec4 b_even, vec4 
 
 	// Compute the absorbance by summing the appropriate weights
 	//vec4 weigth_factor = (vec4(z[1], z[2], z[3], z[4]) <= z[0].xxxx);
-	vec4 weigth_factor = lessThanEqual(vec4(z[1], z[2], z[3], z[4]), z[0].xxxx);
+	vec4 weigth_factor = vec4(lessThanEqual(vec4(z[1], z[2], z[3], z[4]), z[0].xxxx));
 	// Construct an interpolation polynomial
 	float f0 = overestimation;
 	float f1 = weigth_factor[0];

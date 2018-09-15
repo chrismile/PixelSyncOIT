@@ -58,11 +58,11 @@ vec2 Cube(vec2 Z){
   \sa SquareRoot() */
 vec2 SquareRootUnsafe(vec2 Z){
 	float ZLengthSq=dot(Z,Z);
-	float ZLengthInv=rsqrt(ZLengthSq);
+	float ZLengthInv=inversesqrt(ZLengthSq);
 	vec2 UnnormalizedRoot=Z*ZLengthInv+vec2(1.0f,0.0f);
 	float UnnormalizedRootLengthSq=dot(UnnormalizedRoot,UnnormalizedRoot);
 	float NormalizationFactorInvSq=UnnormalizedRootLengthSq*ZLengthInv;
-	float NormalizationFactor=rsqrt(NormalizationFactorInvSq);
+	float NormalizationFactor=inversesqrt(NormalizationFactorInvSq);
 	return NormalizationFactor*UnnormalizedRoot;
 }
 /*! This utility function computes one square root of the given complex value. 
@@ -80,8 +80,7 @@ vec2 SquareRoot(vec2 Z){
 vec2 CubicRoot(vec2 Z){
 	float Argument=atan(Z.x, Z.y);
 	float NewArgument=Argument/3.0f;
-	vec2 NormalizedRoot;
-	sincos(NewArgument,NormalizedRoot.y,NormalizedRoot.x);
+	vec2 NormalizedRoot = vec2(cos(NewArgument), sin(NewArgument));
 	return NormalizedRoot*pow(dot(Z,Z),1.0f/6.0f);
 }
 

@@ -5,6 +5,8 @@
 #ifndef PIXELSYNCOIT_OIT_MBOIT_HPP
 #define PIXELSYNCOIT_OIT_MBOIT_HPP
 
+#include <Graphics/Texture/Texture.hpp>
+
 #include "OIT_Renderer.hpp"
 
 #define MBOIT_NUM_FRAGMENTS 8
@@ -48,13 +50,16 @@ private:
 
     sgl::ShaderProgramPtr gatherShader;
     sgl::ShaderProgramPtr blitShader;
-    sgl::ShaderProgramPtr clearShader;
+    //sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr fragmentNodes;
     sgl::GeometryBufferPtr numFragmentsBuffer;
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
-    sgl::ShaderAttributesPtr clearRenderData;
+    //sgl::ShaderAttributesPtr clearRenderData;
+
+    sgl::TexturePtr b0;
+    sgl::TexturePtr b;
 
     bool clearBitSet;
 };

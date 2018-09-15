@@ -40,10 +40,10 @@ void OIT_PixelSync::create()
 	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"PixelSyncGather.glsl\"");
 
 	gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-	gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
+	//gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	blitShader = ShaderManager->getShaderProgram({"PixelSyncResolve.Vertex", "PixelSyncResolve.Fragment"});
-	blitShader->setUniform("nodesPerPixel", nodesPerPixel);
+	//blitShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	clearShader = ShaderManager->getShaderProgram({"PixelSyncClear.Vertex", "PixelSyncClear.Fragment"});
 	//clearShader->setUniform("nodesPerPixel", nodesPerPixel);
@@ -54,11 +54,13 @@ void OIT_PixelSync::create()
 	std::vector<glm::vec3> fullscreenQuad{
 		glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
 		glm::vec3(-1,-1,0), glm::vec3(1,1,0), glm::vec3(-1,1,0)};
-	GeometryBufferPtr geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(), (void*)&fullscreenQuad.front());
+	GeometryBufferPtr geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
+			(void*)&fullscreenQuad.front());
 	blitRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 
 	clearRenderData = ShaderManager->createShaderAttributes(clearShader);
-	geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(), (void*)&fullscreenQuad.front());
+	geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
+			(void*)&fullscreenQuad.front());
 	clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
@@ -144,6 +146,7 @@ void OIT_PixelSync::renderToScreen()
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
 
 	if (useStencilBuffer) {
 		glStencilFunc(GL_EQUAL, 1, 0xFF);

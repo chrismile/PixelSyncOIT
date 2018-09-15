@@ -56,11 +56,13 @@ void OIT_DepthComplexity::create()
     std::vector<glm::vec3> fullscreenQuad{
             glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
             glm::vec3(-1,-1,0), glm::vec3(1,1,0), glm::vec3(-1,1,0)};
-    GeometryBufferPtr geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(), (void*)&fullscreenQuad.front());
+    GeometryBufferPtr geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
+            (void*)&fullscreenQuad.front());
     blitRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 
     clearRenderData = ShaderManager->createShaderAttributes(clearShader);
-    geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(), (void*)&fullscreenQuad.front());
+    geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
+            (void*)&fullscreenQuad.front());
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 
     //Renderer->errorCheck();
@@ -126,7 +128,7 @@ void OIT_DepthComplexity::gatherEnd()
 
     // Print statistics if enough time has passed
     static float counterPrintFrags = 0.0f;
-    counterPrintFrags += Timer->getElapsed();
+    counterPrintFrags += Timer->getElapsedSeconds();
     if (counterPrintFrags > 1.0f) {
         computeStatistics();
         counterPrintFrags = 0.0f;
@@ -143,6 +145,7 @@ void OIT_DepthComplexity::renderToScreen()
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
 
     if (useStencilBuffer) {
         glStencilFunc(GL_EQUAL, 1, 0xFF);
@@ -178,8 +181,8 @@ void OIT_DepthComplexity::computeStatistics()
 
     numFragmentsBuffer->unmapBuffer();
 
-    if ((uint32_t)maxComplexity > numFragmentsMaxColor) {
-        numFragmentsMaxColor = maxComplexity;
+    if ((uint32_t)maxComplexity != numFragmentsMaxColor) {
+        numFragmentsMaxColor = maxComplexity/2;
         blitShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
     }
 

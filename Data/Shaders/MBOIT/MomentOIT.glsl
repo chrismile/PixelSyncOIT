@@ -18,7 +18,7 @@
 #define MOMENT_OIT_GLSL
 
 // https://www.khronos.org/opengl/wiki/Interface_Block_(GLSL)#Block_buffer_binding
-layout(std140, binding = 0) uniform MomentOIT
+layout(std140, binding = 0) uniform MomentOITUniformData
 {
 	vec4 wrapping_zone_parameters;
 	float overestimation;
@@ -228,7 +228,7 @@ void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrappin
     }
 
 #if NUM_MOMENTS == 4
-	float b_0 = imageLoad(b0, idx0);
+	float b_0 = imageLoad(b0, idx0).x;
 	vec4 b_raw = imageLoad(b, idx0);
 
 #if TRIGONOMETRIC
@@ -242,11 +242,11 @@ void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrappin
 
 	imageStore(b, idx0, vec4(b_odd.x, b_even.x, b_odd.y, b_even.y));
 #endif
-	imageStore(b0, idx0, b_0);
+	imageStore(b0, idx0, vec4(b_0, 0.0, 0.0, 1.0));
 #elif NUM_MOMENTS == 6
 	ivec3 idx2 = ivec3(idx0.xy, 2);
 
-	float b_0 = imageLoad(b0, idx0);
+	float b_0 = imageLoad(b0, idx0).x;
 	vec2 b_raw[3];
 	b_raw[0] = imageLoad(b, idx0).xy;
 #if USE_R_RG_RBBA_FOR_MBOIT6
@@ -271,16 +271,16 @@ void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrappin
 	b_raw[2] = vec2(b_odd.z, b_even.z);
 #endif
 
-	imageStore(b0, idx0, b_0);
-	imageStore(b, idx0, b_raw[0]);
+	imageStore(b0, idx0, vec4(b_0, 0.0, 0.0, 1.0));
+	imageStore(b, idx0, vec4(b_raw[0], 0.0, 1.0));
 #if USE_R_RG_RBBA_FOR_MBOIT6
 	imageStore(b_extra, idx0, vec4(b_raw[1], b_raw[2]));
 #else
-	imageStore(b, idx1, b_raw[1]);
-	imageStore(b, idx2, b_raw[2]);
+	imageStore(b, idx1, vec4(b_raw[1], 0.0, 1.0));
+	imageStore(b, idx2, vec4(b_raw[2], 0.0, 1.0));
 #endif
 #elif NUM_MOMENTS == 8
-	float b_0 = imageLoad(b0, idx0);
+	float b_0 = imageLoad(b0, idx0).x;
 	vec4 b_even = imageLoad(b, idx0);
 	vec4 b_odd = imageLoad(b, idx1);
 
@@ -290,7 +290,7 @@ void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrappin
 	generatePowerMoments(b_0, b_even, b_odd, depth, transmittance);
 #endif
 
-	imageStore(b0, idx0, b_0);
+	imageStore(b0, idx0, vec4(b_0, 0.0, 0.0, 1.0));
 	imageStore(b, idx0, b_even);
 	imageStore(b, idx1, b_odd);
 #endif
@@ -419,7 +419,8 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	trig_b[0] = fma(trig_b[0], 2.0, -1.0);
 	trig_b[1] = fma(trig_b[1], 2.0, -1.0);
 #endif
-	transmittance_at_depth = computeTransmittanceAtDepthFrom2TrigonometricMoments(b_0, trig_b, depth, MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
+	transmittance_at_depth = computeTransmittanceAtDepthFrom2TrigonometricMoments(b_0, trig_b, depth,
+	        MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
 #else
 	vec4 b_1234 = imageLoad(moments, idx0).xyzw;
 #if SINGLE_PRECISION
@@ -440,7 +441,8 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	offsetAndDequantizeMoments(b_even, b_odd, b_even_q, b_odd_q);
 	const vec4 bias_vector = vec4(0, 0.628, 0, 0.628);
 #endif
-	transmittance_at_depth = computeTransmittanceAtDepthFrom4PowerMoments(b_0, b_even, b_odd, depth, MomentOIT.moment_bias, MomentOIT.overestimation, bias_vector);
+	transmittance_at_depth = computeTransmittanceAtDepthFrom4PowerMoments(b_0, b_even, b_odd, depth,
+	        MomentOIT.moment_bias, MomentOIT.overestimation, bias_vector);
 #endif
 #elif NUM_MOMENTS == 6
 	ivec3 idx2 = ivec3(idx0.xy, 2);
@@ -464,7 +466,8 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	trig_b[1] = fma(trig_b[1], 2.0, -1.0);
 	trig_b[2] = fma(trig_b[2], 2.0, -1.0);
 #endif
-	transmittance_at_depth = computeTransmittanceAtDepthFrom3TrigonometricMoments(b_0, trig_b, depth, MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
+	transmittance_at_depth = computeTransmittanceAtDepthFrom3TrigonometricMoments(b_0, trig_b, depth,
+	        MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
 #else
 	vec2 b_12 = imageLoad(moments, idx0).xy;
 #if USE_R_RG_RBBA_FOR_MBOIT6
@@ -493,7 +496,8 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 
 	const float bias_vector[6] = { 0, 0.5566, 0, 0.489, 0, 0.47869382 };
 #endif
-	transmittance_at_depth = computeTransmittanceAtDepthFrom6PowerMoments(b_0, b_even, b_odd, depth, MomentOIT.moment_bias, MomentOIT.overestimation, bias_vector);
+	transmittance_at_depth = computeTransmittanceAtDepthFrom6PowerMoments(b_0, b_even, b_odd, depth,
+	        MomentOIT.moment_bias, MomentOIT.overestimation, bias_vector);
 #endif
 #elif NUM_MOMENTS == 8
 #if TRIGONOMETRIC
@@ -514,7 +518,8 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 		fma(b_tmp.zw, 2.0, -1.0)
 	};
 #endif
-	transmittance_at_depth = computeTransmittanceAtDepthFrom4TrigonometricMoments(b_0, trig_b, depth, MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
+	transmittance_at_depth = computeTransmittanceAtDepthFrom4TrigonometricMoments(b_0, trig_b, depth,
+	        MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
 #else
 #if SINGLE_PRECISION
 	vec4 b_even = imageLoad(moments, idx0);
@@ -533,7 +538,8 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	offsetAndDequantizeMoments(b_even, b_odd, b_even_q, b_odd_q);
 	const float bias_vector[8] = { 0, 0.42474916387959866, 0, 0.22407802675585284, 0, 0.15369230769230768, 0, 0.12900440529089119 };
 #endif
-	transmittance_at_depth = computeTransmittanceAtDepthFrom8PowerMoments(b_0, b_even, b_odd, depth, MomentOIT.moment_bias, MomentOIT.overestimation, bias_vector);
+	transmittance_at_depth = computeTransmittanceAtDepthFrom8PowerMoments(b_0, b_even, b_odd, depth,
+	        MomentOIT.moment_bias, MomentOIT.overestimation, bias_vector);
 #endif
 #endif
 

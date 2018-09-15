@@ -26,14 +26,27 @@
 using namespace std;
 using namespace sgl;
 
+const int NUM_OIT_MODES = 7;
+const char *const OIT_MODE_NAMES[] = {
+        "K-Buffer", "Linked List", "MLAB", "HT", "MBOIT", "Depth Complexity", "No OIT"
+};
 enum RenderModeOIT {
-	RENDER_MODE_OIT_KBUFFER = 0,
-	RENDER_MODE_OIT_LINKED_LIST,
-	RENDER_MODE_OIT_MLAB, // Mutli-layer Alpha Blending
-	RENDER_MODE_OIT_HT, // Hybrid Transparency
-    RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
-	RENDER_MODE_OIT_DEPTH_COMPLEXITY,
-	RENDER_MODE_OIT_DUMMY
+        RENDER_MODE_OIT_KBUFFER = 0,
+        RENDER_MODE_OIT_LINKED_LIST,
+        RENDER_MODE_OIT_MLAB, // Mutli-layer Alpha Blending
+        RENDER_MODE_OIT_HT, // Hybrid Transparency
+        RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
+        RENDER_MODE_OIT_DEPTH_COMPLEXITY,
+        RENDER_MODE_OIT_DUMMY
+};
+
+const int NUM_MODELS = 6;
+const char *const MODEL_FILENAMES[] = {
+        "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04",
+        "Data/Models/Monkey", "Data/Models/Box", "Data/Models/dragon"
+};
+const char *const MODEL_DISPLAYNAMES[] = {
+        "Single Streamline", "Streamlines", "Ship", "Monkey", "Box", "Dragon"
 };
 
 class PixelSyncApp : public AppLogic
@@ -41,16 +54,21 @@ class PixelSyncApp : public AppLogic
 public:
 	PixelSyncApp();
 	~PixelSyncApp();
-	void setRenderMode(RenderModeOIT newMode);
 	void render();
 	void renderScene(); // Renders lighted scene
+	void renderGUI(); // Renders lighted scene
 	void update(float dt);
 	void resolutionChanged(EventPtr event);
+	void processSDLEvent(const SDL_Event &event);
+
+	// State changes
+    void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
+    void loadModel(const std::string &filename);
 
 private:
 	// Lighting & rendering
 	boost::shared_ptr<Camera> camera;
-	RenderModeOIT mode;
+	RenderModeOIT mode = RENDER_MODE_OIT_MLAB;
 	ShaderProgramPtr transparencyShader;
 	ShaderProgramPtr plainShader;
 	ShaderProgramPtr whiteSolidShader;
@@ -62,7 +80,12 @@ private:
 	glm::mat4 rotation;
 	glm::mat4 scaling;
 
-	// Profiling events
+    // User interface
+    bool showSettingsWindow = true;
+    int usedModelIndex = 2;
+    Color bandingColor;
+
+    // Profiling events
 	sgl::TimerGL timer;
 
 	// Save video stream to file

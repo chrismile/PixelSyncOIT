@@ -61,8 +61,7 @@ float computeTransmittanceAtDepthFrom2TrigonometricMoments(float b_0, vec2 trig_
 	float InvD22=1.0f/D22;
 	// Solve a linear system to get the relevant polynomial
 	float phase = fma(depth, wrapping_zone_parameters.y, wrapping_zone_parameters.y);
-	vec2 circle_point;
-	sincos(phase, circle_point.y, circle_point.x);
+	vec2 circle_point = vec2(cos(phase), sin(phase));
 	vec2 c[3] = {
 		vec2(1.0f,0.0f),
 		circle_point,
@@ -140,8 +139,7 @@ float computeTransmittanceAtDepthFrom3TrigonometricMoments(float b_0, vec2 trig_
 	float InvD33=1.0f/D33;
 	// Solve a linear system to get the relevant polynomial
 	float phase = fma(depth, wrapping_zone_parameters.y, wrapping_zone_parameters.y);
-	vec2 circle_point;
-	sincos(phase, circle_point.y, circle_point.x);
+	vec2 circle_point = vec2(cos(phase), sin(phase));
 	vec2 circle_point_pow2 = Multiply(circle_point, circle_point);
 	vec2 c[4] = {
 		vec2(1.0f,0.0f),
@@ -245,8 +243,7 @@ float computeTransmittanceAtDepthFrom4TrigonometricMoments(float b_0, vec2 trig_
 	float InvD44=1.0/D44;
 	// Solve a linear system to get the relevant polynomial
 	float phase = fma(depth, wrapping_zone_parameters.y, wrapping_zone_parameters.y);
-	vec2 circle_point;
-	sincos(phase, circle_point.y, circle_point.x);
+	vec2 circle_point = vec2(cos(phase), sin(phase));
 	vec2 circle_point_pow2 = Multiply(circle_point, circle_point);
 	vec2 c[5] = {
 		vec2(1.0f,0.0f),

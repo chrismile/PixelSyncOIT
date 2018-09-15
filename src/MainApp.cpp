@@ -30,6 +30,7 @@
 #include <Utils/File/FileUtils.hpp>
 #include <Graphics/Renderer.hpp>
 #include <Graphics/Shader/ShaderManager.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
@@ -45,7 +46,7 @@
 
 void openglErrorCallback()
 {
-    std::cout << "Application callback" << std::endl;
+    std::cerr << "Application callback" << std::endl;
 }
 
 PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWriter(NULL)
@@ -63,6 +64,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	//camera->setPosition(glm::vec3(-0.5f, -0.5f, -20.0f));
 	camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 
+	bandingColor = Color(165, 220, 84, 120);
+
 	//Renderer->enableDepthTest();
 	//glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_CULL_FACE);
@@ -70,36 +73,47 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	Renderer->setErrorCallback(&openglErrorCallback);
 	Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
-	// RENDER_MODE_OIT_KBUFFER = 0, RENDER_MODE_OIT_LINKED_LIST, RENDER_MODE_OIT_MLAB,
-	// RENDER_MODE_OIT_HT, RENDER_MODE_OIT_DEPTH_COMPLEXITY, RENDER_MODE_OIT_DUMMY
-	setRenderMode(RENDER_MODE_OIT_MLAB);
-	//modelFilenamePure = "Data/Trajectories/single_streamline";
-    //modelFilenamePure = "Data/Trajectories/9213_streamlines";
-	modelFilenamePure = "Data/Models/Ship_04";
-    //modelFilenamePure = "Data/Models/Monkey";
-    //modelFilenamePure = "Data/Models/Box";
-    //modelFilenamePure = "Data/Models/dragon";
+	setRenderMode(mode, true);
+	loadModel(MODEL_FILENAMES[usedModelIndex]);
+}
+
+void PixelSyncApp::loadModel(const std::string &filename)
+{
+	// Pure filename without extension (to create compressed .binmesh filename)
+	modelFilenamePure = FileUtils::get()->removeExtension(filename);
+
 	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
 	std::string modelFilenameObj = modelFilenamePure + ".obj";
 	if (!FileUtils::get()->exists(modelFilenameOptimized)) {
-	    if (boost::starts_with(modelFilenamePure, "Data/Models")) {
-            convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
-	    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-            convertObjTrajectoryDataToBinaryMesh(modelFilenameObj, modelFilenameOptimized);
-	    }
+		if (boost::starts_with(modelFilenamePure, "Data/Models")) {
+			convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
+		} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+			convertObjTrajectoryDataToBinaryMesh(modelFilenameObj, modelFilenameOptimized);
+		}
 	}
 	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
 
+	camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	camera->setScale(glm::vec3(1.0f));
 	if (modelFilenamePure == "Data/Models/Ship_04") {
 		transparencyShader->setUniform("bandedColorShading", 0);
+		camera->setPosition(glm::vec3(0.0f, -1.5f, -5.0f));
+	} else {
+		transparencyShader->setUniform("bandedColorShading", 1);
+		if (modelFilenamePure == "Data/Models/dragon") {
+			camera->setPosition(glm::vec3(-0.15f, -0.8f, -2.4f));
+			scaling = matrixScaling(glm::vec3(0.2f));
+		} else {
+			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
+		}
 	}
 }
 
-void PixelSyncApp::setRenderMode(RenderModeOIT newMode)
+void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 {
-	if (mode == newMode) {
+	if (mode == newMode && !forceReset) {
 		return;
 	}
 
@@ -137,8 +151,11 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode)
 		transparentObject.setNewShader(transparencyShader);
 		if (modelFilenamePure == "Data/Models/Ship_04") {
 			transparencyShader->setUniform("bandedColorShading", 0);
+		} else {
+			transparencyShader->setUniform("bandedColorShading", 1);
 		}
 	}
+	Timer->setFPSLimit(false, 60);
 
     resolutionChanged(EventPtr());
 }
@@ -207,10 +224,84 @@ void PixelSyncApp::render()
 		Renderer->disableWireframeMode();
 	}
 
+	renderGUI();
+
 	// Video recording enabled?
 	if (recording) {
 		videoWriter->pushWindowFrame();
 	}
+}
+
+void PixelSyncApp::renderGUI()
+{
+	ImGuiWrapper::get()->renderStart();
+    //ImGuiWrapper::get()->renderDemoWindow();
+
+    if (showSettingsWindow) {
+        ImGui::Begin("Settings", &showSettingsWindow);
+
+        // FPS
+        static float displayFPS = 60.0f;
+        static uint64_t fpsCounter = 0;
+        if (Timer->getTicksMicroseconds() - fpsCounter > 1e6) {
+			displayFPS = ImGui::GetIO().Framerate;
+			fpsCounter = Timer->getTicksMicroseconds();
+        }
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / displayFPS, displayFPS);
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps, fps);
+		ImGui::Separator();
+
+		// Mode selection of OIT algorithms
+		bool updateMode = false;
+		for (int i = 0; i < NUM_OIT_MODES; i++) {
+			if (ImGui::RadioButton(OIT_MODE_NAMES[i], (int*)&mode, i)) { updateMode = true; }
+			if (i != NUM_OIT_MODES-1 && i != 3) { ImGui::SameLine(); }
+		}
+		ImGui::Separator();
+		if (updateMode) {
+			setRenderMode(mode, true);
+		}
+
+		// Selection of displayed model
+		updateMode = false;
+		for (int i = 0; i < NUM_MODELS; i++) {
+			if (ImGui::RadioButton(MODEL_DISPLAYNAMES[i], &usedModelIndex, i)) { updateMode = true; }
+			if (i != NUM_MODELS-1 && i != 2) { ImGui::SameLine(); }
+		}
+		ImGui::Separator();
+		if (updateMode) {
+			loadModel(MODEL_FILENAMES[usedModelIndex]);
+		}
+
+		// Color selection in binning mode (if not showing all values in different color channels in mode 1)
+        if (modelFilenamePure != "Data/Models/Ship_04") {
+            static ImVec4 colorSelection = ImColor(165, 220, 84, 120);
+            int misc_flags = 0;
+            ImGui::Text("Color widget:");
+            ImGui::SameLine(); ImGuiWrapper::get()->showHelpMarker("Click on the colored square to open a color picker."
+                                                                   "\nCTRL+click on individual component to input value.\n");
+            if (ImGui::ColorEdit4("MyColor##1", (float*)&colorSelection, misc_flags)) {
+                bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
+            }
+        }
+
+		//windowActive = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+        ImGui::End();
+    }
+
+	/*ImGui::Begin("Settings");
+
+	static float wrap_width = 200.0f;
+	ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
+
+	ImGui::Text("Color widget:");
+	ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nCTRL+click on individual component to input value.\n");
+	ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
+
+	ImGui::End();*/
+
+	//ImGui::RadioButton
+	ImGuiWrapper::get()->renderEnd();
 }
 
 void PixelSyncApp::renderScene()
@@ -225,11 +316,12 @@ void PixelSyncApp::renderScene()
 	Renderer->setModelMatrix(rotation * scaling);
     //transparencyShader->setUniform("diffuseColor", glm::vec3(165, 220, 84, 120)/255.0f/4.0f);
     //transparencyShader->setUniform("ambientColor", Color(0.75f, 0.75f, 0.75f));
-    //transparencyShader->setUniform("opacity", 120.0f/255.0f); // TODO for monkey mesh
-    transparencyShader->setUniform("color", Color(165, 220, 84, 120)); // TODO for monkey mesh
-    if (modelFilenamePure == "Data/Trajectories/9213_streamlines") {
-        transparencyShader->setUniform("color", Color(165, 220, 84, 10));
-    }
+    //transparencyShader->setUniform("opacity", 120.0f/255.0f);
+    //transparencyShader->setUniform("color", Color(165, 220, 84, 120));
+    //if (modelFilenamePure == "Data/Trajectories/9213_streamlines") {
+    //    transparencyShader->setUniform("color", Color(165, 220, 84, 10));
+    //}
+    transparencyShader->setUniform("color", bandingColor);
 	//Renderer->render(transparentObject);
     transparentObject.render();
 
@@ -251,9 +343,27 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 	oitRenderer->resolutionChanged();
 }
 
+void PixelSyncApp::processSDLEvent(const SDL_Event &event)
+{
+	ImGuiWrapper::get()->processSDLEvent(event);
+}
+
 void PixelSyncApp::update(float dt)
 {
 	AppLogic::update(dt);
+	//dt = 1/60.0f;
+
+	//std::cout << "dt: " << dt << std::endl;
+
+	//std::cout << ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow) << std::endl;
+	//std::cout << ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) << std::endl;
+
+	ImGuiIO &io = ImGui::GetIO();
+	if (io.WantCaptureKeyboard) {
+		// Ignore inputs below
+		return;
+	}
+
 
 	if (Keyboard->keyPressed(SDLK_0)) {
         setRenderMode((RenderModeOIT)0);
@@ -271,7 +381,7 @@ void PixelSyncApp::update(float dt)
 		setRenderMode((RenderModeOIT)6);
 	}
 
-	const float ROT_SPEED = 0.001f;
+	const float ROT_SPEED = 1.0f;
 
 	// Rotate scene around camera origin
 	if (Keyboard->isKeyDown(SDLK_x)) {
@@ -287,7 +397,7 @@ void PixelSyncApp::update(float dt)
 		camera->rotate(rot);
 	}
 
-	const float MOVE_SPEED = 0.001f;
+	const float MOVE_SPEED = 1.0f;
 
 
 	glm::mat4 rotationMatrix = glm::mat4(camera->getOrientation());
@@ -298,17 +408,22 @@ void PixelSyncApp::update(float dt)
 	if (Keyboard->isKeyDown(SDLK_PAGEUP)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, -dt*MOVE_SPEED, 0.0f)));
 	}
-	if (Keyboard->isKeyDown(SDLK_DOWN)) {
+	if (Keyboard->isKeyDown(SDLK_DOWN) || Keyboard->isKeyDown(SDLK_s)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, -dt*MOVE_SPEED)));
 	}
-	if (Keyboard->isKeyDown(SDLK_UP)) {
+	if (Keyboard->isKeyDown(SDLK_UP) || Keyboard->isKeyDown(SDLK_w)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, +dt*MOVE_SPEED)));
 	}
-	if (Keyboard->isKeyDown(SDLK_LEFT)) {
+	if (Keyboard->isKeyDown(SDLK_LEFT) || Keyboard->isKeyDown(SDLK_a)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(dt*MOVE_SPEED, 0.0f, 0.0f)));
 	}
-	if (Keyboard->isKeyDown(SDLK_RIGHT)) {
+	if (Keyboard->isKeyDown(SDLK_RIGHT) || Keyboard->isKeyDown(SDLK_d)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(-dt*MOVE_SPEED, 0.0f, 0.0f)));
+	}
+
+	if (io.WantCaptureMouse) {
+		// Ignore inputs below
+		return;
 	}
 
 	// Zoom in/out
