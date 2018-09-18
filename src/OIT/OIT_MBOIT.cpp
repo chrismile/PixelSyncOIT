@@ -187,10 +187,6 @@ void OIT_MBOIT::renderScene()
         glClear(GL_STENCIL_BUFFER_BIT);
     }
 
-    // TODO: Load-Store influenced by this?
-    //glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
-    //glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
-
     pass = 1;
     renderSceneFunction();
 }
@@ -223,9 +219,6 @@ void OIT_MBOIT::renderToScreen()
     Renderer->setModelMatrix(matrixIdentity());
 
 
-
-
-
     if (useStencilBuffer) {
         glStencilFunc(GL_EQUAL, 1, 0xFF);
         glStencilMask(0x00);
@@ -235,7 +228,6 @@ void OIT_MBOIT::renderToScreen()
 
     Renderer->unbindFBO();
     //Renderer->blitTexture(blendRenderTexture, AABB2(glm::vec2(-1,-1), glm::vec2(1,1)));
-    //Renderer->blitTexture(b, AABB2(glm::vec2(-1,-1), glm::vec2(1,1)));
     Renderer->render(blitRenderData);
 
     glDisable(GL_STENCIL_TEST);
