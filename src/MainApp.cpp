@@ -68,8 +68,13 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	//Renderer->enableDepthTest();
 	//glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_FRONT);
+	if (cullBackface) {
+		glCullFace(GL_BACK);
+		glEnable(GL_CULL_FACE);
+	} else {
+		glCullFace(GL_BACK);
+		glDisable(GL_CULL_FACE);
+	}
 	Renderer->setErrorCallback(&openglErrorCallback);
 	Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
@@ -261,7 +266,8 @@ void PixelSyncApp::renderGUI()
 			displayFPS = ImGui::GetIO().Framerate;
 			fpsCounter = Timer->getTicksMicroseconds();
         }
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / displayFPS, displayFPS);
+        // TODO: Average over multiple frames?
+		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / displayFPS, displayFPS);
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps, fps);
 		ImGui::Separator();
 
@@ -297,7 +303,17 @@ void PixelSyncApp::renderGUI()
             if (ImGui::ColorEdit4("MyColor##1", (float*)&colorSelection, misc_flags)) {
                 bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
             }
+            ImGui::Separator();
         }
+
+        if (ImGui::Checkbox("Cull back face", &cullBackface)) {
+            if (cullBackface) {
+                glEnable(GL_CULL_FACE);
+            } else {
+                glDisable(GL_CULL_FACE);
+            }
+        }
+
 
 		//windowActive = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
         ImGui::End();
@@ -321,6 +337,15 @@ void PixelSyncApp::renderGUI()
 void PixelSyncApp::renderScene()
 {
     ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
+
+    if (mode == RENDER_MODE_OIT_MBOIT) {
+        // Hack for supporting multiple passes...
+        if (modelFilenamePure == "Data/Models/Ship_04") {
+            transparencyShader->setUniform("bandedColorShading", 0);
+        } else {
+            transparencyShader->setUniform("bandedColorShading", 1);
+        }
+    }
 
 	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
 	Renderer->setViewMatrix(camera->getViewMatrix());

@@ -83,7 +83,7 @@ struct HTFragmentTail
 
 // Stores viewportW * viewportH * MAX_NUM_NODES fragments.
 // Access fragment i at screen position (x,y) using "nodes[w*npp*y + npp*x + i]".
-layout (std430, binding = 0) buffer FragmentNodes
+layout (std430, binding = 0) coherent buffer FragmentNodes
 {
 	HTFragmentNode_compressed nodes[];
 };

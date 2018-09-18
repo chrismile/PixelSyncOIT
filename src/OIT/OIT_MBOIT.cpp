@@ -26,7 +26,7 @@ struct MomentOITUniformData
     glm::vec4 wrapping_zone_parameters;
     float overestimation;
     float moment_bias;
-} MomentOIT;
+};
 
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
@@ -75,6 +75,7 @@ void OIT_MBOIT::create()
             &uniformData, UNIFORM_BUFFER);
     mboitPass1Shader->setUniformBuffer(1, "MomentOITUniformData", momentOITUniformBuffer);
     mboitPass2Shader->setUniformBuffer(1, "MomentOITUniformData", momentOITUniformBuffer);
+
 
     //clearRenderData = ShaderManager->createShaderAttributes(clearShader);
     //geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
@@ -148,10 +149,10 @@ void OIT_MBOIT::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB)
     // TODO: Negative values
     logmin = log(0.1f);
     logmax = log(10.0f);
-    //mboitPass1Shader->setUniform("logDepthMin", logmin);
-    //mboitPass1Shader->setUniform("logDepthMax", logmax);
-    //mboitPass2Shader->setUniform("logDepthMin", logmin);
-    //mboitPass2Shader->setUniform("logDepthMax", logmax);
+    mboitPass1Shader->setUniform("logDepthMin", logmin);
+    mboitPass1Shader->setUniform("logDepthMax", logmax);
+    mboitPass2Shader->setUniform("logDepthMin", logmin);
+    mboitPass2Shader->setUniform("logDepthMax", logmax);
 }
 
 void OIT_MBOIT::gatherBegin()
@@ -187,7 +188,7 @@ void OIT_MBOIT::renderScene()
     }
 
     // TODO: Load-Store influenced by this?
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
+    //glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
     //glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 
     pass = 1;
@@ -199,11 +200,11 @@ void OIT_MBOIT::gatherEnd()
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_STENCIL_TEST);
+    //glDisable(GL_DEPTH_TEST);
+    //glDisable(GL_STENCIL_TEST);
 
-    Renderer->bindFBO(blendFBO, true);
-    Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT);
+    Renderer->bindFBO(blendFBO);
+    Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT, Color(0,0,0,0));
 
     glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 

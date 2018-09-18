@@ -8,6 +8,7 @@ layout(location = 1) in vec3 vertexNormal;
 out vec4 fragmentColor;
 out vec3 fragmentNormal;
 out vec3 fragmentPositonLocal;
+out vec3 screenSpacePosition;
 
 // Color of the object
 uniform vec4 color;
@@ -17,6 +18,7 @@ void main()
 	fragmentColor = color;
 	fragmentNormal = vertexNormal;
 	fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
+	screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
 	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
@@ -24,6 +26,8 @@ void main()
 -- Fragment
 
 #version 430 core
+
+in vec3 screenSpacePosition;
 
 #ifndef DIRECT_BLIT_GATHER
 #include OIT_GATHER_HEADER

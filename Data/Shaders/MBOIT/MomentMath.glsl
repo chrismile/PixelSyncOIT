@@ -301,7 +301,7 @@ float computeTransmittanceAtDepthFrom4PowerMoments(float b_0, vec2 b_even, vec2 
 	polynomial[0]=f0-polynomial[0]*z[0];
 	float absorbance = polynomial[0] + dot(b.xy, polynomial.yz);
 	// Turn the normalized absorbance into transmittance
-	return clamp(exp(-b_0 * absorbance), 0.0, 1.0);
+    return clamp(exp(-b_0 * absorbance), 0.0, 1.0);
 }
 
 /*! This function reconstructs the transmittance at the given depth from six 

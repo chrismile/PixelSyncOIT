@@ -85,6 +85,7 @@ private:
     bool showSettingsWindow = true;
     int usedModelIndex = 3; // TODO Back to 2
     Color bandingColor;
+    bool cullBackface = true;
 
     // Profiling events
 	sgl::TimerGL timer;

@@ -14,7 +14,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 // States how many fragments are rendered at each location.
 // Size: viewportW * viewportH.
-layout (std430, binding = 1) buffer NumFragmentsBuffer
+layout (std430, binding = 1) coherent buffer NumFragmentsBuffer
 {
 	uint numFragmentsBuffer[];
 };

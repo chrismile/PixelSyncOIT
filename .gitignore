@@ -67,3 +67,4 @@ cmake-build-*/
 *.mtl
 *.obj
 *.binmesh
+*.nc

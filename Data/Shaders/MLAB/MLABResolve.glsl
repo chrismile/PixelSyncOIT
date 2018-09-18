@@ -49,4 +49,5 @@ void main()
 
     float alphaOut = 1.0 - trans;
 	fragColor = vec4(color.rgb / alphaOut, alphaOut);
+	//fragColor = vec4(vec3(alphaOut), 1.0); // Output opacity
 }
