@@ -9,6 +9,7 @@
 #define OIT_OIT_RENDERER_HPP_
 
 #include <cstddef>
+#include <functional>
 #include <glm/glm.hpp>
 
 #include <Utils/AppSettings.hpp>
@@ -30,15 +31,28 @@ public:
 	 */
 	virtual sgl::ShaderProgramPtr getGatherShader()=0;
 
+
 	virtual void create()=0;
 	virtual void resolutionChanged()=0;
 
-	virtual void gatherBegin()=0;
 	// In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
+	virtual void gatherBegin()=0;
+	virtual void renderScene() { renderSceneFunction(); } // Uses renderSceneFunction. Override in e.g. MBOIT.
 	virtual void gatherEnd()=0;
 
 	// Blit accumulated transparent objects to screen
 	virtual void renderToScreen()=0;
+
+	/**
+	 * Set the function which renders the scene. Necessary for algorithms like MBOIT which need two passes.
+	 */
+	inline void setRenderSceneFunction(std::function<void()> renderSceneFunction)
+	{
+		this->renderSceneFunction = renderSceneFunction;
+	}
+
+protected:
+	std::function<void()> renderSceneFunction;
 };
 
 #endif /* OIT_OIT_RENDERER_HPP_ */

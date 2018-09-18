@@ -12,4 +12,14 @@ layout(early_fragment_tests, pixel_interlock_unordered) in;
 
 // gl_FragCoord will be used for pixel centers at integer coordinates.
 // See https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_FragCoord.xhtml
-layout(pixel_center_integer) in vec4 gl_FragCoord; // TODO: Remove for Image-Load-Store?
+layout(pixel_center_integer) in vec4 gl_FragCoord;
+
+
+uniform float logDepthMin;
+uniform float logDepthMax;
+
+// Maps depth to range [-1,1] with logarithmic scale
+float logDepthWarp(float z, float logmin, float logmax)
+{
+	return (log(z) - logmin) / (logmax - logmin) * 2.0 - 1.0;
+}

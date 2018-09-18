@@ -79,10 +79,11 @@ private:
 	MeshRenderer transparentObject;
 	glm::mat4 rotation;
 	glm::mat4 scaling;
+	sgl::AABB3 boundingBox;
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 2;
+    int usedModelIndex = 3; // TODO Back to 2
     Color bandingColor;
 
     // Profiling events

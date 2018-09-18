@@ -18,7 +18,7 @@
 #define MOMENT_OIT_GLSL
 
 // https://www.khronos.org/opengl/wiki/Interface_Block_(GLSL)#Block_buffer_binding
-layout(std140, binding = 0) uniform MomentOITUniformData
+layout(std140, binding = 1) uniform MomentOITUniformData
 {
 	vec4 wrapping_zone_parameters;
 	float overestimation;

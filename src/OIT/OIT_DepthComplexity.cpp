@@ -115,10 +115,11 @@ void OIT_DepthComplexity::gatherBegin()
     //glDepthMask(GL_FALSE);
 
     if (useStencilBuffer) {
-        glClear(GL_STENCIL_BUFFER_BIT);
+        glEnable(GL_STENCIL_TEST);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
         glStencilMask(0xFF);
+        glClear(GL_STENCIL_BUFFER_BIT);
     }
 }
 

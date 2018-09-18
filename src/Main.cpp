@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
 	AppSettings::get()->loadSettings(settingsFile.c_str());
 	AppSettings::get()->getSettings().addKeyValue("window-multisamples", 0);
 	AppSettings::get()->getSettings().addKeyValue("windowSettings.debugContext", true);
+	AppSettings::get()->setLoadGUI();
 
 	Window *window = AppSettings::get()->createWindow();
 	AppSettings::get()->initializeSubsystems();

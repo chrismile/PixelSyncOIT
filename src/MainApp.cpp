@@ -92,6 +92,7 @@ void PixelSyncApp::loadModel(const std::string &filename)
 		}
 	}
 	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
+	boundingBox = transparentObject.boundingBox;
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
 
@@ -104,11 +105,16 @@ void PixelSyncApp::loadModel(const std::string &filename)
 		transparencyShader->setUniform("bandedColorShading", 1);
 		if (modelFilenamePure == "Data/Models/dragon") {
 			camera->setPosition(glm::vec3(-0.15f, -0.8f, -2.4f));
-			scaling = matrixScaling(glm::vec3(0.2f));
+			const float scalingFactor = 0.2f;
+			scaling = matrixScaling(glm::vec3(scalingFactor));
+			//boundingSphere.center *= scalingFactor;
+			//boundingSphere.radius *= scalingFactor;
 		} else {
 			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 		}
 	}
+
+	boundingBox = boundingBox.transformed(rotation * scaling);
 }
 
 void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
@@ -139,6 +145,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 		Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
 		mode = RENDER_MODE_OIT_DUMMY;
 	}
+	oitRenderer->setRenderSceneFunction([this]() { this->renderScene(); });
+
 	transparencyShader = oitRenderer->getGatherShader();
 
 	/*if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
@@ -186,7 +194,13 @@ void PixelSyncApp::render()
 
 	Renderer->setCamera(camera);
 
+	if (mode == RENDER_MODE_OIT_MBOIT) {
+		AABB3 screenSpaceBoundingBox = boundingBox.transformed(camera->getViewMatrix());
+		static_cast<OIT_MBOIT*>(oitRenderer.get())->setScreenSpaceBoundingBox(screenSpaceBoundingBox);
+	}
+
 	//Renderer->setBlendMode(BLEND_ALPHA);
+	// TODO
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	glBlendEquation(GL_FUNC_ADD);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -196,7 +210,7 @@ void PixelSyncApp::render()
 	timer.end();
 
 	timer.start("renderScene");
-	renderScene();
+	oitRenderer->renderScene();
 	timer.end();
 
 	timer.start("gatherEnd");
@@ -312,23 +326,9 @@ void PixelSyncApp::renderScene()
 	Renderer->setViewMatrix(camera->getViewMatrix());
 	//Renderer->setModelMatrix(matrixIdentity());
 
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	Renderer->setModelMatrix(rotation * scaling);
-    //transparencyShader->setUniform("diffuseColor", glm::vec3(165, 220, 84, 120)/255.0f/4.0f);
-    //transparencyShader->setUniform("ambientColor", Color(0.75f, 0.75f, 0.75f));
-    //transparencyShader->setUniform("opacity", 120.0f/255.0f);
-    //transparencyShader->setUniform("color", Color(165, 220, 84, 120));
-    //if (modelFilenamePure == "Data/Trajectories/9213_streamlines") {
-    //    transparencyShader->setUniform("color", Color(165, 220, 84, 10));
-    //}
     transparencyShader->setUniform("color", bandingColor);
-	//Renderer->render(transparentObject);
-    transparentObject.render();
-
-	Renderer->setModelMatrix(matrixTranslation(glm::vec3(0.5f,0.0f,-4.0f)));
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	//transparentObject->getShaderProgram()->setUniform("color", Color(0, 255, 128, 120));
-	//Renderer->render(transparentObject);
+    transparentObject.render(transparencyShader);
 }
 
 void PixelSyncApp::resolutionChanged(EventPtr event)

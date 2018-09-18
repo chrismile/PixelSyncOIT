@@ -1,9 +1,10 @@
 -- Vertex
 
-uniform mat4 mvpMatrix;
-attribute vec4 position;
-attribute vec2 texcoord;
-varying vec2 fragTexCoord;
+#version 430 core
+
+in vec4 position;
+in vec2 texcoord;
+out vec2 fragTexCoord;
 
 void main()
 {
@@ -13,8 +14,10 @@ void main()
 
 -- Fragment
 
+#version 430 core
+
 uniform sampler2D texture;
-varying vec2 fragTexCoord;
+in vec2 fragTexCoord;
 
 void main()
 {

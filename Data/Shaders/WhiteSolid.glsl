@@ -1,7 +1,8 @@
 -- Vertex
 
-uniform mat4 mvpMatrix;
-attribute vec4 vertexPosition;
+#version 430 core
+
+in vec4 vertexPosition;
 
 void main()
 {
@@ -9,6 +10,8 @@ void main()
 }
 
 -- Fragment
+
+#version 430 core
 
 uniform sampler2D texture;
 

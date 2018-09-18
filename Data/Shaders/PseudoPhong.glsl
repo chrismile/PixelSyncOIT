@@ -9,11 +9,6 @@ out vec4 fragmentColor;
 out vec3 fragmentNormal;
 out vec3 fragmentPositonLocal;
 
-// Model-view-projection matrix
-uniform mat4 mvpMatrix;
-uniform mat4 mMatrix;
-uniform mat4 vMatrix;
-
 // Color of the object
 uniform vec4 color;
 

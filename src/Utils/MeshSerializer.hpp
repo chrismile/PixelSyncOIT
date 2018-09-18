@@ -11,6 +11,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#include <Math/Geometry/AABB3.hpp>
+#include <Math/Geometry/Sphere.hpp>
 #include <Graphics/Shader/ShaderAttributes.hpp>
 
 /**
@@ -64,12 +66,14 @@ void readMesh3D(const std::string &filename, ObjMesh &mesh);
 class MeshRenderer
 {
 public:
-	void render();
+	void render(sgl::ShaderProgramPtr passShader);
 	void setNewShader(sgl::ShaderProgramPtr newShader);
 	bool isLoaded() { return shaderAttributes.size() > 0; }
 
 	std::vector<sgl::ShaderAttributesPtr> shaderAttributes;
 	std::vector<ObjMaterial> materials;
+	sgl::AABB3 boundingBox;
+	sgl::Sphere boundingSphere;
 };
 
 

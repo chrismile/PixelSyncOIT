@@ -5,6 +5,8 @@
 #ifndef PIXELSYNCOIT_OIT_MBOIT_HPP
 #define PIXELSYNCOIT_OIT_MBOIT_HPP
 
+#include <Math/Geometry/AABB3.hpp>
+#include <Math/Geometry/Sphere.hpp>
 #include <Graphics/Texture/Texture.hpp>
 
 #include "OIT_Renderer.hpp"
@@ -32,24 +34,35 @@ public:
      *  The gather shader is used to render our transparent objects.
      *  Its purpose is to store the fragments in an offscreen-buffer.
      */
-    virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
+    virtual sgl::ShaderProgramPtr getGatherShader()
+    {
+        if (pass == 1) {
+            return mboitPass1Shader;
+        } else {
+            return mboitPass2Shader;
+        }
+    }
 
     OIT_MBOIT();
     virtual void create();
     virtual void resolutionChanged();
 
     virtual void gatherBegin();
-    // In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
+    virtual void renderScene();
     virtual void gatherEnd();
 
     // Blit accumulated transparent objects to screen
     virtual void renderToScreen();
 
+    // For determining minimum and maximum (screen-space) depth
+    void setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB);
+
 private:
     void clear();
 
-    sgl::ShaderProgramPtr gatherShader;
-    sgl::ShaderProgramPtr blitShader;
+    sgl::ShaderProgramPtr mboitPass1Shader;
+    sgl::ShaderProgramPtr mboitPass2Shader;
+    sgl::ShaderProgramPtr blendShader;
     //sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr fragmentNodes;
     sgl::GeometryBufferPtr numFragmentsBuffer;
@@ -58,10 +71,15 @@ private:
     sgl::ShaderAttributesPtr blitRenderData;
     //sgl::ShaderAttributesPtr clearRenderData;
 
+    // Internal state
+    int pass = 1;
+    bool clearBitSet;
+
     sgl::TexturePtr b0;
     sgl::TexturePtr b;
 
-    bool clearBitSet;
+    sgl::FramebufferObjectPtr blendFBO;
+    sgl::TexturePtr blendRenderTexture;
 };
 
 

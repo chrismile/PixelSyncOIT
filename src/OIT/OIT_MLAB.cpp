@@ -107,10 +107,10 @@ void OIT_MLAB::gatherBegin()
 
     if (useStencilBuffer) {
         glEnable(GL_STENCIL_TEST);
-        glClear(GL_STENCIL_BUFFER_BIT);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
         glStencilMask(0xFF);
+        glClear(GL_STENCIL_BUFFER_BIT);
     }
 }
 
