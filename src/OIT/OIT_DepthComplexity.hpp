@@ -26,7 +26,7 @@ public:
 
     OIT_DepthComplexity();
     virtual void create();
-    virtual void resolutionChanged();
+    virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO);
 
     virtual void gatherBegin();
     // In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
@@ -35,16 +35,24 @@ public:
     // Blit accumulated transparent objects to screen
     virtual void renderToScreen();
 
+    // OIT Renderers can render their own ImGui elements
+    virtual void renderGUI();
+    bool needsReRender();
+
 private:
     void clear();
+    void setUniformData();
 
     void computeStatistics();
 
-    sgl::ShaderProgramPtr gatherShader;
-    sgl::ShaderProgramPtr blitShader;
-    sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr numFragmentsBuffer;
     uint32_t numFragmentsMaxColor; // = max(16, max. depth complexity of scene)
+
+    // User interface
+    int totalNumFragments = 0;
+    int usedLocations = 1;
+    int maxComplexity = 0;
+    int bufferSize = 1;
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;

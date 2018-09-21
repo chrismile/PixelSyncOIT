@@ -40,7 +40,7 @@ OIT_MBOIT::OIT_MBOIT()
 void OIT_MBOIT::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-        Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
+        Logfile::get()->writeError("Error in OIT_KBuffer::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
@@ -49,6 +49,7 @@ void OIT_MBOIT::create()
     ShaderManager->addPreprocessorDefine("SINGLE_PRECISION", "1");
     ShaderManager->addPreprocessorDefine("ROV", "1");
 
+    ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass1.glsl\"");
     mboitPass1Shader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
     ShaderManager->invalidateShaderCache();
@@ -83,8 +84,20 @@ void OIT_MBOIT::create()
     //clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_MBOIT::resolutionChanged()
+void OIT_MBOIT::setGatherShader(const std::string &name)
 {
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass1.glsl\"");
+    mboitPass1Shader = ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass2.glsl\"");
+    mboitPass2Shader = ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
+}
+
+void OIT_MBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
+{
+    this->sceneFramebuffer = sceneFramebuffer;
+
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
@@ -95,14 +108,14 @@ void OIT_MBOIT::resolutionChanged()
     void *emptyData = (void*)calloc(width * height, sizeof(float) * 4 * 8);
     memset(emptyData, 0, bufferSizeBytes);
 
-    TextureSettings textureSettingsB0;
+    textureSettingsB0;
     textureSettingsB0.pixelType = GL_FLOAT;
 
     textureSettingsB0.pixelFormat = GL_RED;
     textureSettingsB0.internalFormat = GL_R32F; // GL_R16
     b0 = TextureManager->createTexture3D(emptyData, width, height, depth, textureSettingsB0);
 
-    TextureSettings textureSettingsB = textureSettingsB0;
+    textureSettingsB = textureSettingsB0;
     textureSettingsB.pixelFormat = GL_RGBA;
     textureSettingsB.internalFormat = GL_RGBA32F; // GL_RGBA16
     b = TextureManager->createTexture3D(emptyData, width, height, depth, textureSettingsB);
@@ -115,7 +128,18 @@ void OIT_MBOIT::resolutionChanged()
     textureSettings.internalFormat = GL_RGBA32F;
     blendRenderTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     blendFBO->bindTexture(blendRenderTexture);
+    blendFBO->bindRenderbuffer(sceneDepthRBO, DEPTH_STENCIL_ATTACHMENT);
 
+
+    // Buffer has to be cleared again
+    clearBitSet = true;
+}
+
+void OIT_MBOIT::setUniformData()
+{
+    Window *window = AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
 
     mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);
     mboitPass1Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0);
@@ -127,16 +151,8 @@ void OIT_MBOIT::resolutionChanged()
 
     blendShader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     blendShader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
-    blendShader->setUniform("transparentSurfaceAccumulator", blendRenderTexture, 0);
-
-    //clearShader->setUniform("viewportW", width);
-    //clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-
-
-
-    // Buffer has to be cleared again
-    clearBitSet = true;
 }
+
 
 
 void OIT_MBOIT::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB)
@@ -157,9 +173,12 @@ void OIT_MBOIT::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB)
 
 void OIT_MBOIT::gatherBegin()
 {
+    setUniformData();
+
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    blendShader->setUniform("transparentSurfaceAccumulator", blendRenderTexture, 0);
 
     //Renderer->bindFBO(blendFBO);
 
@@ -226,10 +245,13 @@ void OIT_MBOIT::renderToScreen()
 
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 
-    Renderer->unbindFBO();
-    //Renderer->blitTexture(blendRenderTexture, AABB2(glm::vec2(-1,-1), glm::vec2(1,1)));
+    Renderer->bindFBO(sceneFramebuffer);
+    Renderer->clearFramebuffer();
     Renderer->render(blitRenderData);
 
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
+
     glDepthMask(GL_TRUE);
 }

@@ -15,6 +15,8 @@
 #include <Utils/AppSettings.hpp>
 #include <Graphics/Window.hpp>
 #include <Graphics/Renderer.hpp>
+#include <Graphics/Buffers/FBO.hpp>
+#include <Graphics/Buffers/RBO.hpp>
 #include <Graphics/Shader/ShaderManager.hpp>
 #include <Graphics/Shader/ShaderAttributes.hpp>
 
@@ -33,7 +35,7 @@ public:
 
 
 	virtual void create()=0;
-	virtual void resolutionChanged()=0;
+	virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)=0;
 
 	// In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
 	virtual void gatherBegin()=0;
@@ -43,6 +45,11 @@ public:
 	// Blit accumulated transparent objects to screen
 	virtual void renderToScreen()=0;
 
+	// OIT Renderers can render their own ImGui elements
+	virtual void renderGUI() {}
+	virtual bool needsReRender() { bool tmp = reRender; reRender = false; return tmp; }
+	virtual bool needsNewShader() { return false; }
+
 	/**
 	 * Set the function which renders the scene. Necessary for algorithms like MBOIT which need two passes.
 	 */
@@ -51,8 +58,16 @@ public:
 		this->renderSceneFunction = renderSceneFunction;
 	}
 
+	virtual void setGatherShader(const std::string &name) { gatherShader = sgl::ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"}); }
+
 protected:
-	std::function<void()> renderSceneFunction;
+    // Shader programs
+    sgl::ShaderProgramPtr gatherShader;
+    sgl::ShaderProgramPtr resolveShader;
+    sgl::ShaderProgramPtr clearShader;
+
+    std::function<void()> renderSceneFunction;
+	bool reRender = false;
 };
 
 #endif /* OIT_OIT_RENDERER_HPP_ */

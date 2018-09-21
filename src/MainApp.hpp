@@ -54,9 +54,10 @@ class PixelSyncApp : public AppLogic
 public:
 	PixelSyncApp();
 	~PixelSyncApp();
-	void render();
+	void render(); // Calls renderOIT and renderGUI
+	void renderOIT(); // Uses renderScene and "oitRenderer" to render the scene
 	void renderScene(); // Renders lighted scene
-	void renderGUI(); // Renders lighted scene
+	void renderGUI(); // Renders GUI
 	void update(float dt);
 	void resolutionChanged(EventPtr event);
 	void processSDLEvent(const SDL_Event &event);
@@ -68,10 +69,15 @@ public:
 private:
 	// Lighting & rendering
 	boost::shared_ptr<Camera> camera;
-	RenderModeOIT mode = RENDER_MODE_OIT_MLAB;
+	RenderModeOIT mode = RENDER_MODE_OIT_DUMMY;
 	ShaderProgramPtr transparencyShader;
 	ShaderProgramPtr plainShader;
 	ShaderProgramPtr whiteSolidShader;
+
+	// Off-screen rendering
+	FramebufferObjectPtr sceneFramebuffer;
+	TexturePtr sceneTexture;
+	RenderbufferObjectPtr sceneDepthRBO;
 
 	// Objects in the scene
 	boost::shared_ptr<OIT_Renderer> oitRenderer;
@@ -86,6 +92,10 @@ private:
     int usedModelIndex = 3; // TODO Back to 2
     Color bandingColor;
     bool cullBackface = true;
+
+    // Continuous rendering: Re-render each frame or only when scene changes?
+    bool continuousRendering = false;
+    bool reRender = true;
 
     // Profiling events
 	sgl::TimerGL timer;

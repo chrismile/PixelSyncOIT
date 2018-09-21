@@ -43,7 +43,7 @@ public:
 
 	OIT_LinkedList();
 	virtual void create();
-	virtual void resolutionChanged();
+	virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO);
 
 	virtual void gatherBegin();
 	// In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
@@ -52,12 +52,16 @@ public:
 	// Blit accumulated transparent objects to screen
 	virtual void renderToScreen();
 
+	// OIT Renderers can render their own ImGui elements
+	virtual void renderGUI();
+	virtual bool needsNewShader() { bool tmp = useNewShader; useNewShader = false; return tmp; }
+
 private:
 	void clear();
+	void setUniformData();
 
-	sgl::ShaderProgramPtr gatherShader;
-	sgl::ShaderProgramPtr blitShader;
-	sgl::ShaderProgramPtr clearShader;
+	bool useNewShader = false;
+
 	sgl::GeometryBufferPtr fragmentBuffer;
 	sgl::GeometryBufferPtr startOffsetBuffer;
 	sgl::GeometryBufferPtr atomicCounterBuffer;

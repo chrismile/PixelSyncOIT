@@ -7,7 +7,7 @@
 
 #include <Math/Geometry/AABB3.hpp>
 #include <Math/Geometry/Sphere.hpp>
-#include <Graphics/Texture/Texture.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
 
 #include "OIT_Renderer.hpp"
 
@@ -42,10 +42,11 @@ public:
             return mboitPass2Shader;
         }
     }
+    virtual void setGatherShader(const std::string &name);
 
     OIT_MBOIT();
     virtual void create();
-    virtual void resolutionChanged();
+    virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO);
 
     virtual void gatherBegin();
     virtual void renderScene();
@@ -59,6 +60,7 @@ public:
 
 private:
     void clear();
+    void setUniformData();
 
     sgl::ShaderProgramPtr mboitPass1Shader;
     sgl::ShaderProgramPtr mboitPass2Shader;
@@ -66,6 +68,7 @@ private:
     //sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr fragmentNodes;
     sgl::GeometryBufferPtr numFragmentsBuffer;
+
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
@@ -77,6 +80,11 @@ private:
 
     sgl::TexturePtr b0;
     sgl::TexturePtr b;
+    sgl::TextureSettings textureSettingsB0;
+    sgl::TextureSettings textureSettingsB;
+
+    // Framebuffer used for rendering the scene
+    sgl::FramebufferObjectPtr sceneFramebuffer;
 
     sgl::FramebufferObjectPtr blendFBO;
     sgl::TexturePtr blendRenderTexture;

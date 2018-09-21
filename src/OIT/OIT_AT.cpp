@@ -28,18 +28,18 @@ OIT_AT::OIT_AT()
 void OIT_AT::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-        Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
+        Logfile::get()->writeError("Error in OIT_KBuffer::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"ATGather.glsl\"");
 
     gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-    blitShader = ShaderManager->getShaderProgram({"ATResolve.Vertex", "ATResolve.Fragment"});
+    resolveShader = ShaderManager->getShaderProgram({"ATResolve.Vertex", "ATResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"ATClear.Vertex", "ATClear.Fragment"});
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
-    blitRenderData = ShaderManager->createShaderAttributes(blitShader);
+    blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
 
     std::vector<glm::vec3> fullscreenQuad{
             glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
@@ -54,7 +54,7 @@ void OIT_AT::create()
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_AT::resolutionChanged()
+void OIT_AT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
@@ -76,8 +76,8 @@ void OIT_AT::resolutionChanged()
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 
-    blitShader->setUniform("viewportW", width);
-    blitShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+    resolveShader->setUniform("viewportW", width);
+    resolveShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 
     clearShader->setUniform("viewportW", width);
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);

@@ -4,10 +4,13 @@
 
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
+layout(location = 2) in vec3 vertexTexCoord;
 
 out vec4 fragmentColor;
 out vec3 fragmentNormal;
 out vec3 fragmentPositonLocal;
+out vec3 screenSpacePosition;
+out float vorticity;
 
 // Color of the object
 uniform vec4 color;
@@ -17,6 +20,7 @@ void main()
 	fragmentColor = color;
 	fragmentNormal = vertexNormal;
 	fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
+	screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
 	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
@@ -34,6 +38,7 @@ in vec3 screenSpacePosition;
 in vec4 fragmentColor;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
+in float vorticity;
 
 #ifdef DIRECT_BLIT_GATHER
 out vec4 fragColor;
@@ -44,25 +49,24 @@ uniform vec3 diffuseColor;
 uniform vec3 specularColor;
 uniform float specularExponent;
 uniform float opacity;
-uniform int bandedColorShading = 1;
+
+uniform float minVorticity;
+uniform float maxVorticity;
 
 void main()
 {
-	// Pseudo Phong shading
-	vec4 bandColor = fragmentColor;
-	float stripWidth = 2.0;
-	if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
-		bandColor = vec4(1.0,1.0,1.0,1.0);
-	}
-	vec4 color = vec4(bandColor.rgb * (dot(fragmentNormal, vec3(1.0,0.0,0.0))/4.0+0.75), fragmentColor.a);
+	// Use vorticity
+	float linearFactor = (opacity - minVorticity) / (maxVorticity - minVorticity);
+	vec4 diffuseColorVorticity = mix(vec4(1.0,0.0,0.0,1.0), vec4(1.0,1.0,1.0,0.0), linearFactor);
 
-	if (bandedColorShading == 0) {
-	    vec3 lightDirection = vec3(1.0,0.0,0.0);
-	    vec3 ambientShading = ambientColor * 0.1;
-	    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
-	    vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
-	    color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
-	}
+	vec3 lightDirection = vec3(1.0,0.0,0.0);
+	vec3 ambientShading = ambientColor * 0.1;
+	vec3 diffuseShadingVorticity = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
+	vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0) * 0.00001;
+	vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
+	color = vec4(ambientShading + diffuseShadingVorticity + diffuseShading + specularShading,
+	    opacity * 0.00001 + diffuseColor.a * fragmentColor.a);
+
 
 #ifdef DIRECT_BLIT_GATHER
 	// Direct rendering

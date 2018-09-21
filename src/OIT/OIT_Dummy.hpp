@@ -17,11 +17,11 @@
 class OIT_Dummy : public OIT_Renderer
 {
 public:
-	virtual sgl::ShaderProgramPtr getGatherShader() { return renderShader; }
+	virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
 
 	OIT_Dummy();
 	virtual void create();
-	virtual void resolutionChanged() {}
+	virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO) {}
 
 	virtual void gatherBegin() {}
 	// In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
@@ -32,9 +32,6 @@ public:
 	 * Disclaimer: May change view/projection matrices!
 	 */
 	virtual void renderToScreen() {}
-
-private:
-	sgl::ShaderProgramPtr renderShader; // == gather shader (normal rendering)
 };
 
 #endif /* OIT_OIT_DUMMY_HPP_ */

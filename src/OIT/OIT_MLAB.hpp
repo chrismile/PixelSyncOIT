@@ -34,7 +34,7 @@ public:
 
     OIT_MLAB();
     virtual void create();
-    virtual void resolutionChanged();
+    virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO);
 
     virtual void gatherBegin();
     // In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
@@ -45,10 +45,8 @@ public:
 
 private:
     void clear();
+    void setUniformData();
 
-    sgl::ShaderProgramPtr gatherShader;
-    sgl::ShaderProgramPtr blitShader;
-    sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr fragmentNodes;
     sgl::GeometryBufferPtr numFragmentsBuffer;
 

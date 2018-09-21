@@ -32,10 +32,8 @@ uniform sampler2D transparentSurfaceAccumulator;
 
 void main()
 {
-    vec4 color = texture(transparentSurfaceAccumulator, (gl_FragCoord.xy + vec2(0.49))
-            / vec2(textureSize(transparentSurfaceAccumulator, 0)));
     ivec3 idx0 = ivec3(ivec2(gl_FragCoord.xy), 0);
-    color = texelFetch(transparentSurfaceAccumulator, idx0.xy, 0); // TODO
+    vec4 color = texelFetch(transparentSurfaceAccumulator, idx0.xy, 0);
     float b_0 = imageLoad(zeroth_moment, idx0).x;
     if (b_0 < 0.00100050033f) {
         discard;

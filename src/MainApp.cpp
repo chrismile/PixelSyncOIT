@@ -29,14 +29,16 @@
 #include <Utils/File/Logfile.hpp>
 #include <Utils/File/FileUtils.hpp>
 #include <Graphics/Renderer.hpp>
+#include <Graphics/Buffers/FBO.hpp>
 #include <Graphics/Shader/ShaderManager.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
 #include "Utils/TrajectoryLoader.hpp"
 #include "OIT/OIT_Dummy.hpp"
-#include "OIT/OIT_PixelSync.hpp"
+#include "OIT/OIT_KBuffer.hpp"
 #include "OIT/OIT_LinkedList.hpp"
 #include "OIT/OIT_MLAB.hpp"
 #include "OIT/OIT_HT.hpp"
@@ -82,6 +84,90 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	loadModel(MODEL_FILENAMES[usedModelIndex]);
 }
 
+
+void PixelSyncApp::resolutionChanged(EventPtr event)
+{
+	Window *window = AppSettings::get()->getMainWindow();
+	int width = window->getWidth();
+	int height = window->getHeight();
+	glViewport(0, 0, width, height);
+
+	// Buffers for off-screen rendering
+	sceneFramebuffer = Renderer->createFBO();
+	TextureSettings textureSettings;
+	textureSettings.internalFormat = GL_RGBA;
+	sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
+	sceneFramebuffer->bindTexture(sceneTexture);
+	sceneDepthRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
+	sceneFramebuffer->bindRenderbuffer(sceneDepthRBO, DEPTH_STENCIL_ATTACHMENT);
+
+
+	camera->onResolutionChanged(event);
+	camera->onResolutionChanged(event);
+	oitRenderer->resolutionChanged(sceneFramebuffer, sceneDepthRBO);
+	reRender = true;
+}
+
+
+#include <Graphics/Window.hpp>
+#include <Graphics/Buffers/FBO.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
+
+void test()
+{
+    Window *window = AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
+
+    FramebufferObjectPtr gBufferFBO = Renderer->createFBO();
+
+    TextureSettings textureSettings;
+    textureSettings.internalFormat = GL_RGB16F;
+    TexturePtr positionTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
+    gBufferFBO->bindTexture(positionTexture, COLOR_ATTACHMENT0);
+
+    textureSettings.internalFormat = GL_RGB16F;
+    TexturePtr normalTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
+    gBufferFBO->bindTexture(normalTexture, COLOR_ATTACHMENT1);
+
+    RenderbufferObjectPtr depthStencilRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
+    gBufferFBO->bindRenderbuffer(depthStencilRBO, DEPTH_STENCIL_ATTACHMENT);
+
+    Renderer->bindFBO(gBufferFBO);
+    // Render scene
+
+
+    ShaderProgramPtr ssaoPhongShader = ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
+    ssaoPhongShader->setUniform("gPositionTexture", positionTexture, 0);
+    ssaoPhongShader->setUniform("gNormalTexture", normalTexture, 1);
+    // Render full screen squad
+}
+
+void depthPeeling()
+{
+    Window *window = AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
+
+    FramebufferObjectPtr depthPeelingFBO = Renderer->createFBO();
+
+    TextureSettings textureSettings;
+    textureSettings.internalFormat = GL_RGBA;
+    TexturePtr colorTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
+    TexturePtr colorTextureAccumulator = TextureManager->createEmptyTexture(width, height, textureSettings);
+    depthPeelingFBO->bindTexture(colorTexture, COLOR_ATTACHMENT0);
+
+    textureSettings.internalFormat = GL_R32F;
+    TexturePtr depthTexture0 = TextureManager->createEmptyTexture(width, height, textureSettings);
+    TexturePtr depthTexture1 = TextureManager->createEmptyTexture(width, height, textureSettings);
+    depthPeelingFBO->bindTexture(depthTexture0, DEPTH_ATTACHMENT);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_GREATER);
+    glDepthFunc(GL_LESS);
+}
+
 void PixelSyncApp::loadModel(const std::string &filename)
 {
 	// Pure filename without extension (to create compressed .binmesh filename)
@@ -120,6 +206,7 @@ void PixelSyncApp::loadModel(const std::string &filename)
 	}
 
 	boundingBox = boundingBox.transformed(rotation * scaling);
+	reRender = true;
 }
 
 void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
@@ -128,11 +215,12 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 		return;
 	}
 
+	reRender = true;
 	ShaderManager->invalidateShaderCache();
 
 	mode = newMode;
 	if (mode == RENDER_MODE_OIT_KBUFFER) {
-		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_PixelSync);
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_KBuffer);
 	} else if (mode == RENDER_MODE_OIT_LINKED_LIST) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_LinkedList);
 	} else if (mode == RENDER_MODE_OIT_MLAB) {
@@ -168,7 +256,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 			transparencyShader->setUniform("bandedColorShading", 1);
 		}
 	}
-	Timer->setFPSLimit(false, 60);
+	//Timer->setFPSLimit(false, 60);
+	Timer->setFPSLimit(true, 60);
 
     resolutionChanged(EventPtr());
 }
@@ -191,13 +280,81 @@ PixelSyncApp::~PixelSyncApp()
 
 void PixelSyncApp::render()
 {
-	bool wireframe = false;
-
 	if (videoWriter == NULL && recording) {
 		videoWriter = new VideoWriter("video.mp4");
 	}
 
-	Renderer->setCamera(camera);
+
+	/*glDepthMask(GL_FALSE);
+	glDisable(GL_DEPTH_TEST);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+	Renderer->setProjectionMatrix(matrixIdentity());
+	Renderer->setViewMatrix(matrixIdentity());
+	Renderer->setModelMatrix(matrixIdentity());
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+	glEnable(GL_DEPTH_TEST);
+	//glDepthFunc(GL_LESS);
+	//glDepthMask(GL_FALSE);
+
+		glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0xFF);
+		glClear(GL_STENCIL_BUFFER_BIT);
+
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_STENCIL_TEST);
+
+	glStencilFunc(GL_EQUAL, 1, 0xFF);
+	glStencilMask(0x00);
+
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+	glDepthMask(GL_TRUE);*/
+
+	//Timer->sleepMilliseconds(4000);
+
+	reRender = reRender || oitRenderer->needsReRender();
+	/*if (oitRenderer->needsNewShader()) {
+		transparencyShader = oitRenderer->getGatherShader();
+		if (transparentObject.isLoaded()) {
+			transparentObject.setNewShader(transparencyShader);
+			if (modelFilenamePure == "Data/Models/Ship_04") {
+				transparencyShader->setUniform("bandedColorShading", 0);
+			} else {
+				transparencyShader->setUniform("bandedColorShading", 1);
+			}
+		}
+		transparentObject.setNewShader(transparencyShader);
+	}*/
+
+	if (continuousRendering || reRender) {
+		renderOIT();
+		reRender = false;
+		Renderer->unbindFBO();
+	}
+
+	// Render to screen
+	Renderer->setProjectionMatrix(matrixIdentity());
+	Renderer->setViewMatrix(matrixIdentity());
+	Renderer->setModelMatrix(matrixIdentity());
+	Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
+
+	renderGUI();
+
+	// Video recording enabled?
+	if (recording) {
+		videoWriter->pushWindowFrame();
+	}
+}
+
+
+void PixelSyncApp::renderOIT()
+{
+	bool wireframe = false;
 
 	if (mode == RENDER_MODE_OIT_MBOIT) {
 		AABB3 screenSpaceBoundingBox = boundingBox.transformed(camera->getViewMatrix());
@@ -205,10 +362,14 @@ void PixelSyncApp::render()
 	}
 
 	//Renderer->setBlendMode(BLEND_ALPHA);
-	// TODO
+
+	Renderer->bindFBO(sceneFramebuffer);
+	Renderer->clearFramebuffer();
+	//Renderer->setCamera(camera); // Resets rendertarget...
+
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	glBlendEquation(GL_FUNC_ADD);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 #ifdef PROFILING_MODE
 	timer.start("gatherBegin");
 	oitRenderer->gatherBegin();
@@ -233,7 +394,6 @@ void PixelSyncApp::render()
 	oitRenderer->renderToScreen();
 #endif
 
-
 	// Wireframe mode
 	if (wireframe) {
 		Renderer->setModelMatrix(matrixIdentity());
@@ -242,14 +402,8 @@ void PixelSyncApp::render()
 		renderScene();
 		Renderer->disableWireframeMode();
 	}
-
-	renderGUI();
-
-	// Video recording enabled?
-	if (recording) {
-		videoWriter->pushWindowFrame();
-	}
 }
+
 
 void PixelSyncApp::renderGUI()
 {
@@ -302,7 +456,8 @@ void PixelSyncApp::renderGUI()
                                                                    "\nCTRL+click on individual component to input value.\n");
             if (ImGui::ColorEdit4("MyColor##1", (float*)&colorSelection, misc_flags)) {
                 bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
-            }
+				reRender = true;
+			}
             ImGui::Separator();
         }
 
@@ -312,8 +467,10 @@ void PixelSyncApp::renderGUI()
             } else {
                 glDisable(GL_CULL_FACE);
             }
+            reRender = true;
         }
 
+        oitRenderer->renderGUI();
 
 		//windowActive = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
         ImGui::End();
@@ -356,22 +513,12 @@ void PixelSyncApp::renderScene()
     transparentObject.render(transparencyShader);
 }
 
-void PixelSyncApp::resolutionChanged(EventPtr event)
-{
-	Window *window = AppSettings::get()->getMainWindow();
-	int width = window->getWidth();
-	int height = window->getHeight();
-	glViewport(0, 0, width, height);
-
-	camera->onResolutionChanged(event);
-	camera->onResolutionChanged(event);
-	oitRenderer->resolutionChanged();
-}
 
 void PixelSyncApp::processSDLEvent(const SDL_Event &event)
 {
 	ImGuiWrapper::get()->processSDLEvent(event);
 }
+
 
 void PixelSyncApp::update(float dt)
 {
@@ -382,6 +529,7 @@ void PixelSyncApp::update(float dt)
 
 	//std::cout << ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow) << std::endl;
 	//std::cout << ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) << std::endl;
+
 
 	ImGuiIO &io = ImGui::GetIO();
 	if (io.WantCaptureKeyboard) {
@@ -412,14 +560,17 @@ void PixelSyncApp::update(float dt)
 	if (Keyboard->isKeyDown(SDLK_x)) {
 		glm::quat rot = glm::quat(glm::vec3(dt*ROT_SPEED, 0.0f, 0.0f));
 		camera->rotate(rot);
+		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_y)) {
 		glm::quat rot = glm::quat(glm::vec3(0.0f, dt*ROT_SPEED, 0.0f));
 		camera->rotate(rot);
+		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_z)) {
 		glm::quat rot = glm::quat(glm::vec3(0.0f, 0.0f, dt*ROT_SPEED));
 		camera->rotate(rot);
+		reRender = true;
 	}
 
 	const float MOVE_SPEED = 1.0f;
@@ -429,21 +580,27 @@ void PixelSyncApp::update(float dt)
     glm::mat4 invRotationMatrix = glm::inverse(rotationMatrix);
 	if (Keyboard->isKeyDown(SDLK_PAGEDOWN)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, dt*MOVE_SPEED, 0.0f)));
+		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_PAGEUP)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, -dt*MOVE_SPEED, 0.0f)));
+		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_DOWN) || Keyboard->isKeyDown(SDLK_s)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, -dt*MOVE_SPEED)));
+		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_UP) || Keyboard->isKeyDown(SDLK_w)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, +dt*MOVE_SPEED)));
+		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_LEFT) || Keyboard->isKeyDown(SDLK_a)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(dt*MOVE_SPEED, 0.0f, 0.0f)));
+		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_RIGHT) || Keyboard->isKeyDown(SDLK_d)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(-dt*MOVE_SPEED, 0.0f, 0.0f)));
+		reRender = true;
 	}
 
 	if (io.WantCaptureMouse) {
@@ -452,8 +609,9 @@ void PixelSyncApp::update(float dt)
 	}
 
 	// Zoom in/out
-	if (Mouse->getScrollWheel() > 0.1 || Mouse->getScrollWheel() < 0.1) {
+	if (Mouse->getScrollWheel() > 0.1 || Mouse->getScrollWheel() < -0.1) {
 		camera->scale((1+Mouse->getScrollWheel()*dt*0.5f)*glm::vec3(1.0,1.0,1.0));
+		reRender = true;
 	}
 
     const float MOUSE_ROT_SPEED = 0.05f;
@@ -468,5 +626,6 @@ void PixelSyncApp::update(float dt)
         glm::quat rotPitch = glm::quat(pitch*glm::vec3(rotationMatrix[0][0], rotationMatrix[1][0], rotationMatrix[2][0]));
         //glm::quat rot = glm::quat(glm::vec3(pitch, yaw, 0.0f));
         camera->rotate(rotYaw*rotPitch);
+		reRender = true;
 	}
 }

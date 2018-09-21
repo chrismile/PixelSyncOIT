@@ -16,6 +16,7 @@
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
 #include <Utils/Timer.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
 #include "OIT_DepthComplexity.hpp"
 
@@ -35,7 +36,7 @@ OIT_DepthComplexity::OIT_DepthComplexity()
 void OIT_DepthComplexity::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-        Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
+        Logfile::get()->writeError("Error in OIT_KBuffer::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
     numFragmentsMaxColor = 16;
@@ -44,14 +45,14 @@ void OIT_DepthComplexity::create()
 
     gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
 
-    blitShader = ShaderManager->getShaderProgram({"DepthComplexityResolve.Vertex", "DepthComplexityResolve.Fragment"});
-    blitShader->setUniform("color", Color(0, 255, 255));
-    blitShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
+    resolveShader = ShaderManager->getShaderProgram({"DepthComplexityResolve.Vertex", "DepthComplexityResolve.Fragment"});
+    resolveShader->setUniform("color", Color(0, 255, 255));
+    resolveShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
 
     clearShader = ShaderManager->getShaderProgram({"DepthComplexityClear.Vertex", "DepthComplexityClear.Fragment"});
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
-    blitRenderData = ShaderManager->createShaderAttributes(blitShader);
+    blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
 
     std::vector<glm::vec3> fullscreenQuad{
             glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
@@ -68,7 +69,7 @@ void OIT_DepthComplexity::create()
     //Renderer->errorCheck();
 }
 
-void OIT_DepthComplexity::resolutionChanged()
+void OIT_DepthComplexity::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
@@ -77,24 +78,31 @@ void OIT_DepthComplexity::resolutionChanged()
     size_t numFragmentsBufferSizeBytes = sizeof(uint32_t) * width * height;
     numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+}
+
+void OIT_DepthComplexity::setUniformData()
+{
+    Window *window = AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
 
     gatherShader->setUniform("viewportW", width);
-    //gatherShader->setUniform("viewportH", height); // Not needed
     gatherShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
-    blitShader->setUniform("viewportW", width);
-    //blitShader->setUniform("viewportH", height); // Not needed
-    blitShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
+    resolveShader->setUniform("viewportW", width);
+    resolveShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
     clearShader->setUniform("viewportW", width);
-    //clearShader->setUniform("viewportH", height); // Not needed
     clearShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 }
 
 void OIT_DepthComplexity::gatherBegin()
 {
+    setUniformData();
+
     //glClearDepth(0.0);
     //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    resolveShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
 
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
@@ -126,14 +134,6 @@ void OIT_DepthComplexity::gatherBegin()
 void OIT_DepthComplexity::gatherEnd()
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-    // Print statistics if enough time has passed
-    static float counterPrintFrags = 0.0f;
-    counterPrintFrags += Timer->getElapsedSeconds();
-    if (counterPrintFrags > 1.0f) {
-        computeStatistics();
-        counterPrintFrags = 0.0f;
-    }
 }
 
 void OIT_DepthComplexity::renderToScreen()
@@ -159,20 +159,46 @@ void OIT_DepthComplexity::renderToScreen()
     glDepthMask(GL_TRUE);
 }
 
+
+void OIT_DepthComplexity::renderGUI()
+{
+    ImGui::Separator();
+
+    ImGui::Separator();
+
+    ImGui::Text("Depth complexity: #fragments: %d,", totalNumFragments);
+    ImGui::Text("avg used: %.2f, avg all: %.2f, max: %d", ((float) totalNumFragments / usedLocations),
+                ((float) totalNumFragments / bufferSize), maxComplexity);
+}
+
+
+bool OIT_DepthComplexity::needsReRender()
+{
+    // Update & print statistics if enough time has passed
+    static float counterPrintFrags = 0.0f;
+    counterPrintFrags += Timer->getElapsedSeconds();
+    if (counterPrintFrags > 1.0f) {
+        computeStatistics();
+        counterPrintFrags = 0.0f;
+        return true;
+    }
+    return false;
+}
+
 void OIT_DepthComplexity::computeStatistics()
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
-    int size = width * height;
+    bufferSize = width * height;
 
     uint32_t *data = (uint32_t*)numFragmentsBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
 
-    int totalNumFragments = 0;
-    int usedLocations = 0;
-    int maxComplexity = 0;
+    totalNumFragments = 0;
+    usedLocations = 0;
+    maxComplexity = 0;
     #pragma omp parallel for reduction(+:totalNumFragments,usedLocations) reduction(max:maxComplexity) schedule(static)
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < bufferSize; i++) {
         totalNumFragments += data[i];
         if (data[i] > 0) {
             usedLocations++;
@@ -183,12 +209,11 @@ void OIT_DepthComplexity::computeStatistics()
     numFragmentsBuffer->unmapBuffer();
 
     if ((uint32_t)maxComplexity != numFragmentsMaxColor) {
-        numFragmentsMaxColor = maxComplexity/2;
-        blitShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
+        numFragmentsMaxColor = std::max(maxComplexity/2, 8);
     }
 
     if (totalNumFragments == 0) usedLocations = 1; // Avoid dividing by zero in code below
     std::cout << "Depth complexity: avg used: " << ((float) totalNumFragments / usedLocations)
-              << ", avg all: " << ((float) totalNumFragments / size) << ", max:" << maxComplexity
+              << ", avg all: " << ((float) totalNumFragments / bufferSize) << ", max: " << maxComplexity
               << ", #fragments: " << totalNumFragments << std::endl;
 }

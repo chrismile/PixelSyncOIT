@@ -1,5 +1,5 @@
 /*
- * OIT_PixelSync.hpp
+ * OIT_KBuffer.hpp
  *
  *  Created on: 14.05.2018
  *      Author: Christoph Neuhauser
@@ -25,7 +25,7 @@ struct FragmentNode
  * (To be precise, it doesn't use the Intel-specific Pixel Sync extension
  * INTEL_fragment_shader_ordering, but the vendor-independent ARB_fragment_shader_interlock).
  */
-class OIT_PixelSync : public OIT_Renderer {
+class OIT_KBuffer : public OIT_Renderer {
 public:
 	/**
 	 *  The gather shader is used to render our transparent objects.
@@ -33,9 +33,9 @@ public:
 	 */
 	virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
 
-    OIT_PixelSync();
+    OIT_KBuffer();
 	virtual void create();
-	virtual void resolutionChanged();
+	virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO);
 
 	virtual void gatherBegin();
 	// In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
@@ -46,10 +46,8 @@ public:
 
 private:
 	void clear();
+	void setUniformData();
 
-	sgl::ShaderProgramPtr gatherShader;
-	sgl::ShaderProgramPtr blitShader;
-	sgl::ShaderProgramPtr clearShader;
 	sgl::GeometryBufferPtr fragmentNodes;
 	sgl::GeometryBufferPtr numFragmentsBuffer;
 

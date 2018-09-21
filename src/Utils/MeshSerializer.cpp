@@ -163,11 +163,11 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 					(void*)&vertices.front(), VERTEX_BUFFER);
 			renderData->addGeometryBuffer(positionBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 		}
-		/*if (texcoords.size() > 0) {
+		if (texcoords.size() > 0) {
 			GeometryBufferPtr texcoordBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec2)*texcoords.size(),
 					(void*)&texcoords.front(), VERTEX_BUFFER);
 			renderData->addGeometryBuffer(texcoordBuffer, "textureCoordinates", ATTRIB_FLOAT, 2);
-		}*/ // TODO
+		}
 		if (normals.size() > 0) {
 			GeometryBufferPtr normalBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*normals.size(),
 					(void*)&normals.front(), VERTEX_BUFFER);

@@ -1,5 +1,5 @@
 /*
- * OIT_PixelSync.cpp
+ * OIT_KBuffer.cpp
  *
  *  Created on: 14.05.2018
  *      Author: Christoph Neuhauser
@@ -15,7 +15,7 @@
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
 
-#include "OIT_PixelSync.hpp"
+#include "OIT_KBuffer.hpp"
 
 using namespace sgl;
 
@@ -25,15 +25,15 @@ const int nodesPerPixel = 8;
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
 
-OIT_PixelSync::OIT_PixelSync()
+OIT_KBuffer::OIT_KBuffer()
 {
     create();
 }
 
-void OIT_PixelSync::create()
+void OIT_KBuffer::create()
 {
 	if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-		Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
+		Logfile::get()->writeError("Error in OIT_KBuffer::create: GL_ARB_fragment_shader_interlock unsupported.");
 		exit(1);
 	}
 
@@ -42,14 +42,14 @@ void OIT_PixelSync::create()
 	gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
 	//gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
 
-	blitShader = ShaderManager->getShaderProgram({"PixelSyncResolve.Vertex", "PixelSyncResolve.Fragment"});
-	//blitShader->setUniform("nodesPerPixel", nodesPerPixel);
+	resolveShader = ShaderManager->getShaderProgram({"PixelSyncResolve.Vertex", "PixelSyncResolve.Fragment"});
+	//resolveShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	clearShader = ShaderManager->getShaderProgram({"PixelSyncClear.Vertex", "PixelSyncClear.Fragment"});
 	//clearShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	// Create blitting data (fullscreen rectangle in normalized device coordinates)
-	blitRenderData = ShaderManager->createShaderAttributes(blitShader);
+	blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
 
 	std::vector<glm::vec3> fullscreenQuad{
 		glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
@@ -64,7 +64,7 @@ void OIT_PixelSync::create()
 	clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_PixelSync::resolutionChanged()
+void OIT_KBuffer::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
 	Window *window = AppSettings::get()->getMainWindow();
 	int width = window->getWidth();
@@ -82,25 +82,30 @@ void OIT_PixelSync::resolutionChanged()
 	size_t numFragmentsBufferSizeBytes = sizeof(int32_t) * width * height;
 	numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
 	numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+}
 
-	gatherShader->setUniform("viewportW", width);
-	//gatherShader->setUniform("viewportH", height); // Not needed
+void OIT_KBuffer::setUniformData()
+{
+	Window *window = AppSettings::get()->getMainWindow();
+	int width = window->getWidth();
+	int height = window->getHeight();
+
 	gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 	gatherShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
-	blitShader->setUniform("viewportW", width);
-	//blitShader->setUniform("viewportH", height); // Not needed
-	blitShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-	blitShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
+	resolveShader->setUniform("viewportW", width);
+	resolveShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+	resolveShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
 	clearShader->setUniform("viewportW", width);
-	//clearShader->setUniform("viewportH", height); // Not needed
 	clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 	clearShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 }
 
-void OIT_PixelSync::gatherBegin()
+void OIT_KBuffer::gatherBegin()
 {
+	setUniformData();
+
 	//glClearDepth(0.0);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -131,12 +136,12 @@ void OIT_PixelSync::gatherBegin()
 	}
 }
 
-void OIT_PixelSync::gatherEnd()
+void OIT_KBuffer::gatherEnd()
 {
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void OIT_PixelSync::renderToScreen()
+void OIT_KBuffer::renderToScreen()
 {
 	Renderer->setProjectionMatrix(matrixIdentity());
 	Renderer->setViewMatrix(matrixIdentity());

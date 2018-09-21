@@ -28,18 +28,18 @@ OIT_MLAB::OIT_MLAB()
 void OIT_MLAB::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-        Logfile::get()->writeError("Error in OIT_PixelSync::create: GL_ARB_fragment_shader_interlock unsupported.");
+        Logfile::get()->writeError("Error in OIT_KBuffer::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABGather.glsl\"");
 
     gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-    blitShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
+    resolveShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
-    blitRenderData = ShaderManager->createShaderAttributes(blitShader);
+    blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
 
     std::vector<glm::vec3> fullscreenQuad{
             glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
@@ -54,7 +54,7 @@ void OIT_MLAB::create()
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_MLAB::resolutionChanged()
+void OIT_MLAB::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
@@ -73,21 +73,30 @@ void OIT_MLAB::resolutionChanged()
     numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
-    gatherShader->setUniform("viewportW", width);
-    gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-
-    blitShader->setUniform("viewportW", width);
-    blitShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-
-    clearShader->setUniform("viewportW", width);
-    clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-
     // Buffer has to be cleared again
     clearBitSet = true;
 }
 
+void OIT_MLAB::setUniformData()
+{
+    Window *window = AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
+
+    gatherShader->setUniform("viewportW", width);
+    gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+
+    resolveShader->setUniform("viewportW", width);
+    resolveShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+
+    clearShader->setUniform("viewportW", width);
+    clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+}
+
 void OIT_MLAB::gatherBegin()
 {
+    setUniformData();
+
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);

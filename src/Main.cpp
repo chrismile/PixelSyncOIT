@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
 	string settingsFile = FileUtils::get()->getConfigDirectory() + "settings.txt";
 	AppSettings::get()->loadSettings(settingsFile.c_str());
 	AppSettings::get()->getSettings().addKeyValue("window-multisamples", 0);
-	AppSettings::get()->getSettings().addKeyValue("windowSettings.debugContext", true);
+	AppSettings::get()->getSettings().addKeyValue("window-debugContext", true);
+	AppSettings::get()->getSettings().addKeyValue("window-vSync", true);
 	AppSettings::get()->setLoadGUI();
 
 	Window *window = AppSettings::get()->createWindow();
