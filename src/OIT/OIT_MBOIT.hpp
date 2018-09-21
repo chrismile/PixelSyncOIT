@@ -11,17 +11,6 @@
 
 #include "OIT_Renderer.hpp"
 
-#define MBOIT_NUM_FRAGMENTS 8
-
-// A fragment node stores rendering information about a list of fragments
-struct MBOITFragmentNode_compressed
-{
-    // Linear depth, i.e. distance to viewer
-    float depth[MBOIT_NUM_FRAGMENTS];
-    // RGB color (3 bytes), translucency (1 byte)
-    uint premulColor[MBOIT_NUM_FRAGMENTS];
-};
-
 /**
  * An order independent transparency renderer using pixel sync.
  *
@@ -58,17 +47,23 @@ public:
     // For determining minimum and maximum (screen-space) depth
     void setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB);
 
+    // OIT Renderers can render their own ImGui elements
+    virtual void renderGUI();
+    virtual bool needsNewShader() { bool tmp = useNewShader; useNewShader = false; return tmp; }
+
 private:
     void clear();
     void setUniformData();
+    void updateMomentMode();
 
     sgl::ShaderProgramPtr mboitPass1Shader;
     sgl::ShaderProgramPtr mboitPass2Shader;
     sgl::ShaderProgramPtr blendShader;
-    //sgl::ShaderProgramPtr clearShader;
     sgl::GeometryBufferPtr fragmentNodes;
-    sgl::GeometryBufferPtr numFragmentsBuffer;
+    sgl::GeometryBufferPtr momentOITUniformBuffer;
 
+    // Indicates whether a new OIT mode was selected
+    bool useNewShader = false;
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
@@ -76,7 +71,6 @@ private:
 
     // Internal state
     int pass = 1;
-    bool clearBitSet;
 
     sgl::TexturePtr b0;
     sgl::TexturePtr b;

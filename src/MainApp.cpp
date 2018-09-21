@@ -44,6 +44,7 @@
 #include "OIT/OIT_HT.hpp"
 #include "OIT/OIT_MBOIT.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
+#include "OIT/OIT_DepthPeeling.hpp"
 #include "MainApp.hpp"
 
 void openglErrorCallback()
@@ -143,30 +144,6 @@ void test()
     // Render full screen squad
 }
 
-void depthPeeling()
-{
-    Window *window = AppSettings::get()->getMainWindow();
-    int width = window->getWidth();
-    int height = window->getHeight();
-
-    FramebufferObjectPtr depthPeelingFBO = Renderer->createFBO();
-
-    TextureSettings textureSettings;
-    textureSettings.internalFormat = GL_RGBA;
-    TexturePtr colorTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
-    TexturePtr colorTextureAccumulator = TextureManager->createEmptyTexture(width, height, textureSettings);
-    depthPeelingFBO->bindTexture(colorTexture, COLOR_ATTACHMENT0);
-
-    textureSettings.internalFormat = GL_R32F;
-    TexturePtr depthTexture0 = TextureManager->createEmptyTexture(width, height, textureSettings);
-    TexturePtr depthTexture1 = TextureManager->createEmptyTexture(width, height, textureSettings);
-    depthPeelingFBO->bindTexture(depthTexture0, DEPTH_ATTACHMENT);
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_TRUE);
-    glDepthFunc(GL_GREATER);
-    glDepthFunc(GL_LESS);
-}
 
 void PixelSyncApp::loadModel(const std::string &filename)
 {
@@ -182,28 +159,36 @@ void PixelSyncApp::loadModel(const std::string &filename)
 			convertObjTrajectoryDataToBinaryMesh(modelFilenameObj, modelFilenameOptimized);
 		}
 	}
+
+	updateShaderMode(false);
+
 	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
 	boundingBox = transparentObject.boundingBox;
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
 
+	// Set position & banding mode dependent on the model
 	camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 	camera->setScale(glm::vec3(1.0f));
 	if (modelFilenamePure == "Data/Models/Ship_04") {
 		transparencyShader->setUniform("bandedColorShading", 0);
 		camera->setPosition(glm::vec3(0.0f, -1.5f, -5.0f));
 	} else {
-		transparencyShader->setUniform("bandedColorShading", 1);
+		if (shaderMode != SHADER_MODE_VORTICITY) {
+			transparencyShader->setUniform("bandedColorShading", 1);
+		}
+
 		if (modelFilenamePure == "Data/Models/dragon") {
 			camera->setPosition(glm::vec3(-0.15f, -0.8f, -2.4f));
 			const float scalingFactor = 0.2f;
 			scaling = matrixScaling(glm::vec3(scalingFactor));
-			//boundingSphere.center *= scalingFactor;
-			//boundingSphere.radius *= scalingFactor;
+		} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 		} else {
 			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 		}
 	}
+
 
 	boundingBox = boundingBox.transformed(rotation * scaling);
 	reRender = true;
@@ -219,6 +204,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	ShaderManager->invalidateShaderCache();
 
 	mode = newMode;
+	oitRenderer = boost::shared_ptr<OIT_Renderer>();
 	if (mode == RENDER_MODE_OIT_KBUFFER) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_KBuffer);
 	} else if (mode == RENDER_MODE_OIT_LINKED_LIST) {
@@ -232,34 +218,51 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
     } else if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
 	} else if (mode == RENDER_MODE_OIT_DUMMY) {
-		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
-	} else {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
+    } else if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
+    } else {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
 		Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
 		mode = RENDER_MODE_OIT_DUMMY;
 	}
 	oitRenderer->setRenderSceneFunction([this]() { this->renderScene(); });
 
-	transparencyShader = oitRenderer->getGatherShader();
+	updateShaderMode(true);
 
-	/*if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
-		Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
-	} else {
-		Renderer->setDebugVerbosity(DEBUG_OUTPUT_MEDIUM_AND_ABOVE);
-	}*/
+	transparencyShader = oitRenderer->getGatherShader();
 
 	if (transparentObject.isLoaded()) {
 		transparentObject.setNewShader(transparencyShader);
-		if (modelFilenamePure == "Data/Models/Ship_04") {
-			transparencyShader->setUniform("bandedColorShading", 0);
-		} else {
-			transparencyShader->setUniform("bandedColorShading", 1);
+		if (shaderMode != SHADER_MODE_VORTICITY) {
+			if (modelFilenamePure == "Data/Models/Ship_04") {
+				transparencyShader->setUniform("bandedColorShading", 0);
+			} else {
+				transparencyShader->setUniform("bandedColorShading", 1);
+			}
 		}
 	}
 	//Timer->setFPSLimit(false, 60);
 	Timer->setFPSLimit(true, 60);
 
     resolutionChanged(EventPtr());
+}
+
+void PixelSyncApp::updateShaderMode(bool newOITRenderer)
+{
+	if (boost::starts_with(modelFilenamePure, "Data/Trajectories/")) {
+		if (shaderMode != SHADER_MODE_VORTICITY || newOITRenderer) {
+			oitRenderer->setGatherShader("PseudoPhongVorticity");
+			transparencyShader = oitRenderer->getGatherShader();
+			shaderMode = SHADER_MODE_VORTICITY;
+		}
+	} else {
+		if (shaderMode == SHADER_MODE_VORTICITY) {
+			oitRenderer->setGatherShader("PseudoPhong");
+			transparencyShader = oitRenderer->getGatherShader();
+			shaderMode = SHADER_MODE_PSEUDO_PHONG;
+		}
+	}
 }
 
 PixelSyncApp::~PixelSyncApp()
@@ -285,51 +288,7 @@ void PixelSyncApp::render()
 	}
 
 
-	/*glDepthMask(GL_FALSE);
-	glDisable(GL_DEPTH_TEST);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-	Renderer->setProjectionMatrix(matrixIdentity());
-	Renderer->setViewMatrix(matrixIdentity());
-	Renderer->setModelMatrix(matrixIdentity());
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-	glEnable(GL_DEPTH_TEST);
-	//glDepthFunc(GL_LESS);
-	//glDepthMask(GL_FALSE);
-
-		glEnable(GL_STENCIL_TEST);
-		glStencilFunc(GL_ALWAYS, 1, 0xFF);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		glStencilMask(0xFF);
-		glClear(GL_STENCIL_BUFFER_BIT);
-
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_STENCIL_TEST);
-
-	glStencilFunc(GL_EQUAL, 1, 0xFF);
-	glStencilMask(0x00);
-
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-	glDepthMask(GL_TRUE);*/
-
-	//Timer->sleepMilliseconds(4000);
-
 	reRender = reRender || oitRenderer->needsReRender();
-	/*if (oitRenderer->needsNewShader()) {
-		transparencyShader = oitRenderer->getGatherShader();
-		if (transparentObject.isLoaded()) {
-			transparentObject.setNewShader(transparencyShader);
-			if (modelFilenamePure == "Data/Models/Ship_04") {
-				transparencyShader->setUniform("bandedColorShading", 0);
-			} else {
-				transparencyShader->setUniform("bandedColorShading", 1);
-			}
-		}
-		transparentObject.setNewShader(transparencyShader);
-	}*/
 
 	if (continuousRendering || reRender) {
 		renderOIT();
@@ -420,8 +379,6 @@ void PixelSyncApp::renderGUI()
 			displayFPS = ImGui::GetIO().Framerate;
 			fpsCounter = Timer->getTicksMicroseconds();
         }
-        // TODO: Average over multiple frames?
-		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / displayFPS, displayFPS);
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps, fps);
 		ImGui::Separator();
 
@@ -429,7 +386,7 @@ void PixelSyncApp::renderGUI()
 		bool updateMode = false;
 		for (int i = 0; i < NUM_OIT_MODES; i++) {
 			if (ImGui::RadioButton(OIT_MODE_NAMES[i], (int*)&mode, i)) { updateMode = true; }
-			if (i != NUM_OIT_MODES-1 && i != 3) { ImGui::SameLine(); }
+			if (i != NUM_OIT_MODES-1 && i != 3 && i != 6) { ImGui::SameLine(); }
 		}
 		ImGui::Separator();
 		if (updateMode) {
@@ -461,14 +418,15 @@ void PixelSyncApp::renderGUI()
             ImGui::Separator();
         }
 
-        if (ImGui::Checkbox("Cull back face", &cullBackface)) {
-            if (cullBackface) {
-                glEnable(GL_CULL_FACE);
-            } else {
-                glDisable(GL_CULL_FACE);
-            }
-            reRender = true;
-        }
+		if (ImGui::Checkbox("Cull back face", &cullBackface)) {
+			if (cullBackface) {
+				glEnable(GL_CULL_FACE);
+			} else {
+				glDisable(GL_CULL_FACE);
+			}
+			reRender = true;
+		} ImGui::SameLine();
+		ImGui::Checkbox("Continuous rendering", &continuousRendering);
 
         oitRenderer->renderGUI();
 
@@ -494,8 +452,12 @@ void PixelSyncApp::renderGUI()
 void PixelSyncApp::renderScene()
 {
     ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
+	if (shaderMode == SHADER_MODE_VORTICITY) {
+		transparencyShader->setUniform("minVorticity", 0.0f);
+		transparencyShader->setUniform("maxVorticity", 1.0f);
+	}
 
-    if (mode == RENDER_MODE_OIT_MBOIT) {
+    if (mode == RENDER_MODE_OIT_MBOIT && shaderMode != SHADER_MODE_VORTICITY) {
         // Hack for supporting multiple passes...
         if (modelFilenamePure == "Data/Models/Ship_04") {
             transparencyShader->setUniform("bandedColorShading", 0);
@@ -538,20 +500,10 @@ void PixelSyncApp::update(float dt)
 	}
 
 
-	if (Keyboard->keyPressed(SDLK_0)) {
-        setRenderMode((RenderModeOIT)0);
-	} else if (Keyboard->keyPressed(SDLK_1)) {
-        setRenderMode((RenderModeOIT)1);
-	} else if (Keyboard->keyPressed(SDLK_2)) {
-        setRenderMode((RenderModeOIT)2);
-	} else if (Keyboard->keyPressed(SDLK_3)) {
-        setRenderMode((RenderModeOIT)3);
-	} else if (Keyboard->keyPressed(SDLK_4)) {
-        setRenderMode((RenderModeOIT)4);
-	} else if (Keyboard->keyPressed(SDLK_5)) {
-		setRenderMode((RenderModeOIT)5);
-	} else if (Keyboard->keyPressed(SDLK_6)) {
-		setRenderMode((RenderModeOIT)6);
+	for (int i = 0; i < NUM_OIT_MODES; i++) {
+		if (Keyboard->keyPressed(SDLK_0+i)) {
+			setRenderMode((RenderModeOIT)i);
+		}
 	}
 
 	const float ROT_SPEED = 1.0f;

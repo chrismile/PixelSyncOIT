@@ -24,9 +24,12 @@ using namespace sgl;
 const bool useStencilBuffer = true;
 
 /// Expected (average) depth complexity, i.e. width*height* this value = number of fragments that can be stored
-int expectedDepthComplexity = 8;
+static int expectedDepthComplexity = 8;
 /// Maximum number of fragments to sort in second pass
-int maxNumFragmentsSorting = 8;
+static int maxNumFragmentsSorting = 8;
+
+// Choice of sorting algorithm
+static int algorithmMode = 0;
 
 OIT_LinkedList::OIT_LinkedList()
 {
@@ -35,6 +38,7 @@ OIT_LinkedList::OIT_LinkedList()
 
 void OIT_LinkedList::create()
 {
+	setModeDefine();
 	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"LinkedListGather.glsl\"");
 	ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
 
@@ -66,13 +70,9 @@ void OIT_LinkedList::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
 
 	size_t fragmentBufferSize = expectedDepthComplexity * width * height;
 	size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
-	/*void *data = (void*)malloc(fragmentBufferSizeBytes);
-	memset(data, 0, fragmentBufferSizeBytes);*/
 
 	fragmentBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
 	fragmentBuffer = Renderer->createGeometryBuffer(fragmentBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
-	//fragmentBuffer = Renderer->createGeometryBuffer(fragmentBufferSizeBytes, data, SHADER_STORAGE_BUFFER);
-	//free(data);
 
 	size_t startOffsetBufferSizeBytes = sizeof(uint32_t) * width * height;
 	startOffsetBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
@@ -105,11 +105,12 @@ void OIT_LinkedList::setUniformData()
     clearShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
 }
 
+
 void OIT_LinkedList::renderGUI()
 {
 	ImGui::Separator();
 
-	if (ImGui::SliderInt("E[d]", &expectedDepthComplexity, 1, 64)) {
+	if (ImGui::SliderInt("Avg. depth", &expectedDepthComplexity, 1, 128)) {
 		Window *window = AppSettings::get()->getMainWindow();
 		int width = window->getWidth();
 		int height = window->getHeight();
@@ -125,10 +126,33 @@ void OIT_LinkedList::renderGUI()
 		reRender = true;
 	}
 
+	// If something changes about fragment collection & sorting
+	bool needNewResolveShader = false;
+
 	if (ImGui::SliderInt("Num sort", &maxNumFragmentsSorting, 1, 2000)) {
 		ShaderManager->invalidateShaderCache();
 		ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
+		needNewResolveShader = true;
+		reRender = true;
+	}
 
+	bool changeMode = false;
+	if (ImGui::RadioButton("Priority Queue", &algorithmMode, 0)) changeMode = true; ImGui::SameLine();
+	if (ImGui::RadioButton("Bubble Sort", &algorithmMode, 1)) changeMode = true;
+	if (ImGui::RadioButton("Insertion Sort", &algorithmMode, 2)) changeMode = true; ImGui::SameLine();
+	if (ImGui::RadioButton("Shell Sort", &algorithmMode, 3)) changeMode = true; ImGui::SameLine();
+	if (ImGui::RadioButton("Max Heap", &algorithmMode, 4)) changeMode = true;
+	if (changeMode) {
+		ShaderManager->invalidateShaderCache();
+		setModeDefine();
+		needNewResolveShader = true;
+		reRender = true;
+	}
+
+	// --- END OF GUI CODE ---
+
+
+	if (needNewResolveShader) {
 		resolveShader = ShaderManager->getShaderProgram({"LinkedListResolve.Vertex", "LinkedListResolve.Fragment"});
 		resolveShader->setUniform("viewportW", AppSettings::get()->getMainWindow()->getWidth());
 		//resolveShader->setUniform("viewportH", height); // Not needed
@@ -136,8 +160,21 @@ void OIT_LinkedList::renderGUI()
 		resolveShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
 
 		blitRenderData = blitRenderData->copy(resolveShader);
+	}
+}
 
-		reRender = true;
+void OIT_LinkedList::setModeDefine()
+{
+	if (algorithmMode == 0) {
+		ShaderManager->addPreprocessorDefine("sortingAlgorithm", "frontToBackPQ");
+	} else if (algorithmMode == 1) {
+		ShaderManager->addPreprocessorDefine("sortingAlgorithm", "bubbleSort");
+	} else if (algorithmMode == 2) {
+		ShaderManager->addPreprocessorDefine("sortingAlgorithm", "insertionSort");
+	} else if (algorithmMode == 3) {
+		ShaderManager->addPreprocessorDefine("sortingAlgorithm", "shellSort");
+	} else if (algorithmMode == 4) {
+		ShaderManager->addPreprocessorDefine("sortingAlgorithm", "heapSort");
 	}
 }
 
@@ -145,7 +182,6 @@ void OIT_LinkedList::gatherBegin()
 {
     setUniformData();
 
-	//glClearDepth(0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glDepthMask(GL_FALSE);
@@ -155,11 +191,9 @@ void OIT_LinkedList::gatherBegin()
 	Renderer->setProjectionMatrix(matrixIdentity());
 	Renderer->setViewMatrix(matrixIdentity());
 	Renderer->setModelMatrix(matrixIdentity());
-	//glEnable(GL_RASTERIZER_DISCARD);
 	Renderer->render(clearRenderData);
-	/*GLuint bufferID = static_cast<GeometryBufferGL*>(fragmentNodes.get())->getBuffer();
-	GLubyte val = 0;
-	glClearNamedBufferData(bufferID, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (const void*)&val);*/
+
+	// Set atomic counter to zero
 	GLuint bufferID = static_cast<GeometryBufferGL*>(atomicCounterBuffer.get())->getBuffer();
 	GLubyte val = 0;
 	glClearNamedBufferData(bufferID, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (const void*)&val);
@@ -189,11 +223,8 @@ void OIT_LinkedList::renderToScreen()
 	Renderer->setViewMatrix(matrixIdentity());
 	Renderer->setModelMatrix(matrixIdentity());
 
-	//glDisable(GL_RASTERIZER_DISCARD);
-
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDisable(GL_DEPTH_TEST);
-    glDisable(GL_STENCIL_TEST);
 
     if (useStencilBuffer) {
         glStencilFunc(GL_EQUAL, 1, 0xFF);
@@ -203,6 +234,7 @@ void OIT_LinkedList::renderToScreen()
     Renderer->render(blitRenderData);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
+	glDisable(GL_STENCIL_TEST);
 	glDepthMask(GL_TRUE);
 }
 

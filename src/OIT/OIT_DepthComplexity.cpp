@@ -100,8 +100,6 @@ void OIT_DepthComplexity::gatherBegin()
 {
     setUniformData();
 
-    //glClearDepth(0.0);
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     resolveShader->setUniform("numFragmentsMaxColor", numFragmentsMaxColor);
 
     glDepthMask(GL_FALSE);
@@ -119,8 +117,6 @@ void OIT_DepthComplexity::gatherBegin()
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     glEnable(GL_DEPTH_TEST);
-    //glDepthFunc(GL_LESS);
-    //glDepthMask(GL_FALSE);
 
     if (useStencilBuffer) {
         glEnable(GL_STENCIL_TEST);
@@ -142,11 +138,8 @@ void OIT_DepthComplexity::renderToScreen()
     Renderer->setViewMatrix(matrixIdentity());
     Renderer->setModelMatrix(matrixIdentity());
 
-    //glDisable(GL_RASTERIZER_DISCARD);
-
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_DEPTH_TEST);
-    glDisable(GL_STENCIL_TEST);
 
     if (useStencilBuffer) {
         glStencilFunc(GL_EQUAL, 1, 0xFF);
@@ -156,19 +149,36 @@ void OIT_DepthComplexity::renderToScreen()
     Renderer->render(blitRenderData);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
+    glDisable(GL_STENCIL_TEST);
     glDepthMask(GL_TRUE);
 }
 
 
+
+// Converts e.g. 123456789 to "123.456.789"
+std::string numberToCommaString(int number) {
+    if (number < 0) {
+        return std::string() + "-" + numberToCommaString(-number);
+    } else if (number < 1000) {
+        return toString(number);
+    } else {
+        return std::string() + numberToCommaString(number/1000) + "," + toString(number%1000);
+    }
+}
+
+static float intensity = 1.0f;
 void OIT_DepthComplexity::renderGUI()
 {
     ImGui::Separator();
 
-    ImGui::Separator();
-
-    ImGui::Text("Depth complexity: #fragments: %d,", totalNumFragments);
+    std::string totalNumFragmentsString = numberToCommaString(totalNumFragments);
+    ImGui::Text("Depth complexity: #fragments: %s", totalNumFragmentsString.c_str());
     ImGui::Text("avg used: %.2f, avg all: %.2f, max: %d", ((float) totalNumFragments / usedLocations),
                 ((float) totalNumFragments / bufferSize), maxComplexity);
+
+    if (ImGui::SliderFloat("Intensity", &intensity, 0.1f, 2.0f)) {
+        numFragmentsMaxColor = std::max(maxComplexity/2, 8)/intensity;
+    }
 }
 
 
@@ -177,9 +187,10 @@ bool OIT_DepthComplexity::needsReRender()
     // Update & print statistics if enough time has passed
     static float counterPrintFrags = 0.0f;
     counterPrintFrags += Timer->getElapsedSeconds();
-    if (counterPrintFrags > 1.0f) {
+    if (counterPrintFrags > 1.0f || firstFrame) {
         computeStatistics();
         counterPrintFrags = 0.0f;
+        firstFrame = false;
         return true;
     }
     return false;
@@ -208,9 +219,9 @@ void OIT_DepthComplexity::computeStatistics()
 
     numFragmentsBuffer->unmapBuffer();
 
-    if ((uint32_t)maxComplexity != numFragmentsMaxColor) {
-        numFragmentsMaxColor = std::max(maxComplexity/2, 8);
-    }
+    //if ((uint32_t)maxComplexity != numFragmentsMaxColor) {
+    numFragmentsMaxColor = std::max(maxComplexity/2, 8)/intensity;
+    // }
 
     if (totalNumFragments == 0) usedLocations = 1; // Avoid dividing by zero in code below
     std::cout << "Depth complexity: avg used: " << ((float) totalNumFragments / usedLocations)

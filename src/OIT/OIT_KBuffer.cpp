@@ -38,15 +38,9 @@ void OIT_KBuffer::create()
 	}
 
 	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"PixelSyncGather.glsl\"");
-
 	gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-	//gatherShader->setUniform("nodesPerPixel", nodesPerPixel);
-
 	resolveShader = ShaderManager->getShaderProgram({"PixelSyncResolve.Vertex", "PixelSyncResolve.Fragment"});
-	//resolveShader->setUniform("nodesPerPixel", nodesPerPixel);
-
 	clearShader = ShaderManager->getShaderProgram({"PixelSyncClear.Vertex", "PixelSyncClear.Fragment"});
-	//clearShader->setUniform("nodesPerPixel", nodesPerPixel);
 
 	// Create blitting data (fullscreen rectangle in normalized device coordinates)
 	blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
@@ -90,6 +84,7 @@ void OIT_KBuffer::setUniformData()
 	int width = window->getWidth();
 	int height = window->getHeight();
 
+	gatherShader->setUniform("viewportW", width);
 	gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 	gatherShader->setShaderStorageBuffer(1, "NumFragmentsBuffer", numFragmentsBuffer);
 
@@ -106,9 +101,6 @@ void OIT_KBuffer::gatherBegin()
 {
 	setUniformData();
 
-	//glClearDepth(0.0);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	glDepthMask(GL_FALSE);
 	glDisable(GL_DEPTH_TEST);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -116,7 +108,6 @@ void OIT_KBuffer::gatherBegin()
 	Renderer->setProjectionMatrix(matrixIdentity());
 	Renderer->setViewMatrix(matrixIdentity());
 	Renderer->setModelMatrix(matrixIdentity());
-	//glEnable(GL_RASTERIZER_DISCARD);
 	Renderer->render(clearRenderData);
 	/*GLuint bufferID = static_cast<GeometryBufferGL*>(fragmentNodes.get())->getBuffer();
 	GLubyte val = 0;
@@ -124,8 +115,6 @@ void OIT_KBuffer::gatherBegin()
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	glEnable(GL_DEPTH_TEST);
-	//glDepthFunc(GL_LESS);
-	//glDepthMask(GL_FALSE);
 
 	if (useStencilBuffer) {
 		glEnable(GL_STENCIL_TEST);
@@ -147,11 +136,8 @@ void OIT_KBuffer::renderToScreen()
 	Renderer->setViewMatrix(matrixIdentity());
 	Renderer->setModelMatrix(matrixIdentity());
 
-	//glDisable(GL_RASTERIZER_DISCARD);
-
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDisable(GL_DEPTH_TEST);
-    glDisable(GL_STENCIL_TEST);
 
 	if (useStencilBuffer) {
 		glStencilFunc(GL_EQUAL, 1, 0xFF);
@@ -161,5 +147,6 @@ void OIT_KBuffer::renderToScreen()
 	Renderer->render(blitRenderData);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
+	glDisable(GL_STENCIL_TEST);
 	glDepthMask(GL_TRUE);
 }

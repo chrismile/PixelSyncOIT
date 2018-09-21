@@ -26,9 +26,9 @@
 using namespace std;
 using namespace sgl;
 
-const int NUM_OIT_MODES = 7;
+const int NUM_OIT_MODES = 8;
 const char *const OIT_MODE_NAMES[] = {
-        "K-Buffer", "Linked List", "MLAB", "HT", "MBOIT", "Depth Complexity", "No OIT"
+        "K-Buffer", "Linked List", "MLAB", "HT", "MBOIT", "Depth Complexity", "No OIT", "Depth Peeling"
 };
 enum RenderModeOIT {
         RENDER_MODE_OIT_KBUFFER = 0,
@@ -37,7 +37,8 @@ enum RenderModeOIT {
         RENDER_MODE_OIT_HT, // Hybrid Transparency
         RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
         RENDER_MODE_OIT_DEPTH_COMPLEXITY,
-        RENDER_MODE_OIT_DUMMY
+        RENDER_MODE_OIT_DUMMY,
+        RENDER_MODE_OIT_DEPTH_PEELING
 };
 
 const int NUM_MODELS = 6;
@@ -47,6 +48,10 @@ const char *const MODEL_FILENAMES[] = {
 };
 const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline", "Streamlines", "Ship", "Monkey", "Box", "Dragon"
+};
+
+enum ShaderMode {
+	SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_VORTICITY, SHADER_MODE_AMBIENT_OCCLUSION
 };
 
 class PixelSyncApp : public AppLogic
@@ -64,15 +69,20 @@ public:
 
 	// State changes
     void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
+    void updateShaderMode(bool newOITRenderer);
     void loadModel(const std::string &filename);
 
 private:
 	// Lighting & rendering
 	boost::shared_ptr<Camera> camera;
-	RenderModeOIT mode = RENDER_MODE_OIT_DUMMY;
 	ShaderProgramPtr transparencyShader;
 	ShaderProgramPtr plainShader;
 	ShaderProgramPtr whiteSolidShader;
+
+	// Mode
+	RenderModeOIT mode = RENDER_MODE_OIT_MLAB;
+	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
+	std::string modelFilenamePure;
 
 	// Off-screen rendering
 	FramebufferObjectPtr sceneFramebuffer;
@@ -81,7 +91,6 @@ private:
 
 	// Objects in the scene
 	boost::shared_ptr<OIT_Renderer> oitRenderer;
-	std::string modelFilenamePure;
 	MeshRenderer transparentObject;
 	glm::mat4 rotation;
 	glm::mat4 scaling;

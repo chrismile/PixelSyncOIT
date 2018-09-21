@@ -54,11 +54,11 @@ public:
 
 	// OIT Renderers can render their own ImGui elements
 	virtual void renderGUI();
-	virtual bool needsNewShader() { bool tmp = useNewShader; useNewShader = false; return tmp; }
 
 private:
 	void clear();
 	void setUniformData();
+	void setModeDefine();
 
 	bool useNewShader = false;
 

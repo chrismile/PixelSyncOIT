@@ -58,7 +58,11 @@ public:
 		this->renderSceneFunction = renderSceneFunction;
 	}
 
-	virtual void setGatherShader(const std::string &name) { gatherShader = sgl::ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"}); }
+	virtual void setGatherShader(const std::string &name)
+	{
+		sgl::ShaderManager->invalidateShaderCache();
+		gatherShader = sgl::ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
+	}
 
 protected:
     // Shader programs

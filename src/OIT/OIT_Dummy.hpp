@@ -20,6 +20,7 @@ public:
 	virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
 
 	OIT_Dummy();
+	virtual ~OIT_Dummy();
 	virtual void create();
 	virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO) {}
 

@@ -47,6 +47,7 @@ private:
 
     sgl::GeometryBufferPtr numFragmentsBuffer;
     uint32_t numFragmentsMaxColor; // = max(16, max. depth complexity of scene)
+    bool firstFrame = true;
 
     // User interface
     int totalNumFragments = 0;

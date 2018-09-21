@@ -8,6 +8,7 @@
 #include <cmath>
 #include <fstream>
 #include <glm/glm.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <Utils/Events/Stream/Stream.hpp>
 #include <Utils/File/Logfile.hpp>
@@ -89,11 +90,13 @@ void MeshRenderer::render(sgl::ShaderProgramPtr passShader)
 {
 	for (size_t i = 0; i < shaderAttributes.size(); i++) {
 		//ShaderProgram *shader = shaderAttributes.at(i)->getShaderProgram();
-		passShader->setUniform("ambientColor", materials.at(i).ambientColor);
-		passShader->setUniform("diffuseColor", materials.at(i).diffuseColor);
-		passShader->setUniform("specularColor", materials.at(i).specularColor);
-		passShader->setUniform("specularExponent", materials.at(i).specularExponent);
-		passShader->setUniform("opacity", materials.at(i).opacity);
+		if (!boost::starts_with(passShader->getShaderList().front()->getFileID(), "PseudoPhongVorticity")) {
+			passShader->setUniform("ambientColor", materials.at(i).ambientColor);
+			passShader->setUniform("diffuseColor", materials.at(i).diffuseColor);
+			passShader->setUniform("specularColor", materials.at(i).specularColor);
+			passShader->setUniform("specularExponent", materials.at(i).specularExponent);
+			passShader->setUniform("opacity", materials.at(i).opacity);
+		}
 		Renderer->render(shaderAttributes.at(i), passShader);
 	}
 }

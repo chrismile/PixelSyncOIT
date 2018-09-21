@@ -102,8 +102,6 @@ void OIT_AT::gatherBegin()
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     glEnable(GL_DEPTH_TEST);
-    //glDepthFunc(GL_LESS);
-    //glDepthMask(GL_FALSE);
 
     if (useStencilBuffer) {
         glEnable(GL_STENCIL_TEST);
@@ -126,7 +124,6 @@ void OIT_AT::renderToScreen()
     Renderer->setModelMatrix(matrixIdentity());
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
 
     if (useStencilBuffer) {
@@ -137,5 +134,6 @@ void OIT_AT::renderToScreen()
     Renderer->render(blitRenderData);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
+    glDisable(GL_STENCIL_TEST);
     glDepthMask(GL_TRUE);
 }

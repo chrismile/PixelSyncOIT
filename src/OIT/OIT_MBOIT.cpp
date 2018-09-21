@@ -15,6 +15,7 @@
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
 #include "OIT_MBOIT_Utils.hpp"
 #include "OIT_MBOIT.hpp"
@@ -31,16 +32,24 @@ struct MomentOITUniformData
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
 
+enum MBOITPixelFormat {
+    MBOIT_PIXEL_FORMAT_FLOAT_32, MBOIT_PIXEL_FORMAT_UNORM_16
+};
+
+// Internal mode
+static bool usePowerMoments = true;
+static int numMoments = 4;
+static MBOITPixelFormat pixelFormat = MBOIT_PIXEL_FORMAT_FLOAT_32;
+
 OIT_MBOIT::OIT_MBOIT()
 {
-    clearBitSet = true;
     create();
 }
 
 void OIT_MBOIT::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-        Logfile::get()->writeError("Error in OIT_KBuffer::create: GL_ARB_fragment_shader_interlock unsupported.");
+        Logfile::get()->writeError("Error in OIT_MBOIT::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
@@ -65,23 +74,14 @@ void OIT_MBOIT::create()
             glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
             glm::vec3(-1,-1,0), glm::vec3(1,1,0), glm::vec3(-1,1,0)};
     GeometryBufferPtr geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
-            (void*)&fullscreenQuad.front());
+                                                                  (void*)&fullscreenQuad.front());
     blitRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 
     MomentOITUniformData uniformData;
     uniformData.moment_bias = 5*1e-7;
     uniformData.overestimation = 0.25f;
     computeWrappingZoneParameters(uniformData.wrapping_zone_parameters);
-    GeometryBufferPtr momentOITUniformBuffer = Renderer->createGeometryBuffer(sizeof(MomentOITUniformData),
-            &uniformData, UNIFORM_BUFFER);
-    mboitPass1Shader->setUniformBuffer(1, "MomentOITUniformData", momentOITUniformBuffer);
-    mboitPass2Shader->setUniformBuffer(1, "MomentOITUniformData", momentOITUniformBuffer);
-
-
-    //clearRenderData = ShaderManager->createShaderAttributes(clearShader);
-    //geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
-    // (void*)&fullscreenQuad.front(), SHADER_STORAGE_BUFFER);
-    //clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
+    momentOITUniformBuffer = Renderer->createGeometryBuffer(sizeof(MomentOITUniformData), &uniformData, UNIFORM_BUFFER);
 }
 
 void OIT_MBOIT::setGatherShader(const std::string &name)
@@ -103,12 +103,10 @@ void OIT_MBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, s
     int height = window->getHeight();
     int depth = 1;
 
-    // Highest memory requirement:
-    size_t bufferSizeBytes = sizeof(float) * 4 * 8 * width * height;
-    void *emptyData = (void*)calloc(width * height, sizeof(float) * 4 * 8);
-    memset(emptyData, 0, bufferSizeBytes);
+    // Highest memory requirement: (width * height * sizeof(DATATYPE) * #maxBufferEntries * #moments
+    void *emptyData = calloc(width * height, sizeof(float) * 4 * 8);
 
-    textureSettingsB0;
+    textureSettingsB0 = TextureSettings();
     textureSettingsB0.pixelType = GL_FLOAT;
 
     textureSettingsB0.pixelFormat = GL_RED;
@@ -129,11 +127,13 @@ void OIT_MBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, s
     blendRenderTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     blendFBO->bindTexture(blendRenderTexture);
     blendFBO->bindRenderbuffer(sceneDepthRBO, DEPTH_STENCIL_ATTACHMENT);
-
-
-    // Buffer has to be cleared again
-    clearBitSet = true;
 }
+
+void OIT_MBOIT::updateMomentMode()
+{
+    ;
+}
+
 
 void OIT_MBOIT::setUniformData()
 {
@@ -145,12 +145,37 @@ void OIT_MBOIT::setUniformData()
     mboitPass1Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0);
     //mboitPass1Shader->setUniform("viewportW", width);
 
-    mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
-    mboitPass1Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
+    mboitPass2Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
+    mboitPass2Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     //mboitPass2Shader->setUniform("viewportW", width);
 
     blendShader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     blendShader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
+    blendShader->setUniform("transparentSurfaceAccumulator", blendRenderTexture, 0);
+
+    mboitPass1Shader->setUniformBuffer(1, "MomentOITUniformData", momentOITUniformBuffer);
+    mboitPass2Shader->setUniformBuffer(1, "MomentOITUniformData", momentOITUniformBuffer);
+}
+
+void OIT_MBOIT::renderGUI()
+{
+    ImGui::Separator();
+
+    const char *momentModes[] = {"Power Moments: 4", "Power Moments: 6", "Power Moments: 8",
+                                 "Trigonometric Moments: 2", "Trigonometric Moments: 3", "Trigonometric Moments: 4"};
+    static int momentModeIndex = 0;
+    if (ImGui::Combo("Moment Mode", &momentModeIndex, momentModes, IM_ARRAYSIZE(momentModes))) {
+        usePowerMoments = (momentModeIndex / 3) == 0;
+        numMoments = usePowerMoments ? momentModeIndex*2 + 4 : momentModeIndex - 1;
+        updateMomentMode();
+        reRender = true;
+    }
+
+    const char *pixelFormatModes[] = {"Float 32-bit", "UNORM Integer 16-bit"};
+    if (ImGui::Combo("Pixel Format", (int*)&pixelFormat, pixelFormatModes, IM_ARRAYSIZE(pixelFormatModes))) {
+        updateMomentMode();
+        reRender = true;
+    }
 }
 
 
@@ -178,25 +203,16 @@ void OIT_MBOIT::gatherBegin()
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    blendShader->setUniform("transparentSurfaceAccumulator", blendRenderTexture, 0);
-
-    //Renderer->bindFBO(blendFBO);
 
     Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());
     Renderer->setModelMatrix(matrixIdentity());
-    if (clearBitSet) {
-        //Renderer->render(clearRenderData); // TODO
-        clearBitSet = false;
-    }
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
 void OIT_MBOIT::renderScene()
 {
     glEnable(GL_DEPTH_TEST);
-    //glDepthFunc(GL_LESS);
-    //glDepthMask(GL_FALSE);
 
     if (useStencilBuffer) {
         glEnable(GL_STENCIL_TEST);
@@ -215,8 +231,6 @@ void OIT_MBOIT::gatherEnd()
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    //glDisable(GL_DEPTH_TEST);
-    //glDisable(GL_STENCIL_TEST);
 
     Renderer->bindFBO(blendFBO);
     Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT, Color(0,0,0,0));
