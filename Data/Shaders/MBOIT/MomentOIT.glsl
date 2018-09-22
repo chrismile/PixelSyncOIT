@@ -34,30 +34,30 @@ layout(std140, binding = 1) uniform MomentOITUniformData
 #if ROV
 
 //RasterizerOrderedTexture2DArray<float> b0 : register(u0);
-layout (binding = 0, r32f) uniform image2DArray b0; // float
+layout (binding = 0, r32f) coherent uniform image2DArray b0; // float
 #if SINGLE_PRECISION
 #if NUM_MOMENTS == 6
 //RasterizerOrderedTexture2DArray<vec2> b : register(u1);
-layout (binding = 1, rg32f) uniform image2DArray b; // vec2
+layout (binding = 1, rg32f) coherent uniform image2DArray b; // vec2
 #if USE_R_RG_RGBA_FOR_MBOIT6
 //RasterizerOrderedTexture2DArray<vec4> b_extra : register(u2);
-layout (binding = 2, rgba32f) uniform image2DArray b_extra; // vec4
+layout (binding = 2, rgba32f) coherent uniform image2DArray b_extra; // vec4
 #endif
 #else
 //RasterizerOrderedTexture2DArray<vec4> b : register(u1);
-layout (binding = 1, rgba32f) uniform image2DArray b; // vec4
+layout (binding = 1, rgba32f) coherent uniform image2DArray b; // vec4
 #endif
 #else
 #if NUM_MOMENTS == 6
 //RasterizerOrderedTexture2DArray<unorm vec2> b : register(u1);
-layout (binding = 1, rg16) uniform image2DArray b;
+layout (binding = 1, rg16) coherent uniform image2DArray b;
 #if USE_R_RG_RGBA_FOR_MBOIT6
 //RasterizerOrderedTexture2DArray<unorm vec4> b_extra : register(u2);
-layout (binding = 2, rgba16) uniform image2DArray b_extra;
+layout (binding = 2, rgba16) coherent uniform image2DArray b_extra;
 #endif
 #else
 //RasterizerOrderedTexture2DArray<unorm vec4> b : register(u1);
-layout (binding = 1, rgba16) uniform image2DArray b;
+layout (binding = 1, rgba16) coherent uniform image2DArray b;
 #endif
 #endif
 
@@ -374,24 +374,24 @@ Texture2DArray zeroth_moment;
 Texture2DArray extra_moments;
 #endif*/
 
-layout (binding = 0, r32f) uniform image2DArray zeroth_moment; // float
+layout (binding = 0, r32f) coherent uniform image2DArray zeroth_moment; // float
 #if SINGLE_PRECISION
 #if NUM_MOMENTS == 6
-layout (binding = 1, rg32f) uniform image2DArray moments; // vec2
+layout (binding = 1, rg32f) coherent uniform image2DArray moments; // vec2
 #if USE_R_RG_RGBA_FOR_MBOIT6
-layout (binding = 2, rgba32f) uniform image2DArray extra_moments; // vec4
+layout (binding = 2, rgba32f) coherent uniform image2DArray extra_moments; // vec4
 #endif
 #else
-layout (binding = 1, rgba32f) uniform image2DArray moments; // vec4
+layout (binding = 1, rgba32f) coherent uniform image2DArray moments; // vec4
 #endif
 #else
 #if NUM_MOMENTS == 6
-layout (binding = 1, rg16) uniform image2DArray moments;
+layout (binding = 1, rg16) coherent uniform image2DArray moments;
 #if USE_R_RG_RGBA_FOR_MBOIT6
-layout (binding = 2, rgba16) uniform image2DArray extra_moments;
+layout (binding = 2, rgba16) coherent uniform image2DArray extra_moments;
 #endif
 #else
-layout (binding = 1, rgba16) uniform image2DArray moments;
+layout (binding = 1, rgba16) coherent uniform image2DArray moments;
 #endif
 #endif
 

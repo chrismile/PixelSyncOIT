@@ -24,24 +24,24 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 out vec4 fragColor;
 
-layout (binding = 0, r32f) uniform image2DArray zeroth_moment; // float
+layout (binding = 0, r32f) coherent uniform image2DArray zeroth_moment; // float
 #if SINGLE_PRECISION
 #if NUM_MOMENTS == 6
-layout (binding = 1, rg32f) uniform image2DArray moments; // vec2
+layout (binding = 1, rg32f) coherent uniform image2DArray moments; // vec2
 #if USE_R_RG_RGBA_FOR_MBOIT6
-layout (binding = 2, rgba32f) uniform image2DArray extra_moments; // vec4
+layout (binding = 2, rgba32f) coherent uniform image2DArray extra_moments; // vec4
 #endif
 #else
-layout (binding = 1, rgba32f) uniform image2DArray moments; // vec4
+layout (binding = 1, rgba32f) coherent uniform image2DArray moments; // vec4
 #endif
 #else
 #if NUM_MOMENTS == 6
-layout (binding = 1, rg16) uniform image2DArray moments;
+layout (binding = 1, rg16) coherent uniform image2DArray moments;
 #if USE_R_RG_RGBA_FOR_MBOIT6
-layout (binding = 2, rgba16) uniform image2DArray extra_moments;
+layout (binding = 2, rgba16) coherent uniform image2DArray extra_moments;
 #endif
 #else
-layout (binding = 1, rgba16) uniform image2DArray moments;
+layout (binding = 1, rgba16) coherent uniform image2DArray moments;
 #endif
 #endif
 

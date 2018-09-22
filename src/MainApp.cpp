@@ -183,7 +183,7 @@ void PixelSyncApp::loadModel(const std::string &filename)
 			const float scalingFactor = 0.2f;
 			scaling = matrixScaling(glm::vec3(scalingFactor));
 		} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
+			camera->setPosition(glm::vec3(-0.6f, -0.4f, -1.8f));
 		} else {
 			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 		}

@@ -34,7 +34,7 @@ enum MBOITPixelFormat {
 static bool usePowerMoments = true;
 static int numMoments = 6;
 static MBOITPixelFormat pixelFormat = MBOIT_PIXEL_FORMAT_FLOAT_32;
-const bool USE_R_RG_RGBA_FOR_MBOIT6 = false;
+static bool USE_R_RG_RGBA_FOR_MBOIT6 = true;
 
 OIT_MBOIT::OIT_MBOIT()
 {
@@ -191,29 +191,29 @@ void OIT_MBOIT::updateMomentMode()
     if (usePowerMoments) {
         if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 6*1e-5;
-        } else if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
+        } else if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
             momentUniformData.moment_bias = 5*1e-7;
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 6*1e-4;
-        } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
-            momentUniformData.moment_bias = 5*1e-6;
+        } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
+            momentUniformData.moment_bias = 5*1e-8;
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 2.5*1e-3;
-        } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
+        } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
             momentUniformData.moment_bias = 5*1e-5;
         }
     } else {
         if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 4*1e-4;
-        } else if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
+        } else if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
             momentUniformData.moment_bias = 4*1e-7;
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 6.5*1e-4;
-        } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
+        } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
             momentUniformData.moment_bias = 8*1e-7;
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 8.5*1e-4;
-        } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
+        } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
             momentUniformData.moment_bias = 1.5*1e-6;
         }
     }
@@ -255,12 +255,23 @@ void OIT_MBOIT::renderGUI()
 {
     ImGui::Separator();
 
-    const char *momentModes[] = {"Power Moments: 4", "Power Moments: 6", "Power Moments: 8",
-                                 "Trigonometric Moments: 2", "Trigonometric Moments: 3", "Trigonometric Moments: 4"};
-    static int momentModeIndex = usePowerMoments ? numMoments/2 - 2 : numMoments/2 + 1;
+    // USE_R_RG_RGBA_FOR_MBOIT6
+    const char *momentModes[] = {"Power Moments: 4", "Power Moments: 6 (Layered)", "Power Moments: 6 (R_RG_RGBA)",
+                                 "Power Moments: 8", "Trigonometric Moments: 2", "Trigonometric Moments: 3 (Layered)",
+                                 "Trigonometric Moments: 3 (R_RG_RGBA)", "Trigonometric Moments: 4"};
+    const int momentModesNumMoments[] = {4, 6, 6, 8, 4, 6, 6, 8};
+    static int momentModeIndex = -1;
+    if (momentModeIndex == -1) {
+        // Initialize
+        momentModeIndex = usePowerMoments ? 0 : 4;
+        momentModeIndex += numMoments/2 - 2;
+        momentModeIndex += USE_R_RG_RGBA_FOR_MBOIT6 ? 1 : 0;
+    }
+
     if (ImGui::Combo("Moment Mode", &momentModeIndex, momentModes, IM_ARRAYSIZE(momentModes))) {
-        usePowerMoments = (momentModeIndex / 3) == 0;
-        numMoments = usePowerMoments ? momentModeIndex*2 + 4 : momentModeIndex*2 - 2; // Count complex moments * 2
+        usePowerMoments = (momentModeIndex / 4) == 0;
+        numMoments = momentModesNumMoments[momentModeIndex]; // Count complex moments * 2
+        USE_R_RG_RGBA_FOR_MBOIT6 = (momentModeIndex == 2) || (momentModeIndex == 6);
         updateMomentMode();
         reRender = true;
     }

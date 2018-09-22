@@ -99,12 +99,12 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 3; // TODO Back to 2
+    int usedModelIndex = 3;
     Color bandingColor;
     bool cullBackface = true;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = true;
+    bool continuousRendering = false;
     bool reRender = true;
 
     // Profiling events
