@@ -15,6 +15,20 @@ void swapFrags(uint i, uint j) {
     depthList[j] = dTemp;
 }
 
+vec4 blendFTB(uint fragsCount)
+{
+    vec4 color = vec4(0.0);
+	for (uint i = 0; i < fragsCount; i++) {
+		// Front-to-Back (FTB) blending
+		// Blend the accumulated color with the color of the fragment node
+		vec4 colorSrc = unpackColorRGBA(colorList[i]);
+		float alphaSrc = colorSrc.a;
+		color.rgb = color.rgb + (1.0 - color.a) * alphaSrc * colorSrc.rgb;
+		color.a = color.a + (1.0 - color.a) * alphaSrc;
+	}
+	return vec4(color.rgb / color.a, color.a);
+}
+
 
 vec4 bubbleSort(uint fragsCount)
 {
@@ -31,72 +45,86 @@ vec4 bubbleSort(uint fragsCount)
         }
     } while (changed); // Nothing changed => sorted
 
-    vec4 color = vec4(0.0);
-	for (uint i = 0; i < fragsCount; i++) {
-		// Front-to-Back (FTB) blending
-		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackColorRGBA(colorList[i]);
-		float alphaSrc = colorSrc.a;
-		color.rgb = color.rgb + (1.0 - color.a) * alphaSrc * colorSrc.rgb;
-		color.a = color.a + (1.0 - color.a) * alphaSrc;
-	}
-	return vec4(color.rgb / color.a, color.a);
+    return blendFTB(fragsCount);
 }
 
-/*void insertionSort(uint fragsCount)
+
+vec4 insertionSort(uint fragsCount)
 {
+    // Temporary fragment storage
+    uint fragColor;
+    float fragDepth;
+
     uint i, j;
-    LinkedListFragmentNode frag; // Temporary fragment storage
     for (i = 1; i < fragsCount; ++i) {
-        frag = fragList[i]; // Get the fragment
+        // Get the fragment
+        fragColor = colorList[i];
+        fragDepth = depthList[i];
+
         j = i; // Store its position
-        while (j >= 1 && fragList[j-1].depth > frag.depth) {
+        while (j >= 1 && depthList[j-1] > fragDepth) {
             // Shift the fragments through the list until place is found
-            fragList[j] = fragList[j-1];
+            colorList[j] = colorList[j-1];
+            depthList[j] = depthList[j-1];
             --j;
         }
 
         // Insert it at the right place
-        fragList[j] = frag;
+        colorList[j] = fragColor;
+        depthList[j] = fragDepth;
     }
+
+    return blendFTB(fragsCount);
 }
 
-void shellSort(uint fragsCount)
+
+vec4 shellSort(uint fragsCount)
 {
-    uint i, j, gap;
-    LinkedListFragmentNode frag; // Temporary fragment storage
+    // Temporary fragment storage
+    uint fragColor;
+    float fragDepth;
 
     // Optimal gap sequence for 128 elements from [Ciu01, table 1]
+    uint i, j, gap;
     uvec4 gaps = uvec4(24, 9, 4, 1);
     for(uint g = 0; g < 4; g++) {
         // For every gap
         gap = gaps[g]; // Current Cap
         for(i = gap; i < fragsCount; ++i) {
-            frag = fragList[i]; // Get the fragment
+            // Get the fragment
+            fragColor = colorList[i];
+            fragDepth = depthList[i];
             j = i;
 
             // Shift earlier until correct
-            while (j >= gap && fragList[j-gap].depth > frag.depth) {
+            while (j >= gap && depthList[j-gap] > fragDepth) {
                 // Shift the fragments through the list until place is found
-                fragList[j] = fragList[j-gap];
+                colorList[j] = colorList[j-gap];
+                depthList[j] = depthList[j-gap];
                 j-=gap;
             }
-            fragList[j] = frag; // Insert it at the right place
+
+            // Insert it at the right place
+            colorList[j] = fragColor;
+            depthList[j] = fragDepth;
         }
     }
+
+    return blendFTB(fragsCount);
 }
+
 
 void maxHeapSink(uint x, uint fragsCount)
 {
     uint c; // Child
     while((c = 2 * x + 1) < fragsCount) {
         // While children exist
-        if(c + 1 < fragsCount && fragList[c].depth < fragList[c+1].depth) {
+        if(c + 1 < fragsCount && depthList[c] < depthList[c+1]) {
             // Find the biggest of both
             ++c;
         }
 
-        if(fragList[x].depth >= fragList[c].depth) {
+        if(depthList[x] >= depthList[c]) {
             // Does it have to sink
             return;
         } else {
@@ -106,7 +134,7 @@ void maxHeapSink(uint x, uint fragsCount)
     }
 }
 
-void heapSort(uint fragsCount)
+vec4 heapSort(uint fragsCount)
 {
     uint i;
     for (i = (fragsCount + 1)/2 ; i > 0 ; --i) {
@@ -118,7 +146,9 @@ void heapSort(uint fragsCount)
         swapFrags(0, fragsCount-i); // Swap max to List End
         maxHeapSink(0, fragsCount-i); // Sink the max to obtain correct heap
     }
-}*/
+
+    return blendFTB(fragsCount);
+}
 
 
 void minHeapSink4(uint x, uint fragsCount)
@@ -169,10 +199,7 @@ vec4 frontToBackPQ(uint fragsCount)
         // Max Steps = #frags Stop when color is saturated enough
         minHeapSink4(0, fragsCount - i++); // Sink it right + increment i
         vec4 colorSrc = unpackColorRGBA(colorList[0]); // Heap first is min
-        //vec4 colorSrc = unpackUnorm4x8(colorList[0]); // Heap first is min
         // FTB Blending
-        //rayColor.rgb += (1-rayColor.a)*color.a*color.rgb;
-        //rayColor.a += color.a*(1-rayColor.a);
 		rayColor.rgb = rayColor.rgb + (1.0 - rayColor.a) * colorSrc.a * colorSrc.rgb;
 		rayColor.a = rayColor.a + (1.0 - rayColor.a) * colorSrc.a;
 
@@ -180,27 +207,8 @@ vec4 frontToBackPQ(uint fragsCount)
         colorList[0] = colorList[fragsCount-i];
         depthList[0] = depthList[fragsCount-i];
     }
-    //vec4 colorSrc = unpackColorRGBA(colorList[0]);
-    //rayColor.rgb = rayColor.rgb + (1.0 - rayColor.a) * colorSrc.a * colorSrc.rgb;
-    //rayColor.a = rayColor.a + (1.0 - rayColor.a) * colorSrc.a;
-
 
     rayColor.rgb = rayColor.rgb / rayColor.a; // Correct rgb with alpha
     return rayColor;
 }
 
-#define sortingAlgorithm frontToBackPQ
-//#define sortingAlgorithm bubbleSort
-
-/*shader FSblend(out vec4 fragColor)
-{
-    // Receive the current head Pointer
-    uint headPtr = imageLoad(headIndex, ivec2(gl_FragCoord.xy)).r;
-    if(headPtr == 0x00) {
-        // When unchanged => Transparent Fragment
-        fragColor = vec4(0.0);
-    } else {
-        uint fragsCount = collectFragments(headPtr);
-        fragColor = frontToBackPQ(fragsCount);
-    }
-}*/

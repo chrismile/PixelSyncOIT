@@ -28,7 +28,8 @@ using namespace sgl;
 
 const int NUM_OIT_MODES = 8;
 const char *const OIT_MODE_NAMES[] = {
-        "K-Buffer", "Linked List", "MLAB", "HT", "MBOIT", "Depth Complexity", "No OIT", "Depth Peeling"
+        "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
+        "Depth Complexity", "No OIT", "Depth Peeling"
 };
 enum RenderModeOIT {
         RENDER_MODE_OIT_KBUFFER = 0,
@@ -103,7 +104,7 @@ private:
     bool cullBackface = true;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = false;
+    bool continuousRendering = true;
     bool reRender = true;
 
     // Profiling events

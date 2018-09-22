@@ -176,8 +176,13 @@ void OIT_DepthComplexity::renderGUI()
     ImGui::Text("avg used: %.2f, avg all: %.2f, max: %d", ((float) totalNumFragments / usedLocations),
                 ((float) totalNumFragments / bufferSize), maxComplexity);
 
-    if (ImGui::SliderFloat("Intensity", &intensity, 0.1f, 2.0f)) {
-        numFragmentsMaxColor = std::max(maxComplexity/2, 8)/intensity;
+    static ImVec4 colorSelection = ImColor(0, 255, 255, 127);
+    if (ImGui::ColorEdit4("Coloring", (float*)&colorSelection, 0)) {
+        Color newColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, 1.0f);
+        resolveShader->setUniform("color", newColor);
+        intensity = 0.01+2*colorSelection.w;
+        numFragmentsMaxColor = std::max(maxComplexity/2, 4)/intensity;
+        //reRender = true;
     }
 }
 
@@ -220,7 +225,7 @@ void OIT_DepthComplexity::computeStatistics()
     numFragmentsBuffer->unmapBuffer();
 
     //if ((uint32_t)maxComplexity != numFragmentsMaxColor) {
-    numFragmentsMaxColor = std::max(maxComplexity/2, 8)/intensity;
+    numFragmentsMaxColor = std::max(maxComplexity/2, 4)/intensity;
     // }
 
     if (totalNumFragments == 0) usedLocations = 1; // Avoid dividing by zero in code below

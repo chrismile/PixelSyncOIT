@@ -39,7 +39,7 @@ layout (binding = 0, r32f) uniform image2DArray b0; // float
 #if NUM_MOMENTS == 6
 //RasterizerOrderedTexture2DArray<vec2> b : register(u1);
 layout (binding = 1, rg32f) uniform image2DArray b; // vec2
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 //RasterizerOrderedTexture2DArray<vec4> b_extra : register(u2);
 layout (binding = 2, rgba32f) uniform image2DArray b_extra; // vec4
 #endif
@@ -51,7 +51,7 @@ layout (binding = 1, rgba32f) uniform image2DArray b; // vec4
 #if NUM_MOMENTS == 6
 //RasterizerOrderedTexture2DArray<unorm vec2> b : register(u1);
 layout (binding = 1, rg16) uniform image2DArray b;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 //RasterizerOrderedTexture2DArray<unorm vec4> b_extra : register(u2);
 layout (binding = 2, rgba16) uniform image2DArray b_extra;
 #endif
@@ -76,6 +76,10 @@ void generatePowerMoments(inout float b_0,
 #endif
 	float depth, float transmittance)
 {
+    // Absorbance would be infinite for zero transmittance. Thus, make sure transittance is never close to zero.
+	if (transmittance < 1e-5) {
+        transmittance = 0.0001;
+	}
 	float absorbance = -log(transmittance);
 
 	float depth_pow2 = depth * depth;
@@ -142,6 +146,10 @@ void generateTrigonometricMoments(inout float b_0,
 #endif
 	float depth, float transmittance, vec4 wrapping_zone_parameters)
 {
+    // Absorbance would be infinite for zero transmittance. Thus, make sure transittance is never close to zero.
+	if (transmittance < 1e-5) {
+        transmittance = 0.0001;
+	}
 	float absorbance = -log(transmittance);
 
 	float phase = fma(depth, wrapping_zone_parameters.y, wrapping_zone_parameters.y);
@@ -155,13 +163,13 @@ void generateTrigonometricMoments(inout float b_0,
 	b_0 += absorbance;
 	b_12 += b_12_new;
 #else
-	b_12 = fma(b_12, 2.0, -1.0) * b_0;
+	b_12 = fma(b_12, vec4(2.0), vec4(-1.0)) * b_0;
 
 	b_0 += absorbance;
 	b_12 += b_12_new;
 
 	b_12 /= b_0;
-	b_12 = fma(b_12, 0.5, 0.5);
+	b_12 = fma(b_12, vec4(0.5), vec4(0.5));
 #endif
 #elif NUM_MOMENTS == 6
 	vec2 b_1_new = circle_point * absorbance;
@@ -173,9 +181,9 @@ void generateTrigonometricMoments(inout float b_0,
 	b_2 += b_2_new;
 	b_3 += b_3_new;
 #else
-	b_1 = fma(b_1, 2.0, -1.0) * b_0;
-	b_2 = fma(b_2, 2.0, -1.0) * b_0;
-	b_3 = fma(b_3, 2.0, -1.0) * b_0;
+	b_1 = fma(b_1, vec2(2.0), vec2(-1.0)) * b_0;
+	b_2 = fma(b_2, vec2(2.0), vec2(-1.0)) * b_0;
+	b_3 = fma(b_3, vec2(2.0), vec2(-1.0)) * b_0;
 
 	b_0 += absorbance;
 	b_1 += b_1_new;
@@ -185,9 +193,9 @@ void generateTrigonometricMoments(inout float b_0,
 	b_1 /= b_0;
 	b_2 /= b_0;
 	b_3 /= b_0;
-	b_1 = fma(b_1, 0.5, 0.5);
-	b_2 = fma(b_2, 0.5, 0.5);
-	b_3 = fma(b_3, 0.5, 0.5);
+	b_1 = fma(b_1, vec2(0.5), vec2(0.5));
+	b_2 = fma(b_2, vec2(0.5), vec2(0.5));
+	b_3 = fma(b_3, vec2(0.5), vec2(0.5));
 #endif
 #elif NUM_MOMENTS == 8
 	vec4 b_even_new = vec4(circle_point_pow2, Multiply(circle_point_pow2, circle_point_pow2)) * absorbance;
@@ -197,8 +205,8 @@ void generateTrigonometricMoments(inout float b_0,
 	b_even += b_even_new;
 	b_odd += b_odd_new;
 #else
-	b_even = fma(b_even, 2.0, -1.0) * b_0;
-	b_odd = fma(b_odd, 2.0, -1.0) * b_0;
+	b_even = fma(b_even, vec4(2.0), vec4(-1.0)) * b_0;
+	b_odd = fma(b_odd, vec4(2.0), vec4(-1.0)) * b_0;
 
 	b_0 += absorbance;
 	b_even += b_even_new;
@@ -206,8 +214,8 @@ void generateTrigonometricMoments(inout float b_0,
 
 	b_even /= b_0;
 	b_odd /= b_0;
-	b_even = fma(b_even, 0.5, 0.5);
-	b_odd = fma(b_odd, 0.5, 0.5);
+	b_even = fma(b_even, vec4(0.5), vec4(0.5));
+	b_odd = fma(b_odd, vec4(0.5), vec4(0.5));
 #endif
 #endif
 }
@@ -249,7 +257,7 @@ void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrappin
 	float b_0 = imageLoad(b0, idx0).x;
 	vec2 b_raw[3];
 	b_raw[0] = imageLoad(b, idx0).xy;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 	vec4 tmp = imageLoad(b_extra, idx0);
 	b_raw[1] = tmp.xy;
 	b_raw[2] = tmp.zw;
@@ -273,7 +281,7 @@ void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrappin
 
 	imageStore(b0, idx0, vec4(b_0, 0.0, 0.0, 1.0));
 	imageStore(b, idx0, vec4(b_raw[0], 0.0, 1.0));
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 	imageStore(b_extra, idx0, vec4(b_raw[1], b_raw[2]));
 #else
 	imageStore(b, idx1, vec4(b_raw[1], 0.0, 1.0));
@@ -305,7 +313,7 @@ void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrappin
 #if NUM_MOMENTS == 4
 void generateMoments(float depth, float transmittance, vec4 wrapping_zone_parameters, out float b_0, out vec4 b)
 #elif NUM_MOMENTS == 6
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 void generateMoments(float depth, float transmittance, vec4 wrapping_zone_parameters, out float b_0, out vec2 b_12, out vec4 b_3456)
 #else
 void generateMoments(float depth, float transmittance, vec4 wrapping_zone_parameters, out float b_0, out vec2 b_12, out vec2 b_34, out vec2 b_56)
@@ -326,7 +334,7 @@ void generateMoments(float depth, float transmittance, vec4 wrapping_zone_parame
 	b = vec4(circle_point, circle_point_pow2) * absorbance;
 #elif NUM_MOMENTS == 6
 	b_12 = circle_point * absorbance;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 	b_3456 = vec4(circle_point_pow2, Multiply(circle_point, circle_point_pow2)) * absorbance;
 #else
 	b_34 = circle_point_pow2 * absorbance;
@@ -343,7 +351,7 @@ void generateMoments(float depth, float transmittance, vec4 wrapping_zone_parame
 	b = vec4(depth, depth_pow2, depth_pow2 * depth, depth_pow4) * absorbance;
 #elif NUM_MOMENTS == 6
 	b_12 = vec2(depth, depth_pow2) * absorbance;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 	b_3456 = vec4(depth_pow2 * depth, depth_pow4, depth_pow4 * depth, depth_pow4 * depth_pow2) * absorbance;
 #else
 	b_34 = vec2(depth_pow2 * depth, depth_pow4) * absorbance;
@@ -362,7 +370,7 @@ void generateMoments(float depth, float transmittance, vec4 wrapping_zone_parame
 
 /*Texture2DArray moments;
 Texture2DArray zeroth_moment;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 Texture2DArray extra_moments;
 #endif*/
 
@@ -370,7 +378,7 @@ layout (binding = 0, r32f) uniform image2DArray zeroth_moment; // float
 #if SINGLE_PRECISION
 #if NUM_MOMENTS == 6
 layout (binding = 1, rg32f) uniform image2DArray moments; // vec2
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 layout (binding = 2, rgba32f) uniform image2DArray extra_moments; // vec4
 #endif
 #else
@@ -379,7 +387,7 @@ layout (binding = 1, rgba32f) uniform image2DArray moments; // vec4
 #else
 #if NUM_MOMENTS == 6
 layout (binding = 1, rg16) uniform image2DArray moments;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 layout (binding = 2, rgba16) uniform image2DArray extra_moments;
 #endif
 #else
@@ -400,7 +408,6 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	total_transmittance = 1;
 	
 	float b_0 = imageLoad(zeroth_moment, idx0).x;
-	//clip(b_0 - 0.00100050033f);
 	if (b_0 < 0.00100050033f) {
         discard;
     }
@@ -416,8 +423,8 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	trig_b[0] /= b_0;
 	trig_b[1] /= b_0;
 #else
-	trig_b[0] = fma(trig_b[0], 2.0, -1.0);
-	trig_b[1] = fma(trig_b[1], 2.0, -1.0);
+	trig_b[0] = fma(trig_b[0], vec2(2.0), vec2(-1.0));
+	trig_b[1] = fma(trig_b[1], vec2(2.0), vec2(-1.0));
 #endif
 	transmittance_at_depth = computeTransmittanceAtDepthFrom2TrigonometricMoments(b_0, trig_b, depth,
 	        MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
@@ -449,7 +456,7 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 #if TRIGONOMETRIC
 	vec2 trig_b[3];
 	trig_b[0] = imageLoad(moments, idx0).xy;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 	vec4 tmp = imageLoad(extra_moments, idx0);
 	trig_b[1] = tmp.xy;
 	trig_b[2] = tmp.zw;
@@ -462,15 +469,15 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	trig_b[1] /= b_0;
 	trig_b[2] /= b_0;
 #else
-	trig_b[0] = fma(trig_b[0], 2.0, -1.0);
-	trig_b[1] = fma(trig_b[1], 2.0, -1.0);
-	trig_b[2] = fma(trig_b[2], 2.0, -1.0);
+	trig_b[0] = fma(trig_b[0], vec2(2.0), vec2(-1.0));
+	trig_b[1] = fma(trig_b[1], vec2(2.0), vec2(-1.0));
+	trig_b[2] = fma(trig_b[2], vec2(2.0), vec2(-1.0));
 #endif
 	transmittance_at_depth = computeTransmittanceAtDepthFrom3TrigonometricMoments(b_0, trig_b, depth,
 	        MomentOIT.moment_bias, MomentOIT.overestimation, MomentOIT.wrapping_zone_parameters);
 #else
 	vec2 b_12 = imageLoad(moments, idx0).xy;
-#if USE_R_RG_RBBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6
 	vec4 tmp = imageLoad(extra_moments, idx0);
 	vec2 b_34 = tmp.xy;
 	vec2 b_56 = tmp.zw;
@@ -512,10 +519,10 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	};
 #else
 	vec2 trig_b[4] = {
-		fma(b_tmp2.xy, 2.0, -1.0),
-		fma(b_tmp.xy, 2.0, -1.0),
-		fma(b_tmp2.zw, 2.0, -1.0),
-		fma(b_tmp.zw, 2.0, -1.0)
+		fma(b_tmp2.xy, vec2(2.0), vec2(-1.0)),
+		fma(b_tmp.xy, vec2(2.0), vec2(-1.0)),
+		fma(b_tmp2.zw, vec2(2.0), vec2(-1.0)),
+		fma(b_tmp.zw, vec2(2.0), vec2(-1.0))
 	};
 #endif
 	transmittance_at_depth = computeTransmittanceAtDepthFrom4TrigonometricMoments(b_0, trig_b, depth,
@@ -529,7 +536,7 @@ void resolveMoments(out float transmittance_at_depth, out float total_transmitta
 	b_odd /= b_0;
 	const float bias_vector[8] = { 0, 0.75, 0, 0.67666666666666664, 0, 0.63, 0, 0.60030303030303034 };
 #else
-	vec4 b_even_q = imageLoad(moment, idx0);
+	vec4 b_even_q = imageLoad(moments, idx0);
 	vec4 b_odd_q = imageLoad(moments, idx1);
 
 	// Dequantize the moments

@@ -61,6 +61,7 @@ public:
 	virtual void setGatherShader(const std::string &name)
 	{
 		sgl::ShaderManager->invalidateShaderCache();
+		gatherShaderName = name;
 		gatherShader = sgl::ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
 	}
 
@@ -72,6 +73,7 @@ protected:
 
     std::function<void()> renderSceneFunction;
 	bool reRender = false;
+	std::string gatherShaderName = "PseudoPhong";
 };
 
 #endif /* OIT_OIT_RENDERER_HPP_ */

@@ -317,7 +317,7 @@ void PixelSyncApp::renderOIT()
 
 	if (mode == RENDER_MODE_OIT_MBOIT) {
 		AABB3 screenSpaceBoundingBox = boundingBox.transformed(camera->getViewMatrix());
-		static_cast<OIT_MBOIT*>(oitRenderer.get())->setScreenSpaceBoundingBox(screenSpaceBoundingBox);
+		static_cast<OIT_MBOIT*>(oitRenderer.get())->setScreenSpaceBoundingBox(screenSpaceBoundingBox, camera);
 	}
 
 	//Renderer->setBlendMode(BLEND_ALPHA);
@@ -383,40 +383,37 @@ void PixelSyncApp::renderGUI()
 		ImGui::Separator();
 
 		// Mode selection of OIT algorithms
-		bool updateMode = false;
-		for (int i = 0; i < NUM_OIT_MODES; i++) {
-			if (ImGui::RadioButton(OIT_MODE_NAMES[i], (int*)&mode, i)) { updateMode = true; }
-			if (i != NUM_OIT_MODES-1 && i != 3 && i != 6) { ImGui::SameLine(); }
-		}
-		ImGui::Separator();
-		if (updateMode) {
+		if (ImGui::Combo("OIT Mode", (int*)&mode, OIT_MODE_NAMES, IM_ARRAYSIZE(OIT_MODE_NAMES))) {
 			setRenderMode(mode, true);
 		}
+		ImGui::Separator();
 
 		// Selection of displayed model
-		updateMode = false;
-		for (int i = 0; i < NUM_MODELS; i++) {
-			if (ImGui::RadioButton(MODEL_DISPLAYNAMES[i], &usedModelIndex, i)) { updateMode = true; }
-			if (i != NUM_MODELS-1 && i != 2) { ImGui::SameLine(); }
-		}
-		ImGui::Separator();
-		if (updateMode) {
+		if (ImGui::Combo("Model Name", &usedModelIndex, MODEL_DISPLAYNAMES, IM_ARRAYSIZE(MODEL_DISPLAYNAMES))) {
 			loadModel(MODEL_FILENAMES[usedModelIndex]);
 		}
+		ImGui::Separator();
 
 		// Color selection in binning mode (if not showing all values in different color channels in mode 1)
-        if (modelFilenamePure != "Data/Models/Ship_04") {
-            static ImVec4 colorSelection = ImColor(165, 220, 84, 120);
+		// TODO
+		static ImVec4 colorSelection = ImColor(165, 220, 84, 120);
+		if (modelFilenamePure != "Data/Models/Ship_04" && mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
             int misc_flags = 0;
-            ImGui::Text("Color widget:");
-            ImGui::SameLine(); ImGuiWrapper::get()->showHelpMarker("Click on the colored square to open a color picker."
-                                                                   "\nCTRL+click on individual component to input value.\n");
-            if (ImGui::ColorEdit4("MyColor##1", (float*)&colorSelection, misc_flags)) {
+            if (ImGui::ColorEdit4("Model Color", (float*)&colorSelection, misc_flags)) {
                 bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
 				reRender = true;
 			}
+			/*ImGui::SameLine();
+			ImGuiWrapper::get()->showHelpMarker("Click on the colored square to open a color picker."
+												"\nCTRL+click on individual component to input value.\n");*/
             ImGui::Separator();
-        }
+        } else if (mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+			if (ImGui::SliderFloat("Opacity", &colorSelection.w, 0.0f, 1.0f, "%.2f")) {
+				bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
+				reRender = true;
+			}
+			ImGui::Separator();
+		}
 
 		if (ImGui::Checkbox("Cull back face", &cullBackface)) {
 			if (cullBackface) {

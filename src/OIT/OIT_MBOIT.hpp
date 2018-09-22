@@ -11,6 +11,14 @@
 
 #include "OIT_Renderer.hpp"
 
+struct MomentOITUniformData
+{
+    glm::vec4 wrapping_zone_parameters;
+    float overestimation;
+    float moment_bias;
+};
+
+
 /**
  * An order independent transparency renderer using pixel sync.
  *
@@ -45,7 +53,7 @@ public:
     virtual void renderToScreen();
 
     // For determining minimum and maximum (screen-space) depth
-    void setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB);
+    void setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, sgl::CameraPtr &camera);
 
     // OIT Renderers can render their own ImGui elements
     virtual void renderGUI();
@@ -60,6 +68,8 @@ private:
     sgl::ShaderProgramPtr mboitPass2Shader;
     sgl::ShaderProgramPtr blendShader;
     sgl::GeometryBufferPtr fragmentNodes;
+
+    MomentOITUniformData momentUniformData;
     sgl::GeometryBufferPtr momentOITUniformBuffer;
 
     // Indicates whether a new OIT mode was selected
@@ -74,11 +84,14 @@ private:
 
     sgl::TexturePtr b0;
     sgl::TexturePtr b;
+    sgl::TexturePtr bExtra;
     sgl::TextureSettings textureSettingsB0;
     sgl::TextureSettings textureSettingsB;
+    sgl::TextureSettings textureSettingsBExtra;
 
     // Framebuffer used for rendering the scene
     sgl::FramebufferObjectPtr sceneFramebuffer;
+    sgl::RenderbufferObjectPtr sceneDepthRBO;
 
     sgl::FramebufferObjectPtr blendFBO;
     sgl::TexturePtr blendRenderTexture;
