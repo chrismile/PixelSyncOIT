@@ -26,10 +26,10 @@
 using namespace std;
 using namespace sgl;
 
-const int NUM_OIT_MODES = 8;
+const int NUM_OIT_MODES = 9;
 const char *const OIT_MODE_NAMES[] = {
         "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
-        "Depth Complexity", "No OIT", "Depth Peeling"
+        "Depth Complexity", "No OIT", "Depth Peeling", "Test Load/Store"
 };
 enum RenderModeOIT {
         RENDER_MODE_OIT_KBUFFER = 0,
@@ -39,7 +39,8 @@ enum RenderModeOIT {
         RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
         RENDER_MODE_OIT_DEPTH_COMPLEXITY,
         RENDER_MODE_OIT_DUMMY,
-        RENDER_MODE_OIT_DEPTH_PEELING
+        RENDER_MODE_OIT_DEPTH_PEELING,
+		RENDER_MODE_OIT_TEST_LOAD_STORE
 };
 
 const int NUM_MODELS = 6;
@@ -99,9 +100,9 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 3;
+    int usedModelIndex = 1;
     Color bandingColor;
-    bool cullBackface = true;
+    bool cullBackface = false;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
     bool continuousRendering = false;

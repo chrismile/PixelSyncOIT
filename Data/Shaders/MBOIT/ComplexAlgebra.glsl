@@ -10,12 +10,14 @@
  */
 
 /*! \file
-   This header defines utility functions to deal with complex numbers and 
+   This header defines utility functions to deal with complex numbers and
    complex polynomials.*/
-#ifndef COMPLEX_ALGEBRA_GLSL
-#define COMPLEX_ALGEBRA_GLSL
+#ifndef COMPLEX_ALGEBRA
+#define COMPLEX_ALGEBRA
 
-/*! Returns the complex conjugate of the given complex number (i.e. it changes 
+#include "DXHelper.glsl"
+
+/*! Returns the complex conjugate of the given complex number (i.e. it changes
 	the sign of the y-component).*/
 vec2 Conjugate(vec2 Z){
 	return vec2(Z.x,-Z.y);
@@ -28,12 +30,12 @@ vec2 Multiply(vec2 LHS,vec2 RHS){
 float Magnitude(vec2 Z){
 	return sqrt(dot(Z,Z));
 }
-/*! This function computes the quotient of two complex numbers. The denominator 
+/*! This function computes the quotient of two complex numbers. The denominator
 	must not be zero.*/
 vec2 Divide(vec2 Numerator,vec2 Denominator){
 	return vec2(Numerator.x*Denominator.x+Numerator.y*Denominator.y,-Numerator.x*Denominator.y+Numerator.y*Denominator.x)/dot(Denominator,Denominator);
 }
-/*! This function divides a real number by a complex number. The denominator 
+/*! This function divides a real number by a complex number. The denominator
 	must not be zero.*/
 vec2 Divide(float Numerator,vec2 Denominator){
 	return vec2(Numerator*Denominator.x,-Numerator*Denominator.y)/dot(Denominator,Denominator);
@@ -51,21 +53,21 @@ vec2 Square(vec2 Z){
 vec2 Cube(vec2 Z){
 	return Multiply(Square(Z),Z);
 }
-/*! This utility function computes one square root of the given complex value. 
+/*! This utility function computes one square root of the given complex value.
 	The other one can be found using the unary minus operator.
-  \warning This function is continuous but not defined on the negative real 
+  \warning This function is continuous but not defined on the negative real
 			axis (and cannot be continued continuously there).
   \sa SquareRoot() */
 vec2 SquareRootUnsafe(vec2 Z){
 	float ZLengthSq=dot(Z,Z);
-	float ZLengthInv=inversesqrt(ZLengthSq);
+	float ZLengthInv=1.0/sqrt(ZLengthSq);
 	vec2 UnnormalizedRoot=Z*ZLengthInv+vec2(1.0f,0.0f);
 	float UnnormalizedRootLengthSq=dot(UnnormalizedRoot,UnnormalizedRoot);
 	float NormalizationFactorInvSq=UnnormalizedRootLengthSq*ZLengthInv;
-	float NormalizationFactor=inversesqrt(NormalizationFactorInvSq);
+	float NormalizationFactor=1.0/sqrt(NormalizationFactorInvSq);
 	return NormalizationFactor*UnnormalizedRoot;
 }
-/*! This utility function computes one square root of the given complex value. 
+/*! This utility function computes one square root of the given complex value.
 	The other one can be found using the unary minus operator.
   \note This function has discontinuities for values with real part zero.
   \sa SquareRootUnsafe() */
@@ -74,21 +76,21 @@ vec2 SquareRoot(vec2 Z){
 	vec2 ComputedRoot=SquareRootUnsafe(ZPositiveRealPart);
 	return (Z.x>=0.0)?ComputedRoot:ComputedRoot.yx;
 }
-/*! This utility function computes one cubic root of the given complex value. The 
+/*! This utility function computes one cubic root of the given complex value. The
    other roots can be found by multiplication by cubic roots of unity.
   \note This function has various discontinuities.*/
 vec2 CubicRoot(vec2 Z){
-	float Argument=atan(Z.x, Z.y);
+	float Argument=atan2(Z.y,Z.x);
 	float NewArgument=Argument/3.0f;
 	vec2 NormalizedRoot = vec2(cos(NewArgument), sin(NewArgument));
 	return NormalizedRoot*pow(dot(Z,Z),1.0f/6.0f);
 }
 
 /*! @{
-   Returns the complex conjugate of the given complex vector (i.e. it changes the 
-   second row (column in DirectX) resp the y-component).*/
-mat2 Conjugate(mat2 Vector){
-	return mat2(Vector[0].x,-Vector[0].y,Vector[1].x,-Vector[1].y);
+   Returns the complex conjugate of the given complex vector (i.e. it changes the
+   second column resp the y-component).*/
+mat2x2 Conjugate(mat2x2 Vector){
+	return mat2x2(Vector[0].x,-Vector[0].y,Vector[1].x,-Vector[1].y);
 }
 mat3x2 Conjugate(mat3x2 Vector){
 	return mat3x2(Vector[0].x,-Vector[0].y,Vector[1].x,-Vector[1].y,Vector[2].x,-Vector[2].y);
@@ -109,7 +111,7 @@ float RealPart(vec2 Z){
 	return Z.x;
 }
 
-/*! Given coefficients of a quadratic polynomial A*x^2+B*x+C, this function 
+/*! Given coefficients of a quadratic polynomial A*x^2+B*x+C, this function
 	outputs its two complex roots.*/
 void SolveQuadratic(out vec2 pOutRoot[2],vec2 A,vec2 B,vec2 C)
 {
@@ -125,7 +127,7 @@ void SolveQuadratic(out vec2 pOutRoot[2],vec2 A,vec2 B,vec2 C)
 	pOutRoot[1]=-B+DiscriminantRoot;
 }
 
-/*! Given coefficients of a cubic polynomial A*x^3+B*x^2+C*x+D, this function 
+/*! Given coefficients of a cubic polynomial A*x^3+B*x^2+C*x+D, this function
 	outputs its three complex roots.*/
 void SolveCubicBlinn(out vec2 pOutRoot[3],vec2 A,vec2 B,vec2 C,vec2 D)
 {
@@ -142,7 +144,7 @@ void SolveCubicBlinn(out vec2 pOutRoot[3],vec2 A,vec2 B,vec2 C,vec2 D)
 	vec2 Delta01=-Multiply(C,B)+D;
 	vec2 Delta11=Multiply(B,D)-Square(C);
 	vec2 Discriminant=4.0f*Multiply(Delta00,Delta11)-Square(Delta01);
-	// Compute coefficients of the depressed cubic 
+	// Compute coefficients of the depressed cubic
 	// (third is zero, fourth is one)
 	vec2 DepressedD=-2.0f*Multiply(B,Delta00)+Delta01;
 	vec2 DepressedC=Delta00;
@@ -163,7 +165,7 @@ void SolveCubicBlinn(out vec2 pOutRoot[3],vec2 A,vec2 B,vec2 C,vec2 D)
 		Multiply(vec2(-0.5f, 0.5f*sqrt(3.0f)),InvFirstRoot),
 		Multiply(vec2(-0.5f,-0.5f*sqrt(3.0f)),InvFirstRoot)
 	};
-	// Turn them into roots of the depressed cubic and revert the depression 
+	// Turn them into roots of the depressed cubic and revert the depression
 	// transform
 	//[unroll]
 	for(int i=0;i!=3;++i)
@@ -173,7 +175,7 @@ void SolveCubicBlinn(out vec2 pOutRoot[3],vec2 A,vec2 B,vec2 C,vec2 D)
 }
 
 
-/*! Given coefficients of a quartic polynomial A*x^4+B*x^3+C*x^2+D*x+E, this 
+/*! Given coefficients of a quartic polynomial A*x^4+B*x^3+C*x^2+D*x+E, this
 	function outputs its four complex roots.*/
 void SolveQuarticNeumark(out vec2 pOutRoot[4],vec2 A,vec2 B,vec2 C,vec2 D,vec2 E)
 {

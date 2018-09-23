@@ -10,17 +10,17 @@
  */
 
 /*! \file
-	This header provides utility functions to reconstruct the transmittance 
-	from a given vector of power moments (4, 6 or 8 power moments) at a 
-	specified depth. As prerequisite, utility functions for computing the real 
+	This header provides utility functions to reconstruct the transmittance
+	from a given vector of power moments (4, 6 or 8 power moments) at a
+	specified depth. As prerequisite, utility functions for computing the real
 	roots of polynomials up to degree four are defined.
 */
-#ifndef MOMENT_MATH_GLSL
-#define MOMENT_MATH_GLSL
+#ifndef MOMENT_MATH_HLSLI
+#define MOMENT_MATH_HLSLI
 
 #include "TrigonometricMomentMath.glsl"
 
-/*! Given coefficients of a quadratic polynomial A*x^2+B*x+C, this function	
+/*! Given coefficients of a quadratic polynomial A*x^2+B*x+C, this function
 	outputs its two real roots.*/
 vec2 solveQuadratic(vec3 coeffs)
 {
@@ -43,7 +43,7 @@ vec2 solveQuadratic(vec3 coeffs)
 
 /*! Code taken from the blog "Moments in Graphics" by Christoph Peters.
 	http://momentsingraphics.de/?p=105
-	This function computes the three real roots of a cubic polynomial 
+	This function computes the three real roots of a cubic polynomial
 	Coefficient[0]+Coefficient[1]*x+Coefficient[2]*x^2+Coefficient[3]*x^3.*/
 vec3 SolveCubic(vec4 Coefficient) {
 	// Normalize the polynomial
@@ -57,14 +57,14 @@ vec3 SolveCubic(vec4 Coefficient) {
 		dot(vec2(Coefficient.z, -Coefficient.y), Coefficient.xy)
 		);
 	float Discriminant = dot(vec2(4.0f*Delta.x, -Delta.y), Delta.zy);
-	// Compute coefficients of the depressed cubic 
+	// Compute coefficients of the depressed cubic
 	// (third is zero, fourth is one)
 	vec2 Depressed = vec2(
 		fma(-2.0f*Coefficient.z, Delta.x, Delta.y),
 		Delta.x
 		);
 	// Take the cubic root of a normalized complex number
-	float Theta = atan(-Depressed.x, sqrt(Discriminant)) / 3.0f;
+	float Theta = atan2(sqrt(Discriminant), -Depressed.x) / 3.0f;
 	vec2 CubicRoot = vec2(cos(Theta), sin(Theta));
 	// Compute the three roots, scale appropriately and
 	// revert the depression transform
@@ -77,8 +77,8 @@ vec3 SolveCubic(vec4 Coefficient) {
 	return Root;
 }
 
-/*! Given coefficients of a cubic polynomial 
-	coeffs[0]+coeffs[1]*x+coeffs[2]*x^2+coeffs[3]*x^3 with three real roots, 
+/*! Given coefficients of a cubic polynomial
+	coeffs[0]+coeffs[1]*x+coeffs[2]*x^2+coeffs[3]*x^3 with three real roots,
 	this function returns the root of least magnitude.*/
 float solveCubicBlinnSmallest(vec4 coeffs)
 {
@@ -89,7 +89,7 @@ float solveCubicBlinnSmallest(vec4 coeffs)
 	float discriminant = 4.0 * delta.x * delta.z - delta.y * delta.y;
 
 	vec2 depressed = vec2(delta.z, -coeffs.x * delta.y + 2.0 * coeffs.y * delta.z);
-	float theta = abs(atan(-depressed.y, coeffs.x * sqrt(discriminant))) / 3.0;
+	float theta = abs(atan2(coeffs.x * sqrt(discriminant), -depressed.y)) / 3.0;
 	vec2 sin_cos = vec2(sin(theta), cos(theta));
 	float tmp = 2.0 * sqrt(-depressed.x);
 	vec2 x = vec2(tmp * sin_cos.y, tmp * (-0.5 * sin_cos.y - 0.5 * sqrt(3.0) * sin_cos.x));
@@ -98,8 +98,8 @@ float solveCubicBlinnSmallest(vec4 coeffs)
 	return  s.x / s.y;
 }
 
-/*! Given coefficients of a quartic polynomial 
-	coeffs[0]+coeffs[1]*x+coeffs[2]*x^2+coeffs[3]*x^3+coeffs[4]*x^4 with four 
+/*! Given coefficients of a quartic polynomial
+	coeffs[0]+coeffs[1]*x+coeffs[2]*x^2+coeffs[3]*x^3+coeffs[4]*x^4 with four
 	real roots, this function returns all roots.*/
 vec4 solveQuarticNeumark(float coeffs[5])
 {
@@ -127,8 +127,8 @@ vec4 solveQuarticNeumark(float coeffs[5])
 	float ZZ_fE = ZZ - fE;
 
 	float G, g, H, h;
-	// Compute the coefficients of the quadratics adaptively using the two 
-	// proposed factorizations by Neumark. Choose the appropriate 
+	// Compute the coefficients of the quadratics adaptively using the two
+	// proposed factorizations by Neumark. Choose the appropriate
 	// factorizations using the heuristic proposed by Herbison-Evans.
 	if(y < 0 || (ZZ + fE) * BB_fy > ZZ_fE * (BB + fy)) {
 		float tmp = sqrt(BB_fy);
@@ -151,7 +151,7 @@ vec4 solveQuarticNeumark(float coeffs[5])
 	return vec4(solveQuadratic(vec3(1.0, G, H)), solveQuadratic(vec3(1.0, g, h)));
 }
 
-/*! Definition of utility functions for quantization and dequantization of 
+/*! Definition of utility functions for quantization and dequantization of
 	power moments stored in 16 bits per moment. */
 void offsetMoments(inout vec2 b_even, inout vec2 b_odd, float sign)
 {
@@ -160,15 +160,15 @@ void offsetMoments(inout vec2 b_even, inout vec2 b_odd, float sign)
 
 void quantizeMoments(out vec2 b_even_q, out vec2 b_odd_q, vec2 b_even, vec2 b_odd)
 {
-	b_odd_q = mat2(1.5f, -2.0f, sqrt(3.0f)*0.5f, -sqrt(3.0f)*2.0f / 9.0f) * b_odd;
-	b_even_q = mat2(4.0f, -4.0f, 0.5f, 0.5f) * b_even;
+	b_odd_q = mul(b_odd, mat2(1.5f, sqrt(3.0f)*0.5f, -2.0f, -sqrt(3.0f)*2.0f / 9.0f));
+	b_even_q = mul(b_even, mat2(4.0f, 0.5f, -4.0f, 0.5f));
 }
 
 void offsetAndDequantizeMoments(out vec2 b_even, out vec2 b_odd, vec2 b_even_q, vec2 b_odd_q)
 {
 	offsetMoments(b_even_q, b_odd_q, -1.0);
-	b_odd = mat2(-1.0f / 3.0f, sqrt(3.0f), -0.75f, 0.75f*sqrt(3.0f)) * b_odd_q;
-	b_even = mat2(0.125f, 1.0f, -0.125f, 1.0f) * b_even_q;
+	b_odd = mul(b_odd_q, mat2(-1.0f / 3.0f, -0.75f, sqrt(3.0f), 0.75f*sqrt(3.0f)));
+	b_even = mul(b_even_q, mat2(0.125f, -0.125f, 1.0f, 1.0f));
 }
 
 void offsetMoments(inout vec3 b_even, inout vec3 b_odd, float sign)
@@ -179,31 +179,31 @@ void offsetMoments(inout vec3 b_even, inout vec3 b_odd, float sign)
 
 void quantizeMoments(out vec3 b_even_q, out vec3 b_odd_q, vec3 b_even, vec3 b_odd)
 {
-    const mat3 QuantizationMatrixOdd = mat3(
-        2.5, -10.0, 8.0,
-        -1.87499864450, 4.20757543111, -1.83257678661,
-        1.26583039016, -1.47644882902, 0.71061660238);
-    const mat3 QuantizationMatrixEven = mat3(
-        4.0, -4.0, 0.0,
-        9.0, -24.0, 16.0,
-        -0.57759806484, 4.61936647543, -3.07953906655);
-	b_odd_q = QuantizationMatrixOdd * b_odd;
-	b_even_q = QuantizationMatrixEven * b_even;
+	const mat3 QuantizationMatrixOdd = mat3(
+		2.5f, -1.87499864450f, 1.26583039016f,
+		-10.0f, 4.20757543111f, -1.47644882902f,
+		8.0f, -1.83257678661f, 0.71061660238f);
+	const mat3 QuantizationMatrixEven = mat3(
+		4.0f, 9.0f, -0.57759806484f,
+		-4.0f, -24.0f, 4.61936647543f,
+		0.0f, 16.0f, -3.07953906655f);
+	b_odd_q = mul(b_odd, QuantizationMatrixOdd);
+	b_even_q = mul(b_even, QuantizationMatrixEven);
 }
 
 void offsetAndDequantizeMoments(out vec3 b_even, out vec3 b_odd, vec3 b_even_q, vec3 b_odd_q)
 {
 	const mat3 QuantizationMatrixOdd = mat3(
-    	-0.02877789192, 0.47635550422, 1.55242808973,
-    	0.09995235706, 0.84532580931, 1.05472570761,
-    	0.25893353755, 0.90779616657, 0.83327335647);
-    const mat3 QuantizationMatrixEven = mat3(
-    	0.00001253044, 0.16668494186, 0.86602540579,
-    	-0.24998746956, 0.16668494186, 0.86602540579,
-    	-0.37498825271, 0.21876713299, 0.81189881793);
+		-0.02877789192f, 0.09995235706f, 0.25893353755f,
+		0.47635550422f, 0.84532580931f, 0.90779616657f,
+		1.55242808973f, 1.05472570761f, 0.83327335647f);
+	const mat3 QuantizationMatrixEven = mat3(
+		0.00001253044f, -0.24998746956f, -0.37498825271f,
+		0.16668494186f, 0.16668494186f, 0.21876713299f,
+		0.86602540579f, 0.86602540579f, 0.81189881793f);
 	offsetMoments(b_even_q, b_odd_q, -1.0);
-	b_odd = QuantizationMatrixOdd * b_odd_q;
-	b_even = QuantizationMatrixEven * b_even_q;
+	b_odd = mul(b_odd_q, QuantizationMatrixOdd);
+	b_even = mul(b_even_q, QuantizationMatrixEven);
 }
 
 void offsetMoments(inout vec4 b_even, inout vec4 b_odd, float sign)
@@ -214,38 +214,34 @@ void offsetMoments(inout vec4 b_even, inout vec4 b_odd, float sign)
 
 void quantizeMoments(out vec4 b_even_q, out vec4 b_odd_q, vec4 b_even, vec4 b_odd)
 {
-	const mat4 mat_odd = mat4(
-    	3.48044635732474, 1.26797185782836, -2.1671560004294, 0.974332879165755,
-    	-27.5760737514826, -0.928755808743913, 6.17950199592966, -0.443426830933027,
-    	55.1267384344761, -2.07520453231032, -0.276515571579297, -0.360491648368785,
-    	-31.5311110403183, 1.23598848322588, -4.23583042392097, 0.310149466050223);
-    const mat4 mat_even = mat4(
-    	0.280504133158527, -2.01362265883247, -7.31010494985321, -15.8954215629556,
-    	-0.757633844606942, 0.221551373038988, 13.9855979699139, 79.6186327084103,
-    	0.392179589334688, -1.06107954265125, -0.114305766176437, -127.457278992502,
-    	-0.887531871812237, 2.83887201588367, -7.4361899359832, 63.7349456687829);
-	b_odd_q = b_odd * mat_odd;
-	b_even_q = b_even * mat_even;
+	const mat4 mat_odd = mat4(3.48044635732474, -27.5760737514826, 55.1267384344761, -31.5311110403183,
+		1.26797185782836, -0.928755808743913, -2.07520453231032, 1.23598848322588,
+		-2.1671560004294, 6.17950199592966, -0.276515571579297, -4.23583042392097,
+		0.974332879165755, -0.443426830933027, -0.360491648368785, 0.310149466050223);
+	const mat4 mat_even = mat4(0.280504133158527, -0.757633844606942, 0.392179589334688, -0.887531871812237,
+		-2.01362265883247, 0.221551373038988, -1.06107954265125, 2.83887201588367,
+		-7.31010494985321, 13.9855979699139, -0.114305766176437, -7.4361899359832,
+		-15.8954215629556, 79.6186327084103, -127.457278992502, 63.7349456687829);
+	b_odd_q = mul(mat_odd, b_odd);
+	b_even_q = mul(mat_even, b_even);
 }
 
 void offsetAndDequantizeMoments(out vec4 b_even, out vec4 b_odd, vec4 b_even_q, vec4 b_odd_q)
 {
-    const mat4 mat_odd = mat4(
-        -0.00482399708502382, -0.0233402218644408, -0.010888537031885, -0.0308713357806732,
-        -0.423201508674231, -0.832829097046478, -0.926393772997063, -0.937989172670245,
-        0.0348312382605129, 0.0193406040499625, -0.11723394414779, -0.218033377677099,
-        1.67179208266592, 1.21021509068975, 0.983723301818275, 0.845991731322996);
-    const mat4 mat_even = mat4(
-        -0.976220278891035, -1.04828341778299, -1.03115268628604, -0.996038443434636,
-        -0.456139260269401, -0.229726640510149, -0.077844420809897, 0.0175438624416783,
-        -0.0504335521016742, 0.0259608334616091, 0.00443408851014257, -0.0361414253243963,
-        0.000838800390651085, -0.00133632693205861, -0.0103744938457406, -0.00317839994022725);
+	const mat4 mat_odd = mat4(-0.00482399708502382, -0.423201508674231, 0.0348312382605129, 1.67179208266592,
+		-0.0233402218644408, -0.832829097046478, 0.0193406040499625, 1.21021509068975,
+		-0.010888537031885, -0.926393772997063, -0.11723394414779, 0.983723301818275,
+		-0.0308713357806732, -0.937989172670245, -0.218033377677099, 0.845991731322996);
+	const mat4 mat_even = mat4(-0.976220278891035, -0.456139260269401, -0.0504335521016742, 0.000838800390651085,
+		-1.04828341778299, -0.229726640510149, 0.0259608334616091, -0.00133632693205861,
+		-1.03115268628604, -0.077844420809897, 0.00443408851014257, -0.0103744938457406,
+		-0.996038443434636, 0.0175438624416783, -0.0361414253243963, -0.00317839994022725);
 	offsetMoments(b_even_q, b_odd_q, -1.0);
-	b_odd = b_odd_q * mat_odd;
-	b_even = b_even_q * mat_even;
+	b_odd = mul(mat_odd, b_odd_q);
+	b_even = mul(mat_even, b_even_q);
 }
 
-/*! This function reconstructs the transmittance at the given depth from four 
+/*! This function reconstructs the transmittance at the given depth from four
 	normalized power moments and the given zeroth moment.*/
 float computeTransmittanceAtDepthFrom4PowerMoments(float b_0, vec2 b_even, vec2 b_odd, float depth, float bias, float overestimation, vec4 bias_vector)
 {
@@ -275,7 +271,7 @@ float computeTransmittanceAtDepthFrom4PowerMoments(float b_0, vec2 b_even, vec2 
 	// Backward substitution to solve L^T*c3=c2
 	c[1]-=L21*c[2];
 	c[0]-=dot(c.yz,b.xy);
-	// Solve the quadratic equation c[0]+c[1]*z+c[2]*z^2 to obtain solutions 
+	// Solve the quadratic equation c[0]+c[1]*z+c[2]*z^2 to obtain solutions
 	// z[1] and z[2]
 	float InvC2=1.0f/c[2];
 	float p=c[1]*InvC2;
@@ -286,10 +282,10 @@ float computeTransmittanceAtDepthFrom4PowerMoments(float b_0, vec2 b_even, vec2 
 	z[2]=-p*0.5f+r;
 	// Compute the absorbance by summing the appropriate weights
 	vec3 polynomial;
-	vec3 weight_factor = vec3(overestimation, (z[1] < z[0])?1.0f:0.0f, (z[2] < z[0])?1.0f:0.0f);
-	float f0=weight_factor[0];
-	float f1=weight_factor[1];
-	float f2=weight_factor[2];
+	vec3 weigth_factor = vec3(overestimation, (z[1] < z[0])?1.0f:0.0f, (z[2] < z[0])?1.0f:0.0f);
+	float f0=weigth_factor[0];
+	float f1=weigth_factor[1];
+	float f2=weigth_factor[2];
 	float f01=(f1-f0)/(z[1]-z[0]);
 	float f12=(f2-f1)/(z[2]-z[1]);
 	float f012=(f12-f01)/(z[2]-z[0]);
@@ -299,12 +295,12 @@ float computeTransmittanceAtDepthFrom4PowerMoments(float b_0, vec2 b_even, vec2 
 	polynomial[2]=polynomial[1];
 	polynomial[1]=polynomial[0]-polynomial[1]*z[0];
 	polynomial[0]=f0-polynomial[0]*z[0];
-	float absorbance = polynomial[0] + dot(b.xy, polynomial.yz);
+	float absorbance = polynomial[0] + dot(b.xy, polynomial.yz);;
 	// Turn the normalized absorbance into transmittance
-    return clamp(exp(-b_0 * absorbance), 0.0, 1.0);
+	return saturate(exp(-b_0 * absorbance));
 }
 
-/*! This function reconstructs the transmittance at the given depth from six 
+/*! This function reconstructs the transmittance at the given depth from six
 	normalized power moments and the given zeroth moment.*/
 float computeTransmittanceAtDepthFrom6PowerMoments(float b_0, vec3 b_even, vec3 b_odd, float depth, float bias, float overestimation, float bias_vector[6])
 {
@@ -332,7 +328,7 @@ float computeTransmittanceAtDepthFrom6PowerMoments(float b_0, vec3 b_even, vec3 
 	float D33 = fma(-b[2], b[2], b[5]) - dot(vec2(L31D11, L32D22), vec2(L31, L32));
 	float InvD33 = 1.0f / D33;
 
-	// Construct the polynomial whose roots have to be points of support of the 
+	// Construct the polynomial whose roots have to be points of support of the
 	// canonical distribution: bz=(1,z[0],z[0]*z[0],z[0]*z[0]*z[0])^T
 	vec4 c;
 	c[0] = 1.0f;
@@ -355,13 +351,9 @@ float computeTransmittanceAtDepthFrom6PowerMoments(float b_0, vec3 b_even, vec3 
 
 	// Compute the absorbance by summing the appropriate weights
 	vec4 weigth_factor;
-	weigth_factor[0] = overestimation;
-	//weigth_factor.yzw = (z.yzw > z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f);
-	//weigth_factor.yzw = greaterThan(z.yzw, z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f);
-	// Unfortunately, the ternary operator doesn't work with vectors in GLSL :(
-	weigth_factor.y = z.y > z.x ? 0.0f : 1.0f;
-	weigth_factor.z = z.z > z.x ? 0.0f : 1.0f;
-	weigth_factor.w = z.w > z.x ? 0.0f : 1.0f;
+	//weigth_factor[0] = overestimation;
+	//weigth_factor.yzw = (z.yzw > z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f); // TODO vectorize
+	weigth_factor = vec4(overestimation, (z[1] < z[0])?1.0f:0.0f, (z[2] < z[0])?1.0f:0.0f, (z[3] < z[0])?1.0f:0.0f);
 	// Construct an interpolation polynomial
 	float f0 = weigth_factor[0];
 	float f1 = weigth_factor[1];
@@ -388,10 +380,10 @@ float computeTransmittanceAtDepthFrom6PowerMoments(float b_0, vec3 b_even, vec3 
 	polynomial[0] = fma(polynomial[0], -z[0], f0);
 	float absorbance = dot(polynomial, vec4 (1.0, b[0], b[1], b[2]));
 	// Turn the normalized absorbance into transmittance
-	return clamp(exp(-b_0 * absorbance), 0.0, 1.0);
+	return saturate(exp(-b_0 * absorbance));
 }
 
-/*! This function reconstructs the transmittance at the given depth from eight 
+/*! This function reconstructs the transmittance at the given depth from eight
 	normalized power moments and the given zeroth moment.*/
 float computeTransmittanceAtDepthFrom8PowerMoments(float b_0, vec4 b_even, vec4 b_odd, float depth, float bias, float overestimation, float bias_vector[8])
 {
@@ -467,7 +459,7 @@ float computeTransmittanceAtDepthFrom8PowerMoments(float b_0, vec4 b_even, vec4 
 	z[4] = zz[3];
 
 	// Compute the absorbance by summing the appropriate weights
-	//vec4 weigth_factor = (vec4(z[1], z[2], z[3], z[4]) <= z[0].xxxx);
+	//vec4 weigth_factor = (vec4(z[1], z[2], z[3], z[4]) <= z[0].xxxx); // TODO
 	vec4 weigth_factor = vec4(lessThanEqual(vec4(z[1], z[2], z[3], z[4]), z[0].xxxx));
 	// Construct an interpolation polynomial
 	float f0 = overestimation;
@@ -508,7 +500,7 @@ float computeTransmittanceAtDepthFrom8PowerMoments(float b_0, vec4 b_even, vec4 
 	Polynomial_0 = fma(-Polynomial_0, z[0], f0);
 	float absorbance = Polynomial_0 + dot(Polynomial, vec4(b[0], b[1], b[2], b[3]));
 	// Turn the normalized absorbance into transmittance
-	return clamp(exp(-b_0 * absorbance), 0.0, 1.0);
+	return saturate(exp(-b_0 * absorbance));
 }
 
 #endif

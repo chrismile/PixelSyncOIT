@@ -45,6 +45,7 @@
 #include "OIT/OIT_MBOIT.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "OIT/OIT_DepthPeeling.hpp"
+#include "OIT/OIT_TestLoadStore.hpp"
 #include "MainApp.hpp"
 
 void openglErrorCallback()
@@ -221,7 +222,9 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
     } else if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
-    } else {
+    } else if (mode == RENDER_MODE_OIT_TEST_LOAD_STORE) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_TestLoadStore);
+	} else {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
 		Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
 		mode = RENDER_MODE_OIT_DUMMY;

@@ -145,7 +145,7 @@ void OIT_MBOIT::updateMomentMode()
 
     if (numMoments == 6) {
         if (USE_R_RG_RGBA_FOR_MBOIT6) {
-            depthB = 1;
+            depthBExtra = 1;
             internalFormatB = internalFormat2;
             pixelFormatB = pixelFormat2;
             internalFormatBExtra = internalFormat4;
@@ -161,7 +161,7 @@ void OIT_MBOIT::updateMomentMode()
 
     // Highest memory requirement: (width * height * sizeof(DATATYPE) * #maxBufferEntries * #moments
     //void *emptyData = calloc(width * height, sizeof(float) * 4 * 8);
-    size_t bufferEntrySize = 32 * 8;
+    size_t bufferEntrySize = sizeof(float) * 8;
     void *emptyData = calloc(width * height, bufferEntrySize);
     //void *emptyData = malloc(width * height * bufferEntrySize);
     //memset(emptyData, 0, width * height * bufferEntrySize);
@@ -170,18 +170,18 @@ void OIT_MBOIT::updateMomentMode()
     textureSettingsB0.pixelType = GL_FLOAT;
     textureSettingsB0.pixelFormat = pixelFormatB0;
     textureSettingsB0.internalFormat = internalFormatB0;
-    b0 = TextureManager->createTexture3D(emptyData, width, height, depthB0, textureSettingsB0);
+    b0 = TextureManager->createTextureArray(emptyData, width, height, depthB0, textureSettingsB0);
 
     textureSettingsB = textureSettingsB0;
     textureSettingsB.pixelFormat = pixelFormatB;
     textureSettingsB.internalFormat = internalFormatB;
-    b = TextureManager->createTexture3D(emptyData, width, height, depthB, textureSettingsB);
+    b = TextureManager->createTextureArray(emptyData, width, height, depthB, textureSettingsB);
 
     if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
         textureSettingsBExtra = textureSettingsB0;
         textureSettingsBExtra.pixelFormat = pixelFormatBExtra;
         textureSettingsBExtra.internalFormat = internalFormatBExtra;
-        bExtra = TextureManager->createTexture3D(emptyData, width, height, depthBExtra, textureSettingsB);
+        bExtra = TextureManager->createTextureArray(emptyData, width, height, depthBExtra, textureSettingsBExtra);
     }
 
     free(emptyData);
@@ -196,7 +196,7 @@ void OIT_MBOIT::updateMomentMode()
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 6*1e-4;
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
-            momentUniformData.moment_bias = 5*1e-8;
+            momentUniformData.moment_bias = 5*1e-6;
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 2.5*1e-3;
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
@@ -208,18 +208,18 @@ void OIT_MBOIT::updateMomentMode()
         } else if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
             momentUniformData.moment_bias = 4*1e-7;
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
-            momentUniformData.moment_bias = 6.5*1e-4;
+            momentUniformData.moment_bias = 6.5*1e-3; // 6.5*1e-4
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
-            momentUniformData.moment_bias = 8*1e-7;
+            momentUniformData.moment_bias = 8*1e-6; // 8*1e-7
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
-            momentUniformData.moment_bias = 8.5*1e-4;
+            momentUniformData.moment_bias = 8.5*1e-3; // 8.5*1e-4
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
-            momentUniformData.moment_bias = 1.5*1e-6;
+            momentUniformData.moment_bias = 1.5*1e-5; // 1.5*1e-6;
         }
     }
 
-    momentUniformData.moment_bias = 5*1e-7;
     momentOITUniformBuffer->subData(0, sizeof(MomentOITUniformData), &momentUniformData);
+    //momentOITUniformBuffer = Renderer->createGeometryBuffer(sizeof(MomentOITUniformData), &momentUniformData, UNIFORM_BUFFER);
 }
 
 
@@ -265,7 +265,7 @@ void OIT_MBOIT::renderGUI()
         // Initialize
         momentModeIndex = usePowerMoments ? 0 : 4;
         momentModeIndex += numMoments/2 - 2;
-        momentModeIndex += USE_R_RG_RGBA_FOR_MBOIT6 ? 1 : 0;
+        momentModeIndex += (MBOIT_PIXEL_FORMAT_FLOAT_32 && numMoments == 6) ? 1 : 0;
     }
 
     if (ImGui::Combo("Moment Mode", &momentModeIndex, momentModes, IM_ARRAYSIZE(momentModes))) {
