@@ -32,6 +32,7 @@
 #include <Graphics/Buffers/FBO.hpp>
 #include <Graphics/Shader/ShaderManager.hpp>
 #include <Graphics/Texture/TextureManager.hpp>
+#include <Graphics/Texture/Bitmap.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "Utils/MeshSerializer.hpp"
@@ -45,7 +46,6 @@
 #include "OIT/OIT_MBOIT.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "OIT/OIT_DepthPeeling.hpp"
-#include "OIT/OIT_TestLoadStore.hpp"
 #include "MainApp.hpp"
 
 void openglErrorCallback()
@@ -69,6 +69,9 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 
 	bandingColor = Color(165, 220, 84, 120);
+	clearColor = Color(0, 0, 0, 255);
+
+	fpsArray.resize(16, 60.0f);
 
 	//Renderer->enableDepthTest();
 	//glEnable(GL_DEPTH_TEST);
@@ -110,7 +113,25 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 	reRender = true;
 }
 
+void PixelSyncApp::saveScreenshot(const std::string &filename)
+{
+	if (uiOnScreenshot) {
+		AppLogic::saveScreenshot(filename);
+	} else {
+		Window *window = AppSettings::get()->getMainWindow();
+		int width = window->getWidth();
+		int height = window->getHeight();
 
+		Renderer->bindFBO(sceneFramebuffer);
+		BitmapPtr bitmap(new Bitmap(width, height, 32));
+		glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, bitmap->getPixels());
+		bitmap->savePNG(filename.c_str(), true);
+		Renderer->unbindFBO();
+	}
+}
+
+
+// TODO
 #include <Graphics/Window.hpp>
 #include <Graphics/Buffers/FBO.hpp>
 #include <Graphics/Texture/TextureManager.hpp>
@@ -222,9 +243,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
     } else if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
-    } else if (mode == RENDER_MODE_OIT_TEST_LOAD_STORE) {
-		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_TestLoadStore);
-	} else {
+    } else {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
 		Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
 		mode = RENDER_MODE_OIT_DUMMY;
@@ -326,7 +345,7 @@ void PixelSyncApp::renderOIT()
 	//Renderer->setBlendMode(BLEND_ALPHA);
 
 	Renderer->bindFBO(sceneFramebuffer);
-	Renderer->clearFramebuffer();
+	Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, clearColor);
 	//Renderer->setCamera(camera); // Resets rendertarget...
 
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
@@ -397,36 +416,14 @@ void PixelSyncApp::renderGUI()
 		}
 		ImGui::Separator();
 
-		// Color selection in binning mode (if not showing all values in different color channels in mode 1)
-		// TODO
-		static ImVec4 colorSelection = ImColor(165, 220, 84, 120);
-		if (modelFilenamePure != "Data/Models/Ship_04" && mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
-            int misc_flags = 0;
-            if (ImGui::ColorEdit4("Model Color", (float*)&colorSelection, misc_flags)) {
-                bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
-				reRender = true;
-			}
-			/*ImGui::SameLine();
-			ImGuiWrapper::get()->showHelpMarker("Click on the colored square to open a color picker."
-												"\nCTRL+click on individual component to input value.\n");*/
-            ImGui::Separator();
-        } else if (mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
-			if (ImGui::SliderFloat("Opacity", &colorSelection.w, 0.0f, 1.0f, "%.2f")) {
-				bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
-				reRender = true;
-			}
-			ImGui::Separator();
+		static bool showSceneSettings = true;
+		if (ImGui::CollapsingHeader("Scene Settings", NULL, ImGuiTreeNodeFlags_DefaultOpen)) {
+			renderSceneSettingsGUI();
 		}
-
-		if (ImGui::Checkbox("Cull back face", &cullBackface)) {
-			if (cullBackface) {
-				glEnable(GL_CULL_FACE);
-			} else {
-				glDisable(GL_CULL_FACE);
-			}
-			reRender = true;
-		} ImGui::SameLine();
-		ImGui::Checkbox("Continuous rendering", &continuousRendering);
+		/*if (ImGui::TreeNode("Scene Settings")) {
+			renderSceneSettingsGUI();
+			ImGui::TreePop();
+		}*/
 
         oitRenderer->renderGUI();
 
@@ -449,6 +446,64 @@ void PixelSyncApp::renderGUI()
 	ImGuiWrapper::get()->renderEnd();
 }
 
+void PixelSyncApp::renderSceneSettingsGUI()
+{
+	// Color selection in binning mode (if not showing all values in different color channels in mode 1)
+	static ImVec4 colorSelection = ImColor(165, 220, 84, 120);
+	if (modelFilenamePure != "Data/Models/Ship_04" && mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+		int misc_flags = 0;
+		if (ImGui::ColorEdit4("Model Color", (float*)&colorSelection, misc_flags)) {
+			bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
+			reRender = true;
+		}
+		/*ImGui::SameLine();
+        ImGuiWrapper::get()->showHelpMarker("Click on the colored square to open a color picker."
+                                            "\nCTRL+click on individual component to input value.\n");*/
+	} else if (mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+		if (ImGui::SliderFloat("Opacity", &colorSelection.w, 0.0f, 1.0f, "%.2f")) {
+			bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
+			reRender = true;
+		}
+	}
+	//ImGui::Separator();
+
+	static ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
+	if (ImGui::ColorEdit3("Clear Color", (float*)&clearColorSelection, 0)) {
+		clearColor = colorFromFloat(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z,
+									clearColorSelection.w);
+		reRender = true;
+	}
+
+	// Select light direction
+	// Spherical coordinates: (r, θ, φ), i.e. with radial distance r, azimuthal angle θ (theta), and polar angle φ (phi)
+	static float theta = sgl::PI/2;
+	static float phi = 0.0f;
+	bool angleChanged = false;
+	angleChanged = ImGui::SliderAngle("Light Azimuth", &theta, 0.0f) || angleChanged;
+	angleChanged = ImGui::SliderAngle("Light Polar Angle", &phi, 0.0f) || angleChanged;
+	if (angleChanged) {
+		// https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#To_cartesian_coordinates
+		lightDirection = glm::vec3(sinf(theta) * cosf(phi), sinf(theta) * sinf(phi), cosf(theta));
+		reRender = true;
+	}
+
+	// FPS
+	//ImGui::PlotLines("Frame Times", &fpsArray.front(), fpsArray.size(), fpsArrayOffset);
+
+	if (ImGui::Checkbox("Cull back face", &cullBackface)) {
+		if (cullBackface) {
+			glEnable(GL_CULL_FACE);
+		} else {
+			glDisable(GL_CULL_FACE);
+		}
+		reRender = true;
+	} ImGui::SameLine();
+	ImGui::Checkbox("Continuous rendering", &continuousRendering);
+	ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);ImGui::SameLine();
+	ImGui::Checkbox("SSAO", &useSSAO);
+	//ImGui::Separator();
+}
+
 void PixelSyncApp::renderScene()
 {
     ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
@@ -466,13 +521,15 @@ void PixelSyncApp::renderScene()
         }
     }
 
+
 	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
 	Renderer->setViewMatrix(camera->getViewMatrix());
 	//Renderer->setModelMatrix(matrixIdentity());
 
 	Renderer->setModelMatrix(rotation * scaling);
     transparencyShader->setUniform("color", bandingColor);
-    transparentObject.render(transparencyShader);
+	transparencyShader->setUniform("lightDirection", lightDirection);
+	transparentObject.render(transparencyShader);
 }
 
 
@@ -491,6 +548,8 @@ void PixelSyncApp::update(float dt)
 
 	//std::cout << ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow) << std::endl;
 	//std::cout << ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) << std::endl;
+	fpsArrayOffset = (fpsArrayOffset + 1) % fpsArray.size();
+	fpsArray[fpsArrayOffset] = 1.0f/dt;
 
 
 	ImGuiIO &io = ImGui::GetIO();

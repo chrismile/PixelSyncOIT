@@ -21,13 +21,15 @@ uniform int viewportW;
 // Distance of infinitely far away fragments (used for initialization)
 #define DISTANCE_INFINITE (1E30)
 
-// Data structure for 4 nodes, packed in vectors for faster access
+/*
+ * Data structures for different numbers of nodes, packed in vectors for faster access.
+ */
 #if MAX_NUM_NODES == 1
 struct HTFragmentNode_compressed
 {
 	// Linear depth, i.e. distance to viewer
 	float depth[1];
-	// RGB color (3 bytes), translucency (1 byte)
+	// RGB color (3 bytes), opacity (1 byte)
 	uint premulColor[1];
 };
 #elif MAX_NUM_NODES == 2
@@ -35,7 +37,7 @@ struct HTFragmentNode_compressed
 {
 	// Linear depth, i.e. distance to viewer
 	vec2 depth;
-	// RGB color (3 bytes), translucency (1 byte)
+	// RGB color (3 bytes), opacity (1 byte)
 	uvec2 premulColor;
 };
 #elif MAX_NUM_NODES == 4
@@ -43,25 +45,32 @@ struct HTFragmentNode_compressed
 {
 	// Linear depth, i.e. distance to viewer
 	vec4 depth;
-	// RGB color (3 bytes), translucency (1 byte)
+	// RGB color (3 bytes), opacity (1 byte)
 	uvec4 premulColor;
 };
-#elif MAX_NUM_NODES == 8
+#elif MAX_NUM_NODES % 4 == 0
 struct HTFragmentNode_compressed
 {
 	// Linear depth, i.e. distance to viewer
-	vec4 depth[2];
-	// RGB color (3 bytes), translucency (1 byte)
-	uvec4 premulColor[2];
+	vec4 depth[MAX_NUM_NODES/4];
+	// RGB color (3 bytes), opacity (1 byte)
+	uvec4 premulColor[MAX_NUM_NODES/4];
 };
 #else
+struct HTFragmentNode_compressed
+{
+	// Linear depth, i.e. distance to viewer
+	float depth[MAX_NUM_NODES];
+	// RGB color (3 bytes), opacity (1 byte)
+	uint premulColor[MAX_NUM_NODES];
+};
 #endif
 
 struct HTFragmentNode
 {
 	// Linear depth, i.e. distance to viewer
 	float depth;
-	// RGB color (3 bytes), translucency (1 byte)
+	// RGB color (3 bytes), opacity (1 byte)
 	uint premulColor;
 };
 
@@ -99,14 +108,11 @@ void loadFragmentNodes(in uint pixelIndex, out HTFragmentNode nodeArray[MAX_NUM_
     HTFragmentNode_compressed fragmentNode = nodes[pixelIndex];
 
 #if MAX_NUM_NODES == 8
-    // Should be easier to unroll by compiler than adding an outer loop for first/second array
-    for(int i = 0; i < 4; i++) {
-        HTFragmentNode node = { fragmentNode.depth[0][i], fragmentNode.premulColor[0][i] };
-        nodeArray[0 + i] = node;
-    }
-    for(int i = 0; i < 4; i++) {
-        HTFragmentNode node = { fragmentNode.depth[1][i], fragmentNode.premulColor[1][i] };
-        nodeArray[4 + i] = node;
+    for (int i = 0; i < MAX_NUM_NODES/4; i++)
+        for(int j = 0; j < 4; j++) {
+            HTFragmentNode node = { fragmentNode.depth[i][j], fragmentNode.premulColor[i][j] };
+            nodeArray[i*4 + j] = node;
+        }
     }
 #else
     for (int i = 0; i < MAX_NUM_NODES; i++) {
@@ -123,14 +129,12 @@ void loadFragmentNodes(in uint pixelIndex, out HTFragmentNode nodeArray[MAX_NUM_
 void storeFragmentNodes(in uint pixelIndex, in HTFragmentNode nodeArray[MAX_NUM_NODES]) {
     HTFragmentNode_compressed fragmentNode;
 
-#if MAX_NUM_NODES == 8
-    for(int i = 0; i < 4; i++) {
-        fragmentNode.depth[0][i] =  nodeArray[0 + i].depth;
-        fragmentNode.premulColor[0][i] = nodeArray[0 + i].premulColor;
-    }
-    for(int i = 0; i < 4; i++) {
-        fragmentNode.depth[1][i] =  nodeArray[4 + i].depth;
-        fragmentNode.premulColor[1][i] = nodeArray[4 + i].premulColor;
+#if (MAX_NUM_NODES % 4 == 0) && (MAX_NUM_NODES > 4)
+    for (int i = 0; i < MAX_NUM_NODES/4; i++)
+        for(int j = 0; j < 4; j++) {
+            fragmentNode.depth[i][j] = nodeArray[4*i + j].depth;
+            fragmentNode.premulColor[i][j] = nodeArray[4*i + j].premulColor;
+        }
     }
 #else
     for (int i = 0; i < MAX_NUM_NODES; i++) {

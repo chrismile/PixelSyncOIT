@@ -159,29 +159,26 @@ void OIT_MBOIT::updateMomentMode()
         depthB = 2;
     }
 
-    // Highest memory requirement: (width * height * sizeof(DATATYPE) * #maxBufferEntries * #moments
-    //void *emptyData = calloc(width * height, sizeof(float) * 4 * 8);
-    size_t bufferEntrySize = sizeof(float) * 8;
-    void *emptyData = calloc(width * height, bufferEntrySize);
-    //void *emptyData = malloc(width * height * bufferEntrySize);
-    //memset(emptyData, 0, width * height * bufferEntrySize);
+    // Highest memory requirement: width * height * sizeof(DATATYPE) * #moments
+    void *emptyData = calloc(width * height, sizeof(float) * 8);
 
     textureSettingsB0 = TextureSettings();
+    textureSettingsB0.type = TEXTURE_2D_ARRAY;
     textureSettingsB0.pixelType = GL_FLOAT;
     textureSettingsB0.pixelFormat = pixelFormatB0;
     textureSettingsB0.internalFormat = internalFormatB0;
-    b0 = TextureManager->createTextureArray(emptyData, width, height, depthB0, textureSettingsB0);
+    b0 = TextureManager->createTexture(emptyData, width, height, depthB0, textureSettingsB0);
 
     textureSettingsB = textureSettingsB0;
     textureSettingsB.pixelFormat = pixelFormatB;
     textureSettingsB.internalFormat = internalFormatB;
-    b = TextureManager->createTextureArray(emptyData, width, height, depthB, textureSettingsB);
+    b = TextureManager->createTexture(emptyData, width, height, depthB, textureSettingsB);
 
     if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
         textureSettingsBExtra = textureSettingsB0;
         textureSettingsBExtra.pixelFormat = pixelFormatBExtra;
         textureSettingsBExtra.internalFormat = internalFormatBExtra;
-        bExtra = TextureManager->createTextureArray(emptyData, width, height, depthBExtra, textureSettingsBExtra);
+        bExtra = TextureManager->createTexture(emptyData, width, height, depthBExtra, textureSettingsBExtra);
     }
 
     free(emptyData);
@@ -190,23 +187,23 @@ void OIT_MBOIT::updateMomentMode()
     // Set algorithm-dependent bias
     if (usePowerMoments) {
         if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
-            momentUniformData.moment_bias = 6*1e-5;
+            momentUniformData.moment_bias = 6*1e-4; // 6*1e-5
         } else if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
-            momentUniformData.moment_bias = 5*1e-7;
+            momentUniformData.moment_bias = 5*1e-7; // 5*1e-7
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
-            momentUniformData.moment_bias = 6*1e-4;
+            momentUniformData.moment_bias = 6*1e-3; // 6*1e-4
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
-            momentUniformData.moment_bias = 5*1e-6;
+            momentUniformData.moment_bias = 5*1e-6; // 5*1e-6
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
-            momentUniformData.moment_bias = 2.5*1e-3;
+            momentUniformData.moment_bias = 2.5*1e-2; // 2.5*1e-3
         } else if (numMoments == 8 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
-            momentUniformData.moment_bias = 5*1e-5;
+            momentUniformData.moment_bias = 5*1e-5; // 5*1e-5
         }
     } else {
         if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
-            momentUniformData.moment_bias = 4*1e-4;
+            momentUniformData.moment_bias = 4*1e-3; // 4*1e-4
         } else if (numMoments == 4 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
-            momentUniformData.moment_bias = 4*1e-7;
+            momentUniformData.moment_bias = 4*1e-7; // 4*1e-7
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_UNORM_16) {
             momentUniformData.moment_bias = 6.5*1e-3; // 6.5*1e-4
         } else if (numMoments == 6 && pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32) {
@@ -219,7 +216,6 @@ void OIT_MBOIT::updateMomentMode()
     }
 
     momentOITUniformBuffer->subData(0, sizeof(MomentOITUniformData), &momentUniformData);
-    //momentOITUniformBuffer = Renderer->createGeometryBuffer(sizeof(MomentOITUniformData), &momentUniformData, UNIFORM_BUFFER);
 }
 
 
@@ -231,15 +227,16 @@ void OIT_MBOIT::setUniformData()
 
     mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);
     mboitPass1Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0);
-    //mboitPass1Shader->setUniform("viewportW", width);
+    mboitPass1Shader->setUniform("viewportW", width);
 
     mboitPass2Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     mboitPass2Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
-    //mboitPass2Shader->setUniform("viewportW", width);
+    mboitPass2Shader->setUniform("viewportW", width);
 
     blendShader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     blendShader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     blendShader->setUniform("transparentSurfaceAccumulator", blendRenderTexture, 0);
+    blendShader->setUniform("viewportW", width);
 
     if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
         mboitPass1Shader->setUniformImageTexture(2, bExtra, textureSettingsBExtra.internalFormat, GL_READ_WRITE, 0, true, 0);
@@ -370,7 +367,6 @@ void OIT_MBOIT::renderToScreen()
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 
     Renderer->bindFBO(sceneFramebuffer);
-    Renderer->clearFramebuffer();
     Renderer->render(blitRenderData);
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

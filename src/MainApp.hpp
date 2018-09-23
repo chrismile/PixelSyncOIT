@@ -26,10 +26,10 @@
 using namespace std;
 using namespace sgl;
 
-const int NUM_OIT_MODES = 9;
+const int NUM_OIT_MODES = 8;
 const char *const OIT_MODE_NAMES[] = {
         "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
-        "Depth Complexity", "No OIT", "Depth Peeling", "Test Load/Store"
+        "Depth Complexity", "No OIT", "Depth Peeling"
 };
 enum RenderModeOIT {
         RENDER_MODE_OIT_KBUFFER = 0,
@@ -39,8 +39,7 @@ enum RenderModeOIT {
         RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
         RENDER_MODE_OIT_DEPTH_COMPLEXITY,
         RENDER_MODE_OIT_DUMMY,
-        RENDER_MODE_OIT_DEPTH_PEELING,
-		RENDER_MODE_OIT_TEST_LOAD_STORE
+        RENDER_MODE_OIT_DEPTH_PEELING
 };
 
 const int NUM_MODELS = 6;
@@ -65,14 +64,20 @@ public:
 	void renderOIT(); // Uses renderScene and "oitRenderer" to render the scene
 	void renderScene(); // Renders lighted scene
 	void renderGUI(); // Renders GUI
+    void renderSceneSettingsGUI();
 	void update(float dt);
 	void resolutionChanged(EventPtr event);
 	void processSDLEvent(const SDL_Event &event);
 
+
+protected:
 	// State changes
-    void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
-    void updateShaderMode(bool newOITRenderer);
-    void loadModel(const std::string &filename);
+	void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
+	void updateShaderMode(bool newOITRenderer);
+	void loadModel(const std::string &filename);
+
+	// Override screenshot function to exclude GUI (if wanted by the user)
+	void saveScreenshot(const std::string &filename);
 
 private:
 	// Lighting & rendering
@@ -100,9 +105,15 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 1;
+    int usedModelIndex = 3;
     Color bandingColor;
-    bool cullBackface = false;
+    Color clearColor;
+    bool cullBackface = true;
+    std::vector<float> fpsArray;
+    size_t fpsArrayOffset = 0;
+    glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
+    bool uiOnScreenshot = false;
+    bool useSSAO = false;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
     bool continuousRendering = false;

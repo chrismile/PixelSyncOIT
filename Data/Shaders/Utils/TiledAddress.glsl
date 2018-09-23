@@ -1,3 +1,4 @@
+
 //#define ADDRESSING_TILED_2x2
 #define ADDRESSING_TILED_2x8
 //#define ADDRESSING_TILED_2x16
@@ -41,4 +42,11 @@ uint addrGen(uvec2 addr2D)
 #else
 	return addr2D.x + viewportW * addr2D.y;
 #endif
+}
+
+// For use with Image Load/Store
+ivec2 addrGen2D(ivec2 addr2D)
+{
+    int addr1D = int(addrGen(addr2D));
+    return ivec2(addr1D%viewportW, addr1D/viewportW);
 }

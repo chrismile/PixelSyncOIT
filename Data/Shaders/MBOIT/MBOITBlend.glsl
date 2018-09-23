@@ -22,6 +22,10 @@ void main()
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 
+uniform int viewportW;
+
+#include "TiledAddress.glsl"
+
 out vec4 fragColor;
 
 layout (binding = 0, r32f) coherent uniform image2DArray zeroth_moment; // float
@@ -68,13 +72,11 @@ void clearMoments(ivec3 idx0)
 
 void main()
 {
+    ivec2 addr2D = addrGen2D(ivec2(gl_FragCoord.xy));
+    ivec3 idx0Tiled = ivec3(addr2D, 0);
     ivec3 idx0 = ivec3(ivec2(gl_FragCoord.xy), 0);
     vec4 color = texelFetch(transparentSurfaceAccumulator, idx0.xy, 0);
-    ivec3 idx1 = ivec3(ivec2(gl_FragCoord.xy), 1);
-    ivec3 idx2 = ivec3(ivec2(gl_FragCoord.xy), 2);
-    vec4 color1 = imageLoad(moments, idx1);
-    vec4 color2 = imageLoad(moments, idx2);
-    float b_0 = imageLoad(zeroth_moment, idx0).x;
+    float b_0 = imageLoad(zeroth_moment, idx0Tiled).x;
     if (b_0 < 0.00100050033f) {
         discard;
     }
@@ -84,10 +86,9 @@ void main()
     }
 
     // Make sure data is cleared for next rendering pass
-    clearMoments(idx0);
+    clearMoments(idx0Tiled);
 
     //color_blend = exp(-b_0) * L_n + (1 - exp(-b_0)) * weighted_color
     fragColor = vec4(color.rgb / color.a, 1.0 - total_transmittance);
-    //fragColor = vec4(color1.rg, color2.g, 1.0);
 }
 

@@ -224,9 +224,9 @@ void generateTrigonometricMoments(inout float b_0,
 /*! This function reads the stored moments from the rasterizer ordered view, 
 	calls the appropriate moment-generating function and writes the new moments 
 	back to the rasterizer ordered view.*/
-void generateMoments(float depth, float transmittance, vec2 sv_pos, vec4 wrapping_zone_parameters)
+void generateMoments(float depth, float transmittance, ivec2 sv_pos, vec4 wrapping_zone_parameters)
 {
-	ivec3 idx0 = ivec3(ivec2(sv_pos), 0);
+	ivec3 idx0 = ivec3(sv_pos, 0);
 	ivec3 idx1 = ivec3(idx0.xy, 1);
 
 	// Return early if the surface is fully transparent
@@ -399,9 +399,9 @@ layout (binding = 1, rgba16) coherent uniform image2DArray moments;
 /*! This function is to be called from the shader that composites the 
 	transparent fragments. It reads the moments and calls the appropriate 
 	function to reconstruct the transmittance at the specified depth.*/
-void resolveMoments(out float transmittance_at_depth, out float total_transmittance, float depth, vec2 sv_pos)
+void resolveMoments(out float transmittance_at_depth, out float total_transmittance, float depth, ivec2 sv_pos)
 {
-	ivec3 idx0 = ivec3(ivec2(sv_pos), 0);
+	ivec3 idx0 = ivec3(sv_pos, 0);
 	ivec3 idx1 = ivec3(idx0.xy, 1);
 
 	transmittance_at_depth = 1;

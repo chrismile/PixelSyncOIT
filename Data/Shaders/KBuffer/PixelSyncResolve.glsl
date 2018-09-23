@@ -16,7 +16,7 @@ void main()
 
 #include "PixelSyncHeader.glsl"
 #include "ColorPack.glsl"
-#include "TiledAdress.glsl"
+#include "TiledAddress.glsl"
 
 out vec4 fragColor;
 

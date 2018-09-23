@@ -45,6 +45,7 @@ in float vorticity;
 out vec4 fragColor;
 #endif
 
+uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
 uniform vec3 specularColor;
@@ -61,7 +62,6 @@ void main()
 	float linearFactor = (vorticity - minVorticity) / (maxVorticity - minVorticity);
 	vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), linearFactor);
 
-	vec3 lightDirection = vec3(1.0,0.0,0.0);
 	vec3 ambientShading = ambientColor * 0.1;
 	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
 	vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0) * 0.00001;

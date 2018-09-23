@@ -16,7 +16,7 @@ void main()
 
 #include "ColorPack.glsl"
 #include "HTHeader.glsl"
-#include "TiledAdress.glsl"
+#include "TiledAddress.glsl"
 
 out vec4 fragColor;
 

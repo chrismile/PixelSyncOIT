@@ -16,7 +16,7 @@ void main()
 
 #include "HTHeader.glsl"
 #include "ColorPack.glsl"
-#include "TiledAdress.glsl"
+#include "TiledAddress.glsl"
 
 void main()
 {

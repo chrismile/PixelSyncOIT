@@ -38,8 +38,7 @@ layout (std430, binding = 1) coherent buffer NumFragmentsBuffer
 };
 
 // Number of transparent pixels we can store per node
-uniform int nodesPerPixel;
 #define MAX_NUM_NODES 8
 
 uniform int viewportW;
-//uniform int viewportH; // Not needed
+//uniform int viewportH;

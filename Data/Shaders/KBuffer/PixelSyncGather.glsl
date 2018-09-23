@@ -1,7 +1,7 @@
 
 #include "PixelSyncHeader.glsl"
 #include "ColorPack.glsl"
-#include "TiledAdress.glsl"
+#include "TiledAddress.glsl"
 
 #define REQUIRE_INVOCATION_INTERLOCK
 

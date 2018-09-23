@@ -110,7 +110,7 @@ void OIT_LinkedList::renderGUI()
 {
 	ImGui::Separator();
 
-	if (ImGui::SliderInt("Avg. depth", &expectedDepthComplexity, 1, 128)) {
+	if (ImGui::SliderInt("Avg. Depth", &expectedDepthComplexity, 1, 128)) {
 		Window *window = AppSettings::get()->getMainWindow();
 		int width = window->getWidth();
 		int height = window->getHeight();
@@ -129,20 +129,15 @@ void OIT_LinkedList::renderGUI()
 	// If something changes about fragment collection & sorting
 	bool needNewResolveShader = false;
 
-	if (ImGui::SliderInt("Num sort", &maxNumFragmentsSorting, 1, 2000)) {
+	if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 1, 2000)) {
 		ShaderManager->invalidateShaderCache();
 		ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
 		needNewResolveShader = true;
 		reRender = true;
 	}
 
-	bool changeMode = false;
-	if (ImGui::RadioButton("Priority Queue", &algorithmMode, 0)) changeMode = true; ImGui::SameLine();
-	if (ImGui::RadioButton("Bubble Sort", &algorithmMode, 1)) changeMode = true;
-	if (ImGui::RadioButton("Insertion Sort", &algorithmMode, 2)) changeMode = true; ImGui::SameLine();
-	if (ImGui::RadioButton("Shell Sort", &algorithmMode, 3)) changeMode = true; ImGui::SameLine();
-	if (ImGui::RadioButton("Max Heap", &algorithmMode, 4)) changeMode = true;
-	if (changeMode) {
+	const char *sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
+	if (ImGui::Combo("Sorting Mode", &algorithmMode, sortingModeStrings, IM_ARRAYSIZE(sortingModeStrings))) {
 		ShaderManager->invalidateShaderCache();
 		setModeDefine();
 		needNewResolveShader = true;

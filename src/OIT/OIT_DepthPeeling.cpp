@@ -132,7 +132,6 @@ void OIT_DepthPeeling::renderToScreen()
     Renderer->setModelMatrix(matrixIdentity());
 
     Renderer->bindFBO(sceneFramebuffer);
-    Renderer->clearFramebuffer();
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // Pre-multiplied alpha
     Renderer->blitTexture(colorAccumulatorTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
 
