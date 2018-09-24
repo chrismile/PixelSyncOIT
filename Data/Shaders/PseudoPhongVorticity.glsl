@@ -45,6 +45,11 @@ in float vorticity;
 out vec4 fragColor;
 #endif
 
+
+#ifdef USE_SSAO
+uniform sampler2D ssaoTexture;
+#endif
+
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
@@ -58,12 +63,22 @@ uniform float maxVorticity;
 
 void main()
 {
+#ifdef USE_SSAO
+    // Read ambient occlusion factor from texture
+    vec2 texCoord = vec2(gl_FragCoord.xy) + vec2(0.5, 0.5);
+    float occlusionFactor = texture(ssaoTexture, texCoord).r;
+#else
+    // No ambient occlusion
+    const float occlusionFactor = 1.0;
+#endif
+
 	// Use vorticity
 	float linearFactor = (vorticity - minVorticity) / (maxVorticity - minVorticity);
 	vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), linearFactor);
 
-	vec3 ambientShading = ambientColor * 0.1;
-	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
+	vec3 ambientShading = ambientColor * 0.1 * occlusionFactor;
+	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(fragmentNormal, lightDirection)/2.0
+	        + 0.75 * occlusionFactor, 0.0, 1.0);
 	vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0) * 0.00001;
 	vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
 	vec4 color = vec4(ambientShading + diffuseShadingVorticity + diffuseShading + specularShading,

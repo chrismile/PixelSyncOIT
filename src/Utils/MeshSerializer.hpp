@@ -66,7 +66,7 @@ void readMesh3D(const std::string &filename, ObjMesh &mesh);
 class MeshRenderer
 {
 public:
-	void render(sgl::ShaderProgramPtr passShader);
+	void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass = false);
 	void setNewShader(sgl::ShaderProgramPtr newShader);
 	bool isLoaded() { return shaderAttributes.size() > 0; }
 

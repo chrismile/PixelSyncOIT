@@ -20,7 +20,7 @@ OIT_Dummy::~OIT_Dummy()
 void OIT_Dummy::create()
 {
     sgl::ShaderManager->addPreprocessorDefine("DIRECT_BLIT_GATHER", "");
-    sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "Empty.glsl");
+    sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "GatherDummy.glsl");
     gatherShader = sgl::ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
     glDisable(GL_STENCIL_TEST);
 }

@@ -85,6 +85,10 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	Renderer->setErrorCallback(&openglErrorCallback);
 	Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
+	if (useSSAO) {
+		ShaderManager->addPreprocessorDefine("USE_SSAO", "");
+	}
+
 	setRenderMode(mode, true);
 	loadModel(MODEL_FILENAMES[usedModelIndex]);
 }
@@ -110,6 +114,7 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 	camera->onResolutionChanged(event);
 	camera->onResolutionChanged(event);
 	oitRenderer->resolutionChanged(sceneFramebuffer, sceneDepthRBO);
+	ssaoHelper.resolutionChanged();
 	reRender = true;
 }
 
@@ -131,41 +136,6 @@ void PixelSyncApp::saveScreenshot(const std::string &filename)
 }
 
 
-// TODO
-#include <Graphics/Window.hpp>
-#include <Graphics/Buffers/FBO.hpp>
-#include <Graphics/Texture/TextureManager.hpp>
-
-void test()
-{
-    Window *window = AppSettings::get()->getMainWindow();
-    int width = window->getWidth();
-    int height = window->getHeight();
-
-    FramebufferObjectPtr gBufferFBO = Renderer->createFBO();
-
-    TextureSettings textureSettings;
-    textureSettings.internalFormat = GL_RGB16F;
-    TexturePtr positionTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
-    gBufferFBO->bindTexture(positionTexture, COLOR_ATTACHMENT0);
-
-    textureSettings.internalFormat = GL_RGB16F;
-    TexturePtr normalTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
-    gBufferFBO->bindTexture(normalTexture, COLOR_ATTACHMENT1);
-
-    RenderbufferObjectPtr depthStencilRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
-    gBufferFBO->bindRenderbuffer(depthStencilRBO, DEPTH_STENCIL_ATTACHMENT);
-
-    Renderer->bindFBO(gBufferFBO);
-    // Render scene
-
-
-    ShaderProgramPtr ssaoPhongShader = ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
-    ssaoPhongShader->setUniform("gPositionTexture", positionTexture, 0);
-    ssaoPhongShader->setUniform("gNormalTexture", normalTexture, 1);
-    // Render full screen squad
-}
-
 
 void PixelSyncApp::loadModel(const std::string &filename)
 {
@@ -182,7 +152,7 @@ void PixelSyncApp::loadModel(const std::string &filename)
 		}
 	}
 
-	updateShaderMode(false);
+	updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
 	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
 	boundingBox = transparentObject.boundingBox;
@@ -250,7 +220,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	}
 	oitRenderer->setRenderSceneFunction([this]() { this->renderScene(); });
 
-	updateShaderMode(true);
+	updateShaderMode(SHADER_MODE_UPDATE_NEW_OIT_RENDERER);
 
 	transparencyShader = oitRenderer->getGatherShader();
 
@@ -270,16 +240,17 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
     resolutionChanged(EventPtr());
 }
 
-void PixelSyncApp::updateShaderMode(bool newOITRenderer)
+void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
 {
 	if (boost::starts_with(modelFilenamePure, "Data/Trajectories/")) {
-		if (shaderMode != SHADER_MODE_VORTICITY || newOITRenderer) {
+		if (shaderMode != SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_NEW_OIT_RENDERER
+				|| modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
 			oitRenderer->setGatherShader("PseudoPhongVorticity");
 			transparencyShader = oitRenderer->getGatherShader();
 			shaderMode = SHADER_MODE_VORTICITY;
 		}
 	} else {
-		if (shaderMode == SHADER_MODE_VORTICITY) {
+		if (shaderMode == SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
 			oitRenderer->setGatherShader("PseudoPhong");
 			transparencyShader = oitRenderer->getGatherShader();
 			shaderMode = SHADER_MODE_PSEUDO_PHONG;
@@ -343,6 +314,10 @@ void PixelSyncApp::renderOIT()
 	}
 
 	//Renderer->setBlendMode(BLEND_ALPHA);
+
+	if (useSSAO) {
+		ssaoHelper.preRender([this]() { this->renderScene(); });
+	}
 
 	Renderer->bindFBO(sceneFramebuffer);
 	Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, clearColor);
@@ -431,18 +406,6 @@ void PixelSyncApp::renderGUI()
         ImGui::End();
     }
 
-	/*ImGui::Begin("Settings");
-
-	static float wrap_width = 200.0f;
-	ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
-
-	ImGui::Text("Color widget:");
-	ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nCTRL+click on individual component to input value.\n");
-	ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
-
-	ImGui::End();*/
-
-	//ImGui::RadioButton
 	ImGuiWrapper::get()->renderEnd();
 }
 
@@ -500,36 +463,59 @@ void PixelSyncApp::renderSceneSettingsGUI()
 	} ImGui::SameLine();
 	ImGui::Checkbox("Continuous rendering", &continuousRendering);
 	ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);ImGui::SameLine();
-	ImGui::Checkbox("SSAO", &useSSAO);
+
+	if (ImGui::Checkbox("SSAO", &useSSAO)) {
+		ShaderManager->invalidateShaderCache();
+		if (useSSAO) {
+			ShaderManager->addPreprocessorDefine("USE_SSAO", "");
+		} else {
+			ShaderManager->removePreprocessorDefine("USE_SSAO");
+		}
+		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+		reRender = true;
+	}
+
 	//ImGui::Separator();
 }
 
 void PixelSyncApp::renderScene()
 {
-    ShaderProgramPtr transparencyShader = oitRenderer->getGatherShader();
-	if (shaderMode == SHADER_MODE_VORTICITY) {
-		transparencyShader->setUniform("minVorticity", 0.0f);
-		transparencyShader->setUniform("maxVorticity", 1.0f);
+	ShaderProgramPtr transparencyShader;
+
+	if (!useSSAO || !ssaoHelper.isPreRenderPass()) {
+		transparencyShader = oitRenderer->getGatherShader();
+		if (shaderMode == SHADER_MODE_VORTICITY) {
+			transparencyShader->setUniform("minVorticity", 0.0f);
+			transparencyShader->setUniform("maxVorticity", 1.0f);
+		}
+
+		if (mode == RENDER_MODE_OIT_MBOIT && shaderMode != SHADER_MODE_VORTICITY) {
+			// Hack for supporting multiple passes...
+			if (modelFilenamePure == "Data/Models/Ship_04") {
+				transparencyShader->setUniform("bandedColorShading", 0);
+			} else {
+				transparencyShader->setUniform("bandedColorShading", 1);
+			}
+		}
+
+		transparencyShader->setUniform("color", bandingColor);
+		transparencyShader->setUniform("lightDirection", lightDirection);
 	}
 
-    if (mode == RENDER_MODE_OIT_MBOIT && shaderMode != SHADER_MODE_VORTICITY) {
-        // Hack for supporting multiple passes...
-        if (modelFilenamePure == "Data/Models/Ship_04") {
-            transparencyShader->setUniform("bandedColorShading", 0);
-        } else {
-            transparencyShader->setUniform("bandedColorShading", 1);
-        }
-    }
-
+	if (useSSAO) {
+		if (ssaoHelper.isPreRenderPass()) {
+			transparencyShader = ssaoHelper.getGeometryPassShader();
+		} else {
+			TexturePtr ssaoTexture = ssaoHelper.getSSAOTexture();
+			transparencyShader->setUniform("ssaoTexture", ssaoTexture, 0);
+		}
+	}
 
 	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
 	Renderer->setViewMatrix(camera->getViewMatrix());
-	//Renderer->setModelMatrix(matrixIdentity());
-
 	Renderer->setModelMatrix(rotation * scaling);
-    transparencyShader->setUniform("color", bandingColor);
-	transparencyShader->setUniform("lightDirection", lightDirection);
-	transparentObject.render(transparencyShader);
+
+	transparentObject.render(transparencyShader, ssaoHelper.isPreRenderPass());
 }
 
 

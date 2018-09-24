@@ -86,11 +86,12 @@ void readMesh3D(const std::string &filename, ObjMesh &mesh) {
 
 
 
-void MeshRenderer::render(sgl::ShaderProgramPtr passShader)
+void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass)
 {
 	for (size_t i = 0; i < shaderAttributes.size(); i++) {
 		//ShaderProgram *shader = shaderAttributes.at(i)->getShaderProgram();
-		if (!boost::starts_with(passShader->getShaderList().front()->getFileID(), "PseudoPhongVorticity")) {
+		if (!boost::starts_with(passShader->getShaderList().front()->getFileID(), "PseudoPhongVorticity")
+				&& !isGBufferPass) {
 			passShader->setUniform("ambientColor", materials.at(i).ambientColor);
 			passShader->setUniform("diffuseColor", materials.at(i).diffuseColor);
 			passShader->setUniform("specularColor", materials.at(i).specularColor);
@@ -187,7 +188,7 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 	}
 
 	meshRenderer.boundingBox = totalBoundingBox;
-	meshRenderer.boundingSphere = sgl::Sphere(totalBoundingBox.getCenter(), totalBoundingBox.getExtent().length());
+	meshRenderer.boundingSphere = sgl::Sphere(totalBoundingBox.getCenter(), glm::length(totalBoundingBox.getExtent()));
 
 	return meshRenderer;
 }

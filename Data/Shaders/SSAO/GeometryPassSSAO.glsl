@@ -1,4 +1,4 @@
--- Vertex.Plain
+-- Vertex
 
 #version 430 core
 
@@ -12,14 +12,12 @@ void main()
 {
     mat4 modelViewMatrix = vMatrix * mMatrix;
     mat3 invModelViewMatrix = transpose(inverse(mat3(modelViewMatrix)));
-    vec4 posHomogeneous = modelViewMatrix * vec4(vertexPosition, 1.0);
-
-    fragPosition = posHomogeneous.xyz;
+    fragPosition = (modelViewMatrix * vec4(vertexPosition, 1.0)).xyz;
     fragNormal = invModelViewMatrix * vertexNormal;
-	gl_Position = posHomogeneous;
+	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
--- Fragment.Plain
+-- Fragment
 
 #version 430 core
 

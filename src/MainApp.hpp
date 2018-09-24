@@ -22,6 +22,7 @@
 #include "Utils/VideoWriter.hpp"
 #include "Utils/MeshSerializer.hpp"
 #include "OIT/OIT_Renderer.hpp"
+#include "AmbientOcclusion/SSAO.hpp"
 
 using namespace std;
 using namespace sgl;
@@ -73,7 +74,10 @@ public:
 protected:
 	// State changes
 	void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
-	void updateShaderMode(bool newOITRenderer);
+	enum ShaderModeUpdate {
+		SHADER_MODE_UPDATE_NEW_OIT_RENDERER, SHADER_MODE_UPDATE_NEW_MODEL, SHADER_MODE_UPDATE_SSAO_CHANGE
+	};
+	void updateShaderMode(ShaderModeUpdate modeUpdate);
 	void loadModel(const std::string &filename);
 
 	// Override screenshot function to exclude GUI (if wanted by the user)
@@ -85,6 +89,10 @@ private:
 	ShaderProgramPtr transparencyShader;
 	ShaderProgramPtr plainShader;
 	ShaderProgramPtr whiteSolidShader;
+
+	// Screen space ambient occlusion
+	SSAOHelper ssaoHelper;
+	bool useSSAO = true;
 
 	// Mode
 	RenderModeOIT mode = RENDER_MODE_OIT_MLAB;
@@ -113,10 +121,9 @@ private:
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
     bool uiOnScreenshot = false;
-    bool useSSAO = false;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = false;
+    bool continuousRendering = true;
     bool reRender = true;
 
     // Profiling events

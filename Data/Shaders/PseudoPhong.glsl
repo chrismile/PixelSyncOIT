@@ -41,6 +41,11 @@ in vec3 fragmentPositonLocal;
 out vec4 fragColor;
 #endif
 
+
+#ifdef USE_SSAO
+uniform sampler2D ssaoTexture;
+#endif
+
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
@@ -51,17 +56,28 @@ uniform int bandedColorShading = 1;
 
 void main()
 {
+#ifdef USE_SSAO
+    // Read ambient occlusion factor from texture
+    vec2 texCoord = vec2(gl_FragCoord.xy) + vec2(0.5, 0.5);
+    float occlusionFactor = texture(ssaoTexture, texCoord).r;
+#else
+    // No ambient occlusion
+    const float occlusionFactor = 1.0;
+#endif
+
 	// Pseudo Phong shading
 	vec4 bandColor = fragmentColor;
 	float stripWidth = 2.0;
 	if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
 		bandColor = vec4(1.0,1.0,1.0,1.0);
 	}
-	vec4 color = vec4(bandColor.rgb * (dot(normalize(fragmentNormal), lightDirection)/4.0+0.75), fragmentColor.a);
+	vec4 color = vec4(bandColor.rgb * (dot(normalize(fragmentNormal), lightDirection)/4.0+0.75 * occlusionFactor),
+	        fragmentColor.a);
 
 	if (bandedColorShading == 0) {
-	    vec3 ambientShading = ambientColor * 0.1;
-	    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0);
+	    vec3 ambientShading = ambientColor * 0.1 * occlusionFactor;
+	    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75 * occlusionFactor,
+	            0.0, 1.0);
 	    vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
 	    color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
 	}

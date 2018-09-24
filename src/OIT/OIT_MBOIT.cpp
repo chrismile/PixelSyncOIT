@@ -284,7 +284,7 @@ void OIT_MBOIT::renderGUI()
 
 void OIT_MBOIT::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, sgl::CameraPtr &camera)
 {
-    //sgl::Sphere sphere = sgl::Sphere(screenSpaceBB.getCenter(), screenSpaceBB.getExtent().length());
+    //sgl::Sphere sphere = sgl::Sphere(screenSpaceBB.getCenter(), glm::length(screenSpaceBB.getExtent()));
     //float minViewZ = sphere.center.z + sphere.radius;
     //float maxViewZ = sphere.center.z - sphere.radius;
     float minViewZ = screenSpaceBB.getMaximum().z;

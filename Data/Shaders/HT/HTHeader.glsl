@@ -18,6 +18,8 @@ uniform int viewportW;
 
 #define MAX_NUM_NODES 4
 
+#define COMPRESS_HT_TAIL
+
 // Distance of infinitely far away fragments (used for initialization)
 #define DISTANCE_INFINITE (1E30)
 
@@ -75,6 +77,7 @@ struct HTFragmentNode
 };
 
 
+#ifdef COMPRESS_HT_TAIL
 struct HTFragmentTail_compressed
 {
 	// Accumulated alpha (16 bit) and fragment count (16 bit)
@@ -82,9 +85,19 @@ struct HTFragmentTail_compressed
 	// RGB Color (30 bit, i.e. 10 bits per component)
 	uint accumColor;
 };
-struct HTFragmentTail
+#else
+struct HTFragmentTail_compressed
 {
 	// Accumulated alpha (16 bit) and fragment count (16 bit)
+	uint accumAlphaAndCount;
+	// RGB Color (32 bit floating point accumulator per component)
+	vec3 accumColor;
+};
+#endif
+
+struct HTFragmentTail
+{
+	// Accumulated fragment count
 	uint accumFragCount;
 	// RGB Color (30 bit, i.e. 10 bits per component) and accumulated alpha
 	vec4 accumColor;
@@ -155,13 +168,21 @@ vec4 unpackColor30bit(uint packedColor);
 
 void unpackFragmentTail(in HTFragmentTail_compressed inputNode, out HTFragmentTail outputNode)
 {
-    outputNode.accumColor = unpackColor30bit(inputNode.accumColor);
+#ifdef COMPRESS_HT_TAIL
+    outputNode.accumColor.rgb = unpackColor30bit(inputNode.accumColor).rgb;
+#else
+    outputNode.accumColor.rgb = inputNode.accumColor;
+#endif
     unpackAccumAlphaAndFragCount(inputNode.accumAlphaAndCount, outputNode.accumColor.a, outputNode.accumFragCount);
 }
 
 void packFragmentTail(in HTFragmentTail inputNode, out HTFragmentTail_compressed outputNode)
 {
+#ifdef COMPRESS_HT_TAIL
     outputNode.accumColor = packColor30bit(inputNode.accumColor);
+#else
+    outputNode.accumColor = inputNode.accumColor.rgb;
+#endif
     outputNode.accumAlphaAndCount = packAccumAlphaAndFragCount(inputNode.accumColor.a, inputNode.accumFragCount);
 }
 
@@ -178,7 +199,11 @@ void clearPixel(uint pixelIndex)
 
     // Clear accumulation tail
     HTFragmentTail_compressed tail;
+#ifdef COMPRESS_HT_TAIL
     tail.accumColor = 0u;
+#else
+    tail.accumColor = vec3(0.0);
+#endif
     tail.accumAlphaAndCount = 0u;
     tails[pixelIndex] = tail;
 }
