@@ -10,20 +10,20 @@
 #define HT_NUM_FRAGMENTS 8
 
 // A fragment node stores rendering information about a list of fragments
-struct HTFragmentNode_compressed
+/*struct HTFragmentNode_compressed
 {
     // Linear depth, i.e. distance to viewer
     float depth[HT_NUM_FRAGMENTS];
     // RGB color (3 bytes), translucency (1 byte)
-    uint premulColor[HT_NUM_FRAGMENTS];
+    uint32_t premulColor[HT_NUM_FRAGMENTS];
 };
 struct HTFragmentTail_compressed
 {
     // Accumulated alpha (16 bit) and fragment count (16 bit)
-    uint accumAlphaAndCount;
+    uint32_t accumAlphaAndCount;
     // RGB Color (30 bit, i.e. 10 bits per component)
-    uint accumColor;
-};
+    uint32_t accumColor;
+};*/
 
 /**
  * An order independent transparency renderer using pixel sync.
@@ -50,6 +50,13 @@ public:
     // Blit accumulated transparent objects to screen
     virtual void renderToScreen();
 
+    void renderGUI();
+    void updateLayerMode();
+    void reloadShaders();
+
+    // For changing performance measurement modes
+    void setNewState(const InternalState &newState);
+
 private:
     void clear();
     void setUniformData();
@@ -60,6 +67,9 @@ private:
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
     sgl::ShaderAttributesPtr clearRenderData;
+
+    sgl::FramebufferObjectPtr sceneFramebuffer;
+    sgl::RenderbufferObjectPtr sceneDepthRBO;
 
     bool clearBitSet;
 };

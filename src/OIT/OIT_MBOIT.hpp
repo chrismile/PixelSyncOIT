@@ -59,9 +59,13 @@ public:
     virtual void renderGUI();
     virtual bool needsNewShader() { bool tmp = useNewShader; useNewShader = false; return tmp; }
 
+    // For changing performance measurement modes
+    void setNewState(const InternalState &newState);
+
 private:
     void clear();
     void setUniformData();
+    void reloadShaders();
     void updateMomentMode();
 
     sgl::ShaderProgramPtr mboitPass1Shader;

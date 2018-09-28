@@ -1,5 +1,5 @@
 
-#include "PixelSyncHeader.glsl"
+#include "KBufferHeader.glsl"
 #include "ColorPack.glsl"
 #include "TiledAddress.glsl"
 
@@ -9,6 +9,10 @@ out vec4 fragColor;
 
 void gatherFragment(vec4 color)
 {
+    if (color.a < 0.001) {
+        discard;
+    }
+
 	uint x = uint(gl_FragCoord.x);
 	uint y = uint(gl_FragCoord.y);
 	uint pixelIndex = addrGen(uvec2(x,y));
@@ -36,27 +40,22 @@ void gatherFragment(vec4 color)
 	
 	// Store the fragment at the end of the list if capacity is left
 	if (numFragments < MAX_NUM_NODES) {
-		atomicAdd(numFragmentsBuffer[pixelIndex], 1);
-		//numFragmentsBuffer[pixelIndex]++;
+		//atomicAdd(numFragmentsBuffer[pixelIndex], 1);
+		numFragmentsBuffer[pixelIndex]++;
 		nodes[index] = frag;
-		//atomicCounterIncrement(numFragmentsBuffer[pixelIndex]);
-		//numFragmentsBuffer[pixelIndex]++; // Race conditon on Intel if used here. Why?
+	} else {
+    	// Blend with last fragment
+		vec4 colorDst = unpackColorRGBA(nodes[index-1].color);
+		vec4 colorSrc = unpackColorRGBA(frag.color);
+
+		vec4 colorOut;
+		colorOut.rgb = colorDst.a * colorDst.rgb + (1.0 - colorDst.a) * colorSrc.a * colorSrc.rgb;
+        colorOut.a = colorDst.a + (1.0 - colorDst.a) * colorSrc.a;
+        //colorOut.a = colorSrc.a + colorDst.a * (1.0 - colorSrc.a);
+        //colorOut.rgb = colorSrc.rgb * colorSrc.a + colorDst.rgb * colorDst.a * (1.0 - colorSrc.a);
+
+    	nodes[index-1].color = packColorRGBA(vec4(colorOut.rgb / colorOut.a, colorOut.a));
 	}
 
-	memoryBarrierBuffer();
-	
-	// If no space was left to store the last fragment, simply discard it.
-	// TODO: Merge nodes with least visual impact?
-	/*if (frag.used == 1) {
-		int lastIndex = index-1;
-	
-		// Blend with last fragment
-		float alpha = nodes[lastIndex].color.a;
-		float alphaOut = alpha + frag.color.a * (1.0 - alpha);
-		nodes[lastIndex].color.rgb = (alpha * nodes[lastIndex].color.rgb + (1.0 - alpha) * frag.color.a * frag.color.rgb) / alphaOut;
-		//color.rgb = (alpha * nodes[lastIndex].color.rgb + (1.0 - alpha) * frag.color.a * frag.color.rgb);
-		nodes[lastIndex].color.a = alphaOut;
-	}*/
-		
 	fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 }

@@ -16,9 +16,6 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 uniform int viewportW;
 
-#define MAX_NUM_NODES 4
-
-#define COMPRESS_HT_TAIL
 
 // Distance of infinitely far away fragments (used for initialization)
 #define DISTANCE_INFINITE (1E30)
@@ -88,10 +85,10 @@ struct HTFragmentTail_compressed
 #else
 struct HTFragmentTail_compressed
 {
-	// Accumulated alpha (16 bit) and fragment count (16 bit)
-	uint accumAlphaAndCount;
 	// RGB Color (32 bit floating point accumulator per component)
 	vec3 accumColor;
+	// Accumulated alpha (16 bit) and fragment count (16 bit)
+    uint accumAlphaAndCount;
 };
 #endif
 
@@ -120,8 +117,8 @@ layout (std430, binding = 1) buffer FragmentTails
 void loadFragmentNodes(in uint pixelIndex, out HTFragmentNode nodeArray[MAX_NUM_NODES]) {
     HTFragmentNode_compressed fragmentNode = nodes[pixelIndex];
 
-#if MAX_NUM_NODES == 8
-    for (int i = 0; i < MAX_NUM_NODES/4; i++)
+#if (MAX_NUM_NODES % 4 == 0) && (MAX_NUM_NODES > 4)
+    for (int i = 0; i < MAX_NUM_NODES/4; i++) {
         for(int j = 0; j < 4; j++) {
             HTFragmentNode node = { fragmentNode.depth[i][j], fragmentNode.premulColor[i][j] };
             nodeArray[i*4 + j] = node;
@@ -143,7 +140,7 @@ void storeFragmentNodes(in uint pixelIndex, in HTFragmentNode nodeArray[MAX_NUM_
     HTFragmentNode_compressed fragmentNode;
 
 #if (MAX_NUM_NODES % 4 == 0) && (MAX_NUM_NODES > 4)
-    for (int i = 0; i < MAX_NUM_NODES/4; i++)
+    for (int i = 0; i < MAX_NUM_NODES/4; i++) {
         for(int j = 0; j < 4; j++) {
             fragmentNode.depth[i][j] = nodeArray[4*i + j].depth;
             fragmentNode.premulColor[i][j] = nodeArray[4*i + j].premulColor;

@@ -33,6 +33,10 @@ void hybridTransparencyBlending(in HTFragmentNode frag, inout HTFragmentNode lis
 
 void gatherFragment(vec4 color)
 {
+    if (color.a < 0.001) {
+        discard;
+    }
+
 	uint x = uint(gl_FragCoord.x);
 	uint y = uint(gl_FragCoord.y);
 	uint pixelIndex = addrGen(uvec2(x,y));

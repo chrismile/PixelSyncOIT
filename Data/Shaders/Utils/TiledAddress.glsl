@@ -1,10 +1,9 @@
 
 //#define ADDRESSING_TILED_2x2
-#define ADDRESSING_TILED_2x8
-//#define ADDRESSING_TILED_2x16
+//#define ADDRESSING_TILED_2x8
 //#define ADDRESSING_TILED_NxM
-//#define TILING_N 2u
-//#define TILING_M 8u
+//#define TILE_N 2u
+//#define TILE_M 8u
 
 // Address 1D structured buffers as tiled to better data exploit locality
 // "OIT to Volumetric Shadow Mapping, 101 Uses for Raster Ordered Views using DirectX 12",
@@ -25,19 +24,12 @@ uint addrGen(uvec2 addr2D)
 	uvec2 pixelAddr2D = addr2D & uvec2(1U, 7U);
 	uint pixelAddr1D = pixelAddr2D.x + pixelAddr2D.y * 2U;
 	return tileAddr1D | pixelAddr1D;
-#elif defined(ADDRESSING_TILED_2x16)
-	uint surfaceWidth = viewportW >> 1U; // / 2U;
-	uvec2 tileAddr2D = addr2D / uvec2(2U, 16U);
-	uint tileAddr1D = (tileAddr2D.x + surfaceWidth * tileAddr2D.y) << 5U; // * 32U;
-	uvec2 pixelAddr2D = addr2D & uvec2(1U, 15U);
-	uint pixelAddr1D = pixelAddr2D.x + pixelAddr2D.y * 2U;
-	return tileAddr1D | pixelAddr1D;
-#elif defined(ADDRESSING_TILED_2x8)
-	uint surfaceWidth = viewportW / TILING_N;
-	uvec2 tileAddr2D = addr2D / uvec2(TILING_N, TILING_M);
-	uint tileAddr1D = (tileAddr2D.x + surfaceWidth * tileAddr2D.y) * (TILING_N * TILING_M);
-	uvec2 pixelAddr2D = addr2D & uvec2(TILING_N-1, TILING_M-1);
-	uint pixelAddr1D = pixelAddr2D.x + pixelAddr2D.y * TILING_N;
+#elif defined(ADDRESSING_TILED_NxM)
+	uint surfaceWidth = viewportW / TILE_N;
+	uvec2 tileAddr2D = addr2D / uvec2(TILE_N, TILE_M);
+	uint tileAddr1D = (tileAddr2D.x + surfaceWidth * tileAddr2D.y) * (TILE_N * TILE_M);
+	uvec2 pixelAddr2D = addr2D & uvec2(TILE_N-1, TILE_M-1);
+	uint pixelAddr1D = pixelAddr2D.x + pixelAddr2D.y * TILE_N;
 	return tileAddr1D | pixelAddr1D;
 #else
 	return addr2D.x + viewportW * addr2D.y;

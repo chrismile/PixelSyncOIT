@@ -91,6 +91,7 @@ void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass)
 	for (size_t i = 0; i < shaderAttributes.size(); i++) {
 		//ShaderProgram *shader = shaderAttributes.at(i)->getShaderProgram();
 		if (!boost::starts_with(passShader->getShaderList().front()->getFileID(), "PseudoPhongVorticity")
+				&& !boost::starts_with(passShader->getShaderList().front()->getFileID(), "DepthPeelingGatherDepthComplexity")
 				&& !isGBufferPass) {
 			passShader->setUniform("ambientColor", materials.at(i).ambientColor);
 			passShader->setUniform("diffuseColor", materials.at(i).diffuseColor);

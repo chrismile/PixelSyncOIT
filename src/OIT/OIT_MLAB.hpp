@@ -10,13 +10,13 @@
 #define MLAB_NUM_FRAGMENTS 8
 
 // A fragment node stores rendering information about a list of fragments
-struct MLABFragmentNode_compressed
+/*struct MLABFragmentNode_compressed
 {
     // Linear depth, i.e. distance to viewer
     float depth[MLAB_NUM_FRAGMENTS];
     // RGB color (3 bytes), translucency (1 byte)
-    uint premulColor[MLAB_NUM_FRAGMENTS];
-};
+    uint32_t premulColor[MLAB_NUM_FRAGMENTS];
+};*/
 
 /**
  * An order independent transparency renderer using pixel sync.
@@ -43,16 +43,26 @@ public:
     // Blit accumulated transparent objects to screen
     virtual void renderToScreen();
 
+    void renderGUI();
+    void updateLayerMode();
+    void reloadShaders();
+
+    // For changing performance measurement modes
+    void setNewState(const InternalState &newState);
+
 private:
     void clear();
     void setUniformData();
 
     sgl::GeometryBufferPtr fragmentNodes;
-    sgl::GeometryBufferPtr numFragmentsBuffer;
+    //sgl::GeometryBufferPtr numFragmentsBuffer;
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
     sgl::ShaderAttributesPtr clearRenderData;
+
+    sgl::FramebufferObjectPtr sceneFramebuffer;
+    sgl::RenderbufferObjectPtr sceneDepthRBO;
 
     bool clearBitSet;
 };

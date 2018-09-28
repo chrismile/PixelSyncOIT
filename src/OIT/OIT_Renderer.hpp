@@ -20,6 +20,8 @@
 #include <Graphics/Shader/ShaderManager.hpp>
 #include <Graphics/Shader/ShaderAttributes.hpp>
 
+#include "../Performance/InternalState.hpp"
+
 /**
  * An interface class for order independent transparency renderers.
  */
@@ -64,6 +66,9 @@ public:
 		gatherShaderName = name;
 		gatherShader = sgl::ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
 	}
+
+	// For changing performance measurement modes
+	virtual void setNewState(const InternalState &newState) {}
 
 protected:
     // Shader programs

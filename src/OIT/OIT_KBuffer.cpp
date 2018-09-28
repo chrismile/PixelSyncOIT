@@ -14,16 +14,19 @@
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
+#include "TilingMode.hpp"
 #include "OIT_KBuffer.hpp"
 
 using namespace sgl;
 
-// Number of transparent pixels we can store per node
-const int nodesPerPixel = 8;
-
 // Use stencil buffer to mask unused pixels
-const bool useStencilBuffer = true;
+static bool useStencilBuffer = true;
+
+// Maximum number of layers
+static int maxNumNodes = 8;
+
 
 OIT_KBuffer::OIT_KBuffer()
 {
@@ -37,10 +40,9 @@ void OIT_KBuffer::create()
 		exit(1);
 	}
 
-	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"PixelSyncGather.glsl\"");
-	gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-	resolveShader = ShaderManager->getShaderProgram({"PixelSyncResolve.Vertex", "PixelSyncResolve.Fragment"});
-	clearShader = ShaderManager->getShaderProgram({"PixelSyncClear.Vertex", "PixelSyncClear.Fragment"});
+	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"KBufferGather.glsl\"");
+
+	updateLayerMode();
 
 	// Create blitting data (fullscreen rectangle in normalized device coordinates)
 	blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
@@ -60,12 +62,14 @@ void OIT_KBuffer::create()
 
 void OIT_KBuffer::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
+	this->sceneFramebuffer = sceneFramebuffer;
+	this->sceneDepthRBO = sceneDepthRBO;
+
 	Window *window = AppSettings::get()->getMainWindow();
 	int width = window->getWidth();
 	int height = window->getHeight();
 
-	size_t bufferSize = nodesPerPixel * width * height;
-	size_t bufferSizeBytes = sizeof(FragmentNode) * bufferSize;
+	size_t bufferSizeBytes = sizeof(FragmentNode) * maxNumNodes * width * height;
 	void *data = (void*)malloc(bufferSizeBytes);
 	memset(data, 0, bufferSizeBytes);
 
@@ -77,6 +81,55 @@ void OIT_KBuffer::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer,
 	numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
 	numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 }
+
+
+void OIT_KBuffer::renderGUI()
+{
+	ImGui::Separator();
+
+	if (ImGui::SliderInt("Num Layers", &maxNumNodes, 1, 64)) {
+		updateLayerMode();
+		reRender = true;
+	}
+
+	if (selectTilingModeUI()) {
+		reloadShaders();
+		reRender = true;
+	}
+}
+
+void OIT_KBuffer::updateLayerMode()
+{
+	ShaderManager->invalidateShaderCache();
+	ShaderManager->addPreprocessorDefine("MAX_NUM_NODES", maxNumNodes);
+	reloadShaders();
+	resolutionChanged(sceneFramebuffer, sceneDepthRBO);
+}
+
+void OIT_KBuffer::reloadShaders()
+{
+	gatherShader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+	resolveShader = ShaderManager->getShaderProgram({"KBufferResolve.Vertex", "KBufferResolve.Fragment"});
+	clearShader = ShaderManager->getShaderProgram({"KBufferClear.Vertex", "KBufferClear.Fragment"});
+	//needsNewShaders = true;
+
+	if (blitRenderData) {
+		blitRenderData = blitRenderData->copy(resolveShader);
+	}
+	if (clearRenderData) {
+		clearRenderData = clearRenderData->copy(clearShader);
+	}
+}
+
+
+void OIT_KBuffer::setNewState(const InternalState &newState)
+{
+	maxNumNodes = newState.oitAlgorithmSettings.getIntValue("numLayers");
+	useStencilBuffer = newState.useStencilBuffer;
+	updateLayerMode();
+}
+
+
 
 void OIT_KBuffer::setUniformData()
 {

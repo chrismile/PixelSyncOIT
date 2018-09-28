@@ -10,7 +10,7 @@ out vec2 fragTexcoord;
 void main()
 {
     fragTexcoord = vertexTexcoord;
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+	gl_Position = vec4(vertexPosition, 1.0);
 }
 
 -- Fragment

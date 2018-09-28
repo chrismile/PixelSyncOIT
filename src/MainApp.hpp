@@ -23,34 +23,11 @@
 #include "Utils/MeshSerializer.hpp"
 #include "OIT/OIT_Renderer.hpp"
 #include "AmbientOcclusion/SSAO.hpp"
+#include "Performance/InternalState.hpp"
+#include "Performance/AutoPerfMeasurer.hpp"
 
 using namespace std;
 using namespace sgl;
-
-const int NUM_OIT_MODES = 8;
-const char *const OIT_MODE_NAMES[] = {
-        "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
-        "Depth Complexity", "No OIT", "Depth Peeling"
-};
-enum RenderModeOIT {
-        RENDER_MODE_OIT_KBUFFER = 0,
-        RENDER_MODE_OIT_LINKED_LIST,
-        RENDER_MODE_OIT_MLAB, // Mutli-layer Alpha Blending
-        RENDER_MODE_OIT_HT, // Hybrid Transparency
-        RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
-        RENDER_MODE_OIT_DEPTH_COMPLEXITY,
-        RENDER_MODE_OIT_DUMMY,
-        RENDER_MODE_OIT_DEPTH_PEELING
-};
-
-const int NUM_MODELS = 6;
-const char *const MODEL_FILENAMES[] = {
-        "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04",
-        "Data/Models/Monkey", "Data/Models/Box", "Data/Models/dragon"
-};
-const char *const MODEL_DISPLAYNAMES[] = {
-        "Single Streamline", "Streamlines", "Ship", "Monkey", "Box", "Dragon"
-};
 
 enum ShaderMode {
 	SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_VORTICITY, SHADER_MODE_AMBIENT_OCCLUSION
@@ -80,8 +57,14 @@ protected:
 	void updateShaderMode(ShaderModeUpdate modeUpdate);
 	void loadModel(const std::string &filename);
 
+	// For changing performance measurement modes
+	void setNewState(const InternalState &newState);
+
 	// Override screenshot function to exclude GUI (if wanted by the user)
 	void saveScreenshot(const std::string &filename);
+
+
+    sgl::ShaderProgramPtr setUniformValues();
 
 private:
 	// Lighting & rendering
@@ -92,10 +75,10 @@ private:
 
 	// Screen space ambient occlusion
 	SSAOHelper ssaoHelper;
-	bool useSSAO = true;
+	bool useSSAO = false;
 
 	// Mode
-	RenderModeOIT mode = RENDER_MODE_OIT_MLAB;
+	RenderModeOIT mode = RENDER_MODE_OIT_HT;
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
 
@@ -113,7 +96,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 3;
+    int usedModelIndex = 2;
     Color bandingColor;
     Color clearColor;
     bool cullBackface = true;
@@ -121,13 +104,22 @@ private:
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
     bool uiOnScreenshot = false;
+    float MOVE_SPEED = 0.2f;
+    float ROT_SPEED = 1.0f;
+    float MOUSE_ROT_SPEED = 0.05f;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = true;
+    bool continuousRendering = false;
     bool reRender = true;
 
     // Profiling events
-	sgl::TimerGL timer;
+    AutoPerfMeasurer *measurer;
+    bool perfMeasurementMode = false;
+	InternalState lastState;
+	bool firstState = true;
+#ifdef PROFILING_MODE
+    sgl::TimerGL timer;
+#endif
 
 	// Save video stream to file
 	bool recording;

@@ -16,8 +16,6 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 uniform int viewportW;
 
-#define MAX_NUM_NODES 4
-
 // Distance of infinitely far away fragments (used for initialization)
 #define DISTANCE_INFINITE (1E30)
 
@@ -86,8 +84,8 @@ void loadFragmentNodes(in uint pixelIndex, out MLABFragmentNode nodeArray[MAX_NU
     MLABFragmentNode_compressed fragmentNode = nodes[pixelIndex];
 
 #if (MAX_NUM_NODES % 4 == 0) && (MAX_NUM_NODES > 4)
-    for (int i = 0; i < MAX_NUM_NODES/4; i++)
-        for(int j = 0; j < 4; j++) {
+    for (int i = 0; i < MAX_NUM_NODES/4; i++) {
+        for (int j = 0; j < 4; j++) {
             MLABFragmentNode node = { fragmentNode.depth[i][j], fragmentNode.premulColor[i][j] };
             nodeArray[i*4 + j] = node;
         }
@@ -108,7 +106,7 @@ void storeFragmentNodes(in uint pixelIndex, in MLABFragmentNode nodeArray[MAX_NU
     MLABFragmentNode_compressed fragmentNode;
 
 #if (MAX_NUM_NODES % 4 == 0) && (MAX_NUM_NODES > 4)
-    for (int i = 0; i < MAX_NUM_NODES/4; i++)
+    for (int i = 0; i < MAX_NUM_NODES/4; i++) {
         for(int j = 0; j < 4; j++) {
             fragmentNode.depth[i][j] = nodeArray[4*i + j].depth;
             fragmentNode.premulColor[i][j] = nodeArray[4*i + j].premulColor;

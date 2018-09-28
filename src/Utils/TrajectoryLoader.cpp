@@ -54,9 +54,15 @@ void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, const glm::vec
         initializeCircleData(NUM_CIRCLE_SEGMENTS, TUBE_RADIUS);
     }
 
-    glm::vec3 helperAxis(0.0f, 1.0f, 0.0f); // TODO: What if normal == helperAxis?
-    glm::vec3 tangent = glm::cross(normal, helperAxis);
-    glm::vec3 binormal = glm::cross(normal, tangent);
+    glm::vec3 helperAxis(0.0f, 1.0f, 0.0f);
+    if (glm::dot(helperAxis, normal) > 0.9999f) {
+        // If normal == helperAxis
+        helperAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+    }
+    glm::vec3 tangent = glm::normalize(helperAxis - normal * glm::dot(helperAxis, normal)); // Gram-Schmidt
+    //glm::vec3 tangent = glm::normalize(glm::cross(normal, helperAxis));
+    glm::vec3 binormal = glm::normalize(glm::cross(normal, tangent));
+
 
     // In column-major order
     glm::mat4 tangentFrameMatrix(
@@ -99,7 +105,7 @@ struct TubeNode
  * @param vertices: The (output) vertex points, which are a set of oriented circles around the centers (see above).
  * @param indices: The (output) indices specifying how tube triangles are built from the circle vertices.
  */
-void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
+void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
                           const std::vector<float> &pathLineAttributes,
                           std::vector<glm::vec3> &vertices,
                           std::vector<float> &vertexAttributes,
@@ -118,23 +124,31 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
 
     std::vector<TubeNode> tubeNodes;
     tubeNodes.reserve(n);
+    int numVertexPts = n;
 
     // First, create a list of tube nodes
     for (int i = 0; i < n; i++) {
         TubeNode node;
         node.center = pathLineCenters.at(i);
+        glm::vec3 normal;
         if (i == 0) {
             // First node
-            node.normal = glm::normalize(pathLineCenters.at(i+1) - pathLineCenters.at(i));
+            normal = pathLineCenters.at(i+1) - pathLineCenters.at(i);
         } else if (i == n-1) {
             // Last node
-            node.normal = glm::normalize(pathLineCenters.at(i) - pathLineCenters.at(i-1));
+            normal = pathLineCenters.at(i) - pathLineCenters.at(i-1);
         } else {
-            // Node with two neighbors. Interpolate between normals.
-            glm::vec3 normal1 = glm::normalize(pathLineCenters.at(i+1) - pathLineCenters.at(i));
-            glm::vec3 normal2 = glm::normalize(pathLineCenters.at(i) - pathLineCenters.at(i-1));
-            node.normal = glm::normalize(normal1 + normal2);
+            // Node with two neighbors - use both normals
+            normal = pathLineCenters.at(i+1) - pathLineCenters.at(i);
+            normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
+        if (glm::length(normal) < 0.0001f) {
+            //normal = glm::vec3(1.0f, 0.0f, 0.0f);
+            // In case the two vertices are almost identical, just skip this path line segment
+            numVertexPts--;
+            continue;
+        }
+        node.normal = glm::normalize(normal);
         insertOrientedCirclePoints(vertices, node.center, node.normal);
         node.circleIndices.reserve(NUM_CIRCLE_SEGMENTS);
         for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
@@ -146,7 +160,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
 
 
     // Create tube triangles/indices for the vertex data
-    for (int i = 0; i < n-1; i++) {
+    for (int i = 0; i < numVertexPts-1; i++) {
         std::vector<uint32_t> &circleIndicesCurrent = tubeNodes.at(i).circleIndices;
         std::vector<uint32_t> &circleIndicesNext = tubeNodes.at(i+1).circleIndices;
         for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
@@ -175,15 +189,15 @@ void createNormals(const std::vector<glm::vec3> &vertices,
                    std::vector<glm::vec3> &normals)
 {
     // For finding all triangles with a specific index. Maps vertex index -> first triangle index.
-    Logfile::get()->writeInfo(std::string() + "Creating index map for "
-            + sgl::toString(indices.size()) + " indices...");
+    //Logfile::get()->writeInfo(std::string() + "Creating index map for "
+    //        + sgl::toString(indices.size()) + " indices...");
     std::multimap<size_t, size_t> indexMap;
     for (size_t j = 0; j < indices.size(); j++) {
         indexMap.insert(std::make_pair(indices.at(j), (j/3)*3));
     }
 
-    Logfile::get()->writeInfo(std::string() + "Computing normals for "
-            + sgl::toString(vertices.size()) + " vertices...");
+    //Logfile::get()->writeInfo(std::string() + "Computing normals for "
+    //        + sgl::toString(vertices.size()) + " vertices...");
     normals.reserve(vertices.size());
     for (size_t i = 0; i < vertices.size(); i++) {
         glm::vec3 normal(0.0f, 0.0f, 0.0f);
@@ -236,6 +250,7 @@ void convertObjTrajectoryDataToBinaryMesh(
     ObjSubmesh &submesh = mesh.submeshes.front();
 
     std::vector<glm::vec3> &globalTubeVertices = submesh.vertices;
+    std::vector<glm::vec3> &globalTubeNormals = submesh.normals;
     std::vector<float> globalTubeVertexAttributes;
     std::vector<uint32_t> &globalTubeIndices = submesh.indices;
 
@@ -255,7 +270,11 @@ void convertObjTrajectoryDataToBinaryMesh(
 
         if (command == "g") {
             // New path
-            Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
+            static int ctr = 0;
+            if (ctr >= 999) {
+                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
+            }
+            ctr = (ctr + 1) % 1000;
         } else if (command == "v") {
             // Path line vertex position
             globalLineVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
@@ -282,16 +301,19 @@ void convertObjTrajectoryDataToBinaryMesh(
 
             // Create tube render data
             std::vector<glm::vec3> localTubeVertices;
+            std::vector<glm::vec3> localTubeNormals;
             std::vector<float> localTubeVertexAttributes;
             std::vector<uint32_t> localTubeIndices;
             createTubeRenderData(pathLineCenters, pathLineAttributes, localTubeVertices, localTubeVertexAttributes,
                     localTubeIndices);
+            createNormals(localTubeVertices, localTubeIndices, localTubeNormals);
 
             // Local -> global
             for (size_t i = 0; i < localTubeIndices.size(); i++) {
                 globalTubeIndices.push_back(localTubeIndices.at(i) + globalTubeVertices.size());
             }
             globalTubeVertices.insert(globalTubeVertices.end(), localTubeVertices.begin(), localTubeVertices.end());
+            globalTubeNormals.insert(globalTubeNormals.end(), localTubeNormals.begin(), localTubeNormals.end());
             globalTubeVertexAttributes.insert(globalTubeVertexAttributes.end(), localTubeVertexAttributes.begin(),
                     localTubeVertexAttributes.end());
 
@@ -311,7 +333,7 @@ void convertObjTrajectoryDataToBinaryMesh(
     }
 
     Logfile::get()->writeInfo(std::string() + "Creating normals...");
-    createNormals(submesh.vertices, submesh.indices, submesh.normals);
+    //createNormals(submesh.vertices, submesh.indices, submesh.normals);
 
     submesh.material.diffuseColor = glm::vec3(165, 220, 84) / 255.0f;
     submesh.material.opacity = 120 / 255.0f;

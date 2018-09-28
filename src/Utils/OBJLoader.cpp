@@ -126,11 +126,11 @@ void processTempSubmesh(ObjMesh &mesh, TempSubmesh &tempSubmesh, std::vector<glm
 
     if (!smooth) {
         for (size_t i = 0; i < vertexIndices.size(); i++) {
-            vertices.push_back(globalVertices.at(vertexIndices.at(i))); // TODO: -1
+            vertices.push_back(globalVertices.at(vertexIndices.at(i)));
             //if (tecoordIndices.size() > 0)
-            //	texcoords.push_back(globalTexcoords.at(tecoordIndices.at(i))); // TODO: -1
+            //	texcoords.push_back(globalTexcoords.at(tecoordIndices.at(i)));
             if (normalIndices.size() > 0)
-                normals.push_back(globalNormals.at(normalIndices.at(i))); // TODO: -1
+                normals.push_back(globalNormals.at(normalIndices.at(i)));
         }
 
         if (normalIndices.size() == 0) {

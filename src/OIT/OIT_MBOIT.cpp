@@ -18,13 +18,14 @@
 #include <Graphics/OpenGL/Shader.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
+#include "TilingMode.hpp"
 #include "OIT_MBOIT_Utils.hpp"
 #include "OIT_MBOIT.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
-const bool useStencilBuffer = true;
+static bool useStencilBuffer = true;
 
 enum MBOITPixelFormat {
     MBOIT_PIXEL_FORMAT_FLOAT_32, MBOIT_PIXEL_FORMAT_UNORM_16
@@ -98,16 +99,8 @@ void OIT_MBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, s
     updateMomentMode();
 }
 
-void OIT_MBOIT::updateMomentMode()
+void OIT_MBOIT::reloadShaders()
 {
-    // 1. Set shader state dependent on the selected mode
-    ShaderManager->addPreprocessorDefine("ROV", "1"); // Always use fragment shader interlock
-    ShaderManager->addPreprocessorDefine("NUM_MOMENTS", toString(numMoments));
-    ShaderManager->addPreprocessorDefine("SINGLE_PRECISION", toString((int)(pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32)));
-    ShaderManager->addPreprocessorDefine("TRIGONOMETRIC", toString((int)(!usePowerMoments)));
-    ShaderManager->addPreprocessorDefine("USE_R_RG_RGBA_FOR_MBOIT6", toString((int)USE_R_RG_RGBA_FOR_MBOIT6));
-
-    // 2. Re-load the shaders
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass1.glsl\"");
     mboitPass1Shader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
@@ -119,6 +112,19 @@ void OIT_MBOIT::updateMomentMode()
         // Copy data to new shader if this function is not called by the constructor
         blitRenderData = blitRenderData->copy(blendShader);
     }
+}
+
+void OIT_MBOIT::updateMomentMode()
+{
+    // 1. Set shader state dependent on the selected mode
+    ShaderManager->addPreprocessorDefine("ROV", "1"); // Always use fragment shader interlock
+    ShaderManager->addPreprocessorDefine("NUM_MOMENTS", toString(numMoments));
+    ShaderManager->addPreprocessorDefine("SINGLE_PRECISION", toString((int)(pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32)));
+    ShaderManager->addPreprocessorDefine("TRIGONOMETRIC", toString((int)(!usePowerMoments)));
+    ShaderManager->addPreprocessorDefine("USE_R_RG_RGBA_FOR_MBOIT6", toString((int)USE_R_RG_RGBA_FOR_MBOIT6));
+
+    // 2. Re-load the shaders
+    reloadShaders();
 
     // 3. Load textures
     Window *window = AppSettings::get()->getMainWindow();
@@ -219,6 +225,24 @@ void OIT_MBOIT::updateMomentMode()
 }
 
 
+void OIT_MBOIT::setNewState(const InternalState &newState)
+{
+    numMoments = newState.oitAlgorithmSettings.getIntValue("numMoments");
+    pixelFormat = newState.oitAlgorithmSettings.getValue("pixelFormat") == "Float" ? MBOIT_PIXEL_FORMAT_FLOAT_32
+            : MBOIT_PIXEL_FORMAT_UNORM_16;
+    if (numMoments == 6) {
+        USE_R_RG_RGBA_FOR_MBOIT6 = newState.oitAlgorithmSettings.getBoolValue("USE_R_RG_RGBA_FOR_MBOIT6");
+    }
+    usePowerMoments = newState.oitAlgorithmSettings.getBoolValue("usePowerMoments");
+
+    useStencilBuffer = newState.useStencilBuffer;
+
+    updateMomentMode();
+    reloadShaders();
+}
+
+
+
 void OIT_MBOIT::setUniformData()
 {
     Window *window = AppSettings::get()->getMainWindow();
@@ -258,7 +282,7 @@ void OIT_MBOIT::renderGUI()
                                  "Trigonometric Moments: 3 (R_RG_RGBA)", "Trigonometric Moments: 4"};
     const int momentModesNumMoments[] = {4, 6, 6, 8, 4, 6, 6, 8};
     static int momentModeIndex = -1;
-    if (momentModeIndex == -1) {
+    if (momentModeIndex == -1) { // momentModeIndex == -1
         // Initialize
         momentModeIndex = usePowerMoments ? 0 : 4;
         momentModeIndex += numMoments/2 - 2;
@@ -276,6 +300,11 @@ void OIT_MBOIT::renderGUI()
     const char *pixelFormatModes[] = {"Float 32-bit", "UNORM Integer 16-bit"};
     if (ImGui::Combo("Pixel Format", (int*)&pixelFormat, pixelFormatModes, IM_ARRAYSIZE(pixelFormatModes))) {
         updateMomentMode();
+        reRender = true;
+    }
+
+    if (selectTilingModeUI()) {
+        reloadShaders();
         reRender = true;
     }
 }

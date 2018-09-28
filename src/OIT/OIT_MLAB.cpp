@@ -11,13 +11,19 @@
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
+#include "TilingMode.hpp"
 #include "OIT_MLAB.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
-const bool useStencilBuffer = true;
+static bool useStencilBuffer = true;
+
+// Maximum number of layers
+static int maxNumNodes = 4;
+
 
 OIT_MLAB::OIT_MLAB()
 {
@@ -34,9 +40,7 @@ void OIT_MLAB::create()
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABGather.glsl\"");
 
-    gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-    resolveShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
-    clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
+    updateLayerMode();
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
     blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
@@ -56,26 +60,71 @@ void OIT_MLAB::create()
 
 void OIT_MLAB::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
+    this->sceneFramebuffer = sceneFramebuffer;
+    this->sceneDepthRBO = sceneDepthRBO;
+
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
 
-    size_t bufferSize = width * height;
-    size_t bufferSizeBytes = sizeof(MLABFragmentNode_compressed) * bufferSize;
-    void *data = (void*)malloc(bufferSizeBytes);
-    memset(data, 0, bufferSizeBytes);
-
+    size_t bufferSizeBytes = (sizeof(uint32_t) + sizeof(float)) * maxNumNodes * width * height;
     fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
-    fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, data, SHADER_STORAGE_BUFFER);
-    free(data);
-
-    size_t numFragmentsBufferSizeBytes = sizeof(int32_t) * width * height;
-    numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
-    numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+    fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
     // Buffer has to be cleared again
     clearBitSet = true;
 }
+
+
+
+void OIT_MLAB::renderGUI()
+{
+    ImGui::Separator();
+
+    if (ImGui::SliderInt("Num Layers", &maxNumNodes, 1, 64)) {
+        updateLayerMode();
+        reRender = true;
+    }
+
+    if (selectTilingModeUI()) {
+        reloadShaders();
+        clearBitSet = true;
+        reRender = true;
+    }
+}
+
+void OIT_MLAB::updateLayerMode()
+{
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("MAX_NUM_NODES", maxNumNodes);
+    reloadShaders();
+    resolutionChanged(sceneFramebuffer, sceneDepthRBO);
+}
+
+void OIT_MLAB::reloadShaders()
+{
+    gatherShader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+    resolveShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
+    clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
+    //needsNewShaders = true;
+
+    if (blitRenderData) {
+        blitRenderData = blitRenderData->copy(resolveShader);
+    }
+    if (clearRenderData) {
+        clearRenderData = clearRenderData->copy(clearShader);
+    }
+}
+
+
+void OIT_MLAB::setNewState(const InternalState &newState)
+{
+    maxNumNodes = newState.oitAlgorithmSettings.getIntValue("numLayers");
+    useStencilBuffer = newState.useStencilBuffer;
+    updateLayerMode();
+}
+
+
 
 void OIT_MLAB::setUniformData()
 {

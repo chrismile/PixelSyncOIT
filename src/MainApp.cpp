@@ -46,6 +46,7 @@
 #include "OIT/OIT_MBOIT.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "OIT/OIT_DepthPeeling.hpp"
+#include "OIT/TilingMode.hpp"
 #include "MainApp.hpp"
 
 void openglErrorCallback()
@@ -72,6 +73,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 	clearColor = Color(0, 0, 0, 255);
 
 	fpsArray.resize(16, 60.0f);
+	framerateSmoother = FramerateSmoother(1);
 
 	//Renderer->enableDepthTest();
 	//glEnable(GL_DEPTH_TEST);
@@ -91,6 +93,15 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
 
 	setRenderMode(mode, true);
 	loadModel(MODEL_FILENAMES[usedModelIndex]);
+
+
+    if (perfMeasurementMode) {
+        measurer = new AutoPerfMeasurer(getAllTestModes(), "performance.csv",
+                                        [this](const InternalState &newState) { this->setNewState(newState); });
+        continuousRendering = true; // Always use continuous rendering in performance measurement mode
+    } else {
+        measurer = NULL;
+    }
 }
 
 
@@ -174,7 +185,9 @@ void PixelSyncApp::loadModel(const std::string &filename)
 			camera->setPosition(glm::vec3(-0.15f, -0.8f, -2.4f));
 			const float scalingFactor = 0.2f;
 			scaling = matrixScaling(glm::vec3(scalingFactor));
-		} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+		} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/lagranto")) {
+			camera->setPosition(glm::vec3(-0.6f, -0.0f, -8.8f));
+		}  else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
 			camera->setPosition(glm::vec3(-0.6f, -0.4f, -1.8f));
 		} else {
 			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
@@ -258,21 +271,73 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
 	}
 }
 
+void PixelSyncApp::setNewState(const InternalState &newState)
+{
+	// 1. Handle global state changes like SSAO, tiling mode
+	/*setNewTilingMode(newState.tilingWidth, newState.tilingHeight);
+	if (useSSAO != newState.useSSAO) {
+		useSSAO = newState.useSSAO;
+		ShaderManager->invalidateShaderCache();
+		if (useSSAO) {
+			ShaderManager->addPreprocessorDefine("USE_SSAO", "");
+		} else {
+			ShaderManager->removePreprocessorDefine("USE_SSAO");
+		}
+		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+	}
+
+	// 2. Load right model file
+	std::string modelFilename = "";
+	for (int i = 0; i < NUM_MODELS; i++) {
+		if (MODEL_DISPLAYNAMES[i] == newState.modelName) {
+			modelFilename = MODEL_FILENAMES[i];
+            usedModelIndex = i;
+		}
+	}
+
+	if (modelFilename.length() < 1) {
+		Logfile::get()->writeError(std::string() + "Error in PixelSyncApp::setNewState: Invalid model name \""
+								   + "\".");
+		exit(1);
+	}
+	loadModel(modelFilename);*/
+
+	// 3. Set OIT algorithm
+	setRenderMode(newState.oitAlgorithm, true);
+
+	// 4. Pass state change to OIT mode to handle internally necessary state changes.
+	/*if (firstState || lastState.oitAlgorithmSettings.getMap() != newState.oitAlgorithmSettings.getMap()
+	        || lastState.tilingWidth != newState.tilingWidth || lastState.tilingHeight != newState.tilingHeight
+            || lastState.useStencilBuffer != newState.useStencilBuffer) {
+        oitRenderer->setNewState(newState);
+	}*/
+
+	lastState = newState;
+	firstState = false;
+}
+
+
+
 PixelSyncApp::~PixelSyncApp()
 {
+#ifdef PROFILING_MODE
 	timer.printTimeMS("gatherBegin");
 	timer.printTimeMS("renderScene");
 	timer.printTimeMS("gatherEnd");
 	timer.printTimeMS("renderToScreen");
 	timer.printTotalAvgTime();
 	timer.deleteAll();
+#endif
+
+	if (perfMeasurementMode) {
+		delete measurer;
+		measurer = NULL;
+	}
 
 	if (videoWriter != NULL) {
 		delete videoWriter;
 	}
 }
-
-#define PROFILING_MODE
 
 void PixelSyncApp::render()
 {
@@ -343,11 +408,19 @@ void PixelSyncApp::renderOIT()
 	oitRenderer->renderToScreen();
 	timer.end();
 #else
+	if (perfMeasurementMode) {
+		measurer->startMeasure();
+	}
+
 	oitRenderer->gatherBegin();
 	renderScene();
 	oitRenderer->gatherEnd();
 
 	oitRenderer->renderToScreen();
+
+	if (perfMeasurementMode) {
+		measurer->endMeasure();
+	}
 #endif
 
 	// Wireframe mode
@@ -475,10 +548,12 @@ void PixelSyncApp::renderSceneSettingsGUI()
 		reRender = true;
 	}
 
+	ImGui::SliderFloat("Move Speed", &MOVE_SPEED, 0.1, 1.0);
+
 	//ImGui::Separator();
 }
 
-void PixelSyncApp::renderScene()
+sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 {
 	ShaderProgramPtr transparencyShader;
 
@@ -489,7 +564,7 @@ void PixelSyncApp::renderScene()
 			transparencyShader->setUniform("maxVorticity", 1.0f);
 		}
 
-		if (mode == RENDER_MODE_OIT_MBOIT && shaderMode != SHADER_MODE_VORTICITY) {
+		if (shaderMode != SHADER_MODE_VORTICITY) {
 			// Hack for supporting multiple passes...
 			if (modelFilenamePure == "Data/Models/Ship_04") {
 				transparencyShader->setUniform("bandedColorShading", 0);
@@ -507,8 +582,21 @@ void PixelSyncApp::renderScene()
 			transparencyShader = ssaoHelper.getGeometryPassShader();
 		} else {
 			TexturePtr ssaoTexture = ssaoHelper.getSSAOTexture();
-			transparencyShader->setUniform("ssaoTexture", ssaoTexture, 0);
+			transparencyShader->setUniform("ssaoTexture", ssaoTexture, 4);
 		}
+	}
+
+	return transparencyShader;
+}
+
+void PixelSyncApp::renderScene()
+{
+	ShaderProgramPtr transparencyShader;
+	if (!boost::starts_with(oitRenderer->getGatherShader()->getShaderList().front()->getFileID(),
+			"DepthPeelingGatherDepthComplexity")) {
+		transparencyShader = setUniformValues();
+	} else {
+		transparencyShader = oitRenderer->getGatherShader();
 	}
 
 	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
@@ -537,6 +625,12 @@ void PixelSyncApp::update(float dt)
 	fpsArrayOffset = (fpsArrayOffset + 1) % fpsArray.size();
 	fpsArray[fpsArrayOffset] = 1.0f/dt;
 
+	if (perfMeasurementMode && !measurer->update(dt)) {
+		// All modes were tested -> quit
+		quit();
+	}
+
+
 
 	ImGuiIO &io = ImGui::GetIO();
 	if (io.WantCaptureKeyboard) {
@@ -551,7 +645,6 @@ void PixelSyncApp::update(float dt)
 		}
 	}
 
-	const float ROT_SPEED = 1.0f;
 
 	// Rotate scene around camera origin
 	if (Keyboard->isKeyDown(SDLK_x)) {
@@ -570,7 +663,6 @@ void PixelSyncApp::update(float dt)
 		reRender = true;
 	}
 
-	const float MOVE_SPEED = 1.0f;
 
 
 	glm::mat4 rotationMatrix = glm::mat4(camera->getOrientation());
@@ -611,7 +703,6 @@ void PixelSyncApp::update(float dt)
 		reRender = true;
 	}
 
-    const float MOUSE_ROT_SPEED = 0.05f;
 
     // Mouse rotation
 	if (Mouse->isButtonDown(1) && Mouse->mouseMoved()) {

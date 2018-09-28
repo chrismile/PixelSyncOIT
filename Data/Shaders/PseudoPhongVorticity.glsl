@@ -74,12 +74,17 @@ void main()
 
 	// Use vorticity
 	float linearFactor = (vorticity - minVorticity) / (maxVorticity - minVorticity);
-	vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), linearFactor);
+	vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), clamp(linearFactor, 0.0, 1.0));
+
+    vec3 normal = fragmentNormal;
+	if (length(normal) < 0.5) {
+	    normal = vec3(1.0, 0.0, 0.0);
+	}
 
 	vec3 ambientShading = ambientColor * 0.1 * occlusionFactor;
-	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(fragmentNormal, lightDirection)/2.0
+	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(normal, lightDirection)/2.0
 	        + 0.75 * occlusionFactor, 0.0, 1.0);
-	vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75, 0.0, 1.0) * 0.00001;
+	vec3 diffuseShading = diffuseColor * clamp(dot(normal, lightDirection)/2.0+0.75, 0.0, 1.0) * 0.00001;
 	vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
 	vec4 color = vec4(ambientShading + diffuseShadingVorticity + diffuseShading + specularShading,
 	    opacity * 0.00001 + diffuseColorVorticity.a * fragmentColor.a);

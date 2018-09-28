@@ -11,13 +11,22 @@
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
+#include "TilingMode.hpp"
 #include "OIT_HT.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
-const bool useStencilBuffer = true;
+static bool useStencilBuffer = true;
+
+// Maximum number of layers
+static int maxNumNodes = 4;
+
+// Compress tail with 10 bits per channel
+static bool compressTail = false;
+
 
 OIT_HT::OIT_HT()
 {
@@ -34,9 +43,7 @@ void OIT_HT::create()
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"HTGather.glsl\"");
 
-    gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
-    resolveShader = ShaderManager->getShaderProgram({"HTResolve.Vertex", "HTResolve.Fragment"});
-    clearShader = ShaderManager->getShaderProgram({"HTClear.Vertex", "HTClear.Fragment"});
+    updateLayerMode();
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
     blitRenderData = ShaderManager->createShaderAttributes(resolveShader);
@@ -56,11 +63,14 @@ void OIT_HT::create()
 
 void OIT_HT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
+    this->sceneFramebuffer = sceneFramebuffer;
+    this->sceneDepthRBO = sceneDepthRBO;
+
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
 
-    size_t bufferSizeBytes = sizeof(HTFragmentNode_compressed) * width * height;
+    size_t bufferSizeBytes = 8 * maxNumNodes * width * height;
     void *data = (void*)malloc(bufferSizeBytes);
     memset(data, 0, bufferSizeBytes);
 
@@ -68,9 +78,74 @@ void OIT_HT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl:
     fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, data, SHADER_STORAGE_BUFFER);
     free(data);
 
-    size_t fragmentTailsSizeBytes = sizeof(HTFragmentTail_compressed) * width * height;
+    size_t fragmentTailsSizeBytes = 8 * width * height;
+    if (!compressTail) {
+        fragmentTailsSizeBytes = 16 * width * height;
+    }
     fragmentTails = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentTails = Renderer->createGeometryBuffer(fragmentTailsSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
+    // Buffer has to be cleared again
+    clearBitSet = true;
+}
+
+
+void OIT_HT::renderGUI()
+{
+    ImGui::Separator();
+
+    if (ImGui::SliderInt("Num Layers", &maxNumNodes, 1, 64)) {
+        updateLayerMode();
+        reRender = true;
+    }
+
+    if (ImGui::Checkbox("10-bit Tail", &compressTail)) {
+        if (compressTail) {
+            ShaderManager->addPreprocessorDefine("COMPRESS_HT_TAIL", "");
+        } else {
+            ShaderManager->removePreprocessorDefine("COMPRESS_HT_TAIL");
+        }
+        updateLayerMode();
+        reRender = true;
+    }
+
+    if (selectTilingModeUI()) {
+        reloadShaders();
+        clearBitSet = true;
+        reRender = true;
+    }
+}
+
+void OIT_HT::updateLayerMode()
+{
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("MAX_NUM_NODES", maxNumNodes);
+    reloadShaders();
+    resolutionChanged(sceneFramebuffer, sceneDepthRBO);
+}
+
+void OIT_HT::reloadShaders()
+{
+    gatherShader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+    resolveShader = ShaderManager->getShaderProgram({"HTResolve.Vertex", "HTResolve.Fragment"});
+    clearShader = ShaderManager->getShaderProgram({"HTClear.Vertex", "HTClear.Fragment"});
+    //needsNewShaders = true;
+
+    if (blitRenderData) {
+        blitRenderData = blitRenderData->copy(resolveShader);
+    }
+    if (clearRenderData) {
+        clearRenderData = clearRenderData->copy(clearShader);
+    }
+}
+
+
+
+void OIT_HT::setUniformData()
+{
+    Window *window = AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
 
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
@@ -83,13 +158,22 @@ void OIT_HT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl:
     clearShader->setUniform("viewportW", width);
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
     clearShader->setShaderStorageBuffer(1, "FragmentTails", fragmentTails);
-
-    // Buffer has to be cleared again
-    clearBitSet = true;
 }
+
+
+void OIT_HT::setNewState(const InternalState &newState)
+{
+    maxNumNodes = newState.oitAlgorithmSettings.getIntValue("numLayers");
+    useStencilBuffer = newState.useStencilBuffer;
+    updateLayerMode();
+}
+
+
 
 void OIT_HT::gatherBegin()
 {
+    setUniformData();
+
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);

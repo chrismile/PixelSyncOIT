@@ -58,7 +58,7 @@ void main()
 {
 #ifdef USE_SSAO
     // Read ambient occlusion factor from texture
-    vec2 texCoord = vec2(gl_FragCoord.xy) + vec2(0.5, 0.5);
+    vec2 texCoord = vec2(gl_FragCoord.xy + vec2(0.5, 0.5))/textureSize(ssaoTexture, 0);
     float occlusionFactor = texture(ssaoTexture, texCoord).r;
 #else
     // No ambient occlusion

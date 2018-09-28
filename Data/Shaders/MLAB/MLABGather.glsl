@@ -36,6 +36,10 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
 
 void gatherFragment(vec4 color)
 {
+    if (color.a < 0.001) {
+        discard;
+    }
+
 	uint x = uint(gl_FragCoord.x);
 	uint y = uint(gl_FragCoord.y);
 	uint pixelIndex = addrGen(uvec2(x,y));

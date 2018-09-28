@@ -21,7 +21,8 @@
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
-const bool useStencilBuffer = true;
+static bool useStencilBuffer = true;
+const char *sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
 
 /// Expected (average) depth complexity, i.e. width*height* this value = number of fragments that can be stored
 static int expectedDepthComplexity = 8;
@@ -172,6 +173,64 @@ void OIT_LinkedList::setModeDefine()
 		ShaderManager->addPreprocessorDefine("sortingAlgorithm", "heapSort");
 	}
 }
+
+
+void OIT_LinkedList::setNewState(const InternalState &newState)
+{
+	useStencilBuffer = newState.useStencilBuffer;
+
+	maxNumFragmentsSorting = newState.oitAlgorithmSettings.getIntValue("maxNumFragmentsSorting");
+	expectedDepthComplexity = newState.oitAlgorithmSettings.getIntValue("expectedDepthComplexity");
+
+	if (expectedDepthComplexity != newState.oitAlgorithmSettings.getIntValue("expectedDepthComplexity")) {
+		expectedDepthComplexity = newState.oitAlgorithmSettings.getIntValue("expectedDepthComplexity");
+
+		Window *window = AppSettings::get()->getMainWindow();
+		int width = window->getWidth();
+		int height = window->getHeight();
+		size_t fragmentBufferSize = expectedDepthComplexity * width * height;
+		size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
+		fragmentBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
+		fragmentBuffer = Renderer->createGeometryBuffer(fragmentBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
+		gatherShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
+		resolveShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
+		gatherShader->setUniform("linkedListSize", (int)fragmentBufferSize);
+	}
+
+	bool needNewResolveShader = false;
+
+	if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 1, 2000)) {
+		ShaderManager->invalidateShaderCache();
+		ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
+		needNewResolveShader = true;
+		reRender = true;
+	}
+
+
+	// Set sorting mode
+	std::string newSortingModeString = newState.oitAlgorithmSettings.getValue("sortingMode");
+	for (int i = 0; i < IM_ARRAYSIZE(sortingModeStrings); i++) {
+		if (sortingModeStrings[i] == newSortingModeString) {
+			algorithmMode = i;
+			ShaderManager->invalidateShaderCache();
+			setModeDefine();
+			needNewResolveShader = true;
+		}
+	}
+
+	if (needNewResolveShader) {
+		resolveShader = ShaderManager->getShaderProgram({"LinkedListResolve.Vertex", "LinkedListResolve.Fragment"});
+		resolveShader->setUniform("viewportW", AppSettings::get()->getMainWindow()->getWidth());
+		//resolveShader->setUniform("viewportH", height); // Not needed
+		resolveShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
+		resolveShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
+
+		blitRenderData = blitRenderData->copy(resolveShader);
+	}
+}
+
+
 
 void OIT_LinkedList::gatherBegin()
 {

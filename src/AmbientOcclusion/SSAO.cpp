@@ -100,16 +100,17 @@ void SSAOHelper::preRender(std::function<void()> sceneRenderFunction)
     preRenderPass = false;
 
     // 2. Use G-buffer to render noisy SSAO texture
-    Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());
     Renderer->setModelMatrix(matrixIdentity());
     Renderer->bindFBO(generateSSAOTextureFBO);
     glClear(GL_COLOR_BUFFER_BIT);
     Renderer->render(generateSSAORenderData);
+    Renderer->setProjectionMatrix(matrixIdentity());
 
     // 3. Blur SSAO texture
     Renderer->blurTexture(ssaoTexture);
     glEnable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
 
     // 4. Lighting render pass using SSAO texture to read ambient occlusion factor (done by MainApp)
 }

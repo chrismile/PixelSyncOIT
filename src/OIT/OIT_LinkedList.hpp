@@ -55,6 +55,9 @@ public:
 	// OIT Renderers can render their own ImGui elements
 	virtual void renderGUI();
 
+	// For changing performance measurement modes
+	void setNewState(const InternalState &newState);
+
 private:
 	void clear();
 	void setUniformData();

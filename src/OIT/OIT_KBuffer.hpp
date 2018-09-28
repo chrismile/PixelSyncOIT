@@ -44,6 +44,13 @@ public:
 	// Blit accumulated transparent objects to screen
 	virtual void renderToScreen();
 
+	void renderGUI();
+	void updateLayerMode();
+	void reloadShaders();
+
+    // For changing performance measurement modes
+    void setNewState(const InternalState &newState);
+
 private:
 	void clear();
 	void setUniformData();
@@ -54,6 +61,9 @@ private:
 	// Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
 	sgl::ShaderAttributesPtr blitRenderData;
 	sgl::ShaderAttributesPtr clearRenderData;
+
+	sgl::FramebufferObjectPtr sceneFramebuffer;
+	sgl::RenderbufferObjectPtr sceneDepthRBO;
 };
 
 #endif /* OIT_OIT_PIXELSYNC_HPP_ */

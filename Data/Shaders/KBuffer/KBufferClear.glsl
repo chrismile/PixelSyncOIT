@@ -14,7 +14,7 @@ void main()
 
 #version 430 core
 
-#include "PixelSyncHeader.glsl"
+#include "KBufferHeader.glsl"
 #include "TiledAddress.glsl"
 
 void main()

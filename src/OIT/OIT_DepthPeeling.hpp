@@ -26,9 +26,13 @@ public:
     // Blit accumulated transparent objects to screen
     virtual void renderToScreen();
 
+    virtual void renderGUI();
+
 private:
     void clear();
     void setUniformData();
+    void computeDepthComplexity();
+    int maxDepthComplexity = 1;
 
     // Render data of depth peeling
     sgl::FramebufferObjectPtr depthPeelingFBOs[2];
@@ -37,8 +41,9 @@ private:
     sgl::FramebufferObjectPtr accumulatorFBO;
     sgl::TexturePtr colorAccumulatorTexture;
 
-    // For blitting final image to screen
-    //sgl::ShaderAttributesPtr blitRenderData;
+    // For computing the depth complexity
+    sgl::ShaderProgramPtr depthComplexityGatherShader;
+    sgl::GeometryBufferPtr numFragmentsBuffer;
 
     // Render target of the final scene
     sgl::FramebufferObjectPtr sceneFramebuffer;
