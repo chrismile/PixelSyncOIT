@@ -25,14 +25,14 @@ enum RenderModeOIT {
     RENDER_MODE_OIT_DEPTH_PEELING
 };
 
-const int NUM_MODELS = 7;
+const int NUM_MODELS = 8;
 const char *const MODEL_FILENAMES[] = {
-        "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines",
-        "Data/Models/Ship_04", "Data/Models/Monkey", "Data/Models/Box", "Data/Models/dragon",
-        "Data/Trajectories/lagranto_out.obj",
+        "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04",
+        "Data/Models/Monkey", "Data/Models/Box", "Data/Models/Plane", "Data/Models/dragon",
+        "Data/Trajectories/lagranto_out.obj"
 };
 const char *const MODEL_DISPLAYNAMES[] = {
-        "Single Streamline", "Streamlines", "Ship", "Monkey", "Box", "Dragon", "Lagranto"
+        "Single Streamline", "Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon", "Lagranto"
 };
 
 
@@ -77,10 +77,12 @@ struct InternalState
     std::string modelName;
     RenderModeOIT oitAlgorithm;
     SettingsMap oitAlgorithmSettings;
-    bool useSSAO = false;
-    bool useStencilBuffer = true;
     int tilingWidth = 2;
     int tilingHeight = 8;
+    bool useSSAO = false;
+    bool useStencilBuffer = true;
+    bool testNoInvocationInterlock = false; // Test without pixel sync
+    bool testNoAtomicOperations = false; // Test without atomic operations
 };
 
 std::vector<InternalState> getAllTestModes();

@@ -238,7 +238,6 @@ void OIT_MBOIT::setNewState(const InternalState &newState)
     useStencilBuffer = newState.useStencilBuffer;
 
     updateMomentMode();
-    reloadShaders();
 }
 
 
@@ -282,7 +281,7 @@ void OIT_MBOIT::renderGUI()
                                  "Trigonometric Moments: 3 (R_RG_RGBA)", "Trigonometric Moments: 4"};
     const int momentModesNumMoments[] = {4, 6, 6, 8, 4, 6, 6, 8};
     static int momentModeIndex = -1;
-    if (momentModeIndex == -1) { // momentModeIndex == -1
+    if (true) { // momentModeIndex == -1
         // Initialize
         momentModeIndex = usePowerMoments ? 0 : 4;
         momentModeIndex += numMoments/2 - 2;

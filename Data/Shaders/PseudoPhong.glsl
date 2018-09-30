@@ -47,6 +47,8 @@ uniform sampler2D ssaoTexture;
 #endif
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
+uniform vec3 cameraPosition; // world space
+
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
 uniform vec3 specularColor;
@@ -86,7 +88,7 @@ void main()
 	// Direct rendering
 	fragColor = color;
 #else
-#ifdef REQUIRE_INVOCATION_INTERLOCK
+#if defined(REQUIRE_INVOCATION_INTERLOCK) && !defined(TEST_NO_INVOCATION_INTERLOCK)
 	// Area of mutual exclusion for fragments mapping to the same pixel
 	beginInvocationInterlockARB();
 	gatherFragment(color);

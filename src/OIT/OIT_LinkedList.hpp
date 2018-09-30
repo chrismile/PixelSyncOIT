@@ -23,6 +23,8 @@ struct LinkedListFragmentNode
 	uint32_t next;
 };
 
+const char * const sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
+
 /**
  * An order independent transparency renderer using a per-pixel linked list.
  * The algorithm uses two read-write buffers (SSBOs in OpenGL, UAVs in DirectX).
@@ -30,9 +32,6 @@ struct LinkedListFragmentNode
  * - The start-offset buffer storing the index of the first fragment in the buffer
  *   mentioned above for each pixel.
  */
-
-const int linkedListEntriesPerPixel = 8;
-
 class OIT_LinkedList : public OIT_Renderer {
 public:
 	/**

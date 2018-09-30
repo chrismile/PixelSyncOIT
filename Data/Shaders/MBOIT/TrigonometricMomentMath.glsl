@@ -33,9 +33,9 @@ float circleToParameter(vec2 circle_point){
 	circular arc going counter clockwise from (1.0,0.0) meets root first, it 
 	returns 1.0, otherwise 0.0 or a linear ramp in the wrapping zone.*/
 float getRootWeightFactor(float reference_parameter,float root_parameter,vec4 wrapping_zone_parameters){
-	float binary_weight_factor=(root_parameter<reference_parameter)?1.0f:0.0f;
-	float linear_weight_factor=clamp(fma(root_parameter,wrapping_zone_parameters.z,wrapping_zone_parameters.w), 0.0, 1.0);
-	return binary_weight_factor+linear_weight_factor;
+	float binary_weigth_factor=(root_parameter<reference_parameter)?1.0f:0.0f;
+	float linear_weigth_factor=clamp(fma(root_parameter,wrapping_zone_parameters.z,wrapping_zone_parameters.w), 0.0, 1.0);
+	return binary_weigth_factor+linear_weigth_factor;
 }
 
 /*! This function reconstructs the transmittance at the given depth from two 
@@ -79,19 +79,19 @@ float computeTransmittanceAtDepthFrom2TrigonometricMoments(float b_0, vec2 trig_
 	SolveQuadratic(pRoot, Conjugate(c[2]), Conjugate(c[1]), Conjugate(c[0]));
 	// Figure out how to weight the weights
 	float depth_parameter = circleToParameter(circle_point);
-	vec3 weight_factor;
-	weight_factor[0] = overestimation;
+	vec3 weigth_factor;
+	weigth_factor[0] = overestimation;
 	//[unroll]
 	for(int i = 0; i != 2; ++i)
 	{
 		float root_parameter = circleToParameter(pRoot[i]);
-		weight_factor[i+1] = getRootWeightFactor(depth_parameter, root_parameter, wrapping_zone_parameters);
+		weigth_factor[i+1] = getRootWeightFactor(depth_parameter, root_parameter, wrapping_zone_parameters);
 	}
 	// Compute the appropriate linear combination of weights
 	vec2 z[3] = {circle_point, pRoot[0], pRoot[1]};
-	float f0=weight_factor[0];
-	float f1=weight_factor[1];
-	float f2=weight_factor[2];
+	float f0=weigth_factor[0];
+	float f1=weigth_factor[1];
+	float f2=weigth_factor[2];
 	vec2 f01=Divide(f1-f0,z[1]-z[0]);
 	vec2 f12=Divide(f2-f1,z[2]-z[1]);
 	vec2 f012=Divide(f12-f01,z[2]-z[0]);
@@ -167,20 +167,20 @@ float computeTransmittanceAtDepthFrom3TrigonometricMoments(float b_0, vec2 trig_
 	//pRoot[2]=normalize(pRoot[2]);
 	// Figure out how to weight the weights
 	float depth_parameter = circleToParameter(circle_point);
-	vec4 weight_factor;
-	weight_factor[0] = overestimation;
+	vec4 weigth_factor;
+	weigth_factor[0] = overestimation;
 	//[unroll]
 	for(int i = 0; i != 3; ++i)
 	{
 		float root_parameter = circleToParameter(pRoot[i]);
-		weight_factor[i+1] = getRootWeightFactor(depth_parameter, root_parameter, wrapping_zone_parameters);
+		weigth_factor[i+1] = getRootWeightFactor(depth_parameter, root_parameter, wrapping_zone_parameters);
 	}
 	// Compute the appropriate linear combination of weights
 	vec2 z[4] = {circle_point, pRoot[0], pRoot[1], pRoot[2]};
-	float f0=weight_factor[0];
-	float f1=weight_factor[1];
-	float f2=weight_factor[2];
-	float f3=weight_factor[3];
+	float f0=weigth_factor[0];
+	float f1=weigth_factor[1];
+	float f2=weigth_factor[2];
+	float f3=weigth_factor[3];
 	vec2 f01=Divide(f1-f0,z[1]-z[0]);
 	vec2 f12=Divide(f2-f1,z[2]-z[1]);
 	vec2 f23=Divide(f3-f2,z[3]-z[2]);
@@ -270,21 +270,21 @@ float computeTransmittanceAtDepthFrom4TrigonometricMoments(float b_0, vec2 trig_
 	SolveQuarticNeumark(pRoot, Conjugate(c[4]), Conjugate(c[3]), Conjugate(c[2]), Conjugate(c[1]), Conjugate(c[0]));
 	// Figure out how to weight the weights
 	float depth_parameter = circleToParameter(circle_point);
-	float weight_factor[5];
-	weight_factor[0] = overestimation;
+	float weigth_factor[5];
+	weigth_factor[0] = overestimation;
 	//[unroll]
 	for(int i = 0; i != 4; ++i)
 	{
 		float root_parameter = circleToParameter(pRoot[i]);
-		weight_factor[i+1] = getRootWeightFactor(depth_parameter, root_parameter, wrapping_zone_parameters);
+		weigth_factor[i+1] = getRootWeightFactor(depth_parameter, root_parameter, wrapping_zone_parameters);
 	}
 	// Compute the appropriate linear combination of weights
 	vec2 z[5] = {circle_point, pRoot[0], pRoot[1], pRoot[2], pRoot[3]};
-	float f0=weight_factor[0];
-	float f1=weight_factor[1];
-	float f2=weight_factor[2];
-	float f3=weight_factor[3];
-	float f4=weight_factor[4];
+	float f0=weigth_factor[0];
+	float f1=weigth_factor[1];
+	float f2=weigth_factor[2];
+	float f3=weigth_factor[3];
+	float f4=weigth_factor[4];
 	vec2 f01=Divide(f1-f0,z[1]-z[0]);
 	vec2 f12=Divide(f2-f1,z[2]-z[1]);
 	vec2 f23=Divide(f3-f2,z[3]-z[2]);

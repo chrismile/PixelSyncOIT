@@ -15,10 +15,20 @@ void gatherFragment(vec4 color)
 	frag.depth = gl_FragCoord.z;
 	frag.next = -1;
 
+#ifndef TEST_NO_ATOMIC_OPERATIONS
 	uint insertIndex = atomicCounterIncrement(fragCounter);
+#else
+	uint insertIndex = fragCounter += 1;
+#endif
+
     if (insertIndex < linkedListSize) {
     	// Insert the fragment into the linked list
+#ifndef TEST_NO_ATOMIC_OPERATIONS
         frag.next = atomicExchange(startOffset[pixelIndex], insertIndex);
+#else
+        frag.next = startOffset[pixelIndex];
+        startOffset[pixelIndex] = insertIndex;
+#endif
         fragmentBuffer[insertIndex] = frag;
     }
 }

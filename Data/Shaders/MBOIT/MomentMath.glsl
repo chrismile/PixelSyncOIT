@@ -351,9 +351,10 @@ float computeTransmittanceAtDepthFrom6PowerMoments(float b_0, vec3 b_even, vec3 
 
 	// Compute the absorbance by summing the appropriate weights
 	vec4 weigth_factor;
-	//weigth_factor[0] = overestimation;
-	//weigth_factor.yzw = (z.yzw > z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f); // TODO vectorize
-	weigth_factor = vec4(overestimation, (z[1] < z[0])?1.0f:0.0f, (z[2] < z[0])?1.0f:0.0f, (z[3] < z[0])?1.0f:0.0f);
+	weigth_factor[0] = overestimation;
+	//weigth_factor.yzw = (z.yzw > z.xxx) ? vec3 (0.0f, 0.0f, 0.0f) : vec3 (1.0f, 1.0f, 1.0f);
+	//weigth_factor = vec4(overestimation, (z[1] < z[0])?1.0f:0.0f, (z[2] < z[0])?1.0f:0.0f, (z[3] < z[0])?1.0f:0.0f);
+	weigth_factor.yzw = mix(vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), ivec3(greaterThan(z.yzw, z.xxx)));
 	// Construct an interpolation polynomial
 	float f0 = weigth_factor[0];
 	float f1 = weigth_factor[1];
@@ -459,7 +460,7 @@ float computeTransmittanceAtDepthFrom8PowerMoments(float b_0, vec4 b_even, vec4 
 	z[4] = zz[3];
 
 	// Compute the absorbance by summing the appropriate weights
-	//vec4 weigth_factor = (vec4(z[1], z[2], z[3], z[4]) <= z[0].xxxx); // TODO
+	//vec4 weigth_factor = (vec4(z[1], z[2], z[3], z[4]) <= z[0].xxxx);
 	vec4 weigth_factor = vec4(lessThanEqual(vec4(z[1], z[2], z[3], z[4]), z[0].xxxx));
 	// Construct an interpolation polynomial
 	float f0 = overestimation;

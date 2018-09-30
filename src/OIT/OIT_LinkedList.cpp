@@ -22,7 +22,6 @@ using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
 static bool useStencilBuffer = true;
-const char *sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
 
 /// Expected (average) depth complexity, i.e. width*height* this value = number of fragments that can be stored
 static int expectedDepthComplexity = 8;
@@ -137,7 +136,6 @@ void OIT_LinkedList::renderGUI()
 		reRender = true;
 	}
 
-	const char *sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
 	if (ImGui::Combo("Sorting Mode", &algorithmMode, sortingModeStrings, IM_ARRAYSIZE(sortingModeStrings))) {
 		ShaderManager->invalidateShaderCache();
 		setModeDefine();

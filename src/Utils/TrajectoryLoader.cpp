@@ -33,7 +33,7 @@ void getPointsOnCircle(std::vector<glm::vec2> &points, const glm::vec2 &center, 
 }
 
 const int NUM_CIRCLE_SEGMENTS = 8;
-const float TUBE_RADIUS = 0.01f;
+const float TUBE_RADIUS = 0.001f;
 
 void initializeCircleData(int numSegments, float radius)
 {
@@ -46,22 +46,28 @@ void initializeCircleData(int numSegments, float radius)
  * The number
  * @param center: The center of the circle in 3D space.
  * @param normal: The normal orthogonal to the circle plane.
+ * @param lastTangent: The tangent of the last circle.
  * @return The points on the oriented circle.
  */
-void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, const glm::vec3 &center, const glm::vec3 &normal)
+void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, const glm::vec3 &center, const glm::vec3 &normal,
+        glm::vec3 &lastTangent)
 {
     if (circlePoints2D.size() == 0) {
         initializeCircleData(NUM_CIRCLE_SEGMENTS, TUBE_RADIUS);
     }
 
-    glm::vec3 helperAxis(0.0f, 1.0f, 0.0f);
-    if (glm::dot(helperAxis, normal) > 0.9999f) {
+    glm::vec3 helperAxis, tangent, binormal;
+    helperAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+    //if (std::abs(glm::dot(helperAxis, normal)) > 0.9f) {
+    if (glm::length(glm::cross(helperAxis, normal)) < 0.01f) {
         // If normal == helperAxis
-        helperAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+        //helperAxis = lastTangent;
+        helperAxis = glm::vec3(0.0f, 1.0f, 0.0f);
     }
-    glm::vec3 tangent = glm::normalize(helperAxis - normal * glm::dot(helperAxis, normal)); // Gram-Schmidt
+    tangent = glm::normalize(helperAxis - normal * glm::dot(helperAxis, normal)); // Gram-Schmidt
     //glm::vec3 tangent = glm::normalize(glm::cross(normal, helperAxis));
-    glm::vec3 binormal = glm::normalize(glm::cross(normal, tangent));
+    binormal = glm::normalize(glm::cross(normal, tangent));
+    lastTangent = tangent;
 
 
     // In column-major order
@@ -127,6 +133,7 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     int numVertexPts = n;
 
     // First, create a list of tube nodes
+    glm::vec3 lastTangent = glm::vec3(1.0f, 0.0f, 0.0f);
     for (int i = 0; i < n; i++) {
         TubeNode node;
         node.center = pathLineCenters.at(i);
@@ -140,7 +147,7 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         } else {
             // Node with two neighbors - use both normals
             normal = pathLineCenters.at(i+1) - pathLineCenters.at(i);
-            normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
+            //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
         if (glm::length(normal) < 0.0001f) {
             //normal = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -149,7 +156,7 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
             continue;
         }
         node.normal = glm::normalize(normal);
-        insertOrientedCirclePoints(vertices, node.center, node.normal);
+        insertOrientedCirclePoints(vertices, node.center, node.normal, lastTangent);
         node.circleIndices.reserve(NUM_CIRCLE_SEGMENTS);
         for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
             node.circleIndices.push_back(j + i*NUM_CIRCLE_SEGMENTS);
@@ -176,6 +183,34 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
             indices.push_back(circleIndicesNext.at((j+1)%NUM_CIRCLE_SEGMENTS));
         }
     }
+    /*for (int i = 0; i < numVertexPts-1; i++) {
+        std::vector<uint32_t> &circleIndicesCurrent = tubeNodes.at(i).circleIndices;
+        std::vector<uint32_t> &circleIndicesNext = tubeNodes.at(i+1).circleIndices;
+
+        int offsetCircle2 = 0;
+        float minDist = FLT_MAX;
+        for (int i = 0; i < NUM_CIRCLE_SEGMENTS; i++) {
+            float currDist = glm::length(vertices.at(circleIndicesCurrent.at(0))
+                                         - vertices.at(circleIndicesNext.at(i)));
+            if (currDist < minDist) {
+                offsetCircle2 = i;
+                minDist = currDist;
+            }
+        }
+
+        for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
+            // Build two CCW triangles (one quad) for each side
+            // Triangle 1
+            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
+            indices.push_back(circleIndicesCurrent.at(j));
+            indices.push_back(circleIndicesNext.at((j+offsetCircle2)%NUM_CIRCLE_SEGMENTS));
+
+            // Triangle 2
+            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
+            indices.push_back(circleIndicesNext.at((j+offsetCircle2)%NUM_CIRCLE_SEGMENTS));
+            indices.push_back(circleIndicesNext.at((j+1+offsetCircle2)%NUM_CIRCLE_SEGMENTS));
+        }
+    }*/
 }
 
 

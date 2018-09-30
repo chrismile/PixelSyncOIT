@@ -29,6 +29,8 @@
 using namespace std;
 using namespace sgl;
 
+//#define PROFILING_MODE
+
 enum ShaderMode {
 	SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_VORTICITY, SHADER_MODE_AMBIENT_OCCLUSION
 };
@@ -78,7 +80,7 @@ private:
 	bool useSSAO = false;
 
 	// Mode
-	RenderModeOIT mode = RENDER_MODE_OIT_HT;
+	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT;
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
 
@@ -96,7 +98,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 2;
+    int usedModelIndex = 1;
     Color bandingColor;
     Color clearColor;
     bool cullBackface = true;

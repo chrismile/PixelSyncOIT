@@ -126,6 +126,9 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 	camera->onResolutionChanged(event);
 	oitRenderer->resolutionChanged(sceneFramebuffer, sceneDepthRBO);
 	ssaoHelper.resolutionChanged();
+	if (perfMeasurementMode) {
+		measurer->resolutionChanged(sceneFramebuffer);
+	}
 	reRender = true;
 }
 
@@ -273,8 +276,20 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
 
 void PixelSyncApp::setNewState(const InternalState &newState)
 {
-	// 1. Handle global state changes like SSAO, tiling mode
-	/*setNewTilingMode(newState.tilingWidth, newState.tilingHeight);
+    // 1. Test whether fragment shader invocation interlock (Pixel Sync) or atomic operations shall be disabled
+	if (newState.testNoInvocationInterlock) {
+		ShaderManager->addPreprocessorDefine("TEST_NO_INVOCATION_INTERLOCK", "");
+	} else {
+		ShaderManager->removePreprocessorDefine("TEST_NO_INVOCATION_INTERLOCK");
+	}
+	if (newState.testNoAtomicOperations) {
+		ShaderManager->addPreprocessorDefine("TEST_NO_ATOMIC_OPERATIONS", "");
+	} else {
+		ShaderManager->removePreprocessorDefine("TEST_NO_ATOMIC_OPERATIONS");
+	}
+
+	// 2. Handle global state changes like SSAO, tiling mode
+	setNewTilingMode(newState.tilingWidth, newState.tilingHeight);
 	if (useSSAO != newState.useSSAO) {
 		useSSAO = newState.useSSAO;
 		ShaderManager->invalidateShaderCache();
@@ -286,7 +301,7 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
 	}
 
-	// 2. Load right model file
+	// 3. Load right model file
 	std::string modelFilename = "";
 	for (int i = 0; i < NUM_MODELS; i++) {
 		if (MODEL_DISPLAYNAMES[i] == newState.modelName) {
@@ -300,17 +315,17 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 								   + "\".");
 		exit(1);
 	}
-	loadModel(modelFilename);*/
+	loadModel(modelFilename);
 
-	// 3. Set OIT algorithm
+	// 4. Set OIT algorithm
 	setRenderMode(newState.oitAlgorithm, true);
 
-	// 4. Pass state change to OIT mode to handle internally necessary state changes.
-	/*if (firstState || lastState.oitAlgorithmSettings.getMap() != newState.oitAlgorithmSettings.getMap()
+	// 5. Pass state change to OIT mode to handle internally necessary state changes.
+	if (firstState || lastState.oitAlgorithmSettings.getMap() != newState.oitAlgorithmSettings.getMap()
 	        || lastState.tilingWidth != newState.tilingWidth || lastState.tilingHeight != newState.tilingHeight
             || lastState.useStencilBuffer != newState.useStencilBuffer) {
         oitRenderer->setNewState(newState);
-	}*/
+	}
 
 	lastState = newState;
 	firstState = false;
@@ -385,7 +400,12 @@ void PixelSyncApp::renderOIT()
 	}
 
 	Renderer->bindFBO(sceneFramebuffer);
-	Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, clearColor);
+	if (perfMeasurementMode) {
+		// Transparent background in measurement mode! This way, reference metrics can compare opacity values.
+		Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, Color(0,0,0,0));
+	} else {
+		Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, clearColor);
+	}
 	//Renderer->setCamera(camera); // Resets rendertarget...
 
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
@@ -413,7 +433,7 @@ void PixelSyncApp::renderOIT()
 	}
 
 	oitRenderer->gatherBegin();
-	renderScene();
+	oitRenderer->renderScene();
 	oitRenderer->gatherEnd();
 
 	oitRenderer->renderToScreen();
@@ -561,7 +581,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 		transparencyShader = oitRenderer->getGatherShader();
 		if (shaderMode == SHADER_MODE_VORTICITY) {
 			transparencyShader->setUniform("minVorticity", 0.0f);
-			transparencyShader->setUniform("maxVorticity", 1.0f);
+            transparencyShader->setUniform("maxVorticity", 1.0f);
+            //transparencyShader->setUniform("cameraPosition", -camera->getPosition());
 		}
 
 		if (shaderMode != SHADER_MODE_VORTICITY) {
