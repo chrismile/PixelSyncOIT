@@ -54,7 +54,7 @@ void openglErrorCallback()
     std::cerr << "Application callback" << std::endl;
 }
 
-PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWriter(NULL)
+PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(false), videoWriter(NULL)
 {
 	plainShader = ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
 	whiteSolidShader = ShaderManager->getShaderProgram({"WhiteSolid.Vertex", "WhiteSolid.Fragment"});
@@ -98,6 +98,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), recording(false), videoWrit
     if (perfMeasurementMode) {
         measurer = new AutoPerfMeasurer(getAllTestModes(), "performance.csv",
                                         [this](const InternalState &newState) { this->setNewState(newState); });
+        measurer->resolutionChanged(sceneFramebuffer);
         continuousRendering = true; // Always use continuous rendering in performance measurement mode
     } else {
         measurer = NULL;
@@ -126,7 +127,7 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 	camera->onResolutionChanged(event);
 	oitRenderer->resolutionChanged(sceneFramebuffer, sceneDepthRBO);
 	ssaoHelper.resolutionChanged();
-	if (perfMeasurementMode) {
+	if (perfMeasurementMode && measurer != NULL) {
 		measurer->resolutionChanged(sceneFramebuffer);
 	}
 	reRender = true;

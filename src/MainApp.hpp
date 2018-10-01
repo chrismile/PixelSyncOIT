@@ -116,7 +116,7 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = false;
+    bool perfMeasurementMode = true;
 	InternalState lastState;
 	bool firstState = true;
 #ifdef PROFILING_MODE

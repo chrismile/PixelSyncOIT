@@ -62,6 +62,7 @@ uniform int bandedColorShading = 1;
 
 uniform float minVorticity;
 uniform float maxVorticity;
+uniform bool transparencyMapping = true;
 
 void main()
 {
@@ -77,7 +78,10 @@ void main()
 
 	// Use vorticity
 	float linearFactor = (vorticity - minVorticity) / (maxVorticity - minVorticity);
-	vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), clamp(linearFactor, 0.0, 1.0));
+	//vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), clamp(linearFactor, 0.0, 1.0));
+	float interpolationFactor = clamp(linearFactor, 0.0, 1.0);
+	//float interpolationFactor = clamp(linearFactor*1.4 - 0.2, 0.0, 1.0);
+	vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), interpolationFactor);
 
     vec3 normal = fragmentNormal;
 	if (length(normal) < 0.5) {
@@ -94,6 +98,10 @@ void main()
 	vec4 color = vec4(ambientShading + diffuseShadingVorticity + diffuseShading + specularShading,
 	    opacity * 0.00001 + diffuseColorVorticity.a * fragmentColor.a);
 	color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a * fragmentColor.a);
+
+	if (!transparencyMapping) {
+	    color.a = fragmentColor.a;
+	}
 
     /*float outlineAngle = dot(normal, viewDir);
 	if (abs(outlineAngle) < 0.2) {

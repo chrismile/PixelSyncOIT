@@ -79,7 +79,11 @@ void OIT_LinkedList::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
 	startOffsetBuffer = Renderer->createGeometryBuffer(startOffsetBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
 	atomicCounterBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
-	atomicCounterBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t), NULL, ATOMIC_COUNTER_BUFFER);
+	if (testNoAtomicOperations) {
+		atomicCounterBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t), NULL, SHADER_STORAGE_BUFFER);
+	} else {
+		atomicCounterBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t), NULL, ATOMIC_COUNTER_BUFFER);
+	}
 }
 
 void OIT_LinkedList::setUniformData()
@@ -94,7 +98,12 @@ void OIT_LinkedList::setUniformData()
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
     gatherShader->setShaderStorageBuffer(1, "StartOffsetBuffer", startOffsetBuffer);
-    gatherShader->setAtomicCounterBuffer(0, atomicCounterBuffer);
+	if (testNoAtomicOperations) {
+		gatherShader->setShaderStorageBuffer(2, "FragCounterBuffer", atomicCounterBuffer);
+	}
+	else {
+		gatherShader->setAtomicCounterBuffer(0, atomicCounterBuffer);
+	}
     gatherShader->setUniform("linkedListSize", (int)fragmentBufferSize);
 
     resolveShader->setUniform("viewportW", width);
@@ -176,9 +185,7 @@ void OIT_LinkedList::setModeDefine()
 void OIT_LinkedList::setNewState(const InternalState &newState)
 {
 	useStencilBuffer = newState.useStencilBuffer;
-
-	maxNumFragmentsSorting = newState.oitAlgorithmSettings.getIntValue("maxNumFragmentsSorting");
-	expectedDepthComplexity = newState.oitAlgorithmSettings.getIntValue("expectedDepthComplexity");
+	testNoAtomicOperations = newState.testNoAtomicOperations;
 
 	if (expectedDepthComplexity != newState.oitAlgorithmSettings.getIntValue("expectedDepthComplexity")) {
 		expectedDepthComplexity = newState.oitAlgorithmSettings.getIntValue("expectedDepthComplexity");
@@ -198,7 +205,8 @@ void OIT_LinkedList::setNewState(const InternalState &newState)
 
 	bool needNewResolveShader = false;
 
-	if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 1, 2000)) {
+	if (maxNumFragmentsSorting != newState.oitAlgorithmSettings.getIntValue("maxNumFragmentsSorting")) {
+		maxNumFragmentsSorting = newState.oitAlgorithmSettings.getIntValue("maxNumFragmentsSorting");
 		ShaderManager->invalidateShaderCache();
 		ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
 		needNewResolveShader = true;

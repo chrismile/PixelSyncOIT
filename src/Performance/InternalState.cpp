@@ -25,7 +25,7 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
                 state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
                         { "usePowerMoments", (useTrigMoments ? "false" : "true") },
                         { "numMoments", sgl::toString(numMoments) },
-                        { "accuracy", (unorm == 0 ? "Float" : "UNORM") },
+                        { "pixelFormat", (unorm == 0 ? "Float" : "UNORM") },
                 });
                 states.push_back(state);
             }
@@ -93,16 +93,9 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
                         { "maxNumFragmentsSorting", sgl::toString(maxNumFragmentsSorting) },
                         { "expectedDepthComplexity", sgl::toString(expectedDepthComplexity) },
                 });
+                states.push_back(state);
             }
         }
-    }
-
-    for (int numLayers = 1; numLayers <= 32; numLayers *= 2) {
-        state.name = std::string() + "K-Buffer " + sgl::toString(numLayers) + " Layers";
-        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-                { "numLayers", sgl::toString(numLayers) },
-        });
-        states.push_back(state);
     }
 }
 
@@ -112,6 +105,71 @@ void getTestModesDepthPeeling(std::vector<InternalState> &states, InternalState 
     state.name = std::string() + "Depth Peeling";
     states.push_back(state);
 }
+
+
+// Test: No atomic operations, no pixel sync. Performance difference?
+void getTestModesNoSync(std::vector<InternalState> &states, InternalState state)
+{
+    state.testNoInvocationInterlock = true;
+    state.testNoAtomicOperations = true;
+
+    state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
+    state.name = std::string() + "MLAB " + sgl::toString(8) + " Layers, No Sync";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "numLayers", sgl::toString(8) },
+    });
+    states.push_back(state);
+
+
+    state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
+    state.name = std::string() + "MBOIT " + sgl::toString(4) + " Power Moments Float, No Sync";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(4) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
+
+
+    state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
+    state.name = std::string() + "Linked List Priority Queue "
+                 + sgl::toString(1024) + " Layers, "
+                 + sgl::toString(32) + " Nodes per Pixel, No Atomic Operations";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "sortingMode", "Priority Queue" },
+            { "maxNumFragmentsSorting", sgl::toString(1024) },
+            { "expectedDepthComplexity", sgl::toString(32) },
+    });
+    states.push_back(state);
+}
+
+
+// Test: Different tiling modes for different algorithms
+void getTestModesTiling(std::vector<InternalState> &states, InternalState state)
+{
+    std::string tilingString = std::string() + sgl::toString(state.tilingWidth)
+            + "x" + sgl::toString(state.tilingHeight);
+
+    state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
+    state.name = std::string() + "MLAB " + sgl::toString(8) + " Layers, Tiling " + tilingString;
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "numLayers", sgl::toString(8) },
+    });
+    states.push_back(state);
+
+
+    state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
+    state.name = std::string() + "MBOIT " + sgl::toString(4) + " Power Moments Float, Tiling " + tilingString;
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(4) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
+
+    states.push_back(state);
+}
+
 
 
 std::vector<InternalState> getAllTestModes()
@@ -127,6 +185,30 @@ std::vector<InternalState> getAllTestModes()
     getTestModesHT(states, state);
     getTestModesKBuffer(states, state);
     getTestModesLinkedList(states, state);
+
+    // Performance test: Different values for tiling
+    InternalState stateTiling = state;
+    stateTiling.tilingWidth = 2;
+    stateTiling.tilingWidth = 2;
+    getTestModesTiling(states, stateTiling);
+    stateTiling.tilingWidth = 2;
+    stateTiling.tilingWidth = 8;
+    getTestModesTiling(states, stateTiling);
+    stateTiling.tilingWidth = 8;
+    stateTiling.tilingWidth = 2;
+    getTestModesTiling(states, stateTiling);
+    stateTiling.tilingWidth = 4;
+    stateTiling.tilingWidth = 4;
+    getTestModesTiling(states, stateTiling);
+    stateTiling.tilingWidth = 8;
+    stateTiling.tilingWidth = 8;
+    getTestModesTiling(states, stateTiling);
+
+    // Performance test: No synchronization operations
+    InternalState stateNoSync = state;
+    stateNoSync.testNoInvocationInterlock = true;
+    stateNoSync.testNoAtomicOperations = true;
+    getTestModesNoSync(states, stateNoSync);
 
     return states;
 }

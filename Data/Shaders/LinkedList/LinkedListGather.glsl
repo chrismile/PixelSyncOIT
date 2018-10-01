@@ -18,7 +18,7 @@ void gatherFragment(vec4 color)
 #ifndef TEST_NO_ATOMIC_OPERATIONS
 	uint insertIndex = atomicCounterIncrement(fragCounter);
 #else
-	uint insertIndex = fragCounter += 1;
+	uint insertIndex = fragCounter++;
 #endif
 
     if (insertIndex < linkedListSize) {

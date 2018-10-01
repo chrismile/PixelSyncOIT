@@ -63,6 +63,7 @@ private:
 	void setModeDefine();
 
 	bool useNewShader = false;
+	bool testNoAtomicOperations = false;
 
 	sgl::GeometryBufferPtr fragmentBuffer;
 	sgl::GeometryBufferPtr startOffsetBuffer;

@@ -228,8 +228,8 @@ void OIT_MBOIT::updateMomentMode()
 void OIT_MBOIT::setNewState(const InternalState &newState)
 {
     numMoments = newState.oitAlgorithmSettings.getIntValue("numMoments");
-    pixelFormat = newState.oitAlgorithmSettings.getValue("pixelFormat") == "Float" ? MBOIT_PIXEL_FORMAT_FLOAT_32
-            : MBOIT_PIXEL_FORMAT_UNORM_16;
+    pixelFormat = newState.oitAlgorithmSettings.getValue("pixelFormat") == "Float"
+            ? MBOIT_PIXEL_FORMAT_FLOAT_32 : MBOIT_PIXEL_FORMAT_UNORM_16;
     if (numMoments == 6) {
         USE_R_RG_RGBA_FOR_MBOIT6 = newState.oitAlgorithmSettings.getBoolValue("USE_R_RG_RGBA_FOR_MBOIT6");
     }
