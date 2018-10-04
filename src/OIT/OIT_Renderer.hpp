@@ -37,7 +37,8 @@ public:
 
 
 	virtual void create()=0;
-	virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)=0;
+	virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+			sgl::RenderbufferObjectPtr &sceneDepthRBO)=0;
 
 	// In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
 	virtual void gatherBegin()=0;

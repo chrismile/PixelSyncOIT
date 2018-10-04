@@ -80,7 +80,7 @@ private:
 	bool useSSAO = false;
 
 	// Mode
-	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT;
+	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT; // RENDER_MODE_VOXEL_RAYTRACING_LINES
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
 
@@ -98,7 +98,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 1;
+    int usedModelIndex = 0;
     Color bandingColor;
     Color clearColor;
     bool cullBackface = true;

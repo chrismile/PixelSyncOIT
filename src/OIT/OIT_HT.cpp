@@ -61,9 +61,11 @@ void OIT_HT::create()
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_HT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
+void OIT_HT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+        sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     this->sceneFramebuffer = sceneFramebuffer;
+    this->sceneTexture = sceneTexture;
     this->sceneDepthRBO = sceneDepthRBO;
 
     Window *window = AppSettings::get()->getMainWindow();
@@ -121,7 +123,7 @@ void OIT_HT::updateLayerMode()
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("MAX_NUM_NODES", maxNumNodes);
     reloadShaders();
-    resolutionChanged(sceneFramebuffer, sceneDepthRBO);
+    resolutionChanged(sceneFramebuffer, sceneTexture, sceneDepthRBO);
 }
 
 void OIT_HT::reloadShaders()

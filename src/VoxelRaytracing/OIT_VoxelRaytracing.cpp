@@ -3,14 +3,25 @@
 //
 
 #include <cmath>
-#include <GL/glew.h>
-#include <Graphics/Texture/TextureManager.hpp>
 
+#include <GL/glew.h>
+
+#include <Utils/File/FileUtils.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
+#include <Graphics/Scene/Camera.hpp>
+
+#include "../Performance/InternalState.hpp"
+#include "VoxelCurveDiscretizer.hpp"
 #include "OIT_VoxelRaytracing.hpp"
 
-OIT_VoxelRaytracing::OIT_VoxelRaytracing()
+OIT_VoxelRaytracing::OIT_VoxelRaytracing(sgl::CameraPtr &camera, const sgl::Color &clearColor) : camera(camera), clearColor(clearColor)
 {
-    ;
+    create();
+}
+
+void OIT_VoxelRaytracing::setClearColor(const sgl::Color &clearColor)
+{
+    this->clearColor = clearColor;
 }
 
 void OIT_VoxelRaytracing::create()
@@ -18,20 +29,69 @@ void OIT_VoxelRaytracing::create()
     renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
 }
 
-void OIT_VoxelRaytracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
+void OIT_VoxelRaytracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+        sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
 
     sgl::TextureSettings settings;
-    renderImage = sgl::TextureManager->createEmptyTexture(width, height, settings);
+    //renderImage = sgl::TextureManager->createEmptyTexture(width, height, settings);
+    renderImage = sceneTexture;
 }
+
+void OIT_VoxelRaytracing::loadModel(int modelIndex)
+{
+    fromFile(MODEL_FILENAMES[modelIndex]);
+}
+
+void OIT_VoxelRaytracing::fromFile(const std::string &filename)
+{
+    // Check if voxel grid is already created
+    // Pure filename without extension (to create compressed .voxel filename)
+    std::string modelFilenamePure = sgl::FileUtils::get()->removeExtension(filename);
+
+    std::string modelFilenameVoxelGrid = modelFilenamePure + ".voxel";
+    std::string modelFilenameObj = modelFilenamePure + ".obj";
+
+    VoxelGridDataCompressed compressedData;
+    if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
+        VoxelCurveDiscretizer discretizer;
+        discretizer.createFromFile(modelFilenameObj);
+        compressedData = discretizer.compressData();
+        //saveToFile(modelFilenameVoxelGrid, compressedData); // TODO When format is stable
+    } else {
+        loadFromFile(modelFilenameVoxelGrid, compressedData);
+    }
+    compressedToGPUData(compressedData, data);
+}
+
 
 void OIT_VoxelRaytracing::setUniformData()
 {
+    sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
+
+    // Set camera data
+    renderShader->setUniform("fov", camera->getFOVy());
+    renderShader->setUniform("aspectRatio", camera->getAspectRatio());
+    glm::mat4 inverseViewMatrix = glm::inverse(camera->getViewMatrix());
+    renderShader->setUniform("inverseViewMatrix", inverseViewMatrix);
+
+    renderShader->setUniform("clearColor", clearColor);
+
     //renderShader->setShaderStorageBuffer(0, "LineSegmentBuffer", NULL);
     renderShader->setUniformImageTexture(0, renderImage, GL_RGBA8, GL_WRITE_ONLY);
+    renderShader->setUniform("viewportSize", glm::ivec2(width, height));
+
+    sgl::ShaderManager->bindShaderStorageBuffer(0, data.voxelLineListOffsets);
+    sgl::ShaderManager->bindShaderStorageBuffer(1, data.numLinesInVoxel);
+    sgl::ShaderManager->bindShaderStorageBuffer(2, data.lineSegments);
+    //renderShader->setUniform("densityTexture", data.densityTexture, 0);
+
+    renderShader->setUniform("worldSpaceToVoxelSpace", data.worldToVoxelGridMatrix);
 }
 
 inline int nextPowerOfTwo(int x) {
@@ -58,6 +118,8 @@ glm::ivec2 rangePadding1D(int w, int localSize) {
 
 void OIT_VoxelRaytracing::renderToScreen()
 {
+    setUniformData();
+
     sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();

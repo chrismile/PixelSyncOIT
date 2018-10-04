@@ -75,9 +75,9 @@ void SSAOHelper::resolutionChanged()
     gBufferFBO->bindRenderbuffer(depthStencilRBO, DEPTH_STENCIL_ATTACHMENT);
 
 
-    generateSSAOTextureFBO = Renderer->createFBO();
     TextureSettings ssaoTextureSettings = textureSettings;
     ssaoTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
+    generateSSAOTextureFBO = Renderer->createFBO();
     generateSSAOTextureFBO->bindTexture(ssaoTexture);
 }
 

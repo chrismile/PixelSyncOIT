@@ -69,7 +69,8 @@ void OIT_DepthComplexity::create()
     //Renderer->errorCheck();
 }
 
-void OIT_DepthComplexity::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
+void OIT_DepthComplexity::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+        sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();

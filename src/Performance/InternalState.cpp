@@ -16,8 +16,8 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
 
-    for (int useTrigMoments = 0; useTrigMoments < 1; useTrigMoments++) {
-        for (int unorm = 0; unorm < 1; unorm++) {
+    for (int useTrigMoments = 0; useTrigMoments <= 1; useTrigMoments++) {
+        for (int unorm = 0; unorm <= 1; unorm++) {
             for (int numMoments = 4; numMoments <= 8; numMoments += 2) {
                 state.name = std::string() + "MBOIT " + sgl::toString(numMoments)
                              + (useTrigMoments ? " Trigonometric Moments " : " Power Moments ")
@@ -81,9 +81,9 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
     state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
 
     // sortingModeStrings
-    for (int expectedDepthComplexity = 8; expectedDepthComplexity <= 128; expectedDepthComplexity *= 2) {
+    for (int expectedDepthComplexity = 32; expectedDepthComplexity <= 64; expectedDepthComplexity *= 2) {
         for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
-            for (int maxNumFragmentsSorting = 64; maxNumFragmentsSorting <= 1024; maxNumFragmentsSorting *= 2) {
+            for (int maxNumFragmentsSorting = 256; maxNumFragmentsSorting <= 1024; maxNumFragmentsSorting *= 2) {
                 std::string sortingMode = sortingModeStrings[sortingModeIdx];
                 state.name = std::string() + "Linked List " + sortingMode + + " "
                              + sgl::toString(maxNumFragmentsSorting) + " Layers, "
@@ -166,8 +166,6 @@ void getTestModesTiling(std::vector<InternalState> &states, InternalState state)
             { "pixelFormat", "Float" },
     });
     states.push_back(state);
-
-    states.push_back(state);
 }
 
 
@@ -176,7 +174,8 @@ std::vector<InternalState> getAllTestModes()
 {
     std::vector<InternalState> states;
     InternalState state;
-    state.modelName = "Monkey";
+    //state.modelName = "Monkey";
+    state.modelName = "Streamlines";
 
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
@@ -188,20 +187,23 @@ std::vector<InternalState> getAllTestModes()
 
     // Performance test: Different values for tiling
     InternalState stateTiling = state;
-    stateTiling.tilingWidth = 2;
-    stateTiling.tilingWidth = 2;
+    stateTiling.tilingWidth = 1;
+    stateTiling.tilingHeight = 1;
     getTestModesTiling(states, stateTiling);
     stateTiling.tilingWidth = 2;
-    stateTiling.tilingWidth = 8;
+    stateTiling.tilingHeight = 2;
+    getTestModesTiling(states, stateTiling);
+    stateTiling.tilingWidth = 2;
+    stateTiling.tilingHeight = 8;
     getTestModesTiling(states, stateTiling);
     stateTiling.tilingWidth = 8;
-    stateTiling.tilingWidth = 2;
+    stateTiling.tilingHeight = 2;
     getTestModesTiling(states, stateTiling);
     stateTiling.tilingWidth = 4;
-    stateTiling.tilingWidth = 4;
+    stateTiling.tilingHeight = 4;
     getTestModesTiling(states, stateTiling);
     stateTiling.tilingWidth = 8;
-    stateTiling.tilingWidth = 8;
+    stateTiling.tilingHeight = 8;
     getTestModesTiling(states, stateTiling);
 
     // Performance test: No synchronization operations

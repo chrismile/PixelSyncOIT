@@ -26,6 +26,10 @@ const uint32_t MESH_FORMAT_VERSION = 2u;
 
 void writeMesh3D(const std::string &filename, const ObjMesh &mesh) {
 	std::ofstream file(filename.c_str(), std::ofstream::binary);
+	if (!file.is_open()) {
+		Logfile::get()->writeError(std::string() + "Error in writeMesh3D: File \"" + filename + "\" not found.");
+		return;
+	}
 
 	sgl::BinaryWriteStream stream;
 	stream.write((uint32_t)MESH_FORMAT_VERSION);

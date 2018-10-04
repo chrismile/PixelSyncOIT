@@ -9,10 +9,10 @@
 #include <map>
 #include <Utils/Convert.hpp>
 
-const int NUM_OIT_MODES = 8;
+const int NUM_OIT_MODES = 9;
 const char *const OIT_MODE_NAMES[] = {
         "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
-        "Depth Complexity", "No OIT", "Depth Peeling"
+        "Depth Complexity", "No OIT", "Depth Peeling", "Voxel Raytracing (Lines)"
 };
 enum RenderModeOIT {
     RENDER_MODE_OIT_KBUFFER = 0,
@@ -22,14 +22,15 @@ enum RenderModeOIT {
     RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
     RENDER_MODE_OIT_DEPTH_COMPLEXITY,
     RENDER_MODE_OIT_DUMMY,
-    RENDER_MODE_OIT_DEPTH_PEELING
+    RENDER_MODE_OIT_DEPTH_PEELING,
+    RENDER_MODE_VOXEL_RAYTRACING_LINES
 };
 
 const int NUM_MODELS = 8;
 const char *const MODEL_FILENAMES[] = {
         "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04",
         "Data/Models/Monkey", "Data/Models/Box", "Data/Models/Plane", "Data/Models/dragon",
-        "Data/Trajectories/lagranto_out.obj"
+        "Data/Trajectories/lagranto_out"
 };
 const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline", "Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon", "Lagranto"

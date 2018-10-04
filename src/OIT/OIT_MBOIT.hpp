@@ -43,7 +43,8 @@ public:
 
     OIT_MBOIT();
     virtual void create();
-    virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO);
+    virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+            sgl::RenderbufferObjectPtr &sceneDepthRBO);
 
     virtual void gatherBegin();
     virtual void renderScene();

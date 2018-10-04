@@ -47,6 +47,7 @@
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "OIT/OIT_DepthPeeling.hpp"
 #include "OIT/TilingMode.hpp"
+#include "VoxelRaytracing/OIT_VoxelRaytracing.hpp"
 #include "MainApp.hpp"
 
 void openglErrorCallback()
@@ -70,7 +71,15 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 
 	bandingColor = Color(165, 220, 84, 120);
-	clearColor = Color(0, 0, 0, 255);
+	if (perfMeasurementMode) {
+		// Transparent background in measurement mode! This way, reference metrics can compare opacity values.
+		clearColor = Color(0, 0, 0, 0);
+	} else {
+		clearColor = Color(0, 0, 0, 255);
+	}
+
+	//Timer->setFPSLimit(false, 60);
+	Timer->setFPSLimit(true, 60);
 
 	fpsArray.resize(16, 60.0f);
 	framerateSmoother = FramerateSmoother(1);
@@ -96,6 +105,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 
 
     if (perfMeasurementMode) {
+    	sgl::FileUtils::get()->ensureDirectoryExists("images");
         measurer = new AutoPerfMeasurer(getAllTestModes(), "performance.csv",
                                         [this](const InternalState &newState) { this->setNewState(newState); });
         measurer->resolutionChanged(sceneFramebuffer);
@@ -125,7 +135,7 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 
 	camera->onResolutionChanged(event);
 	camera->onResolutionChanged(event);
-	oitRenderer->resolutionChanged(sceneFramebuffer, sceneDepthRBO);
+	oitRenderer->resolutionChanged(sceneFramebuffer, sceneTexture, sceneDepthRBO);
 	ssaoHelper.resolutionChanged();
 	if (perfMeasurementMode && measurer != NULL) {
 		measurer->resolutionChanged(sceneFramebuffer);
@@ -169,8 +179,15 @@ void PixelSyncApp::loadModel(const std::string &filename)
 
 	updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
-	transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
-	boundingBox = transparentObject.boundingBox;
+    if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
+        boundingBox = transparentObject.boundingBox;
+    } else {
+        OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
+        voxelRaytracer->loadModel(usedModelIndex);
+        transparentObject = MeshRenderer();
+    }
+
 	rotation = glm::mat4(1.0f);
 	scaling = glm::mat4(1.0f);
 
@@ -212,7 +229,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	reRender = true;
 	ShaderManager->invalidateShaderCache();
 
-	mode = newMode;
+    RenderModeOIT oldMode = mode;
+    mode = newMode;
 	oitRenderer = boost::shared_ptr<OIT_Renderer>();
 	if (mode == RENDER_MODE_OIT_KBUFFER) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_KBuffer);
@@ -229,8 +247,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	} else if (mode == RENDER_MODE_OIT_DUMMY) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
     } else if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
-    } else {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
+	} else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_VoxelRaytracing(camera, clearColor));
+	} else {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
 		Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
 		mode = RENDER_MODE_OIT_DUMMY;
@@ -241,7 +261,12 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 
 	transparencyShader = oitRenderer->getGatherShader();
 
-	if (transparentObject.isLoaded()) {
+	if (oldMode == RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
+	        && !transparentObject.isLoaded()) {
+	    loadModel(MODEL_FILENAMES[usedModelIndex]);
+	}
+
+	if (transparentObject.isLoaded() && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 		transparentObject.setNewShader(transparencyShader);
 		if (shaderMode != SHADER_MODE_VORTICITY) {
 			if (modelFilenamePure == "Data/Models/Ship_04") {
@@ -251,8 +276,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 			}
 		}
 	}
-	//Timer->setFPSLimit(false, 60);
-	Timer->setFPSLimit(true, 60);
+    if (modelFilenamePure.length() > 0 && mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+        OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
+        voxelRaytracer->loadModel(usedModelIndex);
+    }
 
     resolutionChanged(EventPtr());
 }
@@ -394,6 +421,22 @@ void PixelSyncApp::renderOIT()
 		static_cast<OIT_MBOIT*>(oitRenderer.get())->setScreenSpaceBoundingBox(screenSpaceBoundingBox, camera);
 	}
 
+	if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+#ifdef PROFILING_MODE
+		oitRenderer->renderToScreen();
+#else
+		if (perfMeasurementMode) {
+			measurer->startMeasure();
+		}
+
+		oitRenderer->renderToScreen();
+
+		if (perfMeasurementMode) {
+			measurer->endMeasure();
+		}
+#endif
+		return;
+	}
 	//Renderer->setBlendMode(BLEND_ALPHA);
 
 	if (useSSAO) {
@@ -401,12 +444,13 @@ void PixelSyncApp::renderOIT()
 	}
 
 	Renderer->bindFBO(sceneFramebuffer);
-	if (perfMeasurementMode) {
+	/*if (perfMeasurementMode) {
 		// Transparent background in measurement mode! This way, reference metrics can compare opacity values.
 		Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, Color(0,0,0,0));
 	} else {
 		Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, clearColor);
-	}
+	}*/
+	Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, clearColor);
 	//Renderer->setCamera(camera); // Resets rendertarget...
 
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
@@ -528,6 +572,9 @@ void PixelSyncApp::renderSceneSettingsGUI()
 	if (ImGui::ColorEdit3("Clear Color", (float*)&clearColorSelection, 0)) {
 		clearColor = colorFromFloat(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z,
 									clearColorSelection.w);
+		if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+			static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
+		}
 		reRender = true;
 	}
 

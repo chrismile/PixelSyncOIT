@@ -38,7 +38,8 @@ void OIT_DepthPeeling::create()
                                                                    "DepthPeelingGatherDepthComplexity.Fragment"});
 }
 
-void OIT_DepthPeeling::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
+void OIT_DepthPeeling::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+        sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     this->sceneFramebuffer = sceneFramebuffer;
 

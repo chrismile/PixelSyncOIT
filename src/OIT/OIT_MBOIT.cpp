@@ -79,7 +79,8 @@ void OIT_MBOIT::setGatherShader(const std::string &name)
     gatherShaderName = name;
 }
 
-void OIT_MBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::RenderbufferObjectPtr &sceneDepthRBO)
+void OIT_MBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+        sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     this->sceneFramebuffer = sceneFramebuffer;
     this->sceneDepthRBO = sceneDepthRBO;
