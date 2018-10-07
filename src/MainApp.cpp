@@ -126,7 +126,9 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 	// Buffers for off-screen rendering
 	sceneFramebuffer = Renderer->createFBO();
 	TextureSettings textureSettings;
-	textureSettings.internalFormat = GL_RGBA;
+    textureSettings.internalFormat = GL_RGBA8; // For i965 driver to accept image load/store
+    textureSettings.pixelType = GL_UNSIGNED_BYTE;
+    textureSettings.pixelFormat = GL_RGBA;
 	sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
 	sceneFramebuffer->bindTexture(sceneTexture);
 	sceneDepthRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);

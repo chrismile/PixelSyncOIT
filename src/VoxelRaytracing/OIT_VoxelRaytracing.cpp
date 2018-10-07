@@ -132,7 +132,7 @@ void OIT_VoxelRaytracing::renderToScreen()
     int height = window->getHeight();
 
     sgl::ShaderManager->getMaxComputeWorkGroupCount();
-    glm::ivec2 globalWorkSize = rangePadding2D(width, height, glm::ivec2(4, 8)); // last vector: local work group size
+    glm::ivec2 globalWorkSize = rangePadding2D(width, height, glm::ivec2(8, 4)); // last vector: local work group size
     renderShader->dispatchCompute(globalWorkSize.x, globalWorkSize.y);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }

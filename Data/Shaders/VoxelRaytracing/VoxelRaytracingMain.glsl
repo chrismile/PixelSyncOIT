@@ -6,7 +6,7 @@ layout (local_size_x = 8, local_size_y = 4, local_size_z = 1) in;
 
 
 // Output of rasterizer
-layout(rgba32f, binding = 0) uniform image2D imageOutput;
+layout(rgba8, binding = 0) writeonly uniform image2D imageOutput;
 
 
 // Size of the rendering viewport (/window)
