@@ -136,7 +136,7 @@ sgl::AABB3 computeAABB(const std::vector<glm::vec3> &vertices)
 	return sgl::AABB3(minV, maxV);
 }
 
-MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader)
+MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, float *maxVorticity)
 {
 	//std::vector<uint32_t> indices;
 	//std::vector<glm::vec3> vertices;
@@ -176,6 +176,13 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 			GeometryBufferPtr texcoordBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec2)*texcoords.size(),
 					(void*)&texcoords.front(), VERTEX_BUFFER);
 			renderData->addGeometryBuffer(texcoordBuffer, "textureCoordinates", ATTRIB_FLOAT, 2);
+
+			if (maxVorticity != NULL) {
+				*maxVorticity = 0.0f;
+				for (size_t i = 0; i < texcoords.size(); i++) {
+					*maxVorticity = std::max(*maxVorticity, texcoords.at(i).x);
+				}
+			}
 		}
 		if (normals.size() > 0) {
 			GeometryBufferPtr normalBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*normals.size(),

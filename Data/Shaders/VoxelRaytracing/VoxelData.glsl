@@ -4,8 +4,8 @@
 #define GRID_RESOLUTION 256
 #define QUANTIZATION_RESOLUTION 8
 #define QUANTIZATION_RESOLUTION_LOG2 3
-#define TUBE_RADIUS 0.01
-#define MAX_NUM_LINES_PER_VOXEL 256
+#define TUBE_RADIUS 0.2
+#define MAX_NUM_LINES_PER_VOXEL 8
 #define gridResolution ivec3(256, 256, 256)
 
 struct LineSegment
@@ -76,13 +76,19 @@ void decompressLine(in LineSegmentCompressed compressedLine, out LineSegment dec
 void loadLinesInVoxel(ivec3 voxelIndex)
 {
     int voxelIndex1D = voxelIndex.x + voxelIndex.y*GRID_RESOLUTION + voxelIndex.z*GRID_RESOLUTION*GRID_RESOLUTION;
-    uint lineListOffset = voxelLineListOffsets[voxelIndex1D];
     currVoxelNumLines = numLinesInVoxel[voxelIndex1D];
-    for (int i = 0; i < currVoxelNumLines; i++) {
+    if (currVoxelNumLines <= 0) {
+        return;
+    }
+
+    uint lineListOffset = voxelLineListOffsets[voxelIndex1D];
+    for (uint i = 0; i < currVoxelNumLines && i < MAX_NUM_LINES_PER_VOXEL; i++) {
 #ifdef PACK_LINES
         decompressLine(lineSegments[lineListOffset+i], currVoxelLines[i]);
 #else
         currVoxelLines[i] = lineSegments[lineListOffset+i];
+        //currVoxelLines[i].v1 = vec3(voxelIndex);
+        //currVoxelLines[i].v2 = vec3(voxelIndex) + vec3(1.0);
 #endif
     }
 }

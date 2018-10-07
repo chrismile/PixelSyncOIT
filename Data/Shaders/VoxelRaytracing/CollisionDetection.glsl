@@ -115,18 +115,18 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
     float C = SQR(rayOrigin.x - sphereCenter.x) + SQR(rayOrigin.y - sphereCenter.y) + SQR(rayOrigin.z - sphereCenter.z)
             - SQR(sphereRadius);
 
-    float discriminant = SQR(B) - 4.0*C;
+    float discriminant = SQR(B) - 4.0*A*C;
     if (discriminant < 0.0) {
         return false; // No intersection
     }
 
     float discriminantSqrt = sqrt(discriminant);
-    float t0 = (-B - discriminant) / (2.0 * A);
+    float t0 = (-B - discriminantSqrt) / (2.0 * A);
     // Intersection(s) behind the ray origin?
     if (t0 >= 0.0) {
         intersectionPosition = rayOrigin + t0 * rayDirection;
     } else {
-        float t1 = (-B + discriminant) / (2.0 * A);
+        float t1 = (-B + discriminantSqrt) / (2.0 * A);
         if (t1 >= 0.0) {
             intersectionPosition = rayOrigin + t1 * rayDirection;
         } else {
@@ -152,36 +152,70 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
             deltaP - dot(deltaP, tubeDirection) * tubeDirection);
     float C = squareVec(deltaP - dot(deltaP, tubeDirection) * tubeDirection) - SQR(tubeRadius);
 
-    float discriminant = SQR(B) - 4.0*C;
+    float discriminant = SQR(B) - 4.0*A*C;
     if (discriminant < 0.0) {
         return false; // No intersection
     }
 
     float discriminantSqrt = sqrt(discriminant);
-    float t0 = (-B - discriminant) / (2.0 * A);
+    float t0 = (-B - discriminantSqrt) / (2.0 * A);
     // Intersection(s) behind the ray origin?
     if (t0 >= 0.0) {
         intersectionPosition = rayOrigin + t0 * rayDirection;
-        if (dot(tubeDirection, intersectionPosition - tubeStart) < 0
-                || dot(tubeDirection, intersectionPosition - tubeEnd) > 0) {
+        if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
+                && dot(tubeDirection, intersectionPosition - tubeEnd) < 0) {
             // Outside of finite cylinder
-            return false;
-        }
-    } else {
-        float t1 = (-B + discriminant) / (2.0 * A);
-        if (t1 >= 0.0) {
-            intersectionPosition = rayOrigin + t1 * rayDirection;
-            if (dot(tubeDirection, intersectionPosition - tubeStart) < 0
-                    || dot(tubeDirection, intersectionPosition - tubeEnd) > 0) {
-                // Outside of finite cylinder
-                return false;
-            }
-        } else {
-            return false;
+            return true;
         }
     }
 
-    return true;
+    float t1 = (-B + discriminantSqrt) / (2.0 * A);
+    if (t1 >= 0.0) {
+        intersectionPosition = rayOrigin + t1 * rayDirection;
+        if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
+                && dot(tubeDirection, intersectionPosition - tubeEnd) < 0) {
+            // Outside of finite cylinder
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Implementation of ray-sphere intersection (idea from "Advanced Rendering" lecture by Denis Zorin,
+ * NYU Media Research Lab). For more details see: https://mrl.nyu.edu/~dzorin/rend05/lecture2.pdf
+ */
+bool rayTubeInfIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3 tubeEnd, float tubeRadius,
+        out vec3 intersectionPosition)
+{
+    vec3 tubeDirection = normalize(tubeEnd - tubeStart);
+    vec3 deltaP = rayOrigin - tubeStart;
+    float A = squareVec(rayDirection - dot(rayDirection, tubeDirection) * tubeDirection);
+    float B = 2.0 * dot(rayDirection - dot(rayDirection, tubeDirection) * tubeDirection,
+            deltaP - dot(deltaP, tubeDirection) * tubeDirection);
+    float C = squareVec(deltaP - dot(deltaP, tubeDirection) * tubeDirection) - SQR(tubeRadius);
+
+    float discriminant = SQR(B) - 4.0*A*C;
+    if (discriminant < 0.0) {
+        return false; // No intersection
+    }
+
+    float discriminantSqrt = sqrt(discriminant);
+    float t0 = (-B - discriminantSqrt) / (2.0 * A);
+    // Intersection(s) behind the ray origin?
+    if (t0 >= 0.0) {
+        intersectionPosition = rayOrigin + t0 * rayDirection;
+        return true;
+    }
+
+    float t1 = (-B + discriminantSqrt) / (2.0 * A);
+    if (t1 >= 0.0) {
+        intersectionPosition = rayOrigin + t1 * rayDirection;
+        return true;
+    }
+
+    return false;
 }
 
 #endif

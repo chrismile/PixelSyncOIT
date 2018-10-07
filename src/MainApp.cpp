@@ -162,7 +162,7 @@ void PixelSyncApp::saveScreenshot(const std::string &filename)
 
 
 
-void PixelSyncApp::loadModel(const std::string &filename)
+void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 {
 	// Pure filename without extension (to create compressed .binmesh filename)
 	modelFilenamePure = FileUtils::get()->removeExtension(filename);
@@ -180,7 +180,7 @@ void PixelSyncApp::loadModel(const std::string &filename)
 	updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader);
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, &maxVorticity);
         boundingBox = transparentObject.boundingBox;
     } else {
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -196,22 +196,28 @@ void PixelSyncApp::loadModel(const std::string &filename)
 	camera->setScale(glm::vec3(1.0f));
 	if (modelFilenamePure == "Data/Models/Ship_04") {
 		transparencyShader->setUniform("bandedColorShading", 0);
-		camera->setPosition(glm::vec3(0.0f, -1.5f, -5.0f));
+		if (resetCamera) {
+			camera->setPosition(glm::vec3(0.0f, -1.5f, -5.0f));
+		}
 	} else {
 		if (shaderMode != SHADER_MODE_VORTICITY) {
 			transparencyShader->setUniform("bandedColorShading", 1);
 		}
 
+		if (resetCamera) {
+			if (modelFilenamePure == "Data/Models/dragon") {
+				camera->setPosition(glm::vec3(-0.15f, -0.8f, -2.4f));
+			} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/lagranto")) {
+				camera->setPosition(glm::vec3(-0.6f, -0.0f, -8.8f));
+			}  else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+				camera->setPosition(glm::vec3(-0.6f, -0.4f, -1.8f));
+			} else {
+				camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
+			}
+		}
 		if (modelFilenamePure == "Data/Models/dragon") {
-			camera->setPosition(glm::vec3(-0.15f, -0.8f, -2.4f));
 			const float scalingFactor = 0.2f;
 			scaling = matrixScaling(glm::vec3(scalingFactor));
-		} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/lagranto")) {
-			camera->setPosition(glm::vec3(-0.6f, -0.0f, -8.8f));
-		}  else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-			camera->setPosition(glm::vec3(-0.6f, -0.4f, -1.8f));
-		} else {
-			camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
 		}
 	}
 
@@ -229,7 +235,6 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	reRender = true;
 	ShaderManager->invalidateShaderCache();
 
-    RenderModeOIT oldMode = mode;
     mode = newMode;
 	oitRenderer = boost::shared_ptr<OIT_Renderer>();
 	if (mode == RENDER_MODE_OIT_KBUFFER) {
@@ -263,7 +268,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 
 	if (oldMode == RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
 	        && !transparentObject.isLoaded()) {
-	    loadModel(MODEL_FILENAMES[usedModelIndex]);
+	    loadModel(MODEL_FILENAMES[usedModelIndex], false);
 	}
 
 	if (transparentObject.isLoaded() && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
@@ -279,9 +284,15 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
     if (modelFilenamePure.length() > 0 && mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         voxelRaytracer->loadModel(usedModelIndex);
-    }
+	}
+	if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+		OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
+		voxelRaytracer->setClearColor(clearColor);
+		voxelRaytracer->setLightDirection(lightDirection);
+	}
 
     resolutionChanged(EventPtr());
+	oldMode = mode;
 }
 
 void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
@@ -588,6 +599,9 @@ void PixelSyncApp::renderSceneSettingsGUI()
 	if (angleChanged) {
 		// https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#To_cartesian_coordinates
 		lightDirection = glm::vec3(sinf(theta) * cosf(phi), sinf(theta) * sinf(phi), cosf(theta));
+		if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+			static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLightDirection(lightDirection);
+		}
 		reRender = true;
 	}
 
@@ -603,7 +617,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 		reRender = true;
 	} ImGui::SameLine();
 	ImGui::Checkbox("Continuous rendering", &continuousRendering);
-	ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);ImGui::SameLine();
+    ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);ImGui::SameLine();
 
 	if (ImGui::Checkbox("SSAO", &useSSAO)) {
 		ShaderManager->invalidateShaderCache();
@@ -615,6 +629,12 @@ void PixelSyncApp::renderSceneSettingsGUI()
 		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
 		reRender = true;
 	}
+    if (shaderMode == SHADER_MODE_VORTICITY) {
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
+            reRender = true;
+        }
+    }
 
 	ImGui::SliderFloat("Move Speed", &MOVE_SPEED, 0.1, 1.0);
 
@@ -629,8 +649,10 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 		transparencyShader = oitRenderer->getGatherShader();
 		if (shaderMode == SHADER_MODE_VORTICITY) {
 			transparencyShader->setUniform("minVorticity", 0.0f);
-            transparencyShader->setUniform("maxVorticity", 1.0f);
-            //transparencyShader->setUniform("cameraPosition", -camera->getPosition());
+            transparencyShader->setUniform("maxVorticity", maxVorticity);
+            transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+			//std::cout << "Max Vorticity: " << *maxVorticity << std::endl;
+			//transparencyShader->setUniform("cameraPosition", -camera->getPosition());
 		}
 
 		if (shaderMode != SHADER_MODE_VORTICITY) {

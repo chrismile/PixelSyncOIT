@@ -24,6 +24,11 @@ void OIT_VoxelRaytracing::setClearColor(const sgl::Color &clearColor)
     this->clearColor = clearColor;
 }
 
+void OIT_VoxelRaytracing::setLightDirection(const glm::vec3 &lightDirection)
+{
+    this->lightDirection = lightDirection;
+}
+
 void OIT_VoxelRaytracing::create()
 {
     renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
@@ -81,6 +86,7 @@ void OIT_VoxelRaytracing::setUniformData()
     renderShader->setUniform("inverseViewMatrix", inverseViewMatrix);
 
     renderShader->setUniform("clearColor", clearColor);
+    renderShader->setUniform("lightDirection", lightDirection);
 
     //renderShader->setShaderStorageBuffer(0, "LineSegmentBuffer", NULL);
     renderShader->setUniformImageTexture(0, renderImage, GL_RGBA8, GL_WRITE_ONLY);
@@ -89,9 +95,10 @@ void OIT_VoxelRaytracing::setUniformData()
     sgl::ShaderManager->bindShaderStorageBuffer(0, data.voxelLineListOffsets);
     sgl::ShaderManager->bindShaderStorageBuffer(1, data.numLinesInVoxel);
     sgl::ShaderManager->bindShaderStorageBuffer(2, data.lineSegments);
-    //renderShader->setUniform("densityTexture", data.densityTexture, 0);
+    renderShader->setUniform("densityTexture", data.densityTexture, 0);
 
     renderShader->setUniform("worldSpaceToVoxelSpace", data.worldToVoxelGridMatrix);
+    //renderShader->setUniform("voxelSpaceToWorldSpace", glm::inverse(data.worldToVoxelGridMatrix));
 }
 
 inline int nextPowerOfTwo(int x) {

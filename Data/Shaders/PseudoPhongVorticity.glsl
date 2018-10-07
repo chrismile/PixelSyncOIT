@@ -11,6 +11,7 @@ out vec3 fragmentNormal;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 out float vorticity;
+uniform bool transparencyMapping = true;
 
 // Color of the object
 uniform vec4 color;
@@ -98,6 +99,9 @@ void main()
 	vec4 color = vec4(ambientShading + diffuseShadingVorticity + diffuseShading + specularShading,
 	    opacity * 0.00001 + diffuseColorVorticity.a * fragmentColor.a);
 	color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a * fragmentColor.a);
+	if (!transparencyMapping) {
+	    color.a = 1.0;
+	}
 
 	if (!transparencyMapping) {
 	    color.a = fragmentColor.a;

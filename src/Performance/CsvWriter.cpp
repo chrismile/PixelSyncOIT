@@ -75,7 +75,7 @@ void CsvWriter::newRow()
 
 std::string CsvWriter::escapeString(const std::string &s)
 {
-    if (s.find(",") < 0 && s.find("\"") < 0 && s.find("\n") < 0) {
+    if (s.find(",") == std::string::npos && s.find("\"") == std::string::npos && s.find("\n") == std::string::npos) {
         // Nothing to escape
         return s;
     }

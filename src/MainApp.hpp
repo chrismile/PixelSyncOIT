@@ -57,7 +57,7 @@ protected:
 		SHADER_MODE_UPDATE_NEW_OIT_RENDERER, SHADER_MODE_UPDATE_NEW_MODEL, SHADER_MODE_UPDATE_SSAO_CHANGE
 	};
 	void updateShaderMode(ShaderModeUpdate modeUpdate);
-	void loadModel(const std::string &filename);
+	void loadModel(const std::string &filename, bool resetCamera = true);
 
 	// For changing performance measurement modes
 	void setNewState(const InternalState &newState);
@@ -80,9 +80,11 @@ private:
 	bool useSSAO = false;
 
 	// Mode
-	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT; // RENDER_MODE_VOXEL_RAYTRACING_LINES
+	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT; // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT
+    RenderModeOIT oldMode = mode;
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
+	float maxVorticity = 1.0f;
 
 	// Off-screen rendering
 	FramebufferObjectPtr sceneFramebuffer;
@@ -98,10 +100,11 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 0;
+    int usedModelIndex = 1;
     Color bandingColor;
     Color clearColor;
     bool cullBackface = true;
+    bool transparencyMapping = true;
     std::vector<float> fpsArray;
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
@@ -116,7 +119,7 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = true;
+    bool perfMeasurementMode = false;
 	InternalState lastState;
 	bool firstState = true;
 #ifdef PROFILING_MODE

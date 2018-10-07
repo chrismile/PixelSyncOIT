@@ -19,58 +19,77 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
     float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
     ivec3 voxelIndex;
 
-    int dx = int(sign(endPoint.x - startPoint.x));
-    if (dx != 0)
-        tDeltaX = min(dx / (endPoint.x - startPoint.x), 1e7);
+    int stepX = int(sign(endPoint.x - startPoint.x));
+    if (stepX != 0)
+        tDeltaX = min(stepX / (endPoint.x - startPoint.x), 1e7);
     else
         tDeltaX = 1e7; // inf
-    if (dx > 0)
+    if (stepX > 0)
         tMaxX = tDeltaX * (1.0 - fract(startPoint.x));
     else
         tMaxX = tDeltaX * fract(startPoint.x);
     voxelIndex.x = int(startPoint.x);
 
-    int dy = int(sign(endPoint.y - startPoint.y));
-    if (dy != 0)
-        tDeltaY = min(dy / (endPoint.y - startPoint.y), 1e7);
+    int stepY = int(sign(endPoint.y - startPoint.y));
+    if (stepY != 0)
+        tDeltaY = min(stepY / (endPoint.y - startPoint.y), 1e7);
     else
         tDeltaY = 1e7; // inf
-    if (dy > 0)
+    if (stepY > 0)
         tMaxY = tDeltaY * (1.0 - fract(startPoint.y));
     else
         tMaxY = tDeltaY * fract(startPoint.y);
     voxelIndex.y = int(startPoint.y);
 
-    int dz = int(sign(endPoint.z - startPoint.z));
-    if (dz != 0)
-        tDeltaZ = min(dz / (endPoint.z - startPoint.z), 1e7);
+    int stepZ = int(sign(endPoint.z - startPoint.z));
+    if (stepZ != 0)
+        tDeltaZ = min(stepZ / (endPoint.z - startPoint.z), 1e7);
     else
         tDeltaZ = 1e7; // inf
-    if (dz > 0)
+    if (stepZ > 0)
         tMaxZ = tDeltaZ * (1.0 - fract(startPoint.z));
     else
         tMaxZ = tDeltaZ * fract(startPoint.z);
     voxelIndex.z = int(startPoint.z);
 
+    if (stepX == 0 && stepY == 0 && stepZ == 0) {
+        return vec4(0.0);
+    }
+
+    loadLinesInVoxel(voxelIndex);
+    if (currVoxelNumLines > 0) {
+        vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex);
+        if (blend(voxelColor, color)) {
+            // Early ray termination
+            return color;
+        }
+    }
+
     while (true) {
         if (tMaxX < tMaxY) {
             if (tMaxX < tMaxZ) {
-                voxelIndex.x += dx;
+                voxelIndex.x += stepX;
                 tMaxX += tDeltaX;
             } else {
-                voxelIndex.z += dz;
+                voxelIndex.z += stepZ;
                 tMaxZ += tDeltaZ;
             }
         } else {
             if (tMaxY < tMaxZ) {
-                voxelIndex.y += dy;
+                voxelIndex.y += stepY;
                 tMaxY += tDeltaY;
             } else {
-                voxelIndex.z += dz;
+                voxelIndex.z += stepZ;
                 tMaxZ += tDeltaZ;
             }
         }
-        if (tMaxX > 1.0 && tMaxY > 1.0 && tMaxZ > 1.0)
+        //if (!(any(lessThan(voxelIndex, ivec3(0))) || any(greaterThanEqual(voxelIndex, gridResolution)))
+        //        && (tMaxX > 1.0 && tMaxY > 1.0 && tMaxZ > 1.0))
+        //    return vec4(vec3(1.0, 0.0, 0.0), 1.0);
+
+        //if (tMaxX > 1.0 && tMaxY > 1.0 && tMaxZ > 1.0)
+        //    break;
+        if (any(lessThan(voxelIndex, ivec3(0))) || any(greaterThanEqual(voxelIndex, gridResolution)))
             break;
 
         loadLinesInVoxel(voxelIndex);
@@ -80,6 +99,7 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
                 // Early ray termination
                 return color;
             }
+            //return vec4(vec3(1.0), 1.0);
         }
     }
 

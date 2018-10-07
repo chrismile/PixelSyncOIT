@@ -31,7 +31,7 @@ public:
     // Returns true if the passed line intersects the voxel boundaries
     bool addPossibleIntersections(const glm::vec3 &v1, const glm::vec3 &v2, float a1, float a2);
     void setIndex(glm::ivec3 index);
-    float computeDensity();
+    float computeDensity(float maxVorticity);
 
     glm::ivec3 index;
     std::vector<LineSegment> lines;
@@ -56,10 +56,16 @@ public:
 private:
     glm::ivec3 gridResolution, quantizationResolution;
     VoxelDiscretizer *voxels;
+    float maxVorticity;
 
     void nextStreamline(const Curve &line);
     void insertLine(const Curve &line);
-    void quantizePoint(const glm::vec3 &v, glm::ivec3 &qv);
+
+    void quantizeLine(const LineSegment &line, LineSegmentQuantized &lineQuantized, int faceIndex1, int faceIndex2);
+    void compressLine(const LineSegment &line, LineSegmentCompressed &lineCompressed, const glm::ivec3 &voxelIndex);
+    void quantizePoint(const glm::vec3 &v, glm::ivec2 &qv, int faceIndex1, int faceIndex2);
+    int computeFaceIndex(const glm::vec3 &v, const glm::ivec3 &voxelIndex);
+
     std::vector<VoxelDiscretizer*> getVoxelsInAABB(const sgl::AABB3 &aabb);
     sgl::AABB3 linesBoundingBox;
     glm::mat4 linesToVoxel, voxelToLines;

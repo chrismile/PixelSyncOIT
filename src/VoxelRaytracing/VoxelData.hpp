@@ -13,8 +13,8 @@
 #include <Graphics/Buffers/GeometryBuffer.hpp>
 #include <Graphics/Texture/Texture.hpp>
 
-inline float opacityMapping(float attr) {
-    return glm::clamp(attr, 0.0f, 1.0f);
+inline float opacityMapping(float attr, float maxVorticity) {
+    return glm::clamp(attr/maxVorticity, 0.0f, 1.0f);
 }
 
 struct Curve
@@ -28,7 +28,7 @@ struct LineSegment
     LineSegment(const glm::vec3 &v1, float a1, const glm::vec3 &v2, float a2) : v1(v1), a1(a1), v2(v2), a2(a2) {}
     LineSegment() : v1(0.0f), a1(0.0f), v2(0.0f), a2(0.0f) {}
     float length() { return glm::length(v2 - v1); }
-    float avgOpacity() { return (opacityMapping(a1) + opacityMapping(a2)) / 2.0f; }
+    float avgOpacity(float maxVorticity) { return (opacityMapping(a1, maxVorticity) + opacityMapping(a2, maxVorticity)) / 2.0f; }
 
     glm::vec3 v1; // Vertex position
     float a1; // Vertex attribute
@@ -52,7 +52,7 @@ struct LineSegmentCompressed
     // For c = log2(QUANTIZATION_RESOLUTION^2) = 2*log2(QUANTIZATION_RESOLUTION):
     // Bit 6-(5+c), (6+c)-(5+2c): Quantized face position of start/end point.
     uint32_t linePosition;
-    // Bit 0-15, 16-31: Attribute of start point (normalized to [0,1]).
+    // Bit 0-7, 8-15: Attribute of start point (normalized to [0,1] using a transfer function).
     uint32_t attributes;
 };
 

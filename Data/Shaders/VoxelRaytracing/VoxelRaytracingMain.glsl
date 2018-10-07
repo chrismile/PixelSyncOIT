@@ -19,10 +19,13 @@ uniform float fov;
 
 // Convert points in world space to voxel space (voxel grid at range (0, 0, 0) to (rx, ry, rz)).
 uniform mat4 worldSpaceToVoxelSpace;
+uniform mat4 voxelSpaceToWorldSpace;
 uniform mat4 inverseViewMatrix;
 
 uniform vec4 clearColor = vec4(0.0);
 
+// Global lighting data
+uniform vec3 lightDirection = vec3(1.0, 0.0, 0.0);
 
 #include "CollisionDetection.glsl"
 #include "Blend.glsl"
@@ -43,29 +46,83 @@ void main()
 	vec4 fragColor = clearColor;
 
 	// Testing code
-	if (length(vec2(fragCoord)) < 200.0f) {
+	/*if (length(vec2(fragCoord)) < 200.0f) {
 		//fragColor = vec4(0.0, 1.0, 0.0, 1.0);
 	}
 
-	/*vec2 centeredWindowCoords = vec2(fragCoord) - vec2(viewportSize) / 2.0;
+	vec2 centeredWindowCoords = vec2(fragCoord) - vec2(viewportSize) / 2.0;
 	vec3 rayOrigin = vec3(centeredWindowCoords, 0.0);
 	vec3 rayDirection = vec3(0.0, 0.0, -1.0);
 
 	float tubeRadius = 100.0f;
+    bool hasIntersection = false;
 
-	vec3 sphereCenter = vec3(-300.0, 0.0, -10.0);
-	vec3 intersectionPosition;
-	if (raySphereIntersection(rayOrigin, rayDirection, sphereCenter, tubeRadius, intersectionPosition)) {
-		fragColor = vec4(0.0, 1.0, 0.0, 1.0);
-	}
+	vec3 tubePoint1 = vec3(-300.0, -49.0, -200.0);
+	vec3 tubePoint2 = vec3(300.0, 100.0, -150.0);
+	vec3 tubeIntersection, sphereIntersection1, sphereIntersection2;
+	bool hasTubeIntersection, hasSphereIntersection1, hasSphereIntersection2;
+	hasSphereIntersection1 = raySphereIntersection(rayOrigin, rayDirection, tubePoint1, tubeRadius, sphereIntersection1);
+	hasSphereIntersection2 = raySphereIntersection(rayOrigin, rayDirection, tubePoint2, tubeRadius, sphereIntersection2);
+	hasTubeIntersection = rayTubeIntersection(rayOrigin, rayDirection, tubePoint1, tubePoint2, tubeRadius, tubeIntersection);
+	hasIntersection = hasTubeIntersection || hasSphereIntersection1 || hasSphereIntersection2;
 
-	vec3 tubeStart = vec3(200.0, -200.0, -10.0);
-	vec3 tubeEnd = vec3(300.0, 100.0, -10.0);
-	if (rayTubeIntersection(rayOrigin, rayDirection, tubeStart, tubeEnd, tubeRadius, intersectionPosition)) {
-		fragColor = vec4(0.0, 1.0, 0.0, 1.0);
-	}
+    // Get closest intersection point
+    int closestIntersectionIdx = 0;
+    vec3 intersection = tubeIntersection;
+    float distTube = distanceSqr(rayOrigin, tubeIntersection);
+    float distSphere1 = distanceSqr(rayOrigin, sphereIntersection1);
+    float distSphere2 = distanceSqr(rayOrigin, sphereIntersection2);
+    float dist = 1e7;
+    if (hasTubeIntersection && distTube < dist) {
+        closestIntersectionIdx = 0;
+        intersection = tubeIntersection;
+        dist = distTube;
+    }
+    if (hasSphereIntersection1 && distSphere1 < dist) {
+        closestIntersectionIdx = 1;
+        intersection = sphereIntersection1;
+        dist = distSphere1;
+    }
+    if (hasSphereIntersection2 && distSphere2 < dist) {
+        closestIntersectionIdx = 2;
+        intersection = sphereIntersection2;
+        dist = distSphere2;
+    }
 
-    vec3 boxPosition = vec3(0.0, 0.0, -10);
+	if (hasIntersection) {
+        vec3 closestIntersectionNormal;
+        float closestIntersectionAttribute;
+        if (closestIntersectionIdx == 0) {
+            // Tube
+            vec3 v = tubePoint2 - tubePoint1;
+            vec3 u = intersection - tubePoint1;
+            float t = dot(v, u) / dot(v, v);
+            vec3 centerPt = tubePoint1 + t*v;
+            //closestIntersectionAttribute = (1-t)*currVoxelLines[i].a1 + t*currVoxelLines[i].a2; // TODO
+            closestIntersectionNormal =  normalize(intersection - centerPt);
+            //fragColor = vec4(vec3(1.0, 0.0, 0.0), 1.0);
+        } else {
+            vec3 sphereCenter;
+            if (closestIntersectionIdx == 1) {
+                sphereCenter = tubePoint1;
+                //closestIntersectionAttribute = currVoxelLines[i].a1;
+            } else {
+                sphereCenter = tubePoint2;
+                //closestIntersectionAttribute = currVoxelLines[i].a2;
+            }
+            closestIntersectionNormal = normalize(intersection - sphereCenter);
+            //fragColor = vec4(vec3(clamp(dot(closestIntersectionNormal, lightDirection), 0.0, 1.0) + 0.5), 1.0);
+            //fragColor = vec4(vec3(0.0, 1.0, 0.0), 1.0);
+        }
+        //fragColor = vec4(vec3(sqrt(dist)/200.0f), 1.0);
+
+        // Evaluate lighting
+        fragColor = vec4(vec3(clamp(dot(closestIntersectionNormal, lightDirection), 0.0, 1.0) + 0.5), 1.0);
+    }*/
+
+
+
+    /*vec3 boxPosition = vec3(0.0, 0.0, -10);
     vec3 lower = boxPosition + vec3(-100, -100, -10);
     vec3 upper = boxPosition + vec3(100, 100, 0);
     vec3 entrancePoint;
@@ -86,20 +143,12 @@ void main()
     vec3 voxelGridUpper = vec3(gridResolution);
     float tNear, tFar;
     if (rayBoxIntersectionRayCoords(rayOrigin, rayDirection, voxelGridLower, voxelGridUpper, tNear, tFar)) {
-        /*if (boxContainsPoint(rayOrigin, voxelGridLower, voxelGridUpper)) {
-            entrancePoint = rayOrigin;
-        }
-		fragColor = traverseVoxelGrid(rayOrigin, rayDirection, entrancePoint, exitPoint);*/
-		/*if (tNear > 0.0) {
-            fragColor = vec4(0.0, 0.0, 1.0, 1.0);
-		} else {
-            fragColor = vec4(1.0, 0.0, 1.0, 1.0);
-		}*/
 		// First intersection point behind camera ray origin?
-		vec3 entrancePoint = rayOrigin + tNear * rayDirection;
-        vec3 exitPoint = rayOrigin + tFar * rayDirection;
+		vec3 entrancePoint = rayOrigin + tNear * rayDirection + rayDirection*0.1;
+        vec3 exitPoint = rayOrigin + tFar * rayDirection - rayDirection*0.1;
 		if (tNear < 0.0) {
             entrancePoint = rayOrigin;
+        } else {
         }
         fragColor = traverseVoxelGrid(rayOrigin, rayDirection, entrancePoint, exitPoint);
 	}

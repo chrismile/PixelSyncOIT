@@ -98,7 +98,8 @@ std::vector<float> generateMipmapsForDensity(float *density, glm::ivec3 size)
     memcpy(lodDataLast, density, size.x * size.y * size.z * sizeof(float));
     for (glm::ivec3 lodSize = size/2; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
         // Averaging operation
-        for (int i = 0; i < lodSize.x * lodSize.y * lodSize.z; i++) {
+        int N = lodSize.x * lodSize.y * lodSize.z;
+        for (int i = 0; i < N; i++) {
             lodData[i] = 0.0f;
             for (int j = 0; j < 8; j++) {
                 lodData[i] += lodDataLast[i*8+j];
@@ -161,8 +162,13 @@ void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGri
 
     gpuData.densityTexture = generateDensityTexture(compressedData.voxelDensityLODs, gpuData.gridResolution);
 
-    // TODO: Format (NOT uint32_t)
+#ifdef PACK_LINES
+    int baseSize = sizeof(LineSegmentCompressed);
+#else
+    int baseSize = sizeof(LineSegment);
+#endif
+
     gpuData.lineSegments = sgl::Renderer->createGeometryBuffer(
-            sizeof(uint32_t)*compressedData.lineSegments.size(),
+            baseSize*compressedData.lineSegments.size(),
             (void*)&compressedData.lineSegments.front());
 }

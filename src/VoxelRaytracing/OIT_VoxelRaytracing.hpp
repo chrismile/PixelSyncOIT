@@ -20,6 +20,7 @@ public:
     void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
             sgl::RenderbufferObjectPtr &sceneDepthRBO);
     void setClearColor(const sgl::Color &clearColor);
+    void setLightDirection(const glm::vec3 &lightDirection);
 
     virtual void gatherBegin() {}
     virtual void renderScene() {}
@@ -36,8 +37,10 @@ private:
     sgl::ShaderProgramPtr renderShader;
     sgl::TexturePtr renderImage;
 
+    // Data from MainApp
     sgl::CameraPtr camera;
     sgl::Color clearColor;
+    glm::vec3 lightDirection;
 
     // Data compressed for GPU
     VoxelGridDataGPU data;
