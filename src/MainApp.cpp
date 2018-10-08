@@ -65,7 +65,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	camera->setNearClipDistance(0.01f);
 	camera->setFarClipDistance(100.0f);
 	camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-	float fovy = atanf(1.0f / 2.0f) * 2.0f;
+	fovy = atanf(1.0f / 2.0f) * 2.0f;
 	camera->setFOVy(fovy);
 	//camera->setPosition(glm::vec3(-0.5f, -0.5f, -20.0f));
 	camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
@@ -792,7 +792,9 @@ void PixelSyncApp::update(float dt)
 
 	// Zoom in/out
 	if (Mouse->getScrollWheel() > 0.1 || Mouse->getScrollWheel() < -0.1) {
-		camera->scale((1+Mouse->getScrollWheel()*dt*0.5f)*glm::vec3(1.0,1.0,1.0));
+		fovy -= Mouse->getScrollWheel()*dt*2.0f;
+		fovy = glm::clamp(fovy, glm::radians(1.0f), glm::radians(150.0f));
+		camera->setFOVy(fovy);
 		reRender = true;
 	}
 
@@ -807,6 +809,8 @@ void PixelSyncApp::update(float dt)
         glm::quat rotPitch = glm::quat(pitch*glm::vec3(rotationMatrix[0][0], rotationMatrix[1][0], rotationMatrix[2][0]));
         //glm::quat rot = glm::quat(glm::vec3(pitch, yaw, 0.0f));
         camera->rotate(rotYaw*rotPitch);
+		//camera->rotateYaw(yaw);
+		//camera->rotatePitch(pitch);
 		reRender = true;
 	}
 }

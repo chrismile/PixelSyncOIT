@@ -71,6 +71,7 @@ protected:
 private:
 	// Lighting & rendering
 	boost::shared_ptr<Camera> camera;
+    float fovy;
 	ShaderProgramPtr transparencyShader;
 	ShaderProgramPtr plainShader;
 	ShaderProgramPtr whiteSolidShader;
