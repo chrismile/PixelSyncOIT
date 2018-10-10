@@ -76,3 +76,34 @@ double psnr(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
     }
     return 10 * std::log10(max_I * max_I / mse(expected, observed));
 }
+
+
+sgl::BitmapPtr computeNormalizedDifferenceMap(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
+{
+    int N = expected->getW() * expected->getH() * expected->getChannels();
+    sgl::BitmapPtr differenceMap(new sgl::Bitmap);
+    differenceMap->allocate(expected->getW(), expected->getH(), 32);
+
+    // Compute maximum difference for all pixel color channels
+    int *differences = new int[N];
+    int maxDifference = 0;
+    for (int i = 0; i < N; i++) {
+        differences[i] = std::abs(
+                static_cast<int>(expected->getPixels()[i])
+                - static_cast<int>(observed->getPixels()[i]));
+        maxDifference = std::max(maxDifference, differences[i]);
+    }
+
+    // Normalize the difference map
+    if (maxDifference >= 1) {
+        for (int i = 0; i < N; i++) {
+            differenceMap->getPixels()[i] = static_cast<double>(differences[i])
+                    / static_cast<double>(maxDifference) * 255.0;
+        }
+    } else {
+        differenceMap->fill(sgl::Color(0, 0, 0, 0));
+    }
+    delete[] differences;
+
+    return differenceMap;
+}

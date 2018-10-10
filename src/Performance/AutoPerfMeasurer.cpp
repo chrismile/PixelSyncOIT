@@ -64,6 +64,11 @@ void AutoPerfMeasurer::writeCurrentModeData()
         referenceImage = image;
     }
 
+    // Save normalized difference map
+    std::string differenceMapFilename = std::string() + "images/" + currentState.name + " Difference" + ".png";
+    sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(referenceImage, image);
+    differenceMap->savePNG(differenceMapFilename.c_str(), true);
+
     // If a reference image is saved: Compute reference metrics (SSIM, RMSE, PSNR)
     if (referenceImage) {
         double ssimMetric = ssim(referenceImage, image);

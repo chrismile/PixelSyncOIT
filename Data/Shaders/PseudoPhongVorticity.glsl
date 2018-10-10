@@ -65,6 +65,22 @@ uniform float minVorticity;
 uniform float maxVorticity;
 uniform bool transparencyMapping = true;
 
+// Transfer function color lookup table
+layout (std140, binding = 2) uniform TransferFunctionBlock
+{
+    uvec4 mappedColors[64];
+};
+
+vec4 transferFunction(float attr)
+{
+    // Transfer to range [0,255]
+    float posFloat = clamp((attr - minVorticity) / (maxVorticity - minVorticity), 0.0, 1.0);
+    int index = int(posFloat * 255.99);
+    // Look up the color value
+    return unpackUnorm4x8(mappedColors[index/4][index%4]);
+    //return unpackUnorm4x8(mappedColors[64]);
+}
+
 void main()
 {
 #ifdef USE_SSAO
@@ -78,11 +94,10 @@ void main()
 #endif
 
 	// Use vorticity
-	float linearFactor = (vorticity - minVorticity) / (maxVorticity - minVorticity);
-	//vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), clamp(linearFactor, 0.0, 1.0));
-	float interpolationFactor = clamp(linearFactor, 0.0, 1.0);
-	//float interpolationFactor = clamp(linearFactor*1.4 - 0.2, 0.0, 1.0);
-	vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), interpolationFactor);
+	//float linearFactor = (vorticity - minVorticity) / (maxVorticity - minVorticity);
+	//float interpolationFactor = clamp(linearFactor, 0.0, 1.0);
+	//vec4 diffuseColorVorticity = mix(vec4(1.0,1.0,1.0,0.0), vec4(1.0,0.0,0.0,1.0), interpolationFactor);
+	vec4 diffuseColorVorticity = transferFunction(vorticity);
 
     vec3 normal = fragmentNormal;
 	if (length(normal) < 0.5) {

@@ -56,12 +56,11 @@ void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, const glm::vec
         initializeCircleData(NUM_CIRCLE_SEGMENTS, TUBE_RADIUS);
     }
 
-    glm::vec3 helperAxis, tangent, binormal;
-    helperAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 tangent, binormal;
+    glm::vec3 helperAxis = lastTangent;
     //if (std::abs(glm::dot(helperAxis, normal)) > 0.9f) {
     if (glm::length(glm::cross(helperAxis, normal)) < 0.01f) {
         // If normal == helperAxis
-        //helperAxis = lastTangent;
         helperAxis = glm::vec3(0.0f, 1.0f, 0.0f);
     }
     tangent = glm::normalize(helperAxis - normal * glm::dot(helperAxis, normal)); // Gram-Schmidt

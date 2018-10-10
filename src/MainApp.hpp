@@ -25,6 +25,7 @@
 #include "AmbientOcclusion/SSAO.hpp"
 #include "Performance/InternalState.hpp"
 #include "Performance/AutoPerfMeasurer.hpp"
+#include "TransferFunctionWindow.hpp"
 
 using namespace std;
 using namespace sgl;
@@ -113,6 +114,8 @@ private:
     float MOVE_SPEED = 0.2f;
     float ROT_SPEED = 1.0f;
     float MOUSE_ROT_SPEED = 0.05f;
+
+	TransferFunctionWindow transferFunctionWindow;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
     bool continuousRendering = false;

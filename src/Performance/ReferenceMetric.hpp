@@ -25,4 +25,8 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed);
 /// Returns peak signal-to-noise ratio (PSNR, in dB)
 double psnr(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed);
 
+/// Computes the difference map between the two passed bitmaps. The map is normalized so that the differences
+/// assume the total interval of [0,255] in the image.
+sgl::BitmapPtr computeNormalizedDifferenceMap(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed);
+
 #endif //PIXELSYNCOIT_REFERENCEMETRIC_HPP

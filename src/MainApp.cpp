@@ -67,8 +67,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 	fovy = atanf(1.0f / 2.0f) * 2.0f;
 	camera->setFOVy(fovy);
-	//camera->setPosition(glm::vec3(-0.5f, -0.5f, -20.0f));
-	camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
+	//camera->setPosition(glm::vec3(0.5f, 0.5f, 20.0f));
+	camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
 
 	bandingColor = Color(165, 220, 84, 120);
 	if (perfMeasurementMode) {
@@ -77,6 +77,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	} else {
 		clearColor = Color(0, 0, 0, 255);
 	}
+	transferFunctionWindow.setClearColor(clearColor);
 
 	//Timer->setFPSLimit(false, 60);
 	Timer->setFPSLimit(true, 60);
@@ -199,7 +200,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 	if (modelFilenamePure == "Data/Models/Ship_04") {
 		transparencyShader->setUniform("bandedColorShading", 0);
 		if (resetCamera) {
-			camera->setPosition(glm::vec3(0.0f, -1.5f, -5.0f));
+			camera->setPosition(glm::vec3(0.0f, 1.5f, 5.0f));
 		}
 	} else {
 		if (shaderMode != SHADER_MODE_VORTICITY) {
@@ -208,13 +209,13 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
 		if (resetCamera) {
 			if (modelFilenamePure == "Data/Models/dragon") {
-				camera->setPosition(glm::vec3(-0.15f, -0.8f, -2.4f));
+				camera->setPosition(glm::vec3(0.15f, 0.8f, 2.4f));
 			} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/lagranto")) {
-				camera->setPosition(glm::vec3(-0.6f, -0.0f, -8.8f));
+				camera->setPosition(glm::vec3(0.6f, 0.0f, 8.8f));
 			}  else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-				camera->setPosition(glm::vec3(-0.6f, -0.4f, -1.8f));
+				camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
 			} else {
-				camera->setPosition(glm::vec3(-0.0f, 0.1f, -2.4f));
+				camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
 			}
 		}
 		if (modelFilenamePure == "Data/Models/dragon") {
@@ -515,7 +516,7 @@ void PixelSyncApp::renderOIT()
 void PixelSyncApp::renderGUI()
 {
 	ImGuiWrapper::get()->renderStart();
-    //ImGuiWrapper::get()->renderDemoWindow();
+    ImGuiWrapper::get()->renderDemoWindow();
 
     if (showSettingsWindow) {
         ImGui::Begin("Settings", &showSettingsWindow);
@@ -557,6 +558,10 @@ void PixelSyncApp::renderGUI()
         ImGui::End();
     }
 
+	if (transferFunctionWindow.renderGUI()) {
+		reRender = true;
+	}
+
 	ImGuiWrapper::get()->renderEnd();
 }
 
@@ -588,6 +593,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 		if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 			static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
 		}
+		transferFunctionWindow.setClearColor(clearColor);
 		reRender = true;
 	}
 
@@ -653,6 +659,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 			transparencyShader->setUniform("minVorticity", 0.0f);
             transparencyShader->setUniform("maxVorticity", maxVorticity);
             transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+			transparencyShader->setUniformBuffer(2, "TransferFunctionBlock",
+					transferFunctionWindow.getTransferFunctionMapUBO());
 			//std::cout << "Max Vorticity: " << *maxVorticity << std::endl;
 			//transparencyShader->setUniform("cameraPosition", -camera->getPosition());
 		}
@@ -725,6 +733,8 @@ void PixelSyncApp::update(float dt)
 
 
 
+	transferFunctionWindow.update(dt);
+
 	ImGuiIO &io = ImGui::GetIO();
 	if (io.WantCaptureKeyboard) {
 		// Ignore inputs below
@@ -758,30 +768,30 @@ void PixelSyncApp::update(float dt)
 
 
 
-	glm::mat4 rotationMatrix = glm::mat4(camera->getOrientation());
+	glm::mat4 rotationMatrix = camera->getRotationMatrix();//glm::mat4(camera->getOrientation());
     glm::mat4 invRotationMatrix = glm::inverse(rotationMatrix);
 	if (Keyboard->isKeyDown(SDLK_PAGEDOWN)) {
-		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, dt*MOVE_SPEED, 0.0f)));
-		reRender = true;
-	}
-	if (Keyboard->isKeyDown(SDLK_PAGEUP)) {
 		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, -dt*MOVE_SPEED, 0.0f)));
 		reRender = true;
 	}
+	if (Keyboard->isKeyDown(SDLK_PAGEUP)) {
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, dt*MOVE_SPEED, 0.0f)));
+		reRender = true;
+	}
 	if (Keyboard->isKeyDown(SDLK_DOWN) || Keyboard->isKeyDown(SDLK_s)) {
-		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, -dt*MOVE_SPEED)));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, dt*MOVE_SPEED)));
 		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_UP) || Keyboard->isKeyDown(SDLK_w)) {
-		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, +dt*MOVE_SPEED)));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, -dt*MOVE_SPEED)));
 		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_LEFT) || Keyboard->isKeyDown(SDLK_a)) {
-		camera->translate(transformPoint(invRotationMatrix, glm::vec3(dt*MOVE_SPEED, 0.0f, 0.0f)));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(-dt*MOVE_SPEED, 0.0f, 0.0f)));
 		reRender = true;
 	}
 	if (Keyboard->isKeyDown(SDLK_RIGHT) || Keyboard->isKeyDown(SDLK_d)) {
-		camera->translate(transformPoint(invRotationMatrix, glm::vec3(-dt*MOVE_SPEED, 0.0f, 0.0f)));
+		camera->translate(transformPoint(invRotationMatrix, glm::vec3(dt*MOVE_SPEED, 0.0f, 0.0f)));
 		reRender = true;
 	}
 
@@ -803,14 +813,13 @@ void PixelSyncApp::update(float dt)
 	if (Mouse->isButtonDown(1) && Mouse->mouseMoved()) {
 	    sgl::Point2 pixelMovement = Mouse->mouseMovement();
         float yaw = dt*MOUSE_ROT_SPEED*pixelMovement.x;
-        float pitch = dt*MOUSE_ROT_SPEED*pixelMovement.y;
+        float pitch = -dt*MOUSE_ROT_SPEED*pixelMovement.y;
 
         glm::quat rotYaw = glm::quat(glm::vec3(0.0f, yaw, 0.0f));
         glm::quat rotPitch = glm::quat(pitch*glm::vec3(rotationMatrix[0][0], rotationMatrix[1][0], rotationMatrix[2][0]));
-        //glm::quat rot = glm::quat(glm::vec3(pitch, yaw, 0.0f));
-        camera->rotate(rotYaw*rotPitch);
-		//camera->rotateYaw(yaw);
-		//camera->rotatePitch(pitch);
+        //camera->rotate(rotYaw*rotPitch);
+		camera->rotateYaw(yaw);
+		camera->rotatePitch(pitch);
 		reRender = true;
 	}
 }
