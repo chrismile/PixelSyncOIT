@@ -126,11 +126,12 @@ void OIT_DepthPeeling::computeDepthComplexity()
     int bufferSize = window->getWidth() * window->getHeight();
     uint32_t *data = (uint32_t*)numFragmentsBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
 
-    maxDepthComplexity = 0;
-#pragma omp parallel for reduction(max:maxDepthComplexity) schedule(static)
+    int maxDepthComplexity = 0;
+    #pragma omp parallel for reduction(max:maxDepthComplexity) schedule(static)
     for (int i = 0; i < bufferSize; i++) {
         maxDepthComplexity = std::max(maxDepthComplexity, (int)data[i]);
     }
+    this->maxDepthComplexity = maxDepthComplexity;
 
     numFragmentsBuffer->unmapBuffer();
 }

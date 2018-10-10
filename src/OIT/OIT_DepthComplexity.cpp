@@ -211,9 +211,10 @@ void OIT_DepthComplexity::computeStatistics()
 
     uint32_t *data = (uint32_t*)numFragmentsBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
 
-    totalNumFragments = 0;
-    usedLocations = 0;
-    maxComplexity = 0;
+    // Local reduction variables necessary for older OpenMP implementations
+    int totalNumFragments = 0;
+    int usedLocations = 0;
+    int maxComplexity = 0;
     #pragma omp parallel for reduction(+:totalNumFragments,usedLocations) reduction(max:maxComplexity) schedule(static)
     for (int i = 0; i < bufferSize; i++) {
         totalNumFragments += data[i];
@@ -222,6 +223,9 @@ void OIT_DepthComplexity::computeStatistics()
         }
         maxComplexity = std::max(maxComplexity, (int)data[i]);
     }
+    this->totalNumFragments = totalNumFragments;
+    this->usedLocations = usedLocations;
+    this->maxComplexity = maxComplexity;
 
     numFragmentsBuffer->unmapBuffer();
 
