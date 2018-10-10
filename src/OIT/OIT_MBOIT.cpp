@@ -33,7 +33,7 @@ enum MBOITPixelFormat {
 
 // Internal mode
 static bool usePowerMoments = true;
-static int numMoments = 6;
+static int numMoments = 4;
 static MBOITPixelFormat pixelFormat = MBOIT_PIXEL_FORMAT_FLOAT_32;
 static bool USE_R_RG_RGBA_FOR_MBOIT6 = true;
 
@@ -251,16 +251,16 @@ void OIT_MBOIT::setUniformData()
 
     mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);
     mboitPass1Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0);
-    mboitPass1Shader->setUniform("viewportW", width);
+    //mboitPass1Shader->setUniform("viewportW", width);
 
     mboitPass2Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     mboitPass2Shader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
-    mboitPass2Shader->setUniform("viewportW", width);
+    //mboitPass2Shader->setUniform("viewportW", width);
 
     blendShader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     blendShader->setUniformImageTexture(1, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0); // GL_READ_ONLY? -> Shader
     blendShader->setUniform("transparentSurfaceAccumulator", blendRenderTexture, 0);
-    blendShader->setUniform("viewportW", width);
+    //blendShader->setUniform("viewportW", width);
 
     if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
         mboitPass1Shader->setUniformImageTexture(2, bExtra, textureSettingsBExtra.internalFormat, GL_READ_WRITE, 0, true, 0);
@@ -303,10 +303,10 @@ void OIT_MBOIT::renderGUI()
         reRender = true;
     }
 
-    if (selectTilingModeUI()) {
-        reloadShaders();
-        reRender = true;
-    }
+    //if (selectTilingModeUI()) {
+    //    reloadShaders();
+    //    reRender = true;
+    //}
 }
 
 

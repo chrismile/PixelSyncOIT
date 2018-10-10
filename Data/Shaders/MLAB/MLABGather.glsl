@@ -22,12 +22,12 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
 
     // Merge last two nodes if necessary
     if (list[MAX_NUM_NODES].depth != DISTANCE_INFINITE) {
-        vec4 src = unpackColorRGBA(list[MAX_NUM_NODES-1].premulColor);
-        vec4 dst = unpackColorRGBA(list[MAX_NUM_NODES].premulColor);
+        vec4 src = unpackUnorm4x8(list[MAX_NUM_NODES-1].premulColor);
+        vec4 dst = unpackUnorm4x8(list[MAX_NUM_NODES].premulColor);
         vec4 mergedColor;
         mergedColor.rgb = src.rgb + dst.rgb * src.a;
         mergedColor.a = src.a * dst.a; // Transmittance
-        merge.premulColor = packColorRGBA(mergedColor);
+        merge.premulColor = packUnorm4x8(mergedColor);
         merge.depth = list[MAX_NUM_NODES-1].depth;
         list[MAX_NUM_NODES-1] = merge;
 	}
@@ -46,7 +46,7 @@ void gatherFragment(vec4 color)
 
 	MLABFragmentNode frag;
 	frag.depth = gl_FragCoord.z;
-	frag.premulColor = packColorRGBA(vec4(color.rgb * color.a, 1.0 - color.a));
+	frag.premulColor = packUnorm4x8(vec4(color.rgb * color.a, 1.0 - color.a));
 
     // Begin of actual algorithm code
 	MLABFragmentNode nodeArray[MAX_NUM_NODES+1];

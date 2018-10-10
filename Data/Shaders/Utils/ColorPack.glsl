@@ -2,10 +2,10 @@
 uint packColorRGBA(vec4 vecColor)
 {
     uint packedColor;
-    packedColor = uint(vecColor.r * 255.0) & 0xFFu;
-    packedColor |= (uint(vecColor.g * 255.0) & 0xFFu) << 8;
-    packedColor |= (uint(vecColor.b * 255.0) & 0xFFu) << 16;
-    packedColor |= (uint(vecColor.a * 255.0) & 0xFFu) << 24;
+    packedColor = uint(round(clamp(vecColor.r, 0.0, 1.0) * 255.0)) & 0xFFu;
+    packedColor |= (uint(round(clamp(vecColor.g, 0.0, 1.0) * 255.0)) & 0xFFu) << 8;
+    packedColor |= (uint(round(clamp(vecColor.b, 0.0, 1.0) * 255.0)) & 0xFFu) << 16;
+    packedColor |= (uint(round(clamp(vecColor.a, 0.0, 1.0) * 255.0)) & 0xFFu) << 24;
     return packedColor;
 }
 
@@ -31,7 +31,7 @@ float unpackColorAlpha(uint packedColor)
 void updatePackedColorAlpha(inout uint packedColor, in float newAlpha)
 {
     packedColor &= 0xFFFFFFu;
-    packedColor |= (uint(newAlpha * 255.0) & 0xFFu) << 24;
+    packedColor |= (uint(round(clamp(newAlpha, 0.0, 1.0) * 255.0)) & 0xFFu) << 24;
 }
 
 
@@ -42,9 +42,9 @@ void updatePackedColorAlpha(inout uint packedColor, in float newAlpha)
 uint packColor30bit(vec4 vecColor)
 {
     uint packedColor;
-    packedColor = uint(vecColor.r * 255.0) & 0x3FFu;
-    packedColor |= (uint(vecColor.g * 255.0) & 0x3FFu) << 10;
-    packedColor |= (uint(vecColor.b * 255.0) & 0x3FFu) << 20;
+    packedColor = uint(round(vecColor.r * 255.0)) & 0x3FFu;
+    packedColor |= (uint(round(vecColor.g * 255.0)) & 0x3FFu) << 10;
+    packedColor |= (uint(round(vecColor.b * 255.0)) & 0x3FFu) << 20;
     return packedColor;
 }
 
@@ -62,7 +62,7 @@ vec4 unpackColor30bit(uint packedColor)
 // Packs accumulated alpha into lower two bytes, fragment count into higher two bytes
 uint packAccumAlphaAndFragCount(float accumAlpha, uint fragCount)
 {
-    uint packedValue = uint(accumAlpha * 255.0) & 0xFFFFu;
+    uint packedValue = uint(round(accumAlpha * 255.0)) & 0xFFFFu;
     packedValue |= (fragCount & 0xFFFFu) << 16;
     return packedValue;
 }

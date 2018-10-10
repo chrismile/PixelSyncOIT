@@ -72,7 +72,8 @@ void clearMoments(ivec3 idx0)
 
 void main()
 {
-    ivec2 addr2D = addrGen2D(ivec2(gl_FragCoord.xy));
+	//ivec2 addr2D = addrGen2D(ivec2(gl_FragCoord.xy));
+	ivec2 addr2D = ivec2(gl_FragCoord.xy);
     ivec3 idx0Tiled = ivec3(addr2D, 0);
     ivec3 idx0 = ivec3(ivec2(gl_FragCoord.xy), 0);
     vec4 color = texelFetch(transparentSurfaceAccumulator, idx0.xy, 0);
@@ -82,7 +83,7 @@ void main()
     }
     float total_transmittance = exp(-b_0);
     if (isinf(b_0)) {
-        total_transmittance = 0.0f;
+        total_transmittance = 1e7;
     }
 
     // Make sure data is cleared for next rendering pass

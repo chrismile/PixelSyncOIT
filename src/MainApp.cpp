@@ -75,7 +75,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 		// Transparent background in measurement mode! This way, reference metrics can compare opacity values.
 		clearColor = Color(0, 0, 0, 0);
 	} else {
-		clearColor = Color(0, 0, 0, 255);
+		clearColor = Color(255, 255, 255, 255);
 	}
 	transferFunctionWindow.setClearColor(clearColor);
 
@@ -516,45 +516,39 @@ void PixelSyncApp::renderOIT()
 void PixelSyncApp::renderGUI()
 {
 	ImGuiWrapper::get()->renderStart();
-    ImGuiWrapper::get()->renderDemoWindow();
+    //ImGuiWrapper::get()->renderDemoWindow();
 
     if (showSettingsWindow) {
-        ImGui::Begin("Settings", &showSettingsWindow);
+        if (ImGui::Begin("Settings", &showSettingsWindow)) {
+			// FPS
+			static float displayFPS = 60.0f;
+			static uint64_t fpsCounter = 0;
+			if (Timer->getTicksMicroseconds() - fpsCounter > 1e6) {
+				displayFPS = ImGui::GetIO().Framerate;
+				fpsCounter = Timer->getTicksMicroseconds();
+			}
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps, fps);
+			ImGui::Separator();
 
-        // FPS
-        static float displayFPS = 60.0f;
-        static uint64_t fpsCounter = 0;
-        if (Timer->getTicksMicroseconds() - fpsCounter > 1e6) {
-			displayFPS = ImGui::GetIO().Framerate;
-			fpsCounter = Timer->getTicksMicroseconds();
+			// Mode selection of OIT algorithms
+			if (ImGui::Combo("OIT Mode", (int*)&mode, OIT_MODE_NAMES, IM_ARRAYSIZE(OIT_MODE_NAMES))) {
+				setRenderMode(mode, true);
+			}
+			ImGui::Separator();
+
+			// Selection of displayed model
+			if (ImGui::Combo("Model Name", &usedModelIndex, MODEL_DISPLAYNAMES, IM_ARRAYSIZE(MODEL_DISPLAYNAMES))) {
+				loadModel(MODEL_FILENAMES[usedModelIndex]);
+			}
+			ImGui::Separator();
+
+			static bool showSceneSettings = true;
+			if (ImGui::CollapsingHeader("Scene Settings", NULL, ImGuiTreeNodeFlags_DefaultOpen)) {
+				renderSceneSettingsGUI();
+			}
+
+			oitRenderer->renderGUI();
         }
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps, fps);
-		ImGui::Separator();
-
-		// Mode selection of OIT algorithms
-		if (ImGui::Combo("OIT Mode", (int*)&mode, OIT_MODE_NAMES, IM_ARRAYSIZE(OIT_MODE_NAMES))) {
-			setRenderMode(mode, true);
-		}
-		ImGui::Separator();
-
-		// Selection of displayed model
-		if (ImGui::Combo("Model Name", &usedModelIndex, MODEL_DISPLAYNAMES, IM_ARRAYSIZE(MODEL_DISPLAYNAMES))) {
-			loadModel(MODEL_FILENAMES[usedModelIndex]);
-		}
-		ImGui::Separator();
-
-		static bool showSceneSettings = true;
-		if (ImGui::CollapsingHeader("Scene Settings", NULL, ImGuiTreeNodeFlags_DefaultOpen)) {
-			renderSceneSettingsGUI();
-		}
-		/*if (ImGui::TreeNode("Scene Settings")) {
-			renderSceneSettingsGUI();
-			ImGui::TreePop();
-		}*/
-
-        oitRenderer->renderGUI();
-
-		//windowActive = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
         ImGui::End();
     }
 
@@ -642,9 +636,10 @@ void PixelSyncApp::renderSceneSettingsGUI()
         if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
             reRender = true;
         }
+        ImGui::Checkbox("Show transfer function window", &transferFunctionWindow.getShowTransferFunctionWindow());
     }
 
-	ImGui::SliderFloat("Move Speed", &MOVE_SPEED, 0.1, 1.0);
+	ImGui::SliderFloat("Move speed", &MOVE_SPEED, 0.1, 1.0);
 
 	//ImGui::Separator();
 }

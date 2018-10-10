@@ -21,7 +21,7 @@ vec4 blendFTB(uint fragsCount)
 	for (uint i = 0; i < fragsCount; i++) {
 		// Front-to-Back (FTB) blending
 		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackColorRGBA(colorList[i]);
+		vec4 colorSrc = unpackUnorm4x8(colorList[i]);
 		float alphaSrc = colorSrc.a;
 		color.rgb = color.rgb + (1.0 - color.a) * alphaSrc * colorSrc.rgb;
 		color.a = color.a + (1.0 - color.a) * alphaSrc;
@@ -198,7 +198,7 @@ vec4 frontToBackPQ(uint fragsCount)
     while (i < fragsCount && rayColor.a < 0.99) {
         // Max Steps = #frags Stop when color is saturated enough
         minHeapSink4(0, fragsCount - i++); // Sink it right + increment i
-        vec4 colorSrc = unpackColorRGBA(colorList[0]); // Heap first is min
+        vec4 colorSrc = unpackUnorm4x8(colorList[0]); // Heap first is min
         // FTB Blending
 		rayColor.rgb = rayColor.rgb + (1.0 - rayColor.a) * colorSrc.a * colorSrc.rgb;
 		rayColor.a = rayColor.a + (1.0 - rayColor.a) * colorSrc.a;

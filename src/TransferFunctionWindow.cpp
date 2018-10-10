@@ -2,17 +2,25 @@
 // Created by christoph on 09.10.18.
 //
 
+#include <cstdlib>
+#include <GL/glew.h>
+
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <ImGui/imgui.h>
 #include <ImGui/imgui_internal.h>
-#include <GL/glew.h>
+#include <ImGui/imgui_custom.h>
+#include <ImGui/imgui_stl.h>
 
+#include <Utils/XML.hpp>
 #include <Utils/File/Logfile.hpp>
+#include <Utils/File/FileUtils.hpp>
 #include <Math/Math.hpp>
 #include <Input/Mouse.hpp>
 #include <Graphics/Renderer.hpp>
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include "TransferFunctionWindow.hpp"
+
+using namespace tinyxml2;
 
 TransferFunctionWindow::TransferFunctionWindow()
 {
@@ -23,64 +31,180 @@ TransferFunctionWindow::TransferFunctionWindow()
     opacityPoints = { OpacityPoint(0.0f, 0.0f), OpacityPoint(1.0f, 1.0f) };
     transferFunctionMap.resize(256);
     tfMapBuffer = sgl::Renderer->createGeometryBuffer(sizeof(uint32_t) * 256, sgl::UNIFORM_BUFFER);
+    updateAvailableFiles();
     rebuildTransferFunctionMap();
 }
+
+bool TransferFunctionWindow::saveFunctionToFile(const std::string &filename)
+{
+    FILE *file = fopen(filename.c_str(), "w");
+    if (file == NULL) {
+        sgl::Logfile::get()->writeError(std::string()
+                + "ERROR: TransferFunctionWindow::saveFunctionToFile: Couldn't create file \"" + filename + "\"!");
+        return false;
+    }
+
+    XMLPrinter printer(file);
+    printer.OpenElement("TransferFunction");
+
+    printer.OpenElement("OpacityPoints");
+    // Traverse all opacity points
+    for (size_t i = 0; i < opacityPoints.size(); i++) {
+        printer.OpenElement("OpacityPoint");
+        printer.PushAttribute("position", opacityPoints.at(i).position);
+        printer.PushAttribute("opacity", opacityPoints.at(i).opacity);
+        printer.CloseElement();
+    }
+    printer.CloseElement();
+
+    printer.OpenElement("ColorPoints");
+    // Traverse all color points
+    for (size_t i = 0; i < colorPoints.size(); i++) {
+        printer.OpenElement("ColorPoint");
+        printer.PushAttribute("position", colorPoints.at(i).position);
+        printer.PushAttribute("r", (int)colorPoints.at(i).color.getR());
+        printer.PushAttribute("g", (int)colorPoints.at(i).color.getG());
+        printer.PushAttribute("b", (int)colorPoints.at(i).color.getB());
+        printer.CloseElement();
+    }
+    printer.CloseElement();
+
+    printer.CloseElement();
+
+    fclose(file);
+    return true;
+}
+
+bool TransferFunctionWindow::loadFunctionFromFile(const std::string &filename)
+{
+    XMLDocument doc;
+    if (doc.LoadFile(filename.c_str()) != 0) {
+        sgl::Logfile::get()->writeError(std::string()
+                + "TransferFunctionWindow::loadFunctionFromFile: Couldn't open file \"" + filename + "\"!");
+        return false;
+    }
+    XMLElement *tfNode = doc.FirstChildElement("TransferFunction");
+    if (tfNode == NULL) {
+        sgl::Logfile::get()->writeError("TransferFunctionWindow::loadFunctionFromFile: No \"TransferFunction\" node found!");
+        return false;
+    }
+
+    colorPoints.clear();
+    opacityPoints.clear();
+
+    // Traverse all opacity points
+    auto opacityPointsNode = tfNode->FirstChildElement("OpacityPoints");
+    if (opacityPointsNode != NULL) {
+        for (sgl::XMLIterator it(opacityPointsNode, sgl::XMLNameFilter("OpacityPoint")); it.isValid(); ++it) {
+            XMLElement *childElement = *it;
+            float position = childElement->FloatAttribute("position");
+            float opacity = sgl::clamp(childElement->FloatAttribute("opacity"), 0.0f, 1.0f);
+            opacityPoints.push_back(OpacityPoint(opacity, position));
+        }
+    }
+
+    // Traverse all color points
+    auto colorPointsNode = tfNode->FirstChildElement("ColorPoints");
+    if (colorPointsNode != NULL) {
+        for (sgl::XMLIterator it(colorPointsNode, sgl::XMLNameFilter("ColorPoint")); it.isValid(); ++it) {
+            XMLElement *childElement = *it;
+            float position = childElement->FloatAttribute("position");
+            int red = sgl::clamp(childElement->IntAttribute("r"), 0, 255);
+            int green = sgl::clamp(childElement->IntAttribute("g"), 0, 255);
+            int blue = sgl::clamp(childElement->IntAttribute("b"), 0, 255);
+            sgl::Color color(red, green, blue);
+            colorPoints.push_back(ColorPoint(color, position));
+        }
+    }
+
+    selectedPointType = SELECTED_POINT_TYPE_NONE;
+    rebuildTransferFunctionMap();
+    return true;
+}
+
+void TransferFunctionWindow::updateAvailableFiles()
+{
+    availableFiles = sgl::FileUtils::get()->getFilesInDirectoryVector(saveDirectory);
+
+    // Update currently selected filename
+    for (size_t i = 0; i < availableFiles.size(); i++) {
+        availableFiles.at(i) = sgl::FileUtils::get()->getPureFilename(availableFiles.at(i));
+        if (availableFiles.at(i) == saveFileString) {
+            selectedFileIndex = (int)i;
+        }
+    }
+}
+
 
 void TransferFunctionWindow::setClearColor(const sgl::Color &clearColor)
 {
     this->clearColor = clearColor;
 }
 
+
 bool TransferFunctionWindow::renderGUI()
 {
-    ImGui::Begin("Transfer Function", &showTransferFunctionWindow); // , ImGuiWindowFlags_AlwaysAutoResize);
-
-    renderOpacityGraph();
-    renderColorBar();
-
-    if (selectedPointType == SELECTED_POINT_TYPE_OPACITY) {
-        if (ImGui::DragFloat("Opacity", &opacitySelection, 0.01f, 0.0f, 1.0f)) {
-            opacityPoints.at(currentSelectionIndex).opacity = opacitySelection;
-            rebuildTransferFunctionMap();
-            reRender = true;
+    if (showTransferFunctionWindow) { // , ImGuiWindowFlags_AlwaysAutoResize)
+        if (!ImGui::Begin("Transfer Function", &showTransferFunctionWindow)) {
+            // Window collapsed
+            ImGui::End();
+            return false;
         }
-    } else if (selectedPointType == SELECTED_POINT_TYPE_COLOR) {
-        if (ImGui::ColorEdit3("Color", (float*)&colorSelection)) {
-            colorPoints.at(currentSelectionIndex).color = sgl::colorFromFloat(
-                    colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
-            rebuildTransferFunctionMap();
-            reRender = true;
+
+        renderOpacityGraph();
+        renderColorBar();
+
+        if (selectedPointType == SELECTED_POINT_TYPE_OPACITY) {
+            if (ImGui::DragFloat("Opacity", &opacitySelection, 0.001f, 0.0f, 1.0f)) {
+                opacityPoints.at(currentSelectionIndex).opacity = opacitySelection;
+                rebuildTransferFunctionMap();
+                reRender = true;
+            }
+        } else if (selectedPointType == SELECTED_POINT_TYPE_COLOR) {
+            if (ImGui::ColorEdit3("Color", (float*)&colorSelection)) {
+                colorPoints.at(currentSelectionIndex).color = sgl::colorFromFloat(
+                        colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
+                rebuildTransferFunctionMap();
+                reRender = true;
+            }
+        }
+
+        renderFileDialog();
+
+        ImGui::End();
+
+        if (reRender) {
+            reRender = false;
+            return true;
         }
     }
 
-    ImGui::End();
-
-    if (reRender) {
-        reRender = false;
-        return true;
-    }
     return false;
 }
 
-// Code adapted from ImGui's InvisibleButton
-bool ImGuiClickButton(const char *str_id, const ImVec2 &size_arg, bool &mouseReleased)
+void TransferFunctionWindow::renderFileDialog()
 {
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
+    // Load file data
+    if (ImGui::ListBox("##availablefiles", &selectedFileIndex, [this](void *data, int idx, const char **out_text) -> bool {
+        *out_text = availableFiles.at(idx).c_str();
+        return true;
+    }, NULL, availableFiles.size(), 3)) {
+        saveFileString = availableFiles.at(selectedFileIndex);
+    } ImVec2 cursorPosEnd = ImGui::GetCursorPos(); ImGui::SameLine();
 
-    const ImGuiID id = window->GetID(str_id);
-    ImVec2 size = ImGui::CalcItemSize(size_arg, 0.0f, 0.0f);
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
-    ImGui::ItemSize(bb);
-    if (!ImGui::ItemAdd(bb, id))
-        return false;
+    ImVec2 cursorPos = ImGui::GetCursorPos();
+    ImGui::Text("Available files"); ImGui::SameLine(); ImGui::SetCursorPos(cursorPos + ImVec2(0.0f, 42.0f));
+    if (ImGui::Button("Load file") && selectedFileIndex >= 0) {
+        loadFunctionFromFile(saveDirectory + availableFiles.at(selectedFileIndex));
+        reRender = true;
+    } ImGui::SetCursorPos(cursorPosEnd);
 
-    bool hovered = ImGui::ItemHoverable(bb, id);
-    bool clicked = ImGui::GetIO().MouseClicked[0] || ImGui::GetIO().MouseClicked[1] || ImGui::GetIO().MouseClicked[2];
-    mouseReleased = ImGui::GetIO().MouseReleased[0];
-
-    return hovered && clicked;
+    // Save file data
+    ImGui::InputText("##savefilelabel", &saveFileString); ImGui::SameLine();
+    if (ImGui::Button("Save file")) {
+        saveFunctionToFile(saveDirectory + saveFileString);
+        updateAvailableFiles();
+    }
 }
 
 void TransferFunctionWindow::renderOpacityGraph()
@@ -127,7 +251,7 @@ void TransferFunctionWindow::renderOpacityGraph()
     }
 
 
-    if (ImGuiClickButton("##grapharea", ImVec2(regionWidth, graphHeight + 2), mouseReleased)) {
+    if (ImGui::ClickArea("##grapharea", ImVec2(regionWidth, graphHeight + 2), mouseReleased)) {
         onOpacityGraphClick();
     }
 }
@@ -162,7 +286,7 @@ void TransferFunctionWindow::renderColorBar()
         drawList->AddCircle(centerPt, 6, colorInvertedImgui, 24);
     }
 
-    if (ImGuiClickButton("##bararea", ImVec2(regionWidth + 2, barHeight), mouseReleased)) {
+    if (ImGui::ClickArea("##bararea", ImVec2(regionWidth + 2, barHeight), mouseReleased)) {
         onColorBarClick();
     }
 }
@@ -246,9 +370,7 @@ void TransferFunctionWindow::onOpacityGraphClick()
             // A.1 Left clicked? Select/drag-and-drop
             opacitySelection = opacityPoints.at(currentSelectionIndex).opacity;
             selectedPointType = SELECTED_POINT_TYPE_OPACITY;
-            if (currentSelectionIndex != 0 && currentSelectionIndex != opacityPoints.size()-1) {
-                dragging = true;
-            }
+            dragging = true;
         } else if (ImGui::GetIO().MouseClicked[1]) {
             // A.2 Middle clicked? Delete point
             opacityPoints.erase(opacityPoints.begin() + currentSelectionIndex);
@@ -350,15 +472,24 @@ void TransferFunctionWindow::dragPoint()
         glm::vec2 normalizedPosition = mousePosWidget / opacityGraphBox.getDimensions();
         normalizedPosition.y = 1.0f - normalizedPosition.y;
         normalizedPosition = glm::clamp(normalizedPosition, 0.0f, 1.0f);
+        if (currentSelectionIndex == 0) {
+            normalizedPosition.x = 0.0f;
+        }
+        if (currentSelectionIndex == opacityPoints.size()-1) {
+            normalizedPosition.x = 1.0f;
+        }
         // Clip to neighbors!
-        if (normalizedPosition.x < opacityPoints.at(currentSelectionIndex-1).position) {
+        if (currentSelectionIndex != 0
+                && normalizedPosition.x < opacityPoints.at(currentSelectionIndex-1).position) {
             normalizedPosition.x = opacityPoints.at(currentSelectionIndex-1).position;
         }
-        if (normalizedPosition.x > opacityPoints.at(currentSelectionIndex+1).position) {
+        if (currentSelectionIndex != opacityPoints.size()-1
+                && normalizedPosition.x > opacityPoints.at(currentSelectionIndex+1).position) {
             normalizedPosition.x = opacityPoints.at(currentSelectionIndex+1).position;
         }
         opacityPoints.at(currentSelectionIndex).position = normalizedPosition.x;
         opacityPoints.at(currentSelectionIndex).opacity = normalizedPosition.y;
+        opacitySelection = opacityPoints.at(currentSelectionIndex).opacity;
     }
 
     if (selectedPointType == SELECTED_POINT_TYPE_COLOR) {

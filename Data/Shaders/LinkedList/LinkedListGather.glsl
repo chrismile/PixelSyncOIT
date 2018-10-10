@@ -11,7 +11,7 @@ void gatherFragment(vec4 color)
 	int pixelIndex = viewportW*y + x;
 
 	LinkedListFragmentNode frag;
-	frag.color = packColorRGBA(color);
+	frag.color = packUnorm4x8(color);
 	frag.depth = gl_FragCoord.z;
 	frag.next = -1;
 

@@ -27,6 +27,8 @@ layout(std140, binding = 1) uniform MomentOITUniformData
 
 #include "MomentMath.glsl"
 
+const float ABSORBANCE_MAX_VALUE = 2.3;
+
 #if MOMENT_GENERATION
 
 /*! Generation of moments in case that rasterizer ordered views are used. 
@@ -77,10 +79,10 @@ void generatePowerMoments(inout float b_0,
 	float depth, float transmittance)
 {
     // Absorbance would be infinite for zero transmittance. Thus, make sure transittance is never close to zero.
-	if (transmittance < 1e-5) {
-        transmittance = 0.0001;
-	}
 	float absorbance = -log(transmittance);
+	if (absorbance > ABSORBANCE_MAX_VALUE) {
+	    absorbance = ABSORBANCE_MAX_VALUE;
+	}
 
 	float depth_pow2 = depth * depth;
 	float depth_pow4 = depth_pow2 * depth_pow2;
@@ -147,10 +149,10 @@ void generateTrigonometricMoments(inout float b_0,
 	float depth, float transmittance, vec4 wrapping_zone_parameters)
 {
     // Absorbance would be infinite for zero transmittance. Thus, make sure transittance is never close to zero.
-	if (transmittance < 1e-5) {
-        transmittance = 0.0001;
-	}
 	float absorbance = -log(transmittance);
+	if (absorbance > ABSORBANCE_MAX_VALUE) {
+	    absorbance = ABSORBANCE_MAX_VALUE;
+	}
 
 	float phase = fma(depth, wrapping_zone_parameters.y, wrapping_zone_parameters.y);
 	vec2 circle_point = vec2(cos(phase), sin(phase));

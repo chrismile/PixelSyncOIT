@@ -172,44 +172,16 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
             // Build two CCW triangles (one quad) for each side
             // Triangle 1
-            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
             indices.push_back(circleIndicesCurrent.at(j));
-            indices.push_back(circleIndicesNext.at(j));
+            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
+            indices.push_back(circleIndicesNext.at((j+1)%NUM_CIRCLE_SEGMENTS));
 
             // Triangle 2
-            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
-            indices.push_back(circleIndicesNext.at(j));
+            indices.push_back(circleIndicesCurrent.at(j));
             indices.push_back(circleIndicesNext.at((j+1)%NUM_CIRCLE_SEGMENTS));
+            indices.push_back(circleIndicesNext.at(j));
         }
     }
-    /*for (int i = 0; i < numVertexPts-1; i++) {
-        std::vector<uint32_t> &circleIndicesCurrent = tubeNodes.at(i).circleIndices;
-        std::vector<uint32_t> &circleIndicesNext = tubeNodes.at(i+1).circleIndices;
-
-        int offsetCircle2 = 0;
-        float minDist = FLT_MAX;
-        for (int i = 0; i < NUM_CIRCLE_SEGMENTS; i++) {
-            float currDist = glm::length(vertices.at(circleIndicesCurrent.at(0))
-                                         - vertices.at(circleIndicesNext.at(i)));
-            if (currDist < minDist) {
-                offsetCircle2 = i;
-                minDist = currDist;
-            }
-        }
-
-        for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
-            // Build two CCW triangles (one quad) for each side
-            // Triangle 1
-            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
-            indices.push_back(circleIndicesCurrent.at(j));
-            indices.push_back(circleIndicesNext.at((j+offsetCircle2)%NUM_CIRCLE_SEGMENTS));
-
-            // Triangle 2
-            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
-            indices.push_back(circleIndicesNext.at((j+offsetCircle2)%NUM_CIRCLE_SEGMENTS));
-            indices.push_back(circleIndicesNext.at((j+1+offsetCircle2)%NUM_CIRCLE_SEGMENTS));
-        }
-    }*/
 }
 
 

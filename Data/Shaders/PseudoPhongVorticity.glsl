@@ -78,7 +78,6 @@ vec4 transferFunction(float attr)
     int index = int(posFloat * 255.99);
     // Look up the color value
     return unpackUnorm4x8(mappedColors[index/4][index%4]);
-    //return unpackUnorm4x8(mappedColors[64]);
 }
 
 void main()

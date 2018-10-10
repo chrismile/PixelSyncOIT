@@ -20,7 +20,7 @@ void gatherFragment(vec4 color)
 	uint index = MAX_NUM_NODES*pixelIndex;
 
 	FragmentNode frag;
-	frag.color = packColorRGBA(color);
+	frag.color = packUnorm4x8(color);
 	frag.depth = gl_FragCoord.z;
 
 	memoryBarrierBuffer();
@@ -45,8 +45,8 @@ void gatherFragment(vec4 color)
 		nodes[index] = frag;
 	} else {
     	// Blend with last fragment
-		vec4 colorDst = unpackColorRGBA(nodes[index-1].color);
-		vec4 colorSrc = unpackColorRGBA(frag.color);
+		vec4 colorDst = unpackUnorm4x8(nodes[index-1].color);
+		vec4 colorSrc = unpackUnorm4x8(frag.color);
 
 		vec4 colorOut;
 		colorOut.rgb = colorDst.a * colorDst.rgb + (1.0 - colorDst.a) * colorSrc.a * colorSrc.rgb;
@@ -54,7 +54,7 @@ void gatherFragment(vec4 color)
         //colorOut.a = colorSrc.a + colorDst.a * (1.0 - colorSrc.a);
         //colorOut.rgb = colorSrc.rgb * colorSrc.a + colorDst.rgb * colorDst.a * (1.0 - colorSrc.a);
 
-    	nodes[index-1].color = packColorRGBA(vec4(colorOut.rgb / colorOut.a, colorOut.a));
+    	nodes[index-1].color = packUnorm4x8(vec4(colorOut.rgb / colorOut.a, colorOut.a));
 	}
 
 	fragColor = vec4(0.0, 0.0, 0.0, 0.0);

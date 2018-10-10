@@ -39,7 +39,7 @@ void main()
 	for (uint i = 0; i < numFragments; i++)
 	{
 		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackColorRGBA(nodes[index].color);
+		vec4 colorSrc = unpackUnorm4x8(nodes[index].color);
 		float alphaSrc = colorSrc.a;
 		color.rgb = color.rgb + (1.0 - color.a) * alphaSrc * colorSrc.rgb;
 		color.a = color.a + (1.0 - color.a) * alphaSrc;
@@ -60,7 +60,7 @@ void main()
 	for (int i = offset; i >= 0; i--)
 	{
 		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackColorRGBA(nodes[index].color);
+		vec4 colorSrc = unpackUnorm4x8(nodes[index].color);
 		float alphaSrc = colorSrc.a;
 		float alphaOut = alphaSrc + color.a * (1.0 - alphaSrc);
 		color.rgb = (alphaSrc * colorSrc.rgb + (1.0 - alphaSrc) * color.a * color.rgb) / alphaOut;

@@ -37,9 +37,7 @@ void main()
 	float trans = 1.0;
 	for (uint i = 0; i < MAX_NUM_NODES; i++) {
 		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackColorRGBA(nodeArray[i].premulColor);
-		//color.rgb = color.rgb + (1.0 - color.a) * colorSrc.rgb;
-		//color.a = color.a + (1.0 - color.a) * alphaSrc;
+		vec4 colorSrc = unpackUnorm4x8(nodeArray[i].premulColor);
 		color.rgb = color.rgb + trans * colorSrc.rgb;
 		trans *= colorSrc.a;
 	}
