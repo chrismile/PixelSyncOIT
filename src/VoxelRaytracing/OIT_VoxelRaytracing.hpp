@@ -19,8 +19,10 @@ public:
     void loadModel(int modelIndex);
     void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
             sgl::RenderbufferObjectPtr &sceneDepthRBO);
+    void setLineRadius(float lineRadius);
     void setClearColor(const sgl::Color &clearColor);
     void setLightDirection(const glm::vec3 &lightDirection);
+    void setTransferFunctionTexture(const sgl::TexturePtr &texture);
 
     virtual void gatherBegin() {}
     virtual void renderScene() {}
@@ -39,8 +41,10 @@ private:
 
     // Data from MainApp
     sgl::CameraPtr camera;
+    float lineRadius;
     sgl::Color clearColor;
     glm::vec3 lightDirection;
+    sgl::TexturePtr tfTexture;
 
     // Data compressed for GPU
     VoxelGridDataGPU data;

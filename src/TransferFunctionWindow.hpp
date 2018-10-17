@@ -12,7 +12,7 @@
 
 #include <Math/Geometry/AABB2.hpp>
 #include <Graphics/Color.hpp>
-#include <Graphics/Buffers/GeometryBuffer.hpp>
+#include <Graphics/Texture/Texture.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
 struct ColorPoint
@@ -52,7 +52,7 @@ public:
 
     // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
     std::vector<sgl::Color> getTransferFunctionMap();
-    sgl::GeometryBufferPtr &getTransferFunctionMapUBO();
+    sgl::TexturePtr &getTransferFunctionMapTexture();
 
 private:
     void renderFileDialog();
@@ -87,7 +87,8 @@ private:
 
     void rebuildTransferFunctionMap();
     std::vector<sgl::Color> transferFunctionMap;
-    sgl::GeometryBufferPtr tfMapBuffer;
+    sgl::TexturePtr tfMapTexture;
+    sgl::TextureSettings tfMapTextureSettings;
 
     std::vector<OpacityPoint> opacityPoints;
     std::vector<ColorPoint> colorPoints;

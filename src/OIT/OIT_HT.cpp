@@ -128,7 +128,11 @@ void OIT_HT::updateLayerMode()
 
 void OIT_HT::reloadShaders()
 {
-    gatherShader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+    if (gatherShaderName.find("Vorticity") != std::string::npos) {
+        shaderIDs.push_back(gatherShaderName + ".Geometry");
+    }
+    gatherShader = ShaderManager->getShaderProgram(shaderIDs);
     resolveShader = ShaderManager->getShaderProgram({"HTResolve.Vertex", "HTResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"HTClear.Vertex", "HTClear.Fragment"});
     //needsNewShaders = true;

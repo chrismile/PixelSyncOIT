@@ -25,7 +25,7 @@ void gatherFragment(vec4 color)
 
 	memoryBarrierBuffer();
 
-	// Use insertion sort to insert new fragment
+	// Use 1-pass bubble sort to insert new fragment
 	uint numFragments = numFragmentsBuffer[pixelIndex];
 	for (uint i = 0; i < numFragments; i++)
 	{
@@ -40,7 +40,6 @@ void gatherFragment(vec4 color)
 	
 	// Store the fragment at the end of the list if capacity is left
 	if (numFragments < MAX_NUM_NODES) {
-		//atomicAdd(numFragmentsBuffer[pixelIndex], 1);
 		numFragmentsBuffer[pixelIndex]++;
 		nodes[index] = frag;
 	} else {
@@ -51,8 +50,6 @@ void gatherFragment(vec4 color)
 		vec4 colorOut;
 		colorOut.rgb = colorDst.a * colorDst.rgb + (1.0 - colorDst.a) * colorSrc.a * colorSrc.rgb;
         colorOut.a = colorDst.a + (1.0 - colorDst.a) * colorSrc.a;
-        //colorOut.a = colorSrc.a + colorDst.a * (1.0 - colorSrc.a);
-        //colorOut.rgb = colorSrc.rgb * colorSrc.a + colorDst.rgb * colorDst.a * (1.0 - colorSrc.a);
 
     	nodes[index-1].color = packUnorm4x8(vec4(colorOut.rgb / colorOut.a, colorOut.a));
 	}

@@ -367,7 +367,48 @@ void convertObjMeshToBinary(
 
 	file.close();
 
-	writeMesh3D(binaryFilename, mesh);
+
+
+	BinaryMesh binaryMesh;
+	binaryMesh.submeshes.resize(tempMesh.size());
+	for (size_t i = 0; i < mesh.submeshes.size(); ++i) {
+        ObjSubmesh &submesh = mesh.submeshes.at(i);
+        BinarySubMesh &binarySubmesh = binaryMesh.submeshes.at(i);
+        binarySubmesh.material = submesh.material;
+        binarySubmesh.vertexMode = VERTEX_MODE_TRIANGLES;
+        binarySubmesh.indices = submesh.indices;
+
+        BinaryMeshAttribute positionAttribute;
+        positionAttribute.name = "vertexPosition";
+        positionAttribute.attributeFormat = ATTRIB_FLOAT;
+        positionAttribute.numComponents = 3;
+        positionAttribute.data.resize(submesh.vertices.size() * sizeof(glm::vec3));
+        memcpy(&positionAttribute.data.front(), &submesh.vertices.front(), submesh.vertices.size() * sizeof(glm::vec3));
+        binarySubmesh.attributes.push_back(positionAttribute);
+
+        if (submesh.normals.size() > 0) {
+            BinaryMeshAttribute normalAttribute;
+            normalAttribute.name = "vertexNormal";
+            normalAttribute.attributeFormat = ATTRIB_FLOAT;
+            normalAttribute.numComponents = 3;
+            normalAttribute.data.resize(submesh.normals.size() * sizeof(glm::vec3));
+            memcpy(&normalAttribute.data.front(), &submesh.normals.front(), submesh.normals.size() * sizeof(glm::vec3));
+            binarySubmesh.attributes.push_back(normalAttribute);
+        }
+
+        if (submesh.texcoords.size() > 0) {
+            BinaryMeshAttribute texcoordAttribute;
+            texcoordAttribute.name = "vertexTexcoords";
+            texcoordAttribute.attributeFormat = ATTRIB_FLOAT;
+            texcoordAttribute.numComponents = 2;
+            texcoordAttribute.data.resize(submesh.texcoords.size() * sizeof(glm::vec2));
+            memcpy(&texcoordAttribute.data.front(), &submesh.texcoords.front(), submesh.texcoords.size() * sizeof(glm::vec2));
+            binarySubmesh.attributes.push_back(texcoordAttribute);
+        }
+    }
+
+
+	writeMesh3D(binaryFilename, binaryMesh);
 }
 
 

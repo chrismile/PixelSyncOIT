@@ -22,7 +22,7 @@ using namespace sgl;
 static bool useStencilBuffer = true;
 
 // Maximum number of layers
-static int maxNumNodes = 4;
+static int maxNumNodes = 8;
 
 
 OIT_MLAB::OIT_MLAB()
@@ -105,7 +105,11 @@ void OIT_MLAB::updateLayerMode()
 
 void OIT_MLAB::reloadShaders()
 {
-    gatherShader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+    if (gatherShaderName.find("Vorticity") != std::string::npos) {
+        shaderIDs.push_back(gatherShaderName + ".Geometry");
+    }
+    gatherShader = ShaderManager->getShaderProgram(shaderIDs);
     resolveShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
     //needsNewShaders = true;

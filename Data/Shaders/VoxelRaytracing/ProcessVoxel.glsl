@@ -6,14 +6,40 @@ float distanceSqr(vec3 v1, vec3 v2)
     return squareVec(v1 - v2);
 }
 
+
+#define MAX_NUM_HITS 8
+struct RayHit {
+    vec4 color;
+    float distance;
+};
+
+void insertHitSorted(in RayHit insertHit, inout int numHits, inout RayHit hits[MAX_NUM_HITS])
+{
+    int i;
+    for (i = 0; i < numHits; i++) {
+        if (insertHit.distance < hits[i].distance) {
+            RayHit temp = insertHit;
+            insertHit = hits[i];
+            hits[i] = temp;
+        }
+    }
+    if (i != MAX_NUM_HITS) {
+        hits[i] = insertHit;
+        numHits++;
+    }
+}
+
 /**
  * Processes the intersections with the geometry of the voxel at "voxelIndex".
  * Returns the color of the voxel (or completely transparent color if no intersection with geometry stored in voxel).
  */
 vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex)
 {
-    //vec3 closestIntersectionNormal;
-    //float closestIntersectionTransparency;
+    RayHit hits[MAX_NUM_HITS];
+    int numHits = 0;
+
+    // Bit-mask for used lines
+    uint blendedLineIDs = 0;
 
     for (int i = 0; i < currVoxelNumLines; i++) {
         bool hasIntersection = false;
@@ -21,9 +47,9 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex)
 
         vec3 tubeIntersection, sphereIntersection1, sphereIntersection2;
         bool hasTubeIntersection, hasSphereIntersection1 = false, hasSphereIntersection2 = false;
-        hasTubeIntersection = rayTubeIntersection(rayOrigin, rayDirection, tubePoint1, tubePoint2, TUBE_RADIUS, tubeIntersection);
-        hasSphereIntersection1 = raySphereIntersection(rayOrigin, rayDirection, tubePoint1, TUBE_RADIUS, sphereIntersection1);
-        hasSphereIntersection2 = raySphereIntersection(rayOrigin, rayDirection, tubePoint2, TUBE_RADIUS, sphereIntersection2);
+        hasTubeIntersection = rayTubeIntersection(rayOrigin, rayDirection, tubePoint1, tubePoint2, lineRadius, tubeIntersection);
+        hasSphereIntersection1 = raySphereIntersection(rayOrigin, rayDirection, tubePoint1, lineRadius, sphereIntersection1);
+        hasSphereIntersection2 = raySphereIntersection(rayOrigin, rayDirection, tubePoint2, lineRadius, sphereIntersection2);
         hasIntersection = hasTubeIntersection || hasSphereIntersection1 || hasSphereIntersection2;
 
         // Get closest intersection point
@@ -58,30 +84,40 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex)
                 vec3 u = intersection - tubePoint1;
                 float t = dot(v, u) / dot(v, v);
                 vec3 centerPt = tubePoint1 + t*v;
-                //closestIntersectionAttribute = (1-t)*currVoxelLines[i].a1 + t*currVoxelLines[i].a2; // TODO
+                closestIntersectionAttribute = (1-t)*currVoxelLines[i].a1 + t*currVoxelLines[i].a2;
                 closestIntersectionNormal =  normalize(intersection - centerPt);
-                //fragColor = vec4(vec3(1.0, 0.0, 0.0), 1.0);
+                return vec4(vec3(1.0, mod(float(voxelIndex.x + voxelIndex.y + voxelIndex.z) * 0.39475587, 1.0), 0.0), 1.0); // Test
             } else {
                 vec3 sphereCenter;
                 if (closestIntersectionIdx == 1) {
                     sphereCenter = tubePoint1;
-                    //closestIntersectionAttribute = currVoxelLines[i].a1;
+                    closestIntersectionAttribute = currVoxelLines[i].a1;
                 } else {
                     sphereCenter = tubePoint2;
-                    //closestIntersectionAttribute = currVoxelLines[i].a2;
+                    closestIntersectionAttribute = currVoxelLines[i].a2;
                 }
                 closestIntersectionNormal = normalize(intersection - sphereCenter);
-                //fragColor = vec4(vec3(clamp(dot(closestIntersectionNormal, lightDirection), 0.0, 1.0) + 0.5), 1.0);
-                //fragColor = vec4(vec3(0.0, 1.0, 0.0), 1.0);
+                return vec4(vec3(0.9, mod(float(voxelIndex.x + voxelIndex.y + voxelIndex.z) * 0.39475587, 1.0), 0.0), 1.0); // Test
             }
 
 
+            RayHit hit;
+            hit.distance = dist;
+
             // Evaluate lighting
             float diffuseFactor = clamp(dot(closestIntersectionNormal, lightDirection), 0.0, 1.0) + 0.5;
-            //vec3 diffuseColor = vec3(voxelIndex * 103 % 255) / 255.0f;
-            vec3 diffuseColor = vec3(186.0, 106.0, 57.0) / 255.0;
-            return vec4(diffuseColor * diffuseFactor, 1.0);
-            //return vec4(closestIntersectionNormal, 1.0);
+            vec4 diffuseColor = vec4(vec3(186.0, 106.0, 57.0) / 255.0, 1.0); // Test color w/o transfer function
+            hit.color = vec4(diffuseColor.rgb * diffuseFactor, diffuseColor.a);
+
+            const float occlusionFactor = 1.0;
+            vec4 diffuseColorVorticity = transferFunction(uint(round(255.0*closestIntersectionAttribute)));
+            vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(closestIntersectionNormal,
+                    lightDirection)/2.0 + 0.75 * occlusionFactor, 0.0, 1.0);
+            //hit.color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a); // globalColor.a
+
+            insertHitSorted(hit, numHits, hits);
+        } else {
+            return vec4(vec3(0.8, mod(float(voxelIndex.x + voxelIndex.y + voxelIndex.z) * 0.39475587, 1.0), 0.0), 0.2); // Test
         }
 
         //return vec4(vec3(1.0), texelFetch(densityTexture, voxelIndex, 0).r);
@@ -94,7 +130,16 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex)
         float diffuseFactor = dot(closestIntersectionNormal, rayDirection);
     }
     */
-    return vec4(0.0);
+    //return vec4(vec3(0.0), 1.0);
+
+    vec4 color = vec4(0.0);
+    for (int i = 0; i < numHits; i++) {
+        if (blend(hits[i].color, color)) {
+            return color; // Early ray termination
+        }
+    }
+
+    return color;
 }
 
 #endif

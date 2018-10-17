@@ -126,12 +126,13 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
     if (t0 >= 0.0) {
         intersectionPosition = rayOrigin + t0 * rayDirection;
     } else {
-        float t1 = (-B + discriminantSqrt) / (2.0 * A);
+        return false;
+        /*float t1 = (-B + discriminantSqrt) / (2.0 * A);
         if (t1 >= 0.0) {
             intersectionPosition = rayOrigin + t1 * rayDirection;
         } else {
             return false;
-        }
+        }*/
     }
 
     return true;
@@ -175,7 +176,7 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0) {
             // Outside of finite cylinder
-            return true;
+            //return true; // TODO
         }
     }
 
@@ -212,7 +213,7 @@ bool rayTubeInfIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, v
     float t1 = (-B + discriminantSqrt) / (2.0 * A);
     if (t1 >= 0.0) {
         intersectionPosition = rayOrigin + t1 * rayDirection;
-        return true;
+        //return true;
     }
 
     return false;

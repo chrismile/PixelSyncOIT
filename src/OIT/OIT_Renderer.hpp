@@ -65,7 +65,11 @@ public:
 	{
 		sgl::ShaderManager->invalidateShaderCache();
 		gatherShaderName = name;
-		gatherShader = sgl::ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
+        std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+        if (gatherShaderName.find("Vorticity") != std::string::npos) {
+            shaderIDs.push_back(gatherShaderName + ".Geometry");
+        }
+        gatherShader = sgl::ShaderManager->getShaderProgram(shaderIDs);
 	}
 
 	// For changing performance measurement modes

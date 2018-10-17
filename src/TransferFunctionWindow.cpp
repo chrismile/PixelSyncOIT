@@ -17,7 +17,7 @@
 #include <Math/Math.hpp>
 #include <Input/Mouse.hpp>
 #include <Graphics/Renderer.hpp>
-#include <Graphics/OpenGL/GeometryBuffer.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
 #include "TransferFunctionWindow.hpp"
 
 using namespace tinyxml2;
@@ -30,7 +30,8 @@ TransferFunctionWindow::TransferFunctionWindow()
                     ColorPoint(sgl::Color(255, 0, 0), 1.0f)};*/
     opacityPoints = { OpacityPoint(0.0f, 0.0f), OpacityPoint(1.0f, 1.0f) };
     transferFunctionMap.resize(256);
-    tfMapBuffer = sgl::Renderer->createGeometryBuffer(sizeof(uint32_t) * 256, sgl::UNIFORM_BUFFER);
+    tfMapTextureSettings.type = sgl::TEXTURE_1D;
+    tfMapTexture = sgl::TextureManager->createEmptyTexture(256, tfMapTextureSettings);
     updateAvailableFiles();
     rebuildTransferFunctionMap();
 }
@@ -246,8 +247,12 @@ void TransferFunctionWindow::renderOpacityGraph()
     for (int i = 0; i < (int)opacityPoints.size(); i++) {
         ImVec2 centerPt = ImVec2(startPos.x + border + opacityPoints.at(i).position * (regionWidth - border),
                 startPos.y + border + (1.0f - opacityPoints.at(i).opacity) * (graphHeight - border));
-        drawList->AddCircleFilled(centerPt, 6, backgroundColor, 24);
-        drawList->AddCircle(centerPt, 6, borderColor, 24, 1.5f);
+        float radius = 6;
+        if (selectedPointType == SELECTED_POINT_TYPE_OPACITY && i == currentSelectionIndex) {
+            radius = 8;
+        }
+        drawList->AddCircleFilled(centerPt, radius, backgroundColor, 24);
+        drawList->AddCircle(centerPt, radius, borderColor, 24, 1.5f);
     }
 
 
@@ -282,8 +287,12 @@ void TransferFunctionWindow::renderColorBar()
         ImU32 colorImgui = ImColor(color.getR(), color.getG(), color.getB());
         ImU32 colorInvertedImgui = ImColor(1.0f - color.getFloatR(), 1.0f - color.getFloatG(), 1.0f - color.getFloatB());
         ImVec2 centerPt = ImVec2(pos.x + colorPoints.at(i).position * regionWidth, pos.y + barHeight/2);
-        drawList->AddCircleFilled(centerPt, 6, colorImgui, 24);
-        drawList->AddCircle(centerPt, 6, colorInvertedImgui, 24);
+        float radius = 6;
+        if (selectedPointType == SELECTED_POINT_TYPE_COLOR && i == currentSelectionIndex) {
+            radius = 8;
+        }
+        drawList->AddCircleFilled(centerPt, radius, colorImgui, 24);
+        drawList->AddCircle(centerPt, radius, colorInvertedImgui, 24);
     }
 
     if (ImGui::ClickArea("##bararea", ImVec2(regionWidth + 2, barHeight), mouseReleased)) {
@@ -298,9 +307,9 @@ std::vector<sgl::Color> TransferFunctionWindow::getTransferFunctionMap()
     return transferFunctionMap;
 }
 
-sgl::GeometryBufferPtr &TransferFunctionWindow::getTransferFunctionMapUBO()
+sgl::TexturePtr &TransferFunctionWindow::getTransferFunctionMapTexture()
 {
-    return tfMapBuffer;
+    return tfMapTexture;
 }
 
 // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
@@ -348,7 +357,7 @@ void TransferFunctionWindow::rebuildTransferFunctionMap()
         transferFunctionMap.at(i) = colorAtIdx;
     }
 
-    tfMapBuffer->subData(0, sizeof(uint32_t) * 256, &transferFunctionMap.front());
+    tfMapTexture->uploadPixelData(256, &transferFunctionMap.front());
 }
 
 
@@ -371,7 +380,8 @@ void TransferFunctionWindow::onOpacityGraphClick()
             opacitySelection = opacityPoints.at(currentSelectionIndex).opacity;
             selectedPointType = SELECTED_POINT_TYPE_OPACITY;
             dragging = true;
-        } else if (ImGui::GetIO().MouseClicked[1]) {
+        } else if (ImGui::GetIO().MouseClicked[1] && currentSelectionIndex != 0
+                && currentSelectionIndex != opacityPoints.size()-1) {
             // A.2 Middle clicked? Delete point
             opacityPoints.erase(opacityPoints.begin() + currentSelectionIndex);
             selectedPointType = SELECTED_POINT_TYPE_NONE;
@@ -419,7 +429,8 @@ void TransferFunctionWindow::onColorBarClick()
             if (currentSelectionIndex != 0 && currentSelectionIndex != colorPoints.size()-1) {
                 dragging = true;
             }
-        } else if (ImGui::GetIO().MouseClicked[1]) {
+        } else if (ImGui::GetIO().MouseClicked[1] && currentSelectionIndex != 0
+                   && currentSelectionIndex != colorPoints.size()-1) {
             // A.2 Middle clicked? Delete point
             colorPoints.erase(colorPoints.begin() + currentSelectionIndex);
             selectedPointType = SELECTED_POINT_TYPE_NONE;
@@ -496,7 +507,7 @@ void TransferFunctionWindow::dragPoint()
         float normalizedPosition = mousePosWidget.x / opacityGraphBox.getWidth();
         normalizedPosition = glm::clamp(normalizedPosition, 0.0f, 1.0f);
         // Sort if necessary
-        while (normalizedPosition < colorPoints.at(currentSelectionIndex-1).position) {
+        /*while (normalizedPosition < colorPoints.at(currentSelectionIndex-1).position) {
             ColorPoint tmp = colorPoints.at(currentSelectionIndex-1);
             colorPoints.at(currentSelectionIndex-1) = colorPoints.at(currentSelectionIndex);
             colorPoints.at(currentSelectionIndex) = tmp;
@@ -507,6 +518,15 @@ void TransferFunctionWindow::dragPoint()
             colorPoints.at(currentSelectionIndex+1) = colorPoints.at(currentSelectionIndex);
             colorPoints.at(currentSelectionIndex) = tmp;
             currentSelectionIndex += 1;
+        }*/
+        // Clip to neighbors!
+        if (currentSelectionIndex != 0
+                && normalizedPosition < colorPoints.at(currentSelectionIndex-1).position) {
+            normalizedPosition = colorPoints.at(currentSelectionIndex-1).position;
+        }
+        if (currentSelectionIndex != colorPoints.size()-1
+                && normalizedPosition > colorPoints.at(currentSelectionIndex+1).position) {
+            normalizedPosition = colorPoints.at(currentSelectionIndex+1).position;
         }
         colorPoints.at(currentSelectionIndex).position = normalizedPosition;
     }

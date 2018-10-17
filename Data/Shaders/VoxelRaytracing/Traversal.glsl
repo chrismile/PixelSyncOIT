@@ -59,7 +59,7 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
     loadLinesInVoxel(voxelIndex);
     if (currVoxelNumLines > 0) {
         vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex);
-        if (blend(voxelColor, color)) {
+        if (blendPremul(voxelColor, color)) {
             // Early ray termination
             return color;
         }
@@ -95,7 +95,7 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
         loadLinesInVoxel(voxelIndex);
         if (currVoxelNumLines > 0) {
             vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex);
-            if (blend(voxelColor, color)) {
+            if (blendPremul(voxelColor, color)) {
                 // Early ray termination
                 return color;
             }

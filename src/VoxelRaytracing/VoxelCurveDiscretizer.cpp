@@ -122,6 +122,8 @@ float VoxelDiscretizer::computeDensity(float maxVorticity)
 
 
 
+
+
 VoxelCurveDiscretizer::VoxelCurveDiscretizer(const glm::ivec3 &gridResolution, const glm::ivec3 &quantizationResolution)
         : gridResolution(gridResolution), quantizationResolution(quantizationResolution)
 {
@@ -155,6 +157,7 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename)
     std::vector<Curve> curves;
     Curve currentCurve;
     maxVorticity = 0.0f;
+    int lineCounter = 0;
 
     std::string lineString;
     while (getline(file, lineString)) {
@@ -169,11 +172,10 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename)
 
         if (command == "g") {
             // New path
-            static int ctr = 0;
-            if (ctr >= 999) {
+            if (lineCounter % 1000 == 999) {
                 sgl::Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
             }
-            ctr = (ctr + 1) % 1000;
+            lineCounter++;
         } else if (command == "v") {
             // Path line vertex position
             currentCurve.points.push_back(glm::vec3(sgl::fromString<float>(line.at(1)),
@@ -187,6 +189,7 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename)
             // Indices of path line signal all points read of current curve
             curves.push_back(currentCurve);
             currentCurve = Curve();
+            currentCurve.lineID = lineCounter;
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
@@ -244,12 +247,20 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
         dataCompressed.numLinesInVoxel.push_back(numLines);
         voxelDensities.push_back(voxels[i].computeDensity(maxVorticity));
 
-        // TODO: Compress
 #ifdef PACK_LINES
         std::vector<LineSegmentCompressed> lineSegments;
         lineSegments.resize(voxels[i].lines.size());
         for (size_t j = 0; j < voxels[i].lines.size(); j++) {
-            compressLine(voxels[i].lines[j], lineSegments[j]);
+            compressLine(voxels[i].getIndex(), voxels[i].lines[j], lineSegments[j]);
+
+            // Test
+            /*LineSegment originalLine = voxels[i].lines[j];
+            LineSegment decompressedLine;
+            decompressLine(glm::vec3(voxels[i].getIndex()), lineSegments[j], decompressedLine);
+            if (!checkLinesEqual(originalLine, decompressedLine)) {
+                compressLine(voxels[i].getIndex(), voxels[i].lines[j], lineSegments[j]);
+                decompressLine(glm::vec3(voxels[i].getIndex()), lineSegments[j], decompressedLine);
+            }*/
         }
         dataCompressed.lineSegments.insert(dataCompressed.lineSegments.end(),
                 lineSegments.begin(), lineSegments.end());
@@ -332,7 +343,7 @@ void VoxelCurveDiscretizer::nextStreamline(const Curve &line)
         auto it2 = voxel->currentCurveIntersections.begin();
         it2++;
         while (it2 != voxel->currentCurveIntersections.end()) {
-            voxel->lines.push_back(LineSegment(it1->v, it1->a, it2->v, it2->a));
+            voxel->lines.push_back(LineSegment(it1->v, it1->a, it2->v, it2->a, line.lineID));
             it1++; it1++;
             if (it1 == voxel->currentCurveIntersections.end()) break;
             it2++; it2++;
@@ -352,15 +363,16 @@ T clamp(T x, T a, T b) {
     }
 }
 
-void VoxelCurveDiscretizer::quantizeLine(const LineSegment &line, LineSegmentQuantized &lineQuantized,
-        int faceIndex1, int faceIndex2)
+void VoxelCurveDiscretizer::quantizeLine(const glm::vec3 &voxelPos, const LineSegment &line,
+        LineSegmentQuantized &lineQuantized, int faceIndex1, int faceIndex2)
 {
     lineQuantized.a1 = line.a1;
     lineQuantized.a2 = line.a2;
 
     glm::ivec2 facePosition3D1, facePosition3D2;
-    quantizePoint(line.v1, facePosition3D1, faceIndex1, faceIndex2);
-    quantizePoint(line.v2, facePosition3D2, faceIndex1, faceIndex2);
+    quantizePoint(line.v1 - voxelPos, facePosition3D1, faceIndex1);
+    quantizePoint(line.v2 - voxelPos, facePosition3D2, faceIndex2);
+    lineQuantized.lineID = line.lineID;
     lineQuantized.faceIndex1 = faceIndex1;
     lineQuantized.faceIndex2 = faceIndex2;
     lineQuantized.facePositionQuantized1 = facePosition3D1.x + facePosition3D1.y*quantizationResolution.x;
@@ -376,34 +388,36 @@ int intlog2(int x) {
     return exponent;
 }
 
-void VoxelCurveDiscretizer::compressLine(const LineSegment &line, LineSegmentCompressed &lineCompressed,
-        const glm::ivec3 &voxelIndex)
+void VoxelCurveDiscretizer::compressLine(const glm::ivec3 &voxelIndex, const LineSegment &line,
+        LineSegmentCompressed &lineCompressed)
 {
     LineSegmentQuantized lineQuantized;
     int faceIndex1 = computeFaceIndex(line.v1, voxelIndex);
     int faceIndex2 = computeFaceIndex(line.v2, voxelIndex);
-    quantizeLine(line, lineQuantized, faceIndex1, faceIndex2);
+    quantizeLine(glm::vec3(voxelIndex), line, lineQuantized, faceIndex1, faceIndex2);
 
-    uint8_t attr1Transferred = static_cast<int>(opacityMapping(lineQuantized.a1, maxVorticity)*255);
-    uint8_t attr2Transferred = static_cast<int>(opacityMapping(lineQuantized.a2, maxVorticity)*255);
+    uint8_t attr1Transferred = static_cast<int>(opacityMapping(lineQuantized.a1, maxVorticity)*32);
+    uint8_t attr2Transferred = static_cast<int>(opacityMapping(lineQuantized.a2, maxVorticity)*32);
 
     int c = round(2*intlog2(quantizationResolution.x));
     lineCompressed.linePosition = lineQuantized.faceIndex1;
     lineCompressed.linePosition |= lineQuantized.faceIndex2 << 3;
     lineCompressed.linePosition |= lineQuantized.facePositionQuantized1 << 6;
     lineCompressed.linePosition |= lineQuantized.facePositionQuantized2 << (6 + c);
-    lineCompressed.attributes = attr1Transferred;
-    lineCompressed.attributes |= attr2Transferred << 8;
+    lineCompressed.attributes = 0;
+    lineCompressed.attributes |= (lineQuantized.lineID & 32u) << 11;
+    lineCompressed.attributes |= attr1Transferred << 16;
+    lineCompressed.attributes |= attr2Transferred << 24;
 }
 
-void VoxelCurveDiscretizer::quantizePoint(const glm::vec3 &v, glm::ivec2 &qv, int faceIndex1, int faceIndex2)
+void VoxelCurveDiscretizer::quantizePoint(const glm::vec3 &v, glm::ivec2 &qv, int faceIndex)
 {
     int dimensions[2];
-    if (faceIndex1 == 0 || faceIndex1 == 1) {
+    if (faceIndex == 0 || faceIndex == 1) {
         // x face
         dimensions[0] = 1;
         dimensions[1] = 2;
-    } else if (faceIndex1 == 2 || faceIndex1 == 3) {
+    } else if (faceIndex == 2 || faceIndex == 3) {
         // y face
         dimensions[0] = 0;
         dimensions[1] = 2;
@@ -415,7 +429,7 @@ void VoxelCurveDiscretizer::quantizePoint(const glm::vec3 &v, glm::ivec2 &qv, in
 
     // Iterate over all dimensions
     for (int i = 0; i < 2; i++) {
-        int quantizationPos = std::lround(v[dimensions[i]] * quantizationResolution[dimensions[i]] + 0.5);
+        int quantizationPos = std::floor(v[dimensions[i]] * quantizationResolution[dimensions[i]]);
         qv[i] = glm::clamp(quantizationPos, 0, quantizationResolution[dimensions[i]]-1);
     }
 }
@@ -431,4 +445,78 @@ int VoxelCurveDiscretizer::computeFaceIndex(const glm::vec3 &v, const glm::ivec3
             return 2*i+1;
         }
     }
+}
+
+
+
+
+glm::vec3 VoxelCurveDiscretizer::getQuantizedPositionOffset(uint faceIndex, uint quantizedPos1D)
+{
+    glm::vec2 quantizedFacePosition = glm::vec2(
+            float(quantizedPos1D % quantizationResolution.x),
+            float(quantizedPos1D / quantizationResolution.x))
+                    / float(quantizationResolution.x);
+
+    // Whether the face is the face in x/y/z direction with greater dimensions (offset factor)
+    float face0or1 = float(faceIndex % 2);
+
+    glm::vec3 offset;
+    if (faceIndex <= 1) {
+        offset = glm::vec3(face0or1, quantizedFacePosition.x, quantizedFacePosition.y);
+    } else if (faceIndex <= 3) {
+        offset = glm::vec3(quantizedFacePosition.x, face0or1, quantizedFacePosition.y);
+    } else if (faceIndex <= 5) {
+        offset = glm::vec3(quantizedFacePosition.x, quantizedFacePosition.y, face0or1);
+    }
+    return offset;
+}
+
+
+void VoxelCurveDiscretizer::decompressLine(const glm::vec3 &voxelPosition, const LineSegmentCompressed &compressedLine,
+        LineSegment &decompressedLine)
+{
+    const uint c = 2*log2(quantizationResolution.x);
+    const uint bitmaskQuantizedPos = quantizationResolution.x*quantizationResolution.x-1;
+    uint faceStartIndex = compressedLine.linePosition & 0x7u;
+    uint faceEndIndex = (compressedLine.linePosition >> 3) & 0x7u;
+    uint quantizedStartPos1D = (compressedLine.linePosition >> 6) & bitmaskQuantizedPos;
+    uint quantizedEndPos1D = (compressedLine.linePosition >> 6+c) & bitmaskQuantizedPos;
+    uint lineID = (compressedLine.attributes >> 11) & 32u;
+    uint attr1 = (compressedLine.attributes >> 16) & 0xFFu;
+    uint attr2 = (compressedLine.attributes >> 24) & 0xFFu;
+
+    decompressedLine.v1 = voxelPosition + getQuantizedPositionOffset(faceStartIndex, quantizedStartPos1D);
+    decompressedLine.v2 = voxelPosition + getQuantizedPositionOffset(faceEndIndex, quantizedEndPos1D);
+    decompressedLine.a1 = float(attr1) / 255.0f;
+    decompressedLine.a2 = float(attr2) / 255.0f;
+    decompressedLine.lineID = lineID;
+}
+
+bool VoxelCurveDiscretizer::checkLinesEqual(const LineSegment &originalLine, const LineSegment &decompressedLine)
+{
+    bool linesEqual = true;
+    if (originalLine.lineID % 256 != decompressedLine.lineID) {
+        linesEqual = false;
+        sgl::Logfile::get()->writeError("VoxelCurveDiscretizer::checkLinesEqual: lineID");
+    }
+
+    if (abs(originalLine.a1 - decompressedLine.a1) > 0.01f
+            || abs(originalLine.a2 - decompressedLine.a2) > 0.01f) {
+        linesEqual = false;
+        sgl::Logfile::get()->writeError("VoxelCurveDiscretizer::checkLinesEqual: attribute");
+    }
+
+    if (glm::length(originalLine.v1 - decompressedLine.v1) > 0.5f) {
+        linesEqual = false;
+        sgl::Logfile::get()->writeError(std::string() + "VoxelCurveDiscretizer::checkLinesEqual: position2, error: "
+                + sgl::toString(glm::length(originalLine.v2 - decompressedLine.v2)));
+    }
+
+    if (glm::length(originalLine.v2 - decompressedLine.v2) > 0.5f) {
+        linesEqual = false;
+        sgl::Logfile::get()->writeError(std::string() + "VoxelCurveDiscretizer::checkLinesEqual: position1, error: "
+                                        + sgl::toString(glm::length(originalLine.v2 - decompressedLine.v2)));
+    }
+
+    return linesEqual;
 }

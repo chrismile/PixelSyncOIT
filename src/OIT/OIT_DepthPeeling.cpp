@@ -31,7 +31,11 @@ OIT_DepthPeeling::OIT_DepthPeeling()
 void OIT_DepthPeeling::create()
 {
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthPeelingGather.glsl\"");
-    gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
+    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+    if (gatherShaderName.find("Vorticity") != std::string::npos) {
+        shaderIDs.push_back(gatherShaderName + ".Geometry");
+    }
+    gatherShader = ShaderManager->getShaderProgram(shaderIDs);
 
     // Create render data for determining depth complexity.
     depthComplexityGatherShader = ShaderManager->getShaderProgram({"DepthPeelingGatherDepthComplexity.Vertex",

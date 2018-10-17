@@ -49,18 +49,38 @@ struct ObjMesh
 	std::vector<ObjSubmesh> submeshes;
 };
 
+struct BinaryMeshAttribute
+{
+    std::string name; // e.g. "vertexPosition"
+    sgl::VertexAttributeFormat attributeFormat;
+    uint32_t numComponents;
+    std::vector<uint8_t> data;
+};
+
+struct BinarySubMesh
+{
+    ObjMaterial material;
+    sgl::VertexMode vertexMode;
+    std::vector<uint32_t> indices;
+    std::vector<BinaryMeshAttribute> attributes;
+};
+
+struct BinaryMesh
+{
+    std::vector<BinarySubMesh> submeshes;
+};
 
 /**
  * Writes a mesh to a binary file. The mesh data vectors may also be empty (i.e. size 0).
  * @param indices, vertices, texcoords, normals: The mesh data.
  */
-void writeMesh3D(const std::string &filename, const ObjMesh &mesh);
+void writeMesh3D(const std::string &filename, const BinaryMesh &mesh);
 
 /**
  * Reads a mesh from a binary file. The mesh data vectors may also be empty (i.e. size 0).
  * @param indices, vertices, texcoords, normals: The mesh data.
  */
-void readMesh3D(const std::string &filename, ObjMesh &mesh);
+void readMesh3D(const std::string &filename, BinaryMesh &mesh);
 
 
 class MeshRenderer
@@ -83,6 +103,6 @@ public:
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader = sgl::ShaderProgramPtr(),
-		float *maxVorticity = NULL);
+		float *maxVorticity = NULL, bool shuffleData = false);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */

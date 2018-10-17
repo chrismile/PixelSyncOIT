@@ -31,6 +31,7 @@ public:
     // Returns true if the passed line intersects the voxel boundaries
     bool addPossibleIntersections(const glm::vec3 &v1, const glm::vec3 &v2, float a1, float a2);
     void setIndex(glm::ivec3 index);
+    const glm::ivec3 &getIndex() const { return index; }
     float computeDensity(float maxVorticity);
 
     glm::ivec3 index;
@@ -59,12 +60,19 @@ private:
     float maxVorticity;
 
     void nextStreamline(const Curve &line);
-    void insertLine(const Curve &line);
 
-    void quantizeLine(const LineSegment &line, LineSegmentQuantized &lineQuantized, int faceIndex1, int faceIndex2);
-    void compressLine(const LineSegment &line, LineSegmentCompressed &lineCompressed, const glm::ivec3 &voxelIndex);
-    void quantizePoint(const glm::vec3 &v, glm::ivec2 &qv, int faceIndex1, int faceIndex2);
+    // Compression
+    void quantizeLine(const glm::vec3 &voxelPos, const LineSegment &line, LineSegmentQuantized &lineQuantized,
+            int faceIndex1, int faceIndex2);
+    void compressLine(const glm::ivec3 &voxelIndex, const LineSegment &line, LineSegmentCompressed &lineCompressed);
+    void quantizePoint(const glm::vec3 &v, glm::ivec2 &qv, int faceIndex);
     int computeFaceIndex(const glm::vec3 &v, const glm::ivec3 &voxelIndex);
+
+    // Test decompression
+    glm::vec3 getQuantizedPositionOffset(uint faceIndex, uint quantizedPos1D);
+    void decompressLine(const glm::vec3 &voxelPosition, const LineSegmentCompressed &compressedLine,
+            LineSegment &decompressedLine);
+    bool checkLinesEqual(const LineSegment &originalLine, const LineSegment &decompressedLine);
 
     std::vector<VoxelDiscretizer*> getVoxelsInAABB(const sgl::AABB3 &aabb);
     sgl::AABB3 linesBoundingBox;

@@ -72,10 +72,14 @@ void OIT_MBOIT::setGatherShader(const std::string &name)
 {
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass1.glsl\"");
-    mboitPass1Shader = ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
+    std::list<std::string> shaderIDs = {name + ".Vertex", name + ".Fragment"};
+    if (name.find("Vorticity") != std::string::npos) {
+        shaderIDs.push_back(name + ".Geometry");
+    }
+    mboitPass1Shader = ShaderManager->getShaderProgram(shaderIDs);
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass2.glsl\"");
-    mboitPass2Shader = ShaderManager->getShaderProgram({name + ".Vertex", name + ".Fragment"});
+    mboitPass2Shader = ShaderManager->getShaderProgram(shaderIDs);
     gatherShaderName = name;
 }
 
@@ -104,10 +108,14 @@ void OIT_MBOIT::reloadShaders()
 {
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass1.glsl\"");
-    mboitPass1Shader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+    if (gatherShaderName.find("Vorticity") != std::string::npos) {
+        shaderIDs.push_back(gatherShaderName + ".Geometry");
+    }
+    mboitPass1Shader = ShaderManager->getShaderProgram(shaderIDs);
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass2.glsl\"");
-    mboitPass2Shader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+    mboitPass2Shader = ShaderManager->getShaderProgram(shaderIDs);
     blendShader = ShaderManager->getShaderProgram({"MBOITBlend.Vertex", "MBOITBlend.Fragment"});
     if (blitRenderData) {
         // Copy data to new shader if this function is not called by the constructor

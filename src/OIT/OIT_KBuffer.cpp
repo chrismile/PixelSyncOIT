@@ -110,7 +110,11 @@ void OIT_KBuffer::updateLayerMode()
 
 void OIT_KBuffer::reloadShaders()
 {
-	gatherShader = ShaderManager->getShaderProgram({gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"});
+	std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+	if (gatherShaderName.find("Vorticity") != std::string::npos) {
+		shaderIDs.push_back(gatherShaderName + ".Geometry");
+	}
+	gatherShader = ShaderManager->getShaderProgram(shaderIDs);
 	resolveShader = ShaderManager->getShaderProgram({"KBufferResolve.Vertex", "KBufferResolve.Fragment"});
 	clearShader = ShaderManager->getShaderProgram({"KBufferClear.Vertex", "KBufferClear.Fragment"});
 	//needsNewShaders = true;

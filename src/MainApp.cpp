@@ -77,6 +77,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	} else {
 		clearColor = Color(255, 255, 255, 255);
 	}
+    clearColorSelection = ImColor(clearColor.getColorRGBA());
 	transferFunctionWindow.setClearColor(clearColor);
 
 	//Timer->setFPSLimit(false, 60);
@@ -183,7 +184,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 	updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, &maxVorticity);
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, &maxVorticity, shuffleGeometry);
         boundingBox = transparentObject.boundingBox;
     } else {
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -195,8 +196,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 	scaling = glm::mat4(1.0f);
 
 	// Set position & banding mode dependent on the model
-	camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-	camera->setScale(glm::vec3(1.0f));
+	if (resetCamera) {
+		camera->setYaw(-sgl::PI / 2.0f);
+		camera->setPitch(0.0f);
+	}
 	if (modelFilenamePure == "Data/Models/Ship_04") {
 		transparencyShader->setUniform("bandedColorShading", 0);
 		if (resetCamera) {
@@ -290,8 +293,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	}
 	if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 		OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
-		voxelRaytracer->setClearColor(clearColor);
-		voxelRaytracer->setLightDirection(lightDirection);
+        voxelRaytracer->setLineRadius(lineRadius);
+        voxelRaytracer->setClearColor(clearColor);
+        voxelRaytracer->setLightDirection(lightDirection);
+        voxelRaytracer->setTransferFunctionTexture(transferFunctionWindow.getTransferFunctionMapTexture());
 	}
 
     resolutionChanged(EventPtr());
@@ -357,15 +362,14 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 								   + "\".");
 		exit(1);
 	}
-	loadModel(modelFilename);
+    shuffleGeometry = newState.testShuffleGeometry;
+    loadModel(modelFilename);
 
 	// 4. Set OIT algorithm
 	setRenderMode(newState.oitAlgorithm, true);
 
 	// 5. Pass state change to OIT mode to handle internally necessary state changes.
-	if (firstState || lastState.oitAlgorithmSettings.getMap() != newState.oitAlgorithmSettings.getMap()
-	        || lastState.tilingWidth != newState.tilingWidth || lastState.tilingHeight != newState.tilingHeight
-            || lastState.useStencilBuffer != newState.useStencilBuffer) {
+	if (firstState || newState != lastState) {
         oitRenderer->setNewState(newState);
 	}
 
@@ -580,7 +584,6 @@ void PixelSyncApp::renderSceneSettingsGUI()
 	}
 	//ImGui::Separator();
 
-	static ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
 	if (ImGui::ColorEdit3("Clear Color", (float*)&clearColorSelection, 0)) {
 		clearColor = colorFromFloat(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z,
 									clearColorSelection.w);
@@ -637,11 +640,16 @@ void PixelSyncApp::renderSceneSettingsGUI()
             reRender = true;
         }
         ImGui::Checkbox("Show transfer function window", &transferFunctionWindow.getShowTransferFunctionWindow());
-    }
 
-	ImGui::SliderFloat("Move speed", &MOVE_SPEED, 0.1, 1.0);
+		if (ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
+            if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+                static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLineRadius(lineRadius);
+            }
+            reRender = true;
+		}
+	}
 
-	//ImGui::Separator();
+	ImGui::SliderFloat("Move speed", &MOVE_SPEED, 0.1f, 1.0f);
 }
 
 sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
@@ -652,10 +660,13 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 		transparencyShader = oitRenderer->getGatherShader();
 		if (shaderMode == SHADER_MODE_VORTICITY) {
 			transparencyShader->setUniform("minVorticity", 0.0f);
-            transparencyShader->setUniform("maxVorticity", maxVorticity);
+			transparencyShader->setUniform("maxVorticity", maxVorticity);
+			transparencyShader->setUniform("radius", lineRadius);
             transparencyShader->setUniform("transparencyMapping", transparencyMapping);
-			transparencyShader->setUniformBuffer(2, "TransferFunctionBlock",
-					transferFunctionWindow.getTransferFunctionMapUBO());
+            transparencyShader->setUniform("transferFunctionTexture",
+            		transferFunctionWindow.getTransferFunctionMapTexture(), 5);
+			//transparencyShader->setUniformBuffer(2, "TransferFunctionBlock",
+			//		transferFunctionWindow.getTransferFunctionMapUBO());
 			//std::cout << "Max Vorticity: " << *maxVorticity << std::endl;
 			//transparencyShader->setUniform("cameraPosition", -camera->getPosition());
 		}
@@ -669,7 +680,7 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 			}
 		}
 
-		transparencyShader->setUniform("color", bandingColor);
+		transparencyShader->setUniform("colorGlobal", bandingColor);
 		transparencyShader->setUniform("lightDirection", lightDirection);
 	}
 

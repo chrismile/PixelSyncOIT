@@ -7,17 +7,6 @@
 
 #include "OIT_Renderer.hpp"
 
-#define MLAB_NUM_FRAGMENTS 8
-
-// A fragment node stores rendering information about a list of fragments
-/*struct MLABFragmentNode_compressed
-{
-    // Linear depth, i.e. distance to viewer
-    float depth[MLAB_NUM_FRAGMENTS];
-    // RGB color (3 bytes), translucency (1 byte)
-    uint32_t premulColor[MLAB_NUM_FRAGMENTS];
-};*/
-
 /**
  * An order independent transparency renderer using pixel sync.
  *

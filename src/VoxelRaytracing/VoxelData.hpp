@@ -13,6 +13,8 @@
 #include <Graphics/Buffers/GeometryBuffer.hpp>
 #include <Graphics/Texture/Texture.hpp>
 
+#define PACK_LINES
+
 inline float opacityMapping(float attr, float maxVorticity) {
     return glm::clamp(attr/maxVorticity, 0.0f, 1.0f);
 }
@@ -21,12 +23,14 @@ struct Curve
 {
     std::vector<glm::vec3> points;
     std::vector<float> attributes;
+    unsigned int lineID = 0;
 };
 
 struct LineSegment
 {
-    LineSegment(const glm::vec3 &v1, float a1, const glm::vec3 &v2, float a2) : v1(v1), a1(a1), v2(v2), a2(a2) {}
-    LineSegment() : v1(0.0f), a1(0.0f), v2(0.0f), a2(0.0f) {}
+    LineSegment(const glm::vec3 &v1, float a1, const glm::vec3 &v2, float a2, unsigned int lineID)
+            : v1(v1), a1(a1), v2(v2), a2(a2), lineID(lineID) {}
+    LineSegment() : v1(0.0f), a1(0.0f), v2(0.0f), a2(0.0f), lineID(0) {}
     float length() { return glm::length(v2 - v1); }
     float avgOpacity(float maxVorticity) { return (opacityMapping(a1, maxVorticity) + opacityMapping(a2, maxVorticity)) / 2.0f; }
 
@@ -34,6 +38,7 @@ struct LineSegment
     float a1; // Vertex attribute
     glm::vec3 v2; // Vertex position
     float a2; // Vertex attribute
+    unsigned int lineID;
 };
 
 struct LineSegmentQuantized
@@ -42,6 +47,7 @@ struct LineSegmentQuantized
     uint8_t faceIndex2; // 3 bits
     uint32_t facePositionQuantized1; // 2*log2(QUANTIZATION_RESOLUTION) bits
     uint32_t facePositionQuantized2; // 2*log2(QUANTIZATION_RESOLUTION) bits
+    unsigned int lineID; // 8 bits
     float a1; // Attribute 1
     float a2; // Attribute 2
 };
@@ -51,9 +57,10 @@ struct LineSegmentCompressed
     // Bit 0-2, 3-5: Face ID of start/end point.
     // For c = log2(QUANTIZATION_RESOLUTION^2) = 2*log2(QUANTIZATION_RESOLUTION):
     // Bit 6-(5+c), (6+c)-(5+2c): Quantized face position of start/end point.
-    uint32_t linePosition;
-    // Bit 0-7, 8-15: Attribute of start point (normalized to [0,1] using a transfer function).
-    uint32_t attributes;
+    uint linePosition;
+    // Bit 11-15: Line ID (5 bits for bitmask of 2^5 bits = 32 bits).
+    // Bit 16-23, 24-31: Attribute of start/end point (normalized to [0,1]).
+    uint attributes;
 };
 
 

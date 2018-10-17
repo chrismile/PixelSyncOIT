@@ -28,6 +28,7 @@ uniform vec4 clearColor = vec4(0.0);
 uniform vec3 lightDirection = vec3(1.0, 0.0, 0.0);
 
 #include "CollisionDetection.glsl"
+#include "TransferFunction.glsl"
 #include "Blend.glsl"
 #include "VoxelData.glsl"
 #include "ProcessVoxel.glsl"
@@ -131,6 +132,9 @@ void main()
 		fragColor = vec4(0.0, 1.0, 0.0, 1.0);
 	}*/
 
+
+
+
     vec3 rayOrigin = (worldSpaceToVoxelSpace * inverseViewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     vec2 rayDirCameraSpace;
     float scale = tan(fov * 0.5);
@@ -148,9 +152,10 @@ void main()
         vec3 exitPoint = rayOrigin + tFar * rayDirection - rayDirection*0.1;
 		if (tNear < 0.0) {
             entrancePoint = rayOrigin;
-        } else {
         }
         fragColor = traverseVoxelGrid(rayOrigin, rayDirection, entrancePoint, exitPoint);
+        blend(clearColor, fragColor);
+        fragColor = vec4(fragColor.rgb / fragColor.a, fragColor.a);
 	}
 
 	imageStore(imageOutput, fragCoord, fragColor);

@@ -42,7 +42,11 @@ void OIT_LinkedList::create()
 	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"LinkedListGather.glsl\"");
 	ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
 
-	gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
+	std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+	if (gatherShaderName.find("Vorticity") != std::string::npos) {
+		shaderIDs.push_back(gatherShaderName + ".Geometry");
+	}
+	gatherShader = ShaderManager->getShaderProgram(shaderIDs);
 	resolveShader = ShaderManager->getShaderProgram({"LinkedListResolve.Vertex", "LinkedListResolve.Fragment"});
 	clearShader = ShaderManager->getShaderProgram({"LinkedListClear.Vertex", "LinkedListClear.Fragment"});
 

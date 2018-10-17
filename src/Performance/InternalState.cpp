@@ -169,6 +169,57 @@ void getTestModesTiling(std::vector<InternalState> &states, InternalState state)
 }
 
 
+// Quality test: Shuffle geometry randomly
+void getTestModesShuffleGeometry(std::vector<InternalState> &states, InternalState state, int runNumber)
+{
+    state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
+    state.name = std::string() + "MLAB " + sgl::toString(8) + " Layers, Shuffled " + sgl::toString(runNumber);
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "numLayers", sgl::toString(8) },
+    });
+    states.push_back(state);
+
+
+    state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
+    state.name = std::string() + "MBOIT " + sgl::toString(4) + " Power Moments Float, Shuffled " + sgl::toString(runNumber);
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(4) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
+
+
+    state.oitAlgorithm = RENDER_MODE_OIT_HT;
+    state.name = std::string() + "HT " + sgl::toString(8) + " Layers, Shuffled " + sgl::toString(runNumber);
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "numLayers", sgl::toString(8) },
+    });
+    states.push_back(state);
+
+
+    state.oitAlgorithm = RENDER_MODE_OIT_KBUFFER;
+    state.name = std::string() + "K-Buffer " + sgl::toString(8) + " Layers, Shuffled " + sgl::toString(runNumber);
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "numLayers", sgl::toString(8) },
+    });
+    states.push_back(state);
+
+
+    state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
+    state.name = std::string() + "Linked List Priority Queue "
+                 + sgl::toString(1024) + " Layers, "
+                 + sgl::toString(32) + " Nodes per Pixel, Shuffled " + sgl::toString(runNumber);
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "sortingMode", "Priority Queue" },
+            { "maxNumFragmentsSorting", sgl::toString(512) },
+            { "expectedDepthComplexity", sgl::toString(32) },
+    });
+    states.push_back(state);
+}
+
+
+
 
 std::vector<InternalState> getAllTestModes()
 {
@@ -179,7 +230,7 @@ std::vector<InternalState> getAllTestModes()
 
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
-    getTestModesMLAB(states, state);
+    /*getTestModesMLAB(states, state);
     getTestModesMBOIT(states, state);
     getTestModesHT(states, state);
     getTestModesKBuffer(states, state);
@@ -211,6 +262,12 @@ std::vector<InternalState> getAllTestModes()
     stateNoSync.testNoInvocationInterlock = true;
     stateNoSync.testNoAtomicOperations = true;
     getTestModesNoSync(states, stateNoSync);
+
+    // Quality test: Shuffle geometry randomly
+    InternalState stateShuffleGeometry = state;
+    stateShuffleGeometry.testShuffleGeometry = true;
+    getTestModesShuffleGeometry(states, stateShuffleGeometry, 1);
+    getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);*/
 
     return states;
 }

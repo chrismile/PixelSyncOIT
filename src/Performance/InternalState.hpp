@@ -74,6 +74,18 @@ private:
 
 struct InternalState
 {
+    bool operator==(const InternalState &rhs) const {
+        return this->name == rhs.name && this->modelName == rhs.modelName && this->oitAlgorithm == rhs.oitAlgorithm
+               && this->oitAlgorithmSettings.getMap() == rhs.oitAlgorithmSettings.getMap()
+               && this->tilingWidth == rhs.tilingWidth && this->tilingHeight == rhs.tilingHeight
+               && this->useSSAO == rhs.useSSAO && this->useStencilBuffer == rhs.useStencilBuffer
+               && this->testNoInvocationInterlock == rhs.testNoInvocationInterlock
+               && this->testNoAtomicOperations == rhs.testNoAtomicOperations
+               && this->testShuffleGeometry == rhs.testShuffleGeometry;
+    }
+    bool operator!=(const InternalState &rhs) const {
+        return !(*this == rhs);
+    }
     std::string name;
     std::string modelName;
     RenderModeOIT oitAlgorithm;
@@ -84,6 +96,7 @@ struct InternalState
     bool useStencilBuffer = true;
     bool testNoInvocationInterlock = false; // Test without pixel sync
     bool testNoAtomicOperations = false; // Test without atomic operations
+    bool testShuffleGeometry = false;
 };
 
 std::vector<InternalState> getAllTestModes();

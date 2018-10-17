@@ -7,6 +7,8 @@
 
 #include <cmath>
 #include <fstream>
+#include <algorithm>
+#include <random>
 #include <glm/glm.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -22,9 +24,9 @@
 using namespace std;
 using namespace sgl;
 
-const uint32_t MESH_FORMAT_VERSION = 2u;
+const uint32_t MESH_FORMAT_VERSION = 3u;
 
-void writeMesh3D(const std::string &filename, const ObjMesh &mesh) {
+void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
 	std::ofstream file(filename.c_str(), std::ofstream::binary);
 	if (!file.is_open()) {
 		Logfile::get()->writeError(std::string() + "Error in writeMesh3D: File \"" + filename + "\" not found.");
@@ -35,20 +37,25 @@ void writeMesh3D(const std::string &filename, const ObjMesh &mesh) {
 	stream.write((uint32_t)MESH_FORMAT_VERSION);
 	stream.write((uint32_t)mesh.submeshes.size());
 
-	for (const ObjSubmesh &submesh : mesh.submeshes) {
-        stream.write(submesh.material);
-        stream.writeArray(submesh.indices);
-		stream.writeArray(submesh.vertices);
-		stream.writeArray(submesh.texcoords);
-        stream.writeArray(submesh.normals);
-	}
+	for (const BinarySubMesh &submesh : mesh.submeshes) {
+		stream.write(submesh.material);
+		stream.write((uint32_t)submesh.vertexMode);
+		stream.writeArray(submesh.indices);
+		stream.write((uint32_t)submesh.attributes.size());
 
+		for (const BinaryMeshAttribute &attribute : submesh.attributes) {
+			stream.write(attribute.name);
+			stream.write((uint32_t)attribute.attributeFormat);
+			stream.write((uint32_t)attribute.numComponents);
+			stream.writeArray(attribute.data);
+		}
+	}
 
 	file.write((const char*)stream.getBuffer(), stream.getSize());
 	file.close();
 }
 
-void readMesh3D(const std::string &filename, ObjMesh &mesh) {
+void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
 	std::ifstream file(filename.c_str(), std::ifstream::binary);
 	if (!file.is_open()) {
 		Logfile::get()->writeError(std::string() + "Error in readMesh3D: File \"" + filename + "\" not found.");
@@ -75,11 +82,26 @@ void readMesh3D(const std::string &filename, ObjMesh &mesh) {
 	mesh.submeshes.resize(numSubmeshes);
 
 	for (uint32_t i = 0; i < numSubmeshes; i++) {
-        stream.read(mesh.submeshes.at(i).material);
-        stream.readArray(mesh.submeshes.at(i).indices);
-		stream.readArray(mesh.submeshes.at(i).vertices);
-		stream.readArray(mesh.submeshes.at(i).texcoords);
-		stream.readArray(mesh.submeshes.at(i).normals);
+		BinarySubMesh &submesh = mesh.submeshes.at(i);
+		stream.read(submesh.material);
+		uint32_t vertexMode;
+		stream.read(vertexMode);
+		submesh.vertexMode = (sgl::VertexMode)vertexMode;
+		stream.readArray(mesh.submeshes.at(i).indices);
+
+		uint32_t numAttributes;
+		stream.read(numAttributes);
+		submesh.attributes.resize(numAttributes);
+
+		for (uint32_t j = 0; j < numAttributes; j++) {
+			BinaryMeshAttribute &attribute = submesh.attributes.at(j);
+			stream.read(attribute.name);
+			uint32_t format;
+			stream.read(format);
+			attribute.attributeFormat = (sgl::VertexAttributeFormat)format;
+			stream.read(attribute.numComponents);
+			stream.readArray(attribute.data);
+		}
 	}
 
 	//delete[] buffer; // BinaryReadStream does deallocation
@@ -136,15 +158,51 @@ sgl::AABB3 computeAABB(const std::vector<glm::vec3> &vertices)
 	return sgl::AABB3(minV, maxV);
 }
 
-MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, float *maxVorticity)
-{
-	//std::vector<uint32_t> indices;
-	//std::vector<glm::vec3> vertices;
-	//std::vector<glm::vec2> texcoords;
-	//std::vector<glm::vec3> normals;
+std::vector<uint32_t> shuffleIndicesLines(const std::vector<uint32_t> &indices) {
+	size_t numSegments = indices.size() / 2;
+	std::vector<size_t> shuffleOffsets;
+	for (size_t i = 0; i < numSegments; i++) {
+		shuffleOffsets.push_back(i);
+	}
+	auto rng = std::default_random_engine{};
+	std::shuffle(std::begin(shuffleOffsets), std::end(shuffleOffsets), rng);
 
+	std::vector<uint32_t> shuffledIndices;
+	shuffledIndices.reserve(numSegments*2);
+	for (size_t i = 0; i < numSegments; i++) {
+	    size_t lineIndex = shuffleOffsets.at(i);
+		shuffledIndices.push_back(indices.at(lineIndex*2));
+		shuffledIndices.push_back(indices.at(lineIndex*2+1));
+	}
+
+	return shuffledIndices;
+}
+
+std::vector<uint32_t> shuffleIndicesTriangles(const std::vector<uint32_t> &indices) {
+	size_t numSegments = indices.size() / 3;
+	std::vector<size_t> shuffleOffsets;
+	for (size_t i = 0; i < numSegments; numSegments++) {
+		shuffleOffsets.push_back(i);
+	}
+	auto rng = std::default_random_engine{};
+	std::shuffle(std::begin(shuffleOffsets), std::end(shuffleOffsets), rng);
+
+	std::vector<uint32_t> shuffledIndices;
+	shuffledIndices.reserve(numSegments*3);
+	for (size_t i = 0; i < numSegments; i++) {
+		shuffledIndices.push_back(indices.at(i*3));
+		shuffledIndices.push_back(indices.at(i*3+1));
+		shuffledIndices.push_back(indices.at(i*3+2));
+	}
+
+	return shuffledIndices;
+}
+
+MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader,
+		float *maxVorticity, bool shuffleData)
+{
 	MeshRenderer meshRenderer;
-	ObjMesh mesh;
+	BinaryMesh mesh;
 	readMesh3D(filename, mesh);
 
 	if (!shader) {
@@ -160,39 +218,51 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 	AABB3 totalBoundingBox(glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 
 	for (size_t i = 0; i < mesh.submeshes.size(); i++) {
-		std::vector<uint32_t> &indices = mesh.submeshes.at(i).indices;
-		std::vector<glm::vec3> &vertices = mesh.submeshes.at(i).vertices;
-		std::vector<glm::vec2> &texcoords = mesh.submeshes.at(i).texcoords;
-		std::vector<glm::vec3> &normals = mesh.submeshes.at(i).normals;
-		totalBoundingBox.combine(computeAABB(vertices));
-
+		BinarySubMesh &submesh = mesh.submeshes.at(i);
 		ShaderAttributesPtr renderData = ShaderManager->createShaderAttributes(shader);
-		if (vertices.size() > 0) {
-			GeometryBufferPtr positionBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*vertices.size(),
-					(void*)&vertices.front(), VERTEX_BUFFER);
-			renderData->addGeometryBuffer(positionBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
-		}
-		if (texcoords.size() > 0) {
-			GeometryBufferPtr texcoordBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec2)*texcoords.size(),
-					(void*)&texcoords.front(), VERTEX_BUFFER);
-			renderData->addGeometryBuffer(texcoordBuffer, "textureCoordinates", ATTRIB_FLOAT, 2);
-
-			if (maxVorticity != NULL) {
-				*maxVorticity = 0.0f;
-				for (size_t i = 0; i < texcoords.size(); i++) {
-					*maxVorticity = std::max(*maxVorticity, texcoords.at(i).x);
+		renderData->setVertexMode(submesh.vertexMode);
+		if (submesh.indices.size() > 0) {
+			if (shuffleData && submesh.vertexMode == VERTEX_MODE_LINES) {
+				std::vector<uint32_t> shuffledIndices;
+				if (submesh.vertexMode == VERTEX_MODE_LINES) {
+					shuffledIndices = shuffleIndicesLines(submesh.indices);
+				} else if (submesh.vertexMode == VERTEX_MODE_TRIANGLES) {
+					shuffledIndices = shuffleIndicesTriangles(submesh.indices);
+				} else {
+					Logfile::get()->writeError("ERROR in parseMesh3D: shuffleData and unsupported vertex mode!");
+					shuffledIndices = submesh.indices;
 				}
+				GeometryBufferPtr indexBuffer = Renderer->createGeometryBuffer(
+						sizeof(uint32_t)*shuffledIndices.size(), (void*)&shuffledIndices.front(), INDEX_BUFFER);
+				renderData->setIndexGeometryBuffer(indexBuffer, ATTRIB_UNSIGNED_INT);
+			} else {
+				GeometryBufferPtr indexBuffer = Renderer->createGeometryBuffer(
+						sizeof(uint32_t)*submesh.indices.size(), (void*)&submesh.indices.front(), INDEX_BUFFER);
+				renderData->setIndexGeometryBuffer(indexBuffer, ATTRIB_UNSIGNED_INT);
 			}
 		}
-		if (normals.size() > 0) {
-			GeometryBufferPtr normalBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*normals.size(),
-					(void*)&normals.front(), VERTEX_BUFFER);
-			renderData->addGeometryBuffer(normalBuffer, "vertexNormal", ATTRIB_FLOAT, 3);
-		}
-		if (indices.size() > 0) {
-			GeometryBufferPtr indexBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t)*indices.size(),
-					(void*)&indices.front(), INDEX_BUFFER);
-			renderData->setIndexGeometryBuffer(indexBuffer, ATTRIB_UNSIGNED_INT);
+
+		for (size_t j = 0; j < submesh.attributes.size(); j++) {
+			BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
+			GeometryBufferPtr attributeBuffer = Renderer->createGeometryBuffer(
+					meshAttribute.data.size(), (void*)&meshAttribute.data.front(), VERTEX_BUFFER);
+			renderData->addGeometryBuffer(attributeBuffer, meshAttribute.name.c_str(), meshAttribute.attributeFormat,
+					meshAttribute.numComponents);
+
+			if (meshAttribute.name == "vertexPosition") {
+				std::vector<glm::vec3> vertices;
+				vertices.resize(meshAttribute.data.size() / sizeof(glm::vec3));
+				memcpy(&vertices.front(), &meshAttribute.data.front(), meshAttribute.data.size());
+				totalBoundingBox.combine(computeAABB(vertices));
+			}
+			if (maxVorticity != NULL && meshAttribute.name == "vorticity") {
+				float *vorticities = (float*)&meshAttribute.data.front();
+				size_t numVorticityValues = meshAttribute.data.size() / sizeof(float);
+				*maxVorticity = 0.0f;
+				for (size_t k = 0; k < numVorticityValues; k++) {
+					*maxVorticity = std::max(*maxVorticity, vorticities[k]);
+				}
+			}
 		}
 
 		shaderAttributes.push_back(renderData);

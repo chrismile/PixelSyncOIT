@@ -11,11 +11,11 @@ out vec3 fragmentPositonLocal;
 out vec3 screenSpacePosition;
 
 // Color of the object
-uniform vec4 color;
+uniform vec4 colorGlobal;
 
 void main()
 {
-	fragmentColor = color;
+	fragmentColor = colorGlobal;
 	fragmentNormal = vertexNormal;
 	fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
 	screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;

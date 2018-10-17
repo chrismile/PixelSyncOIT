@@ -44,8 +44,6 @@ public:
 	void render(); // Calls renderOIT and renderGUI
 	void renderOIT(); // Uses renderScene and "oitRenderer" to render the scene
 	void renderScene(); // Renders lighted scene
-	void renderGUI(); // Renders GUI
-    void renderSceneSettingsGUI();
 	void update(float dt);
 	void resolutionChanged(EventPtr event);
 	void processSDLEvent(const SDL_Event &event);
@@ -70,7 +68,10 @@ protected:
     sgl::ShaderProgramPtr setUniformValues();
 
 private:
-	// Lighting & rendering
+    void renderGUI(); // Renders GUI
+    void renderSceneSettingsGUI();
+
+    // Lighting & rendering
 	boost::shared_ptr<Camera> camera;
     float fovy;
 	ShaderProgramPtr transparencyShader;
@@ -87,6 +88,7 @@ private:
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
 	float maxVorticity = 1.0f;
+	bool shuffleGeometry = false; // For testing order dependency of OIT algorithms on triangle order
 
 	// Off-screen rendering
 	FramebufferObjectPtr sceneFramebuffer;
@@ -105,8 +107,10 @@ private:
     int usedModelIndex = 1;
     Color bandingColor;
     Color clearColor;
+    ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
     bool cullBackface = true;
     bool transparencyMapping = true;
+    float lineRadius = 0.001f;
     std::vector<float> fpsArray;
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
