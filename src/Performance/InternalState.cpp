@@ -230,7 +230,7 @@ std::vector<InternalState> getAllTestModes()
 
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
-    /*getTestModesMLAB(states, state);
+    getTestModesMLAB(states, state);
     getTestModesMBOIT(states, state);
     getTestModesHT(states, state);
     getTestModesKBuffer(states, state);
@@ -267,7 +267,7 @@ std::vector<InternalState> getAllTestModes()
     InternalState stateShuffleGeometry = state;
     stateShuffleGeometry.testShuffleGeometry = true;
     getTestModesShuffleGeometry(states, stateShuffleGeometry, 1);
-    getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);*/
+    getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);
 
     return states;
 }
