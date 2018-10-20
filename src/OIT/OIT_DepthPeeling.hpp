@@ -29,6 +29,27 @@ public:
 
     virtual void renderGUI();
 
+    virtual void setGatherShader(const std::string &name)
+    {
+        gatherShaderName = name;
+
+        sgl::ShaderManager->invalidateShaderCache();
+        sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthPeelingGather.glsl\"");
+        std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+        if (gatherShaderName.find("Vorticity") != std::string::npos) {
+            shaderIDs.push_back(gatherShaderName + ".Geometry");
+        }
+        gatherShader = sgl::ShaderManager->getShaderProgram(shaderIDs);
+
+        sgl::ShaderManager->invalidateShaderCache();
+        sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthComplexityGather.glsl\"");
+        shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+        if (gatherShaderName.find("Vorticity") != std::string::npos) {
+            shaderIDs.push_back(gatherShaderName + ".Geometry");
+        }
+        depthComplexityGatherShader = sgl::ShaderManager->getShaderProgram(shaderIDs);
+    }
+
 private:
     void clear();
     void setUniformData();

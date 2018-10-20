@@ -30,6 +30,7 @@ OIT_DepthPeeling::OIT_DepthPeeling()
 
 void OIT_DepthPeeling::create()
 {
+    ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthPeelingGather.glsl\"");
     std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
     if (gatherShaderName.find("Vorticity") != std::string::npos) {
@@ -38,8 +39,15 @@ void OIT_DepthPeeling::create()
     gatherShader = ShaderManager->getShaderProgram(shaderIDs);
 
     // Create render data for determining depth complexity.
-    depthComplexityGatherShader = ShaderManager->getShaderProgram({"DepthPeelingGatherDepthComplexity.Vertex",
-                                                                   "DepthPeelingGatherDepthComplexity.Fragment"});
+    //depthComplexityGatherShader = ShaderManager->getShaderProgram({"DepthPeelingGatherDepthComplexity.Vertex",
+    //                                                               "DepthPeelingGatherDepthComplexity.Fragment"});
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthComplexityGather.glsl\"");
+    shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+    if (gatherShaderName.find("Vorticity") != std::string::npos) {
+        shaderIDs.push_back(gatherShaderName + ".Geometry");
+    }
+    depthComplexityGatherShader = ShaderManager->getShaderProgram(shaderIDs);
 }
 
 void OIT_DepthPeeling::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
@@ -179,7 +187,7 @@ void OIT_DepthPeeling::renderScene()
         Renderer->blitTexture(colorRenderTextures[i%2], AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
 
         // NVIDIA OpenGL Linux driver assumes the application has hung if we don't swap buffers every now and then
-        if (i % 400 == 0 && i > 0) {
+        if (i % 200 == 0 && i > 0) {
             sgl::AppSettings::get()->getMainWindow()->flip();
         }
     }

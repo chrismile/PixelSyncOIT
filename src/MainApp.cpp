@@ -184,11 +184,18 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 	updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, &maxVorticity, shuffleGeometry);
+        std::vector<float> lineAttributes;
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, lineAttributes, &maxVorticity,
+                shuffleGeometry);
+        if (shaderMode == SHADER_MODE_VORTICITY) {
+            transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
+        }
         boundingBox = transparentObject.boundingBox;
     } else {
-        OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
-        voxelRaytracer->loadModel(usedModelIndex);
+		std::vector<float> lineAttributes;
+		OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
+        voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
+        transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         transparentObject = MeshRenderer();
     }
 
@@ -288,18 +295,20 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 		}
 	}
     if (modelFilenamePure.length() > 0 && mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+		std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
-        voxelRaytracer->loadModel(usedModelIndex);
+        voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
+		transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
 	}
 	if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 		OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         voxelRaytracer->setLineRadius(lineRadius);
         voxelRaytracer->setClearColor(clearColor);
         voxelRaytracer->setLightDirection(lightDirection);
-        voxelRaytracer->setTransferFunctionTexture(transferFunctionWindow.getTransferFunctionMapTexture());
+		voxelRaytracer->setTransferFunctionTexture(transferFunctionWindow.getTransferFunctionMapTexture());
 	}
 
-    resolutionChanged(EventPtr());
+	resolutionChanged(EventPtr());
 	oldMode = mode;
 }
 

@@ -49,6 +49,7 @@ public:
 
     void setClearColor(const sgl::Color &clearColor);
     inline bool &getShowTransferFunctionWindow() { return showTransferFunctionWindow; }
+    void computeHistogram(const std::vector<float> &attributes, float minAttr, float maxAttr);
 
     // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
     std::vector<sgl::Color> getTransferFunctionMap();
@@ -80,11 +81,12 @@ private:
     float opacitySelection = 1.0f;
     ImVec4 colorSelection = ImColor(255, 255, 255, 255);
     sgl::Color clearColor;
+
     std::string saveDirectory = "Data/TransferFunctions/";
     std::string saveFileString = "WhiteRed.xml";
     std::vector<std::string> availableFiles;
     int selectedFileIndex = -1;
-
+    std::vector<float> histogram;
     void rebuildTransferFunctionMap();
     std::vector<sgl::Color> transferFunctionMap;
     sgl::TexturePtr tfMapTexture;

@@ -56,16 +56,16 @@ void OIT_VoxelRaytracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFram
     renderImage = sceneTexture;
 }
 
-void OIT_VoxelRaytracing::loadModel(int modelIndex)
+void OIT_VoxelRaytracing::loadModel(int modelIndex, std::vector<float> &attributes, float &maxVorticity)
 {
-    fromFile(MODEL_FILENAMES[modelIndex]);
+    fromFile(MODEL_FILENAMES[modelIndex], attributes, maxVorticity);
 }
 
 std::string ivec3ToString(const glm::ivec3 &v) {
     return std::string() + "ivec3(" + sgl::toString(v.x) + ", " + sgl::toString(v.y) + ", " + sgl::toString(v.z) + ")";
 }
 
-void OIT_VoxelRaytracing::fromFile(const std::string &filename)
+void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity)
 {
     // Check if voxel grid is already created
     // Pure filename without extension (to create compressed .voxel filename)
@@ -77,7 +77,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename)
     VoxelGridDataCompressed compressedData;
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
         VoxelCurveDiscretizer discretizer(glm::ivec3(64), glm::ivec3(64));
-        discretizer.createFromFile(modelFilenameObj);
+        discretizer.createFromFile(modelFilenameObj, attributes, maxVorticity);
         compressedData = discretizer.compressData();
         //saveToFile(modelFilenameVoxelGrid, compressedData); // TODO When format is stable
     } else {

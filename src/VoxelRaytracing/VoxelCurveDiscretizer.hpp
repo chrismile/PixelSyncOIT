@@ -50,7 +50,7 @@ public:
             const glm::ivec3 &gridResolution = glm::ivec3(256, 256, 256),
             const glm::ivec3 &quantizationResolution = glm::ivec3(8, 8, 8));
     ~VoxelCurveDiscretizer();
-    void createFromFile(const std::string &filename);
+    void createFromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
     VoxelGridDataCompressed compressData();
     glm::mat4 getWorldToVoxelGridMatrix() { return linesToVoxel; }
 

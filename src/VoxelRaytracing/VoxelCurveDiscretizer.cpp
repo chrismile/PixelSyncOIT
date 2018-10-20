@@ -143,7 +143,8 @@ VoxelCurveDiscretizer::~VoxelCurveDiscretizer()
     delete[] voxels;
 }
 
-void VoxelCurveDiscretizer::createFromFile(const std::string &filename)
+void VoxelCurveDiscretizer::createFromFile(const std::string &filename, std::vector<float> &attributes,
+        float &_maxVorticity)
 {
     std::ifstream file(filename.c_str());
 
@@ -183,8 +184,10 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename)
             linesBoundingBox.combine(currentCurve.points.back());
         } else if (command == "vt") {
             // Path line vertex attribute
-            currentCurve.attributes.push_back(sgl::fromString<float>(line.at(1)));
-            maxVorticity = std::max(maxVorticity, currentCurve.attributes.back());
+            float attr = sgl::fromString<float>(line.at(1));
+            currentCurve.attributes.push_back(attr);
+            attributes.push_back(attr);
+            maxVorticity = std::max(maxVorticity, attr);
         } else if (command == "l") {
             // Indices of path line signal all points read of current curve
             curves.push_back(currentCurve);
@@ -196,6 +199,7 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename)
             sgl::Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
         }
     }
+    _maxVorticity = maxVorticity;
 
     file.close();
 

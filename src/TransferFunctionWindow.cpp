@@ -143,6 +143,27 @@ void TransferFunctionWindow::setClearColor(const sgl::Color &clearColor)
 }
 
 
+void TransferFunctionWindow::computeHistogram(const std::vector<float> &attributes, float minAttr, float maxAttr)
+{
+    const int histogramResolution = 256;
+    histogram.clear();
+    histogram.resize(histogramResolution);
+    for (float attr : attributes) {
+        int index = (attr - maxAttr) / (minAttr - maxAttr) * (histogramResolution-1);
+        histogram.at(index) += 1;
+    }
+
+    float maxNum = 1.0f;
+    for (float num : histogram) {
+        maxNum = std::max(num, maxNum);
+    }
+
+    for (float &num : histogram) {
+        num /= maxNum;
+    }
+}
+
+
 bool TransferFunctionWindow::renderGUI()
 {
     if (showTransferFunctionWindow) { // , ImGuiWindowFlags_AlwaysAutoResize)
@@ -230,6 +251,8 @@ void TransferFunctionWindow::renderOpacityGraph()
                             ImVec2(startPos.x + regionWidth - border, startPos.y + graphHeight - border),
                             backgroundColor,
                             ImGui::GetStyle().FrameRounding);
+    ImGui::PlotHistogram("##histogram", &histogram.front(), histogram.size(), 0, NULL, 0.0f, 1.0f,
+            ImVec2(regionWidth, graphHeight));
 
     // Then render the graph itself
     for (int i = 0; i < (int)opacityPoints.size()-1; i++) {

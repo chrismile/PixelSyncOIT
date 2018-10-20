@@ -199,7 +199,7 @@ std::vector<uint32_t> shuffleIndicesTriangles(const std::vector<uint32_t> &indic
 }
 
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader,
-		float *maxVorticity, bool shuffleData)
+		std::vector<float> &lineAttributes, float *maxVorticity, bool shuffleData)
 {
 	MeshRenderer meshRenderer;
 	BinaryMesh mesh;
@@ -255,12 +255,14 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 				memcpy(&vertices.front(), &meshAttribute.data.front(), meshAttribute.data.size());
 				totalBoundingBox.combine(computeAABB(vertices));
 			}
-			if (maxVorticity != NULL && meshAttribute.name == "vorticity") {
+			if (maxVorticity != NULL && meshAttribute.name == "vertexVorticity") {
 				float *vorticities = (float*)&meshAttribute.data.front();
 				size_t numVorticityValues = meshAttribute.data.size() / sizeof(float);
 				*maxVorticity = 0.0f;
+				lineAttributes.reserve(numVorticityValues);
 				for (size_t k = 0; k < numVorticityValues; k++) {
 					*maxVorticity = std::max(*maxVorticity, vorticities[k]);
+					lineAttributes.push_back(vorticities[k]);
 				}
 			}
 		}

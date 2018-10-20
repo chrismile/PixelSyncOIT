@@ -16,7 +16,7 @@ public:
     virtual sgl::ShaderProgramPtr getGatherShader() { return renderShader; }
 
     void create();
-    void loadModel(int modelIndex);
+    void loadModel(int modelIndex, std::vector<float> &attributes, float &maxVorticity);
     void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
             sgl::RenderbufferObjectPtr &sceneDepthRBO);
     void setLineRadius(float lineRadius);
@@ -33,7 +33,7 @@ public:
     virtual void renderToScreen();
 
 private:
-    void fromFile(const std::string &filename);
+    void fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
     void setUniformData();
 
     sgl::ShaderProgramPtr renderShader;

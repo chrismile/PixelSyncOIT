@@ -42,8 +42,11 @@ void OIT_DepthComplexity::create()
     numFragmentsMaxColor = 16;
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthComplexityGather.glsl\"");
-
-    gatherShader = ShaderManager->getShaderProgram({"PseudoPhong.Vertex", "PseudoPhong.Fragment"});
+    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
+    if (gatherShaderName.find("Vorticity") != std::string::npos) {
+        shaderIDs.push_back(gatherShaderName + ".Geometry");
+    }
+    gatherShader = ShaderManager->getShaderProgram(shaderIDs);
 
     resolveShader = ShaderManager->getShaderProgram({"DepthComplexityResolve.Vertex", "DepthComplexityResolve.Fragment"});
     resolveShader->setUniform("color", Color(0, 255, 255));

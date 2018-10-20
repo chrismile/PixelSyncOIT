@@ -102,7 +102,7 @@ public:
  * @param shader: The shader to use for the mesh.
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
-MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader = sgl::ShaderProgramPtr(),
-		float *maxVorticity = NULL, bool shuffleData = false);
+MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader,
+		std::vector<float> &lineAttributes, float *maxVorticity = NULL, bool shuffleData = false);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */
