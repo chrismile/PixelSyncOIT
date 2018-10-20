@@ -449,6 +449,9 @@ int VoxelCurveDiscretizer::computeFaceIndex(const glm::vec3 &v, const glm::ivec3
             return 2*i+1;
         }
     }
+    sgl::Logfile::get()->writeError(std::string() + "Error in VoxelCurveDiscretizer::computeFaceIndex: "
+            + "Invalid position.");
+    return 0;
 }
 
 
