@@ -34,6 +34,10 @@ TransferFunctionWindow::TransferFunctionWindow()
     tfMapTexture = sgl::TextureManager->createEmptyTexture(256, tfMapTextureSettings);
     updateAvailableFiles();
     rebuildTransferFunctionMap();
+
+    if (sgl::FileUtils::get()->exists(saveDirectory + "TestMBOIT.xml")) {
+        loadFunctionFromFile(saveDirectory + "TestMBOIT.xml");
+    }
 }
 
 bool TransferFunctionWindow::saveFunctionToFile(const std::string &filename)
@@ -251,8 +255,10 @@ void TransferFunctionWindow::renderOpacityGraph()
                             ImVec2(startPos.x + regionWidth - border, startPos.y + graphHeight - border),
                             backgroundColor,
                             ImGui::GetStyle().FrameRounding);
+    ImVec2 cursorPosHistogram = ImGui::GetCursorPos();
     ImGui::PlotHistogram("##histogram", &histogram.front(), histogram.size(), 0, NULL, 0.0f, 1.0f,
             ImVec2(regionWidth, graphHeight));
+    ImGui::SetCursorPos(cursorPosHistogram);
 
     // Then render the graph itself
     for (int i = 0; i < (int)opacityPoints.size()-1; i++) {

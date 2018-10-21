@@ -27,7 +27,7 @@ layout(std140, binding = 1) uniform MomentOITUniformData
 
 #include "MomentMath.glsl"
 
-const float ABSORBANCE_MAX_VALUE = 2.3;
+const float ABSORBANCE_MAX_VALUE = 10.0;
 
 #if MOMENT_GENERATION
 

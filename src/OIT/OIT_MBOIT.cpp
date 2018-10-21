@@ -36,6 +36,7 @@ static bool usePowerMoments = true;
 static int numMoments = 4;
 static MBOITPixelFormat pixelFormat = MBOIT_PIXEL_FORMAT_FLOAT_32;
 static bool USE_R_RG_RGBA_FOR_MBOIT6 = true;
+static float overestimationBeta = 0.01;
 
 OIT_MBOIT::OIT_MBOIT()
 {
@@ -51,7 +52,7 @@ void OIT_MBOIT::create()
 
     // Create moment OIT uniform data buffer
     momentUniformData.moment_bias = 5*1e-7;
-    momentUniformData.overestimation = 0.25f;
+    momentUniformData.overestimation = overestimationBeta;
     computeWrappingZoneParameters(momentUniformData.wrapping_zone_parameters);
     momentOITUniformBuffer = Renderer->createGeometryBuffer(sizeof(MomentOITUniformData), &momentUniformData, UNIFORM_BUFFER);
 
@@ -308,6 +309,12 @@ void OIT_MBOIT::renderGUI()
     const char *pixelFormatModes[] = {"Float 32-bit", "UNORM Integer 16-bit"};
     if (ImGui::Combo("Pixel Format", (int*)&pixelFormat, pixelFormatModes, IM_ARRAYSIZE(pixelFormatModes))) {
         updateMomentMode();
+        reRender = true;
+    }
+
+    if (ImGui::SliderFloat("Overestimation", &overestimationBeta, 0.0f, 1.0f, "%.2f")) {
+        momentUniformData.overestimation = overestimationBeta;
+        momentOITUniformBuffer->subData(0, sizeof(MomentOITUniformData), &momentUniformData);
         reRender = true;
     }
 

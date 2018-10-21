@@ -80,12 +80,14 @@ double psnr(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
 
 sgl::BitmapPtr computeNormalizedDifferenceMap(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
 {
-    int N = expected->getW() * expected->getH() * expected->getChannels();
+    int numChannels = expected->getChannels();
+    int imageSize = expected->getW() * expected->getH();
+    int N = numChannels * imageSize;
     sgl::BitmapPtr differenceMap(new sgl::Bitmap);
     differenceMap->allocate(expected->getW(), expected->getH(), 32);
 
     // Compute maximum difference for all pixel color channels
-    int *differences = new int[N];
+    /*int *differences = new int[N];
     int maxDifferenceRGB = 0;
     int maxDifferenceAlpha = 0;
     for (int i = 0; i < N; i++) {
@@ -103,8 +105,9 @@ sgl::BitmapPtr computeNormalizedDifferenceMap(const sgl::BitmapPtr &expected, co
     if (maxDifferenceRGB >= 1 && maxDifferenceAlpha >= 1) {
         for (int i = 0; i < N; i++) {
             if (i % 4 == 3) {
-                differenceMap->getPixels()[i] = static_cast<double>(differences[i])
-                                                / static_cast<double>(maxDifferenceAlpha) * 255.0;
+                //differenceMap->getPixels()[i] = static_cast<double>(differences[i])
+                //                                / static_cast<double>(maxDifferenceAlpha) * 255.0;
+                differenceMap->getPixels()[i] = 255;
             } else {
                 differenceMap->getPixels()[i] = static_cast<double>(differences[i])
                                                 / static_cast<double>(maxDifferenceRGB) * 255.0;
@@ -113,7 +116,36 @@ sgl::BitmapPtr computeNormalizedDifferenceMap(const sgl::BitmapPtr &expected, co
     } else {
         differenceMap->fill(sgl::Color(0, 0, 0, 0));
     }
-    delete[] differences;
+    delete[] differences;*/
+
+
+    // Compute maximum difference for all pixel color channels
+    float *l2normDifferences = new float[imageSize];
+    float maxNormValue = 0.0f;
+    for (int i = 0; i < imageSize; i++) {
+        l2normDifferences[i] = 0.0f;
+        for (int j = 0; j < numChannels; j++) {
+            l2normDifferences[i] += std::abs(
+                    static_cast<int>(expected->getPixels()[i*numChannels+j])
+                    - static_cast<int>(observed->getPixels()[i*numChannels+j]));
+        }
+        l2normDifferences[i] = sqrt(l2normDifferences[i]);
+        maxNormValue = std::max(maxNormValue, l2normDifferences[i]);
+    }
+
+    // Normalize the difference map
+    if (maxNormValue >= 1) {
+        for (int i = 0; i < imageSize; i++) {
+            int pixelValue = 255.0f - l2normDifferences[i] / maxNormValue * 255.0f;
+            differenceMap->getPixels()[i*4+0] = pixelValue;
+            differenceMap->getPixels()[i*4+1] = pixelValue;
+            differenceMap->getPixels()[i*4+2] = pixelValue;
+            differenceMap->getPixels()[i*4+3] = 255;
+        }
+    } else {
+        differenceMap->fill(sgl::Color(255, 255, 255, 255));
+    }
+    delete[] l2normDifferences;
 
     return differenceMap;
 }
