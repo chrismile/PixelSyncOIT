@@ -295,7 +295,8 @@ void OIT_MBOIT::renderGUI()
         // Initialize
         momentModeIndex = usePowerMoments ? 0 : 4;
         momentModeIndex += numMoments/2 - 2;
-        momentModeIndex += (MBOIT_PIXEL_FORMAT_FLOAT_32 && numMoments == 6) ? 1 : 0;
+        momentModeIndex += (USE_R_RG_RGBA_FOR_MBOIT6 && numMoments == 6) ? 1 : 0;
+        momentModeIndex += (numMoments == 8) ? 1 : 0;
     }
 
     if (ImGui::Combo("Moment Mode", &momentModeIndex, momentModes, IM_ARRAYSIZE(momentModes))) {
