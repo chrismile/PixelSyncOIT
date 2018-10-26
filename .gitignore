@@ -67,6 +67,7 @@ cmake-build-*/
 *.mtl
 *.obj
 *.binmesh
+*.binmesh_tri
 *.nc
 
 Data/TransferFunctions/*

@@ -34,11 +34,7 @@ void OIT_AT::create()
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"ATGather.glsl\"");
 
-    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-    if (gatherShaderName.find("Vorticity") != std::string::npos) {
-        shaderIDs.push_back(gatherShaderName + ".Geometry");
-    }
-    gatherShader = ShaderManager->getShaderProgram(shaderIDs);
+    gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
     resolveShader = ShaderManager->getShaderProgram({"ATResolve.Vertex", "ATResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"ATClear.Vertex", "ATClear.Fragment"});
 

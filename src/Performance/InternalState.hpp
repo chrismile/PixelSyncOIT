@@ -23,17 +23,19 @@ enum RenderModeOIT {
     RENDER_MODE_OIT_DEPTH_COMPLEXITY,
     RENDER_MODE_OIT_DUMMY,
     RENDER_MODE_OIT_DEPTH_PEELING,
-    RENDER_MODE_VOXEL_RAYTRACING_LINES
+    RENDER_MODE_VOXEL_RAYTRACING_LINES,
+    RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
 };
 
 const int NUM_MODELS = 8;
 const char *const MODEL_FILENAMES[] = {
-        "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04",
-        "Data/Models/Monkey", "Data/Models/Box", "Data/Models/Plane", "Data/Models/dragon",
-        "Data/Trajectories/lagranto_out"
+        "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines",
+        "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04", "Data/Models/Monkey", "Data/Models/Box",
+        "Data/Models/Plane", "Data/Models/dragon", "Data/Trajectories/lagranto_out"
 };
 const char *const MODEL_DISPLAYNAMES[] = {
-        "Single Streamline", "Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon", "Lagranto"
+        "Single Streamline", "Streamlines", "Streamlines (Triangles)", "Ship", "Monkey", "Box", "Plane", "Dragon",
+        "Lagranto"
 };
 
 

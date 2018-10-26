@@ -48,6 +48,7 @@
 #include "OIT/OIT_DepthPeeling.hpp"
 #include "OIT/TilingMode.hpp"
 #include "VoxelRaytracing/OIT_VoxelRaytracing.hpp"
+#include "Tests/TestPixelSyncPerformance.hpp"
 #include "MainApp.hpp"
 
 void openglErrorCallback()
@@ -171,13 +172,35 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 	// Pure filename without extension (to create compressed .binmesh filename)
 	modelFilenamePure = FileUtils::get()->removeExtension(filename);
 
-	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
+	if (oitRenderer->isTestingMode()) {
+		return;
+	}
+
+	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh"; // TODO
+	if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Triangles)")) {
+		// Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
+		modelFilenameOptimized += "_tri";
+	}
 	std::string modelFilenameObj = modelFilenamePure + ".obj";
 	if (!FileUtils::get()->exists(modelFilenameOptimized)) {
 		if (boost::starts_with(modelFilenamePure, "Data/Models")) {
 			convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
 		} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-			convertObjTrajectoryDataToBinaryMesh(modelFilenameObj, modelFilenameOptimized);
+		    if (boost::ends_with(modelFilenameOptimized, "_tri")) {
+				convertObjTrajectoryDataToBinaryTriangleMesh(modelFilenameObj, modelFilenameOptimized);
+		    } else {
+				convertObjTrajectoryDataToBinaryLineMesh(modelFilenameObj, modelFilenameOptimized);
+            }
+		}
+	}
+	if (boost::starts_with(modelFilenamePure, "Data/Models")) {
+		gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
+	} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+		if (boost::ends_with(modelFilenameOptimized, "_tri")) {
+			gatherShaderIDs = {"PseudoPhongVorticity.TriangleVertex", "PseudoPhongVorticity.Fragment"};
+		} else {
+			gatherShaderIDs = {"PseudoPhongVorticity.Vertex", "PseudoPhongVorticity.Geometry",
+							   "PseudoPhongVorticity.Fragment"};
 		}
 	}
 
@@ -269,6 +292,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
 	} else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_VoxelRaytracing(camera, clearColor));
+	} else if (mode == RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE) {
+		oitRenderer = boost::shared_ptr<OIT_Renderer>(new TestPixelSyncPerformance);
 	} else {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
 		Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
@@ -284,8 +309,12 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	        && !transparentObject.isLoaded()) {
 	    loadModel(MODEL_FILENAMES[usedModelIndex], false);
 	}
+	if (oldMode == RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE) {
+        loadModel(MODEL_FILENAMES[usedModelIndex], true);
+	}
 
-	if (transparentObject.isLoaded() && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+	if (transparentObject.isLoaded() && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
+			&& !oitRenderer->isTestingMode()) {
 		transparentObject.setNewShader(transparencyShader);
 		if (shaderMode != SHADER_MODE_VORTICITY) {
 			if (modelFilenamePure == "Data/Models/Ship_04") {
@@ -315,17 +344,21 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 
 void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
 {
+	if (oitRenderer->isTestingMode()) {
+		return;
+	}
+
+	if (gatherShaderIDs.size() != 0) {
+		oitRenderer->setGatherShaderList(gatherShaderIDs);
+		transparencyShader = oitRenderer->getGatherShader();
+	}
 	if (boost::starts_with(modelFilenamePure, "Data/Trajectories/")) {
 		if (shaderMode != SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_NEW_OIT_RENDERER
 				|| modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
-			oitRenderer->setGatherShader("PseudoPhongVorticity");
-			transparencyShader = oitRenderer->getGatherShader();
 			shaderMode = SHADER_MODE_VORTICITY;
 		}
 	} else {
 		if (shaderMode == SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
-			oitRenderer->setGatherShader("PseudoPhong");
-			transparencyShader = oitRenderer->getGatherShader();
 			shaderMode = SHADER_MODE_PSEUDO_PHONG;
 		}
 	}
@@ -417,7 +450,7 @@ void PixelSyncApp::render()
 	}
 
 
-	reRender = reRender || oitRenderer->needsReRender();
+	reRender = reRender || oitRenderer->needsReRender() || oitRenderer->isTestingMode();
 
 	if (continuousRendering || reRender) {
 		renderOIT();
@@ -530,7 +563,7 @@ void PixelSyncApp::renderOIT()
 void PixelSyncApp::renderGUI()
 {
 	ImGuiWrapper::get()->renderStart();
-    //ImGuiWrapper::get()->renderDemoWindow();
+    ImGuiWrapper::get()->renderDemoWindow();
 
     if (showSettingsWindow) {
         if (ImGui::Begin("Settings", &showSettingsWindow)) {

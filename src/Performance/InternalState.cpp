@@ -219,6 +219,41 @@ void getTestModesShuffleGeometry(std::vector<InternalState> &states, InternalSta
 }
 
 
+// Performance test: Pixel sync vs. atomic operations
+void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE;
+    state.name = std::string() + "Pixel Sync Performance Test Compute";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "usePixelSync", "true" },
+            { "testType", "compute" },
+    });
+    states.push_back(state);
+
+
+    state.name = std::string() + "Atomic Operations Performance Test Compute";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "usePixelSync", "false" },
+            { "testType", "compute" },
+    });
+    states.push_back(state);
+
+    state.name = std::string() + "Pixel Sync Performance Test Sum";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "usePixelSync", "true" },
+            { "testType", "sum" },
+    });
+    states.push_back(state);
+
+    state.name = std::string() + "Atomic Operations Performance Test Sum";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "usePixelSync", "false" },
+            { "testType", "sum" },
+    });
+    states.push_back(state);
+}
+
+
 
 
 std::vector<InternalState> getAllTestModes()
@@ -268,6 +303,9 @@ std::vector<InternalState> getAllTestModes()
     stateShuffleGeometry.testShuffleGeometry = true;
     getTestModesShuffleGeometry(states, stateShuffleGeometry, 1);
     getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);
+
+    // Performance test: Pixel sync vs. atomic operations
+    getTestModesPixelSyncVsAtomicOps(states, stateShuffleGeometry);
 
     return states;
 }

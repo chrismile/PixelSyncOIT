@@ -61,19 +61,16 @@ public:
 		this->renderSceneFunction = renderSceneFunction;
 	}
 
-	virtual void setGatherShader(const std::string &name)
+	virtual void setGatherShaderList(const std::list<std::string> &shaderIDs)
 	{
 		sgl::ShaderManager->invalidateShaderCache();
-		gatherShaderName = name;
-        std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-        if (gatherShaderName.find("Vorticity") != std::string::npos) {
-            shaderIDs.push_back(gatherShaderName + ".Geometry");
-        }
-        gatherShader = sgl::ShaderManager->getShaderProgram(shaderIDs);
+		gatherShaderIDs = shaderIDs;
+        gatherShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
 	}
 
 	// For changing performance measurement modes
 	virtual void setNewState(const InternalState &newState) {}
+	virtual bool isTestingMode() { return false; }
 
 protected:
     // Shader programs
@@ -83,7 +80,7 @@ protected:
 
     std::function<void()> renderSceneFunction;
 	bool reRender = false;
-	std::string gatherShaderName = "PseudoPhong";
+	std::list<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
 };
 
 #endif /* OIT_OIT_RENDERER_HPP_ */

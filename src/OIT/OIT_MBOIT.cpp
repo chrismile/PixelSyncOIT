@@ -69,19 +69,15 @@ void OIT_MBOIT::create()
     blitRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_MBOIT::setGatherShader(const std::string &name)
+void OIT_MBOIT::setGatherShaderList(const std::list<std::string> &shaderIDs)
 {
+    gatherShaderIDs = shaderIDs;
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass1.glsl\"");
-    std::list<std::string> shaderIDs = {name + ".Vertex", name + ".Fragment"};
-    if (name.find("Vorticity") != std::string::npos) {
-        shaderIDs.push_back(name + ".Geometry");
-    }
-    mboitPass1Shader = ShaderManager->getShaderProgram(shaderIDs);
+    mboitPass1Shader = ShaderManager->getShaderProgram(gatherShaderIDs);
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass2.glsl\"");
-    mboitPass2Shader = ShaderManager->getShaderProgram(shaderIDs);
-    gatherShaderName = name;
+    mboitPass2Shader = ShaderManager->getShaderProgram(gatherShaderIDs);
 }
 
 void OIT_MBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
@@ -109,14 +105,10 @@ void OIT_MBOIT::reloadShaders()
 {
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass1.glsl\"");
-    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-    if (gatherShaderName.find("Vorticity") != std::string::npos) {
-        shaderIDs.push_back(gatherShaderName + ".Geometry");
-    }
-    mboitPass1Shader = ShaderManager->getShaderProgram(shaderIDs);
+    mboitPass1Shader = ShaderManager->getShaderProgram(gatherShaderIDs);
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MBOITPass2.glsl\"");
-    mboitPass2Shader = ShaderManager->getShaderProgram(shaderIDs);
+    mboitPass2Shader = ShaderManager->getShaderProgram(gatherShaderIDs);
     blendShader = ShaderManager->getShaderProgram({"MBOITBlend.Vertex", "MBOITBlend.Fragment"});
     if (blitRenderData) {
         // Copy data to new shader if this function is not called by the constructor

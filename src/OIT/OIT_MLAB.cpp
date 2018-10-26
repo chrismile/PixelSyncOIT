@@ -105,11 +105,7 @@ void OIT_MLAB::updateLayerMode()
 
 void OIT_MLAB::reloadShaders()
 {
-    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-    if (gatherShaderName.find("Vorticity") != std::string::npos) {
-        shaderIDs.push_back(gatherShaderName + ".Geometry");
-    }
-    gatherShader = ShaderManager->getShaderProgram(shaderIDs);
+    gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
     resolveShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
     //needsNewShaders = true;

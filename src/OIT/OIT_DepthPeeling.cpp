@@ -32,22 +32,12 @@ void OIT_DepthPeeling::create()
 {
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthPeelingGather.glsl\"");
-    std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-    if (gatherShaderName.find("Vorticity") != std::string::npos) {
-        shaderIDs.push_back(gatherShaderName + ".Geometry");
-    }
-    gatherShader = ShaderManager->getShaderProgram(shaderIDs);
+    gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
 
     // Create render data for determining depth complexity.
-    //depthComplexityGatherShader = ShaderManager->getShaderProgram({"DepthPeelingGatherDepthComplexity.Vertex",
-    //                                                               "DepthPeelingGatherDepthComplexity.Fragment"});
     ShaderManager->invalidateShaderCache();
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthComplexityGather.glsl\"");
-    shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-    if (gatherShaderName.find("Vorticity") != std::string::npos) {
-        shaderIDs.push_back(gatherShaderName + ".Geometry");
-    }
-    depthComplexityGatherShader = ShaderManager->getShaderProgram(shaderIDs);
+    depthComplexityGatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
 }
 
 void OIT_DepthPeeling::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,

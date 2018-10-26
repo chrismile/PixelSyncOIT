@@ -1,3 +1,27 @@
+-- TriangleVertex
+
+#version 430 core
+
+
+layout(location = 0) in vec3 vertexPosition;
+layout(location = 1) in vec3 vertexNormal;
+layout(location = 2) in float vertexVorticity;
+
+out vec3 fragmentNormal;
+out vec3 fragmentPositonWorld;
+out vec3 screenSpacePosition;
+out float vorticity;
+
+void main()
+{
+	fragmentNormal = vertexNormal;
+	fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
+	screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
+	vorticity = vertexVorticity;
+	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+}
+
+
 -- Vertex
 
 #version 430 core

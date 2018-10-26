@@ -29,25 +29,15 @@ public:
 
     virtual void renderGUI();
 
-    virtual void setGatherShader(const std::string &name)
+    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs)
     {
-        gatherShaderName = name;
-
+        gatherShaderIDs = shaderIDs;
         sgl::ShaderManager->invalidateShaderCache();
         sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthPeelingGather.glsl\"");
-        std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-        if (gatherShaderName.find("Vorticity") != std::string::npos) {
-            shaderIDs.push_back(gatherShaderName + ".Geometry");
-        }
-        gatherShader = sgl::ShaderManager->getShaderProgram(shaderIDs);
-
+        gatherShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
         sgl::ShaderManager->invalidateShaderCache();
         sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthComplexityGather.glsl\"");
-        shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-        if (gatherShaderName.find("Vorticity") != std::string::npos) {
-            shaderIDs.push_back(gatherShaderName + ".Geometry");
-        }
-        depthComplexityGatherShader = sgl::ShaderManager->getShaderProgram(shaderIDs);
+        depthComplexityGatherShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
     }
 
 private:

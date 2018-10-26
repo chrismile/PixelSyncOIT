@@ -37,6 +37,8 @@ TransferFunctionWindow::TransferFunctionWindow()
 
     if (sgl::FileUtils::get()->exists(saveDirectory + "TestMBOIT.xml")) {
         loadFunctionFromFile(saveDirectory + "TestMBOIT.xml");
+    } else if (sgl::FileUtils::get()->exists(saveDirectory + "ColorsMichi02.xml")) {
+        loadFunctionFromFile(saveDirectory + "ColorsMichi02.xml");
     }
 }
 
@@ -256,9 +258,12 @@ void TransferFunctionWindow::renderOpacityGraph()
                             backgroundColor,
                             ImGui::GetStyle().FrameRounding);
     ImVec2 cursorPosHistogram = ImGui::GetCursorPos();
+    ImVec2 oldPadding = ImGui::GetStyle().FramePadding;
+    ImGui::GetStyle().FramePadding = ImVec2(1,1);
     ImGui::PlotHistogram("##histogram", &histogram.front(), histogram.size(), 0, NULL, 0.0f, 1.0f,
             ImVec2(regionWidth, graphHeight));
     ImGui::SetCursorPos(cursorPosHistogram);
+    ImGui::GetStyle().FramePadding = oldPadding;
 
     // Then render the graph itself
     for (int i = 0; i < (int)opacityPoints.size()-1; i++) {

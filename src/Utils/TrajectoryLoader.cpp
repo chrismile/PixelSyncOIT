@@ -238,7 +238,7 @@ void createNormals(const std::vector<glm::vec3> &vertices,
 }
 
 
-/*void convertObjTrajectoryDataToBinaryMesh(
+void convertObjTrajectoryDataToBinaryTriangleMesh(
         const std::string &objFilename,
         const std::string &binaryFilename)
 {
@@ -246,18 +246,19 @@ void createNormals(const std::vector<glm::vec3> &vertices,
 
     if (!file.is_open()) {
         sgl::Logfile::get()->writeError(std::string() + "Error in convertObjTrajectoryDataToBinaryMesh: File \""
-                + objFilename + "\" does not exist.");
+                                        + objFilename + "\" does not exist.");
         return;
     }
 
-    ObjMesh mesh;
-    mesh.submeshes.push_back(ObjSubmesh());
-    ObjSubmesh &submesh = mesh.submeshes.front();
+    BinaryMesh binaryMesh;
+    binaryMesh.submeshes.push_back(BinarySubMesh());
+    BinarySubMesh &submesh = binaryMesh.submeshes.front();
+    submesh.vertexMode = VERTEX_MODE_TRIANGLES;
 
-    std::vector<glm::vec3> &globalTubeVertices = submesh.vertices;
-    std::vector<glm::vec3> &globalTubeNormals = submesh.normals;
-    std::vector<float> globalTubeVertexAttributes;
-    std::vector<uint32_t> &globalTubeIndices = submesh.indices;
+    std::vector<glm::vec3> globalVertexPositions;
+    std::vector<glm::vec3> globalNormals;
+    std::vector<float> globalVorticities;
+    std::vector<uint32_t> globalIndices;
 
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
@@ -283,7 +284,7 @@ void createNormals(const std::vector<glm::vec3> &vertices,
         } else if (command == "v") {
             // Path line vertex position
             globalLineVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
-                                               fromString<float>(line.at(3))));
+                                                   fromString<float>(line.at(3))));
         } else if (command == "vt") {
             // Path line vertex attribute
             globalLineVertexAttributes.push_back(fromString<float>(line.at(1)));
@@ -296,32 +297,29 @@ void createNormals(const std::vector<glm::vec3> &vertices,
 
             // pathLineCenters: The path line points to create a tube from.
             std::vector<glm::vec3> pathLineCenters;
-            std::vector<float> pathLineAttributes;
+            std::vector<float> pathLineVorticities;
             pathLineCenters.reserve(currentLineIndices.size());
-            pathLineAttributes.reserve(currentLineIndices.size());
+            pathLineVorticities.reserve(currentLineIndices.size());
             for (size_t i = 0; i < currentLineIndices.size(); i++) {
                 pathLineCenters.push_back(globalLineVertices.at(currentLineIndices.at(i)));
-                pathLineAttributes.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
+                pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
             }
 
             // Create tube render data
-            std::vector<glm::vec3> localTubeVertices;
-            std::vector<glm::vec3> localTubeNormals;
-            std::vector<float> localTubeVertexAttributes;
-            std::vector<uint32_t> localTubeIndices;
-            createTubeRenderData(pathLineCenters, pathLineAttributes, localTubeVertices, localTubeVertexAttributes,
-                    localTubeIndices);
-            createNormals(localTubeVertices, localTubeIndices, localTubeNormals);
+            std::vector<glm::vec3> localVertices;
+            std::vector<float> localVorticites;
+            std::vector<glm::vec3> localNormals;
+            std::vector<uint32_t> localIndices;
+            createTubeRenderData(pathLineCenters, pathLineVorticities, localVertices, localVorticites, localIndices);
+            createNormals(localVertices, localIndices, localNormals);
 
             // Local -> global
-            for (size_t i = 0; i < localTubeIndices.size(); i++) {
-                globalTubeIndices.push_back(localTubeIndices.at(i) + globalTubeVertices.size());
+            for (size_t i = 0; i < localIndices.size(); i++) {
+                globalIndices.push_back(localIndices.at(i) + globalVertexPositions.size());
             }
-            globalTubeVertices.insert(globalTubeVertices.end(), localTubeVertices.begin(), localTubeVertices.end());
-            globalTubeNormals.insert(globalTubeNormals.end(), localTubeNormals.begin(), localTubeNormals.end());
-            globalTubeVertexAttributes.insert(globalTubeVertexAttributes.end(), localTubeVertexAttributes.begin(),
-                    localTubeVertexAttributes.end());
-
+            globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
+            globalVorticities.insert(globalVorticities.end(), localVorticites.begin(), localVorticites.end());
+            globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
@@ -329,31 +327,42 @@ void createNormals(const std::vector<glm::vec3> &vertices,
         }
     }
 
-
-    // Store vertex attributes in first index of texture coordinates
-    size_t numAttributes = globalTubeVertexAttributes.size();
-    submesh.texcoords.reserve(numAttributes);
-    for (size_t i = 0; i < numAttributes; i++) {
-        submesh.texcoords.push_back(glm::vec2(globalTubeVertexAttributes.at(i), 0.0f));
-    }
-
-    Logfile::get()->writeInfo(std::string() + "Creating normals...");
-    //createNormals(submesh.vertices, submesh.indices, submesh.normals);
-
     submesh.material.diffuseColor = glm::vec3(165, 220, 84) / 255.0f;
     submesh.material.opacity = 120 / 255.0f;
+    submesh.indices = globalIndices;
+
+    BinaryMeshAttribute positionAttribute;
+    positionAttribute.name = "vertexPosition";
+    positionAttribute.attributeFormat = ATTRIB_FLOAT;
+    positionAttribute.numComponents = 3;
+    positionAttribute.data.resize(globalVertexPositions.size() * sizeof(glm::vec3));
+    memcpy(&positionAttribute.data.front(), &globalVertexPositions.front(), globalVertexPositions.size() * sizeof(glm::vec3));
+    submesh.attributes.push_back(positionAttribute);
+
+    BinaryMeshAttribute lineNormalsAttribute;
+    lineNormalsAttribute.name = "vertexNormal";
+    lineNormalsAttribute.attributeFormat = ATTRIB_FLOAT;
+    lineNormalsAttribute.numComponents = 3;
+    lineNormalsAttribute.data.resize(globalNormals.size() * sizeof(glm::vec3));
+    memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), globalNormals.size() * sizeof(glm::vec3));
+    submesh.attributes.push_back(lineNormalsAttribute);
+
+    BinaryMeshAttribute vorticitiesAttribute;
+    vorticitiesAttribute.name = "vertexVorticity";
+    vorticitiesAttribute.attributeFormat = ATTRIB_FLOAT;
+    vorticitiesAttribute.numComponents = 1;
+    vorticitiesAttribute.data.resize(globalVorticities.size() * sizeof(float));
+    memcpy(&vorticitiesAttribute.data.front(), &globalVorticities.front(), globalVorticities.size() * sizeof(float));
+    submesh.attributes.push_back(vorticitiesAttribute);
 
     file.close();
 
     Logfile::get()->writeInfo(std::string() + "Summary: "
-            + sgl::toString(submesh.vertices.size()) + " vertices, "
-            + sgl::toString(submesh.normals.size()) + " normals, "
-            + sgl::toString(submesh.texcoords.size()) + " texture coordinates, "
-            + sgl::toString(submesh.indices.size()) + " indices.");
+                              + sgl::toString(globalVertexPositions.size()) + " vertices, "
+                              + sgl::toString(globalIndices.size()) + " indices.");
     Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
-
     writeMesh3D(binaryFilename, binaryMesh);
-}*/
+}
 
 
 
@@ -434,7 +443,7 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
     }
 }
 
-void convertObjTrajectoryDataToBinaryMesh(
+void convertObjTrajectoryDataToBinaryLineMesh(
         const std::string &objFilename,
         const std::string &binaryFilename)
 {
@@ -509,7 +518,7 @@ void convertObjTrajectoryDataToBinaryMesh(
             std::vector<glm::vec3> localNormals;
             std::vector<uint32_t> localIndices;
             createTangentAndNormalData(pathLineCenters, pathLineVorticities, localVertices, localVorticites,
-                    localTangents, localNormals, localIndices);
+                                       localTangents, localNormals, localIndices);
 
             // Local -> global
             for (size_t i = 0; i < localIndices.size(); i++) {
@@ -564,6 +573,9 @@ void convertObjTrajectoryDataToBinaryMesh(
 
     file.close();
 
+    Logfile::get()->writeInfo(std::string() + "Summary: "
+                              + sgl::toString(globalVertexPositions.size()) + " vertices, "
+                              + sgl::toString(globalIndices.size()) + " indices.");
     Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);
 }

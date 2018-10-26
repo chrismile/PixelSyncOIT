@@ -42,11 +42,7 @@ void OIT_LinkedList::create()
 	ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"LinkedListGather.glsl\"");
 	ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
 
-	std::list<std::string> shaderIDs = {gatherShaderName + ".Vertex", gatherShaderName + ".Fragment"};
-	if (gatherShaderName.find("Vorticity") != std::string::npos) {
-		shaderIDs.push_back(gatherShaderName + ".Geometry");
-	}
-	gatherShader = ShaderManager->getShaderProgram(shaderIDs);
+	gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
 	resolveShader = ShaderManager->getShaderProgram({"LinkedListResolve.Vertex", "LinkedListResolve.Fragment"});
 	clearShader = ShaderManager->getShaderProgram({"LinkedListClear.Vertex", "LinkedListClear.Fragment"});
 
@@ -143,7 +139,7 @@ void OIT_LinkedList::renderGUI()
 	// If something changes about fragment collection & sorting
 	bool needNewResolveShader = false;
 
-	if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 1, 2000)) {
+	if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 1, 1024)) {
 		ShaderManager->invalidateShaderCache();
 		ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
 		needNewResolveShader = true;

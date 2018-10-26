@@ -44,14 +44,14 @@ void gatherFragment(vec4 color)
 		nodes[index] = frag;
 	} else {
     	// Blend with last fragment
-		vec4 colorDst = unpackUnorm4x8(nodes[index-1].color);
+		/*vec4 colorDst = unpackUnorm4x8(nodes[index-1].color);
 		vec4 colorSrc = unpackUnorm4x8(frag.color);
 
 		vec4 colorOut;
 		colorOut.rgb = colorDst.a * colorDst.rgb + (1.0 - colorDst.a) * colorSrc.a * colorSrc.rgb;
         colorOut.a = colorDst.a + (1.0 - colorDst.a) * colorSrc.a;
 
-    	nodes[index-1].color = packUnorm4x8(vec4(colorOut.rgb / colorOut.a, colorOut.a));
+    	nodes[index-1].color = packUnorm4x8(vec4(colorOut.rgb / colorOut.a, colorOut.a));*/
 	}
 
 	fragColor = vec4(0.0, 0.0, 0.0, 0.0);

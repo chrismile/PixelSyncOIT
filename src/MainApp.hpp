@@ -83,12 +83,14 @@ private:
 	bool useSSAO = false;
 
 	// Mode
-	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT; // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT
+	// RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
+	RenderModeOIT mode = RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE;
     RenderModeOIT oldMode = mode;
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
 	float maxVorticity = 1.0f;
 	bool shuffleGeometry = false; // For testing order dependency of OIT algorithms on triangle order
+    std::list<std::string> gatherShaderIDs;
 
 	// Off-screen rendering
 	FramebufferObjectPtr sceneFramebuffer;

@@ -11,7 +11,11 @@
 
 #include <glm/glm.hpp>
 
-void convertObjTrajectoryDataToBinaryMesh(
+void convertObjTrajectoryDataToBinaryTriangleMesh(
+        const std::string &objFilename,
+        const std::string &binaryFilename);
+
+void convertObjTrajectoryDataToBinaryLineMesh(
         const std::string &objFilename,
         const std::string &binaryFilename);
 
