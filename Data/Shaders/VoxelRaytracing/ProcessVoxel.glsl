@@ -7,7 +7,7 @@ float distanceSqr(vec3 v1, vec3 v2)
 }
 
 
-#define MAX_NUM_HITS 8
+#define MAX_NUM_HITS 16
 struct RayHit {
     vec4 color;
     float distance;
@@ -247,18 +247,6 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, inout uint b
 
     uint nextBlendedLineIDs = blendedLineIDs;
 
-    for (int z = -1; z <= 1; z++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
-                ivec3 processedVoxelIndex = voxelIndex + ivec3(x,y,z);
-                if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
-                        && all(lessThan(processedVoxelIndex, gridResolution))) {
-                    processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
-                            blendedLineIDs, nextBlendedLineIDs);
-                }
-            }
-        }
-    }
     /*for (int i = 0; i <= 27; i++) {
         int x = i % 3 - 1;
         int y = (i / 3) % 3 - 1;
@@ -270,6 +258,20 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, inout uint b
                     blendedLineIDs, nextBlendedLineIDs);
         }
     }*/
+    /*for (int z = -1; z <= 1; z++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                ivec3 processedVoxelIndex = voxelIndex + ivec3(x,y,z);
+                if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
+                        && all(lessThan(processedVoxelIndex, gridResolution))) {
+                    processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
+                            blendedLineIDs, nextBlendedLineIDs);
+                }
+            }
+        }
+    }*/
+    processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits,
+            blendedLineIDs, nextBlendedLineIDs);
     blendedLineIDs = nextBlendedLineIDs;
 
     vec4 color = vec4(0.0);

@@ -17,7 +17,7 @@ TestPixelSyncPerformance::TestPixelSyncPerformance()
 
 TestPixelSyncPerformance::~TestPixelSyncPerformance()
 {
-    timer.printTotalAvgTime();
+    //timer.printTotalAvgTime();
 }
 
 void TestPixelSyncPerformance::create()
@@ -115,9 +115,9 @@ void TestPixelSyncPerformance::gatherBegin()
 
 void TestPixelSyncPerformance::renderToScreen()
 {
-    timer.start("Rendering time");
+    //timer.start("Rendering time");
     sgl::Renderer->render(renderData);
-    timer.end();
+    //timer.end();
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     sgl::Renderer->clearFramebuffer();

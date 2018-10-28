@@ -32,7 +32,7 @@ private:
     void setUniformData();
     sgl::ShaderAttributesPtr renderData;
     sgl::GeometryBufferPtr dataBuffer;
-    sgl::TimerGL timer;
+    //sgl::TimerGL timer;
 };
 
 

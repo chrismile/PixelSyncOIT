@@ -58,7 +58,7 @@ void main()
 
 #elif defined(TEST_SUM)
 
-void mainSum()
+void main()
 {
 	uint idx = addrGen(uvec2(uint(gl_FragCoord.x), uint(gl_FragCoord.y)));
 #ifdef TEST_PIXEL_SYNC

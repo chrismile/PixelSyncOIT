@@ -109,12 +109,13 @@ sgl::BitmapPtr computeNormalizedDifferenceMapRGBDiff(const sgl::BitmapPtr &expec
                 //                                / static_cast<double>(maxDifferenceAlpha) * 255.0;
                 differenceMap->getPixels()[i] = 255;
             } else {
-                differenceMap->getPixels()[i] = static_cast<double>(differences[i])
-                                                / static_cast<double>(maxDifferenceRGB) * 255.0;
+                //differenceMap->getPixels()[i] = static_cast<double>(differences[i])
+                //                                / static_cast<double>(maxDifferenceRGB) * 255.0;
+                differenceMap->getPixels()[i] = static_cast<double>(differences[i]);
             }
         }
     } else {
-        differenceMap->fill(sgl::Color(0, 0, 0, 0));
+        differenceMap->fill(sgl::Color(0, 0, 0, 255));
     }
     delete[] differences;
 

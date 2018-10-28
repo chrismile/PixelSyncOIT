@@ -704,7 +704,9 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 		if (shaderMode == SHADER_MODE_VORTICITY) {
 			transparencyShader->setUniform("minVorticity", 0.0f);
 			transparencyShader->setUniform("maxVorticity", maxVorticity);
-			transparencyShader->setUniform("radius", lineRadius);
+			if (transparencyShader->hasUniform("radius")) {
+                transparencyShader->setUniform("radius", lineRadius);
+			}
             transparencyShader->setUniform("transparencyMapping", transparencyMapping);
             transparencyShader->setUniform("transferFunctionTexture",
             		transferFunctionWindow.getTransferFunctionMapTexture(), 5);
