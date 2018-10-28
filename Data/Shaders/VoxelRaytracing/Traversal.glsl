@@ -15,6 +15,10 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
 {
     vec4 color = vec4(0.0);
 
+    // Bit-mask for already blended lines
+    uint blendedLineIDs = 0;
+
+
     // 1. Initialize the following variables
     float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
     ivec3 voxelIndex;
@@ -56,9 +60,8 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
         return vec4(0.0);
     }
 
-    loadLinesInVoxel(voxelIndex);
-    if (currVoxelNumLines > 0) {
-        vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex);
+    if (getNumLinesInVoxel(voxelIndex) > 0) {
+        vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, blendedLineIDs);
         if (blendPremul(voxelColor, color)) {
             // Early ray termination
             return color;
@@ -92,9 +95,8 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
         if (any(lessThan(voxelIndex, ivec3(0))) || any(greaterThanEqual(voxelIndex, gridResolution)))
             break;
 
-        loadLinesInVoxel(voxelIndex);
-        if (currVoxelNumLines > 0) {
-            vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex);
+        if (getNumLinesInVoxel(voxelIndex) > 0) {
+            vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, blendedLineIDs);
             if (blendPremul(voxelColor, color)) {
                 // Early ray termination
                 return color;

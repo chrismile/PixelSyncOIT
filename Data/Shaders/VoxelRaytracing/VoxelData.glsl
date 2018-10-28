@@ -58,12 +58,6 @@ layout (std430, binding = 2) readonly buffer LineSegmentBuffer
 uniform sampler3D densityTexture;
 
 
-// --- Data global to shader invocation ---
-
-uint currVoxelNumLines = 0;
-LineSegment currVoxelLines[MAX_NUM_LINES_PER_VOXEL];
-
-
 // --- Functions ---
 
 vec3 getQuantizedPositionOffset(uint faceIndex, uint quantizedPos1D)
@@ -97,7 +91,7 @@ void decompressLine(in vec3 voxelPosition, in LineSegmentCompressed compressedLi
     uint faceEndIndex = (compressedLine.linePosition >> 3) & 0x7u;
     uint quantizedStartPos1D = (compressedLine.linePosition >> 6) & bitmaskQuantizedPos;
     uint quantizedEndPos1D = (compressedLine.linePosition >> 6+c) & bitmaskQuantizedPos;
-    uint lineID = (compressedLine.attributes >> 11) & 32u;
+    uint lineID = (compressedLine.attributes >> 11) & 31u;
     uint attr1 = (compressedLine.attributes >> 16) & 0xFFu;
     uint attr2 = (compressedLine.attributes >> 24) & 0xFFu;
 
@@ -110,7 +104,15 @@ void decompressLine(in vec3 voxelPosition, in LineSegmentCompressed compressedLi
 #endif
 
 /// Stores lines of voxel in global variables "currVoxelLines", "currVoxelNumLines"
-void loadLinesInVoxel(ivec3 voxelIndex)
+uint getNumLinesInVoxel(ivec3 voxelIndex)
+{
+    int voxelIndex1D = voxelIndex.x + voxelIndex.y*gridResolution.x + voxelIndex.z*gridResolution.x*gridResolution.y;
+    return min(numLinesInVoxel[voxelIndex1D], MAX_NUM_LINES_PER_VOXEL);
+}
+
+/// Stores lines of voxel in global variables "currVoxelLines", "currVoxelNumLines"
+void loadLinesInVoxel(ivec3 voxelIndex, out uint currVoxelNumLines,
+        out LineSegment currVoxelLines[MAX_NUM_LINES_PER_VOXEL])
 {
     int voxelIndex1D = voxelIndex.x + voxelIndex.y*gridResolution.x + voxelIndex.z*gridResolution.x*gridResolution.y;
     currVoxelNumLines = min(numLinesInVoxel[voxelIndex1D], MAX_NUM_LINES_PER_VOXEL);

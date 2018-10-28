@@ -563,7 +563,7 @@ void PixelSyncApp::renderOIT()
 void PixelSyncApp::renderGUI()
 {
 	ImGuiWrapper::get()->renderStart();
-    ImGuiWrapper::get()->renderDemoWindow();
+    //ImGuiWrapper::get()->renderDemoWindow();
 
     if (showSettingsWindow) {
         if (ImGui::Begin("Settings", &showSettingsWindow)) {

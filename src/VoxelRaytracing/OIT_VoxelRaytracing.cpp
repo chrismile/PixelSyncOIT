@@ -108,7 +108,7 @@ void OIT_VoxelRaytracing::setUniformData()
     glm::mat4 inverseViewMatrix = glm::inverse(camera->getViewMatrix());
     renderShader->setUniform("inverseViewMatrix", inverseViewMatrix);
 
-    renderShader->setUniform("lineRadius", lineRadius*100.0f);
+    renderShader->setUniform("lineRadius", lineRadius*120.0f); // TODO: Dynamic
     renderShader->setUniform("clearColor", clearColor);
     if (renderShader->hasUniform("lightDirection")) {
         renderShader->setUniform("lightDirection", lightDirection);
