@@ -80,6 +80,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	}
     clearColorSelection = ImColor(clearColor.getColorRGBA());
 	transferFunctionWindow.setClearColor(clearColor);
+	setNewTilingMode(2, 8);
 
 	//Timer->setFPSLimit(false, 60);
 	Timer->setFPSLimit(true, 60);
@@ -693,6 +694,16 @@ void PixelSyncApp::renderSceneSettingsGUI()
 	}
 
 	ImGui::SliderFloat("Move speed", &MOVE_SPEED, 0.1f, 1.0f);
+
+    if (ImGui::Checkbox("Shuffle Geometry", &shuffleGeometry)) {
+        loadModel(MODEL_FILENAMES[usedModelIndex], false);
+        reRender = true;
+    }
+    if (ImGui::Button("Shuffle")) {
+        shuffleGeometry = true;
+        loadModel(MODEL_FILENAMES[usedModelIndex], false);
+        reRender = true;
+    }
 }
 
 sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()

@@ -5,12 +5,14 @@
  *      Author: christoph
  */
 
-#include <cmath>
 #include <fstream>
 #include <algorithm>
 #include <random>
-#include <glm/glm.hpp>
+#include <chrono>
+#include <cmath>
+
 #include <boost/algorithm/string/predicate.hpp>
+#include <glm/glm.hpp>
 
 #include <Utils/Events/Stream/Stream.hpp>
 #include <Utils/File/Logfile.hpp>
@@ -165,6 +167,7 @@ std::vector<uint32_t> shuffleIndicesLines(const std::vector<uint32_t> &indices) 
 		shuffleOffsets.push_back(i);
 	}
 	auto rng = std::default_random_engine{};
+	rng.seed(std::chrono::system_clock::now().time_since_epoch().count());
 	std::shuffle(std::begin(shuffleOffsets), std::end(shuffleOffsets), rng);
 
 	std::vector<uint32_t> shuffledIndices;
@@ -181,18 +184,20 @@ std::vector<uint32_t> shuffleIndicesLines(const std::vector<uint32_t> &indices) 
 std::vector<uint32_t> shuffleIndicesTriangles(const std::vector<uint32_t> &indices) {
 	size_t numSegments = indices.size() / 3;
 	std::vector<size_t> shuffleOffsets;
-	for (size_t i = 0; i < numSegments; numSegments++) {
+	for (size_t i = 0; i < numSegments; i++) {
 		shuffleOffsets.push_back(i);
 	}
 	auto rng = std::default_random_engine{};
+	rng.seed(std::chrono::system_clock::now().time_since_epoch().count());
 	std::shuffle(std::begin(shuffleOffsets), std::end(shuffleOffsets), rng);
 
 	std::vector<uint32_t> shuffledIndices;
 	shuffledIndices.reserve(numSegments*3);
 	for (size_t i = 0; i < numSegments; i++) {
-		shuffledIndices.push_back(indices.at(i*3));
-		shuffledIndices.push_back(indices.at(i*3+1));
-		shuffledIndices.push_back(indices.at(i*3+2));
+		size_t lineIndex = shuffleOffsets.at(i);
+		shuffledIndices.push_back(indices.at(lineIndex*3));
+		shuffledIndices.push_back(indices.at(lineIndex*3+1));
+		shuffledIndices.push_back(indices.at(lineIndex*3+2));
 	}
 
 	return shuffledIndices;
@@ -222,7 +227,7 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 		ShaderAttributesPtr renderData = ShaderManager->createShaderAttributes(shader);
 		renderData->setVertexMode(submesh.vertexMode);
 		if (submesh.indices.size() > 0) {
-			if (shuffleData && submesh.vertexMode == VERTEX_MODE_LINES) {
+			if (shuffleData && (submesh.vertexMode == VERTEX_MODE_LINES || submesh.vertexMode == VERTEX_MODE_TRIANGLES)) {
 				std::vector<uint32_t> shuffledIndices;
 				if (submesh.vertexMode == VERTEX_MODE_LINES) {
 					shuffledIndices = shuffleIndicesLines(submesh.indices);

@@ -83,7 +83,7 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
     // sortingModeStrings
     for (int expectedDepthComplexity = 32; expectedDepthComplexity <= 64; expectedDepthComplexity *= 2) {
         for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
-            for (int maxNumFragmentsSorting = 256; maxNumFragmentsSorting <= 1024; maxNumFragmentsSorting *= 2) {
+            for (int maxNumFragmentsSorting = 256; maxNumFragmentsSorting <= 512; maxNumFragmentsSorting *= 2) {
                 std::string sortingMode = sortingModeStrings[sortingModeIdx];
                 state.name = std::string() + "Linked List " + sortingMode + + " "
                              + sgl::toString(maxNumFragmentsSorting) + " Layers, "
@@ -264,7 +264,7 @@ std::vector<InternalState> getAllTestModes()
     state.modelName = "Streamlines (Triangles)";
 
     getTestModesDepthPeeling(states, state);
-    /*getTestModesNoOIT(states, state);
+    getTestModesNoOIT(states, state);
     getTestModesMLAB(states, state);
     getTestModesMBOIT(states, state);
     getTestModesHT(states, state);
@@ -302,7 +302,7 @@ std::vector<InternalState> getAllTestModes()
     InternalState stateShuffleGeometry = state;
     stateShuffleGeometry.testShuffleGeometry = true;
     getTestModesShuffleGeometry(states, stateShuffleGeometry, 1);
-    getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);*/
+    getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);
 
     // Performance test: Pixel sync vs. atomic operations
     getTestModesPixelSyncVsAtomicOps(states, state);

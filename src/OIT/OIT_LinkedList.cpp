@@ -120,7 +120,7 @@ void OIT_LinkedList::renderGUI()
 {
 	ImGui::Separator();
 
-	if (ImGui::SliderInt("Avg. Depth", &expectedDepthComplexity, 1, 128)) {
+	if (ImGui::SliderInt("Avg. Depth", &expectedDepthComplexity, 1, 64)) {
 		Window *window = AppSettings::get()->getMainWindow();
 		int width = window->getWidth();
 		int height = window->getHeight();
@@ -139,7 +139,7 @@ void OIT_LinkedList::renderGUI()
 	// If something changes about fragment collection & sorting
 	bool needNewResolveShader = false;
 
-	if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 1, 1024)) {
+	if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 1, 512)) {
 		ShaderManager->invalidateShaderCache();
 		ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
 		needNewResolveShader = true;
