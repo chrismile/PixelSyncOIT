@@ -35,10 +35,8 @@ TransferFunctionWindow::TransferFunctionWindow()
     updateAvailableFiles();
     rebuildTransferFunctionMap();
 
-    if (sgl::FileUtils::get()->exists(saveDirectory + "TestMBOIT.xml")) {
-        loadFunctionFromFile(saveDirectory + "TestMBOIT.xml");
-    } else if (sgl::FileUtils::get()->exists(saveDirectory + "ColorsMichi02.xml")) {
-        loadFunctionFromFile(saveDirectory + "ColorsMichi02.xml");
+    if (sgl::FileUtils::get()->exists(saveDirectory + "Standard.xml")) {
+        loadFunctionFromFile(saveDirectory + "Standard.xml");
     }
 }
 
