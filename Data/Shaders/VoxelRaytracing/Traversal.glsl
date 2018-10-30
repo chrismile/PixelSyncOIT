@@ -17,9 +17,10 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
 
     // Bit-mask for already blended lines
     uint blendedLineIDs = 0;
+    uint oldBlendedLineIDs1 = 0;
+    uint oldBlendedLineIDs2 = 0;
 
 
-    // 1. Initialize the following variables
     float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
     ivec3 voxelIndex;
 
@@ -68,7 +69,16 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
         }
     }
 
+    int iterationNum = 0;
     while (true) {
+        /*int lodIndex
+        int numNodes = texelFetch(octreeTexture, pos, lodIndex);
+        if (numNodes == 0) {
+            // Skip
+        } else {
+            ;
+        }*/
+
         if (tMaxX < tMaxY) {
             if (tMaxX < tMaxZ) {
                 voxelIndex.x += stepX;
@@ -97,6 +107,10 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
 
         if (getNumLinesInVoxel(voxelIndex) > 0) {
             vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, blendedLineIDs);
+            iterationNum++;
+            oldBlendedLineIDs1 = blendedLineIDs;
+            blendedLineIDs &= ~oldBlendedLineIDs2;
+            oldBlendedLineIDs2 = oldBlendedLineIDs1;
             if (blendPremul(voxelColor, color)) {
                 // Early ray termination
                 return color;

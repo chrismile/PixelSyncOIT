@@ -173,9 +173,50 @@ std::vector<uint32_t> shuffleIndicesLines(const std::vector<uint32_t> &indices) 
 	std::vector<uint32_t> shuffledIndices;
 	shuffledIndices.reserve(numSegments*2);
 	for (size_t i = 0; i < numSegments; i++) {
-	    size_t lineIndex = shuffleOffsets.at(i);
+		size_t lineIndex = shuffleOffsets.at(i);
 		shuffledIndices.push_back(indices.at(lineIndex*2));
 		shuffledIndices.push_back(indices.at(lineIndex*2+1));
+	}
+
+	return shuffledIndices;
+}
+
+std::vector<uint32_t> shuffleLineOrder(const std::vector<uint32_t> &indices) {
+	size_t numSegments = indices.size() / 2;
+
+	// 1. Compute list of all lines
+	std::vector<std::vector<uint32_t>> lines;
+	std::vector<uint32_t> currentLine;
+	for (size_t i = 0; i < numSegments; i++) {
+		uint32_t idx0 = indices.at(i*2);
+		uint32_t idx1 = indices.at(i*2+1);
+
+		// Start new line?
+		if (i > 0 && idx0 != indices.at((i-1)*2+1)) {
+			lines.push_back(currentLine);
+			currentLine.clear();
+		}
+
+		// Add indices to line
+		currentLine.push_back(idx0);
+		currentLine.push_back(idx1);
+	}
+	if (currentLine.size() > 0) {
+		lines.push_back(currentLine);
+	}
+
+	// 2. Shuffle line list
+	auto rng = std::default_random_engine{};
+	rng.seed(std::chrono::system_clock::now().time_since_epoch().count());
+	std::shuffle(std::begin(lines), std::end(lines), rng);
+
+	// 3. Reconstruct line list from shuffled lines
+	std::vector<uint32_t> shuffledIndices;
+	shuffledIndices.reserve(indices.size());
+	for (const std::vector<uint32_t> &line : lines) {
+		for (uint32_t idx : line) {
+			shuffledIndices.push_back(idx);
+		}
 	}
 
 	return shuffledIndices;
@@ -230,7 +271,8 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 			if (shuffleData && (submesh.vertexMode == VERTEX_MODE_LINES || submesh.vertexMode == VERTEX_MODE_TRIANGLES)) {
 				std::vector<uint32_t> shuffledIndices;
 				if (submesh.vertexMode == VERTEX_MODE_LINES) {
-					shuffledIndices = shuffleIndicesLines(submesh.indices);
+					//shuffledIndices = shuffleIndicesLines(submesh.indices);
+					shuffledIndices = shuffleLineOrder(submesh.indices);
 				} else if (submesh.vertexMode == VERTEX_MODE_TRIANGLES) {
 					shuffledIndices = shuffleIndicesTriangles(submesh.indices);
 				} else {

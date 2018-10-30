@@ -99,6 +99,7 @@ struct InternalState
     bool testNoInvocationInterlock = false; // Test without pixel sync
     bool testNoAtomicOperations = false; // Test without atomic operations
     bool testShuffleGeometry = false;
+    bool testPixelSyncOrdered = false;
 };
 
 std::vector<InternalState> getAllTestModes();

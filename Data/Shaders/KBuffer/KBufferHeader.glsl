@@ -6,9 +6,15 @@
 
 #pragma optionNV (unroll all)
 
+#ifdef PIXEL_SYNC_ORDERED
+// Use early z-test to cull transparent fragments occluded by opaque fragments.
+// Additionaly, use fragment interlock.
+layout(early_fragment_tests, pixel_interlock_ordered) in;
+#else
 // Use early z-test to cull transparent fragments occluded by opaque fragments.
 // Additionaly, use fragment interlock.
 layout(early_fragment_tests, pixel_interlock_unordered) in;
+#endif
 
 // gl_FragCoord will be used for pixel centers at integer coordinates.
 // See https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_FragCoord.xhtml

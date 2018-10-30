@@ -378,6 +378,11 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 	} else {
 		ShaderManager->removePreprocessorDefine("TEST_NO_ATOMIC_OPERATIONS");
 	}
+	if (newState.testPixelSyncOrdered) {
+		ShaderManager->addPreprocessorDefine("PIXEL_SYNC_ORDERED", "");
+	} else {
+		ShaderManager->removePreprocessorDefine("PIXEL_SYNC_ORDERED");
+	}
 
 	// 2. Handle global state changes like SSAO, tiling mode
 	setNewTilingMode(newState.tilingWidth, newState.tilingHeight);
