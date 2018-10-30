@@ -109,7 +109,7 @@ void OIT_VoxelRaytracing::setUniformData()
     renderShader->setUniform("inverseViewMatrix", inverseViewMatrix);
 
     float voxelSpaceRatio = lineRadius * glm::length(data.worldToVoxelGridMatrix[0]);
-    renderShader->setUniform("lineRadius", voxelSpaceRatio); // TODO: Dynamic
+    renderShader->setUniform("lineRadius", voxelSpaceRatio);
     renderShader->setUniform("clearColor", clearColor);
     if (renderShader->hasUniform("lightDirection")) {
         renderShader->setUniform("lightDirection", lightDirection);

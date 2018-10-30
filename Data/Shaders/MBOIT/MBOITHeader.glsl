@@ -27,6 +27,6 @@ uniform float logDepthMax;
 // Maps depth to range [-1,1] with logarithmic scale
 float logDepthWarp(float z, float logmin, float logmax)
 {
-	return (log(z) - logmin) / (logmax - logmin);// * 2.0 - 1.0;
+	return (log(z) - logmin) / (logmax - logmin) * 2.0 - 1.0;// ;
 	//return (z - exp(logmin)) / (exp(logmax) - exp(logmin)) * 2.0 - 1.0;
 }

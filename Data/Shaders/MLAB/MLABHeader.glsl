@@ -135,7 +135,7 @@ void clearPixel(uint pixelIndex)
     MLABFragmentNode nodeArray[MAX_NUM_NODES+1];
     for (uint i = 0; i < MAX_NUM_NODES; i++) {
         nodeArray[i].depth = DISTANCE_INFINITE;
-        nodeArray[i].premulColor = 0xFF000000u; // 100% opacity, i.e. 0% opacity
+        nodeArray[i].premulColor = 0xFF000000u; // 100% transparency, i.e. 0% opacity
     }
     storeFragmentNodes(pixelIndex, nodeArray);
 }

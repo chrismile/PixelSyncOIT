@@ -1,5 +1,5 @@
 //
-// Created by christoph on 29.08.18.
+// Created by christoph on 30.10.18.
 //
 
 #include <cstdlib>
@@ -8,37 +8,41 @@
 
 #include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
+#include <Graphics/Scene/Camera.hpp>
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "TilingMode.hpp"
-#include "OIT_MLAB.hpp"
+#include "OIT_MLABBucket.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
 static bool useStencilBuffer = true;
 
-// Maximum number of layers
-static int maxNumNodes = 8;
+// Maximum number of buckets
+static int numBuckets = 4;
+
+// Maximum number of nodes per bucket
+static int nodesPerBucket = 4;
 
 
-OIT_MLAB::OIT_MLAB()
+OIT_MLABBucket::OIT_MLABBucket()
 {
     clearBitSet = true;
     create();
 }
 
-void OIT_MLAB::create()
+void OIT_MLABBucket::create()
 {
     if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-        Logfile::get()->writeError("Error in OIT_MLAB::create: GL_ARB_fragment_shader_interlock unsupported.");
+        Logfile::get()->writeError("Error in OIT_MLABBucket::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
 
-    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABGather.glsl\"");
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABBucketGather.glsl\"");
 
     updateLayerMode();
 
@@ -49,17 +53,17 @@ void OIT_MLAB::create()
             glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
             glm::vec3(-1,-1,0), glm::vec3(1,1,0), glm::vec3(-1,1,0)};
     GeometryBufferPtr geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
-            (void*)&fullscreenQuad.front());
+                                                                  (void*)&fullscreenQuad.front());
     blitRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 
     clearRenderData = ShaderManager->createShaderAttributes(clearShader);
     geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
-            (void*)&fullscreenQuad.front());
+                                                (void*)&fullscreenQuad.front());
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_MLAB::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
-        sgl::RenderbufferObjectPtr &sceneDepthRBO)
+void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+                                 sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     this->sceneFramebuffer = sceneFramebuffer;
     this->sceneTexture = sceneTexture;
@@ -69,7 +73,7 @@ void OIT_MLAB::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sg
     int width = window->getWidth();
     int height = window->getHeight();
 
-    size_t bufferSizeBytes = (sizeof(uint32_t) + sizeof(float)) * maxNumNodes * width * height;
+    size_t bufferSizeBytes = (sizeof(uint32_t) + sizeof(float)) * numBuckets * nodesPerBucket * width * height;
     fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
@@ -79,11 +83,16 @@ void OIT_MLAB::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sg
 
 
 
-void OIT_MLAB::renderGUI()
+void OIT_MLABBucket::renderGUI()
 {
     ImGui::Separator();
 
-    if (ImGui::SliderInt("Num Layers", &maxNumNodes, 1, 64)) {
+    if (ImGui::SliderInt("Num Buckets", &numBuckets, 1, 8)) {
+        updateLayerMode();
+        reRender = true;
+    }
+
+    if (ImGui::SliderInt("Nodes per Bucket", &nodesPerBucket, 1, 8)) {
         updateLayerMode();
         reRender = true;
     }
@@ -95,19 +104,37 @@ void OIT_MLAB::renderGUI()
     }
 }
 
-void OIT_MLAB::updateLayerMode()
+void OIT_MLABBucket::updateLayerMode()
 {
     ShaderManager->invalidateShaderCache();
-    ShaderManager->addPreprocessorDefine("MAX_NUM_NODES", maxNumNodes);
+    ShaderManager->addPreprocessorDefine("BUFFER_SIZE", numBuckets * nodesPerBucket);
+    ShaderManager->addPreprocessorDefine("NUM_BUCKETS", numBuckets);
+    ShaderManager->addPreprocessorDefine("NODES_PER_BUCKET", nodesPerBucket);
     reloadShaders();
     resolutionChanged(sceneFramebuffer, sceneTexture, sceneDepthRBO);
 }
 
-void OIT_MLAB::reloadShaders()
+void OIT_MLABBucket::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, sgl::CameraPtr &camera)
+{
+    float minViewZ = screenSpaceBB.getMaximum().z;
+    float maxViewZ = screenSpaceBB.getMinimum().z;
+    minViewZ = std::max(-minViewZ, camera->getNearClipDistance());
+    maxViewZ = std::min(-maxViewZ, camera->getFarClipDistance());
+    minViewZ = std::min(minViewZ, camera->getFarClipDistance());
+    maxViewZ = std::max(maxViewZ, camera->getNearClipDistance());
+    float logmin = log(minViewZ);
+    float logmax = log(maxViewZ);
+    gatherShader->setUniform("logDepthMin", logmin);
+    gatherShader->setUniform("logDepthMax", logmax);
+    //resolveShader->setUniform("logDepthMin", logmin);
+    //resolveShader->setUniform("logDepthMax", logmax);
+}
+
+void OIT_MLABBucket::reloadShaders()
 {
     gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
-    resolveShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
-    clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
+    resolveShader = ShaderManager->getShaderProgram({"MLABBucketResolve.Vertex", "MLABBucketResolve.Fragment"});
+    clearShader = ShaderManager->getShaderProgram({"MLABBucketClear.Vertex", "MLABBucketClear.Fragment"});
     //needsNewShaders = true;
 
     if (blitRenderData) {
@@ -119,16 +146,17 @@ void OIT_MLAB::reloadShaders()
 }
 
 
-void OIT_MLAB::setNewState(const InternalState &newState)
+void OIT_MLABBucket::setNewState(const InternalState &newState)
 {
-    maxNumNodes = newState.oitAlgorithmSettings.getIntValue("numLayers");
+    numBuckets = newState.oitAlgorithmSettings.getIntValue("numBuckets");
+    nodesPerBucket = newState.oitAlgorithmSettings.getIntValue("nodesPerBucket");
     useStencilBuffer = newState.useStencilBuffer;
     updateLayerMode();
 }
 
 
 
-void OIT_MLAB::setUniformData()
+void OIT_MLABBucket::setUniformData()
 {
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
@@ -144,7 +172,7 @@ void OIT_MLAB::setUniformData()
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 }
 
-void OIT_MLAB::gatherBegin()
+void OIT_MLABBucket::gatherBegin()
 {
     setUniformData();
 
@@ -172,12 +200,12 @@ void OIT_MLAB::gatherBegin()
     }
 }
 
-void OIT_MLAB::gatherEnd()
+void OIT_MLABBucket::gatherEnd()
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void OIT_MLAB::renderToScreen()
+void OIT_MLABBucket::renderToScreen()
 {
     Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());

@@ -42,6 +42,7 @@
 #include "OIT/OIT_KBuffer.hpp"
 #include "OIT/OIT_LinkedList.hpp"
 #include "OIT/OIT_MLAB.hpp"
+#include "OIT/OIT_MLABBucket.hpp"
 #include "OIT/OIT_HT.hpp"
 #include "OIT/OIT_MBOIT.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
@@ -290,8 +291,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 	} else if (mode == RENDER_MODE_OIT_DUMMY) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
     } else if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
-		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
-	} else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
+    } else if (mode == RENDER_MODE_OIT_MLAB_BUCKET) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLABBucket);
+    } else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_VoxelRaytracing(camera, clearColor));
 	} else if (mode == RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE) {
 		oitRenderer = boost::shared_ptr<OIT_Renderer>(new TestPixelSyncPerformance);
@@ -486,6 +489,10 @@ void PixelSyncApp::renderOIT()
 	if (mode == RENDER_MODE_OIT_MBOIT) {
 		AABB3 screenSpaceBoundingBox = boundingBox.transformed(camera->getViewMatrix());
 		static_cast<OIT_MBOIT*>(oitRenderer.get())->setScreenSpaceBoundingBox(screenSpaceBoundingBox, camera);
+	}
+	if (mode == RENDER_MODE_OIT_MLAB_BUCKET) {
+		AABB3 screenSpaceBoundingBox = boundingBox.transformed(camera->getViewMatrix());
+		static_cast<OIT_MLABBucket*>(oitRenderer.get())->setScreenSpaceBoundingBox(screenSpaceBoundingBox, camera);
 	}
 
 	if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {

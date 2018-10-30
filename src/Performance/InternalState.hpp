@@ -9,10 +9,10 @@
 #include <map>
 #include <Utils/Convert.hpp>
 
-const int NUM_OIT_MODES = 9;
+const int NUM_OIT_MODES = 10;
 const char *const OIT_MODE_NAMES[] = {
         "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
-        "Depth Complexity", "No OIT", "Depth Peeling", "Voxel Raytracing (Lines)"
+        "Depth Complexity", "No OIT", "Depth Peeling", "MLAB (Buckets)", "Voxel Raytracing (Lines)"
 };
 enum RenderModeOIT {
     RENDER_MODE_OIT_KBUFFER = 0,
@@ -23,6 +23,7 @@ enum RenderModeOIT {
     RENDER_MODE_OIT_DEPTH_COMPLEXITY,
     RENDER_MODE_OIT_DUMMY,
     RENDER_MODE_OIT_DEPTH_PEELING,
+    RENDER_MODE_OIT_MLAB_BUCKET,
     RENDER_MODE_VOXEL_RAYTRACING_LINES,
     RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
 };

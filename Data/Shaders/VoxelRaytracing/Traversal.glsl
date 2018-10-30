@@ -1,6 +1,18 @@
 #ifndef TRAVERSAL_GLSL
 #define TRAVERSAL_GLSL
 
+void pushOctree(in int voxelIndex, inout int lod, out int lodIndex)
+{
+    lod--;
+    lodIndex = voxelIndex / (lod + 1);
+}
+
+void popOctree(in int voxelIndex, inout int lod, out int lodIndex)
+{
+    lod++;
+    lodIndex = voxelIndex / (lod + 1);
+}
+
 /**
  * Code inspired by "A Fast Voxel Traversal Algorithm for Ray Tracing" written by John Amanatides, Andrew Woo.
  * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
@@ -71,12 +83,63 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
 
     int iterationNum = 0;
     while (true) {
-        /*int lodIndex
+        /*
+        int maxLod = log2(gridResolution.x);
+        int lod = maxLod;
+        ivec3 lodIndex = voxelIndex / (lod+1);
+
+        int numElements = texelFetch(octreeTexture, lodIndex, lod).x;
+        if (numElements == 0) {
+            advance;
+        } else if (lod > 0) {
+            // Push (go to more detailed lod)
+            pushOctree(voxelIndex, lod, lodIndex);
+            popOctree(voxelIndex, lod, lodIndex);
+        } else {
+            // Process voxel
+            vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, blendedLineIDs);
+            iterationNum++;
+            oldBlendedLineIDs1 = blendedLineIDs;
+            blendedLineIDs &= ~oldBlendedLineIDs2;
+            oldBlendedLineIDs2 = oldBlendedLineIDs1;
+            if (blendPremul(voxelColor, color)) {
+                // Early ray termination
+                return color;
+            }
+        }
+
+        // Advance
+        numSkipsAtVoxel = (1 << lod) - lodIndex;
+        for (int i = 0; i < numSkipsAtVoxel; i++) {
+            if (tMaxX < tMaxY) {
+                if (tMaxX < tMaxZ) {
+                    voxelIndex.x += stepX;
+                    tMaxX += tDeltaX;
+                } else {
+                    voxelIndex.z += stepZ;
+                    tMaxZ += tDeltaZ;
+                }
+            } else {
+                if (tMaxY < tMaxZ) {
+                    voxelIndex.y += stepY;
+                    tMaxY += tDeltaY;
+                } else {
+                    voxelIndex.z += stepZ;
+                    tMaxZ += tDeltaZ;
+                }
+            }
+        }
+
+        if (any(lessThan(voxelIndex, ivec3(0))) || any(greaterThanEqual(voxelIndex, gridResolution)))
+            break;
+
+        int lodIndex
         int numNodes = texelFetch(octreeTexture, pos, lodIndex);
         if (numNodes == 0) {
             // Skip
         } else {
-            ;
+            //
+            texelFetch();
         }*/
 
         if (tMaxX < tMaxY) {

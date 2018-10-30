@@ -84,7 +84,7 @@ private:
 
 	// Mode
 	// RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
-	RenderModeOIT mode = RENDER_MODE_VOXEL_RAYTRACING_LINES;
+	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT;
     RenderModeOIT oldMode = mode;
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
