@@ -14,14 +14,23 @@ void main()
 #version 430 core
 
 #ifdef TEST_PIXEL_SYNC
+
 // See https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_fragment_shader_interlock.txt
 #extension GL_ARB_fragment_shader_interlock : require
+
+#ifdef PIXEL_SYNC_ORDERED
+layout(pixel_interlock_ordered) in;
+#else
+layout(pixel_interlock_unordered) in;
+#endif
+
 #else
 #endif
 
 #ifdef ABC_TEST
 //#extension GL_NV_shader_atomic_float : require
 #endif
+
 
 uniform int viewportW;
 layout (std430, binding = 0) coherent buffer DataBuffer

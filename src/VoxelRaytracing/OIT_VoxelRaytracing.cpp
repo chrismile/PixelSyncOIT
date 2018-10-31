@@ -76,7 +76,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
 
     VoxelGridDataCompressed compressedData;
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
-        VoxelCurveDiscretizer discretizer(glm::ivec3(128), glm::ivec3(64));
+        VoxelCurveDiscretizer discretizer(glm::ivec3(64), glm::ivec3(64));
         discretizer.createFromFile(modelFilenameObj, attributes, maxVorticity);
         compressedData = discretizer.compressData();
         //saveToFile(modelFilenameVoxelGrid, compressedData); // TODO When format is stable
@@ -108,7 +108,8 @@ void OIT_VoxelRaytracing::setUniformData()
     glm::mat4 inverseViewMatrix = glm::inverse(camera->getViewMatrix());
     renderShader->setUniform("inverseViewMatrix", inverseViewMatrix);
 
-    renderShader->setUniform("lineRadius", lineRadius*120.0f); // TODO: Dynamic
+    float voxelSpaceRatio = lineRadius * glm::length(data.worldToVoxelGridMatrix[0]);
+    renderShader->setUniform("lineRadius", voxelSpaceRatio);
     renderShader->setUniform("clearColor", clearColor);
     if (renderShader->hasUniform("lightDirection")) {
         renderShader->setUniform("lightDirection", lightDirection);
@@ -154,6 +155,11 @@ glm::ivec2 rangePadding1D(int w, int localSize) {
     return glm::ivec2(iceil(w, localSize)*localSize);
 }
 
+glm::ivec2 getNumWorkGroups(const glm::ivec2 &globalWorkSize, const glm::ivec2 &localWorkSize) {
+    // Ceil
+    return glm::ivec2(1) + ((globalWorkSize - glm::ivec2(1)) / localWorkSize);
+}
+
 void OIT_VoxelRaytracing::renderToScreen()
 {
     setUniformData();
@@ -162,8 +168,8 @@ void OIT_VoxelRaytracing::renderToScreen()
     int width = window->getWidth();
     int height = window->getHeight();
 
-    sgl::ShaderManager->getMaxComputeWorkGroupCount();
-    glm::ivec2 globalWorkSize = rangePadding2D(width, height, glm::ivec2(8, 4)); // last vector: local work group size
-    renderShader->dispatchCompute(globalWorkSize.x, globalWorkSize.y);
+    //sgl::ShaderManager->getMaxComputeWorkGroupCount();
+    glm::ivec2 numWorkGroups = getNumWorkGroups(glm::ivec2(width, height), glm::ivec2(8, 4)); // last vector: local work group size
+    renderShader->dispatchCompute(numWorkGroups.x, numWorkGroups.y);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }

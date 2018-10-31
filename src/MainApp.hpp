@@ -106,7 +106,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 2;
+    int usedModelIndex = 0;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);

@@ -36,7 +36,7 @@ static bool usePowerMoments = true;
 static int numMoments = 4;
 static MBOITPixelFormat pixelFormat = MBOIT_PIXEL_FORMAT_FLOAT_32;
 static bool USE_R_RG_RGBA_FOR_MBOIT6 = true;
-static float overestimationBeta = 0.01;
+static float overestimationBeta = 0.1;
 
 OIT_MBOIT::OIT_MBOIT()
 {
@@ -321,17 +321,12 @@ void OIT_MBOIT::renderGUI()
 
 void OIT_MBOIT::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, sgl::CameraPtr &camera)
 {
-    //sgl::Sphere sphere = sgl::Sphere(screenSpaceBB.getCenter(), glm::length(screenSpaceBB.getExtent()));
-    //float minViewZ = sphere.center.z + sphere.radius;
-    //float maxViewZ = sphere.center.z - sphere.radius;
     float minViewZ = screenSpaceBB.getMaximum().z;
     float maxViewZ = screenSpaceBB.getMinimum().z;
-    minViewZ = std::max(-minViewZ, camera->getNearClipDistance()); // 0.1f
-    maxViewZ = std::min(-maxViewZ, camera->getFarClipDistance()); // 10.0f
+    minViewZ = std::max(-minViewZ, camera->getNearClipDistance());
+    maxViewZ = std::min(-maxViewZ, camera->getFarClipDistance());
     minViewZ = std::min(minViewZ, camera->getFarClipDistance());
     maxViewZ = std::max(maxViewZ, camera->getNearClipDistance());
-    //minViewZ = 0.01f;
-    //maxViewZ = 10.0f;
     float logmin = log(minViewZ);
     float logmax = log(maxViewZ);
     mboitPass1Shader->setUniform("logDepthMin", logmin);

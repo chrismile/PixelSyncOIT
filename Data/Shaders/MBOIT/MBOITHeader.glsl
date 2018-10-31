@@ -6,9 +6,15 @@
 
 #pragma optionNV (unroll all)
 
+#ifdef PIXEL_SYNC_ORDERED
+// Use early z-test to cull transparent fragments occluded by opaque fragments.
+// Additionaly, use fragment interlock.
+layout(early_fragment_tests, pixel_interlock_ordered) in;
+#else
 // Use early z-test to cull transparent fragments occluded by opaque fragments.
 // Additionaly, use fragment interlock.
 layout(early_fragment_tests, pixel_interlock_unordered) in;
+#endif
 
 // gl_FragCoord will be used for pixel centers at integer coordinates.
 // See https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_FragCoord.xhtml
@@ -21,6 +27,6 @@ uniform float logDepthMax;
 // Maps depth to range [-1,1] with logarithmic scale
 float logDepthWarp(float z, float logmin, float logmax)
 {
-	return (log(z) - logmin) / (logmax - logmin);// * 2.0 - 1.0;
+	return (log(z) - logmin) / (logmax - logmin) * 2.0 - 1.0;// ;
 	//return (z - exp(logmin)) / (exp(logmax) - exp(logmin)) * 2.0 - 1.0;
 }
