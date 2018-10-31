@@ -213,7 +213,7 @@ void main()
 
 	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(normal, lightDirection)/2.0
 	        + 0.75 * occlusionFactor, 0.0, 1.0);
-	vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a); // * colorGlobal.a
+	vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a); //  colorGlobal.a
 
 	if (!transparencyMapping) {
 	    color.a = colorGlobal.a;
