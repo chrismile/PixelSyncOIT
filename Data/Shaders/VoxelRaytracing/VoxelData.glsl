@@ -5,7 +5,7 @@
 //#define QUANTIZATION_RESOLUTION_LOG2 3
 //#define gridResolution ivec3(256, 256, 256)
 //#define TUBE_RADIUS 0.2
-#define MAX_NUM_LINES_PER_VOXEL 64
+#define MAX_NUM_LINES_PER_VOXEL 32
 #define PACK_LINES
 
 uniform float lineRadius = 0.2;
@@ -56,6 +56,9 @@ layout (std430, binding = 2) readonly buffer LineSegmentBuffer
 
 // Density of voxels (with LODs)
 uniform sampler3D densityTexture;
+
+// Density of voxels (with LODs)
+uniform usampler3D octreeTexture;
 
 
 // --- Functions ---

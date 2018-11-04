@@ -1,16 +1,23 @@
 #ifndef TRAVERSAL_GLSL
 #define TRAVERSAL_GLSL
 
-void pushOctree(in int voxelIndex, inout int lod, out int lodIndex)
-{
-    lod--;
-    lodIndex = voxelIndex / (lod + 1);
+#define MAX_STACK_SIZE (GRID_RESOLUTION_LOG2+1)
+
+bool isPositionOutsideOfParent(ivec3 lodIndex, ivec3 parentStack[MAX_STACK_SIZE], int stackSize) {
+	if (stackSize == 0) {
+		return true;
+	}
+
+	ivec3 parentIndex = parentStack[stackSize-1];
+	return parentIndex != lodIndex;
 }
 
-void popOctree(in int voxelIndex, inout int lod, out int lodIndex)
-{
-    lod++;
-    lodIndex = voxelIndex / (lod + 1);
+int intlog2(int x) {
+	int log2x = 0;
+	while ((x >>= 1) != 0) {
+		++log2x;
+	}
+	return log2x;
 }
 
 /**
@@ -72,18 +79,137 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
     if (stepX == 0 && stepY == 0 && stepZ == 0) {
         return vec4(0.0);
     }
+    ivec3 step = ivec3(stepX, stepY, stepZ);
+    vec3 tMax = vec3(tMaxX, tMaxY, tMaxZ);
+    vec3 tDelta = vec3(tDeltaX, tDeltaY, tDeltaZ);
 
-    if (getNumLinesInVoxel(voxelIndex) > 0) {
+    /*if (getNumLinesInVoxel(voxelIndex) > 0) {
         vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, blendedLineIDs);
         if (blendPremul(voxelColor, color)) {
             // Early ray termination
             return color;
         }
+    }*/
+
+
+    ivec3 parentStack[MAX_STACK_SIZE];
+    int stackSize = 0;
+
+    int maxLod = GRID_RESOLUTION_LOG2;//intlog2(gridResolution.x);
+    int lod = maxLod;
+    ivec3 lodIndex = voxelIndex / (1 << lod);
+    int iterationNum = 0;
+
+    /*uint numElementsRoot = texelFetch(octreeTexture, ivec3(0,0,0), 6).x;
+    if (numElementsRoot > 0u) {
+        return vec4(vec3(1.0, 0.6, 0.0), 1.0);
+    }*/
+
+    while (true) {
+        bool shallAdvance = false;
+
+        uint numElements = texelFetch(octreeTexture, lodIndex, lod).x;
+        // Is the current level voxel used?
+        if (numElements > 0u) {
+            if (lod == 0) {
+                // Voxel level is leaf
+                vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, blendedLineIDs);
+                iterationNum++;
+                oldBlendedLineIDs1 = blendedLineIDs;
+                blendedLineIDs &= ~oldBlendedLineIDs2;
+                oldBlendedLineIDs2 = oldBlendedLineIDs1;
+                if (blendPremul(voxelColor, color)) {
+                    // Early ray termination
+                    return color;
+                }
+                shallAdvance = true;
+            } else {
+                // Voxel level is node -> implicit push operation
+                lod--;
+                lodIndex = voxelIndex / (1 << lod);
+                if (stackSize < MAX_STACK_SIZE) {
+                    parentStack[stackSize] = lodIndex;
+                    stackSize++;
+                    //return vec4(vec3(0.0, 0.0, 1.0), 1.0);
+                }
+            }
+            //return vec4(vec3(0.0, 0.0, 1.0), 1.0);
+        } else {
+            // Not used. Go to next neighbor at current LOD level.
+            shallAdvance = true;
+        }
+
+        if (shallAdvance) {
+            while (true) {
+                if (tMaxX < tMaxY) {
+                    if (tMaxX < tMaxZ) {
+                        voxelIndex.x += stepX;
+                        tMaxX += tDeltaX;
+                    } else {
+                        voxelIndex.z += stepZ;
+                        tMaxZ += tDeltaZ;
+                    }
+                } else {
+                    if (tMaxY < tMaxZ) {
+                        voxelIndex.y += stepY;
+                        tMaxY += tDeltaY;
+                    } else {
+                        voxelIndex.z += stepZ;
+                        tMaxZ += tDeltaZ;
+                    }
+                }
+                lodIndex = voxelIndex / (1 << lod);
+
+                if (isPositionOutsideOfParent(lodIndex, parentStack, stackSize)) {
+                    //return vec4(vec3(0.9, float(lod) / 6.0f,  0.0), 1.0);
+                    break;
+                } else {
+                    //return vec4(vec3(0.9, mod(float(voxelIndex.x + voxelIndex.y + voxelIndex.z) * 0.39475587, 1.0), 0.0), 1.0);
+                    //return vec4(vec3(0.9, float(lod) / 6.0f,  0.0), 1.0);
+                }
+            }
+            /*ivec3 numSteps = ivec3(0,0,0);
+            while (true) {
+                if (tMaxX < tMaxY) {
+                    if (tMaxX < tMaxZ) {
+                        numSteps += ivec3(1,0,0);
+                    } else {
+                        numSteps += ivec3(0,0,1);
+                    }
+                } else {
+                    if (tMaxY < tMaxZ) {
+                        numSteps += ivec3(0,1,0);
+                    } else {
+                        numSteps += ivec3(0,0,1);
+                    }
+                }
+                lodIndex = (voxelIndex + numSteps * step) / (1 << lod);
+
+                if (isPositionOutsideOfParent(lodIndex, parentStack, stackSize)) {
+                    break;
+                }
+            }
+            voxelIndex += numSteps * step;
+            tMax += vec3(numSteps) * tDelta;*/
+
+            // Explicit pop operations while outside of parent octant
+            while (stackSize != 0 && isPositionOutsideOfParent(lodIndex, parentStack, stackSize)) {
+                lod++;
+                lodIndex = voxelIndex / (1 << lod);
+                stackSize--;
+            }
+        }
+
+        // Termination condition
+        if (any(lessThan(voxelIndex, ivec3(0))) || any(greaterThanEqual(voxelIndex, gridResolution)))
+            break;
     }
 
-    int iterationNum = 0;
+
+    /*int iterationNum = 0;
     while (true) {
-        /*
+
+
         int maxLod = log2(gridResolution.x);
         int lod = maxLod;
         ivec3 lodIndex = voxelIndex / (lod+1);
@@ -140,7 +266,7 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
         } else {
             //
             texelFetch();
-        }*/
+        }
 
         if (tMaxX < tMaxY) {
             if (tMaxX < tMaxZ) {
@@ -180,7 +306,7 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
             }
             //return vec4(vec3(1.0), 1.0);
         }
-    }
+    }*/
 
     return color;
 }

@@ -11,6 +11,7 @@
 #include <Utils/Events/Stream/Stream.hpp>
 #include <Utils/File/Logfile.hpp>
 #include <Utils/Convert.hpp>
+#include <Math/Math.hpp>
 #include <Graphics/Renderer.hpp>
 #include <Graphics/OpenGL/Texture.hpp>
 
@@ -78,8 +79,6 @@ void loadFromFile(const std::string &filename, VoxelGridDataCompressed &data)
 }
 
 
-
-
 std::vector<float> generateMipmapsForDensity(float *density, glm::ivec3 size)
 {
     std::vector<float> allLODs;
@@ -98,19 +97,38 @@ std::vector<float> generateMipmapsForDensity(float *density, glm::ivec3 size)
     memcpy(lodDataLast, density, size.x * size.y * size.z * sizeof(float));
     for (glm::ivec3 lodSize = size/2; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
         // Averaging operation
-        int N = lodSize.x * lodSize.y * lodSize.z;
-        for (int i = 0; i < N; i++) {
-            lodData[i] = 0.0f;
-            for (int j = 0; j < 8; j++) {
-                lodData[i] += lodDataLast[i*8+j];
+        for (int z = 0; z < lodSize.z; z++) {
+            for (int y = 0; y < lodSize.y; y++) {
+                for (int x = 0; x < lodSize.x; x++) {
+                    int childIdx = z*lodSize.y*lodSize.x + y*lodSize.x + x;
+                    lodData[childIdx] = 0;
+                    for (int offsetZ = 0; offsetZ < 2; offsetZ++) {
+                        for (int offsetY = 0; offsetY < 2; offsetY++) {
+                            for (int offsetX = 0; offsetX < 2; offsetX++) {
+                                int parentIdx = (z*2+offsetZ)*lodSize.y*lodSize.x*4
+                                                + (y*2+offsetY)*lodSize.y*2 + x*2+offsetX;
+                                lodData[childIdx] += lodDataLast[parentIdx];
+                            }
+                        }
+                    }
+                    lodData[childIdx] /= 8.0f;
+                    allLODs.push_back(lodData[childIdx]);
+                }
             }
+        }
+        float *tmp = lodData;
+        lodData = lodDataLast;
+        lodDataLast = tmp;
+        /*int N = lodSize.x * lodSize.y * lodSize.z;
+        for (int i = 0; i < N; i++) {
             lodData[i] = (lodDataLast[i*8]+lodDataLast[i*8+1]
                           + lodDataLast[i*8 + lodSize.x*2]+lodDataLast[i*8+1 + lodSize.x*2]
                           + lodDataLast[i*8 + lodSize.x*lodSize.y*4]+lodDataLast[i*8+1 + lodSize.x*lodSize.y*4]
-                          + lodDataLast[i*8 + lodSize.x*2 + lodSize.x*lodSize.y*4]+lodDataLast[i*8+1 + lodSize.x*2 + lodSize.x*lodSize.y*4]) / 8.0f;
+                          + lodDataLast[i*8 + lodSize.x*2 + lodSize.x*lodSize.y*4]
+                            +lodDataLast[i*8+1 + lodSize.x*2 + lodSize.x*lodSize.y*4]);
             lodData[i] /= 8.0f;
             allLODs.push_back(lodData[i]);
-        }
+        }*/
     }
 
     delete[] lodData;
@@ -118,8 +136,70 @@ std::vector<float> generateMipmapsForDensity(float *density, glm::ivec3 size)
     return allLODs;
 }
 
+
+std::vector<uint32_t> generateMipmapsForOctree(uint32_t *numLines, glm::ivec3 size)
+{
+    std::vector<uint32_t> allLODs;
+    size_t memorySize = 0;
+    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
+        memorySize += lodSize.x * lodSize.y * lodSize.z;
+    }
+    allLODs.reserve(memorySize);
+
+    for (int i = 0; i < size.x * size.y * size.z; i++) {
+        allLODs.push_back(numLines[i]);
+    }
+
+    uint32_t *lodData = new uint32_t[size.x * size.y * size.z];
+    uint32_t *lodDataLast = new uint32_t[size.x * size.y * size.z];
+    memcpy(lodDataLast, numLines, size.x * size.y * size.z * sizeof(uint32_t));
+    for (glm::ivec3 lodSize = size/2; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
+        // Sum operation
+        for (int z = 0; z < lodSize.z; z++) {
+            for (int y = 0; y < lodSize.y; y++) {
+                for (int x = 0; x < lodSize.x; x++) {
+                    int childIdx = z*lodSize.y*lodSize.x + y*lodSize.x + x;
+                    lodData[childIdx] = 0;
+                    for (int offsetZ = 0; offsetZ < 2; offsetZ++) {
+                        for (int offsetY = 0; offsetY < 2; offsetY++) {
+                            for (int offsetX = 0; offsetX < 2; offsetX++) {
+                                int parentIdx = (z*2+offsetZ)*lodSize.y*lodSize.x*4
+                                        + (y*2+offsetY)*lodSize.y*2 + x*2+offsetX;
+                                lodData[childIdx] += lodDataLast[parentIdx];
+                            }
+                        }
+                    }
+                    allLODs.push_back(lodData[childIdx] > 0 ? 1 : 0);
+                }
+            }
+        }
+        uint32_t *tmp = lodData;
+        lodData = lodDataLast;
+        lodDataLast = tmp;
+        /*int N = lodSize.x * lodSize.y * lodSize.z;
+        for (int i = 0; i < N; i++) {
+            lodData[i] = (lodDataLast[i*8]+lodDataLast[i*8+1]
+                          + lodDataLast[i*8 + lodSize.x*2]+lodDataLast[i*8+1 + lodSize.x*2]
+                          + lodDataLast[i*8 + lodSize.x*lodSize.y*4]+lodDataLast[i*8+1 + lodSize.x*lodSize.y*4]
+                          + lodDataLast[i*8 + lodSize.x*2 + lodSize.x*lodSize.y*4]
+                            +lodDataLast[i*8+1 + lodSize.x*2 + lodSize.x*lodSize.y*4]);
+            allLODs.push_back(lodData[i]);
+        }*/
+    }
+
+    delete[] lodData;
+    delete[] lodDataLast;
+    return allLODs;
+}
+
+
 sgl::TexturePtr generateDensityTexture(const std::vector<float> &lods, glm::ivec3 size)
 {
+    int numMipmapLevels = 0;
+    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
+        numMipmapLevels++;
+    }
+
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_3D, textureID);
@@ -127,6 +207,9 @@ sgl::TexturePtr generateDensityTexture(const std::vector<float> &lods, glm::ivec
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, numMipmapLevels-1);
 
 #ifdef USE_OPENGL_LOD_GENERATION
     glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size.x, size.y, size.z, 0, GL_RED, GL_FLOAT, &lods.front());
@@ -147,6 +230,72 @@ sgl::TexturePtr generateDensityTexture(const std::vector<float> &lods, glm::ivec
     return sgl::TexturePtr(new sgl::TextureGL(textureID, size.x, size.y, size.z, textureSettings));
 }
 
+
+sgl::TexturePtr generateOctreeTexture(const std::vector<uint32_t> &lods, glm::ivec3 size)
+{
+    int numMipmapLevels = 0;
+    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
+        numMipmapLevels++;
+    }
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_3D, textureID);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, numMipmapLevels-1);
+
+#ifdef USE_OPENGL_LOD_GENERATION
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size.x, size.y, size.z, 0, GL_RED, GL_FLOAT, &lods.front());
+    glGenerateMipmap(GL_TEXTURE_3D);
+#else
+    // Now upload the LOD levels
+    int lodIndex = 0;
+    const uint32_t *data = &lods.front();
+    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
+        // TODO: GL_R8UI and only one bit indicator?
+        glTexImage3D(GL_TEXTURE_3D, lodIndex, GL_R8UI, lodSize.x, lodSize.y, lodSize.z, 0, GL_RED_INTEGER,
+                GL_UNSIGNED_INT, data);
+        std::cout << data[0] << std::endl;
+        lodIndex++;
+        data += lodSize.x * lodSize.y * lodSize.z;
+    }
+#endif
+
+    std::cout << "LOD: " << lodIndex << std::endl;
+
+    /*if (lods.at(lods.size()-1) != 0) {
+        std::cout << "HERE: " << lods.at(lods.size()-1) << std::endl;
+    }
+
+    uint32_t array1[] = {1,0, 0,0,
+                        0,1, 0,1,};
+    std::vector<uint32_t> v1 = generateMipmapsForOctree(array1, glm::ivec3(2));
+    for (size_t i = 0; i < v1.size(); i++) {
+        std::cout << v1.at(i) << " ";
+    }
+    std::cout << std::endl;
+
+    uint32_t array2[] = {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+                        0,0,0,0, 0,1,0,0, 0,0,0,0, 0,0,0,0,
+                        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0,
+                        1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1,};
+    std::vector<uint32_t> v2 = generateMipmapsForOctree(array2, glm::ivec3(4));
+    for (size_t i = 0; i < v2.size(); i++) {
+        std::cout << v2.at(i) << " ";
+    }
+    std::cout << std::endl;*/
+
+    sgl::TextureSettings textureSettings;
+    textureSettings.type = sgl::TEXTURE_3D;
+    return sgl::TexturePtr(new sgl::TextureGL(textureID, size.x, size.y, size.z, textureSettings));
+}
+
+
 void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGridDataGPU &gpuData)
 {
     gpuData.gridResolution = compressedData.gridResolution;
@@ -160,7 +309,13 @@ void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGri
             sizeof(uint32_t)*compressedData.numLinesInVoxel.size(),
             (void*)&compressedData.numLinesInVoxel.front());
 
+    /*auto octreeLODs = compressedData.octreeLODs;
+    for (uint32_t &value : octreeLODs) {
+        value = 1;
+    }*/
+
     gpuData.densityTexture = generateDensityTexture(compressedData.voxelDensityLODs, gpuData.gridResolution);
+    gpuData.octreeTexture = generateOctreeTexture(compressedData.octreeLODs, gpuData.gridResolution);
 
 #ifdef PACK_LINES
     int baseSize = sizeof(LineSegmentCompressed);

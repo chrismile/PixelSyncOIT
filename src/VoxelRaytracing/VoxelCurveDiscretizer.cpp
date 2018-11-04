@@ -238,7 +238,9 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
 
     int n = gridResolution.x * gridResolution.y * gridResolution.z;
     std::vector<float> voxelDensities;
+    std::vector<uint32_t> usedVoxels;
     voxelDensities.reserve(n);
+    usedVoxels.reserve(n);
 
     int lineOffset = 0;
     dataCompressed.voxelLineListOffsets.reserve(n);
@@ -250,6 +252,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
         int numLines = voxels[i].lines.size();
         dataCompressed.numLinesInVoxel.push_back(numLines);
         voxelDensities.push_back(voxels[i].computeDensity(maxVorticity));
+        usedVoxels.push_back(numLines > 0 ? 1 : 0);
 
 #ifdef PACK_LINES
         std::vector<LineSegmentCompressed> lineSegments;
@@ -277,6 +280,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
     }
 
     dataCompressed.voxelDensityLODs = generateMipmapsForDensity(&voxelDensities.front(), gridResolution);
+    dataCompressed.octreeLODs = generateMipmapsForOctree(&usedVoxels.front(), gridResolution);
     return dataCompressed;
 }
 

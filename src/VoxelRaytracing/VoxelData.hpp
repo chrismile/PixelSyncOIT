@@ -64,7 +64,7 @@ struct LineSegmentCompressed
 };
 
 
-class Voxel
+/*class Voxel
 {
     std::vector<LineSegment> lineSegments;
 };
@@ -76,7 +76,7 @@ struct VoxelGridData
 
     /// Every entry is one LOD
     std::vector<std::vector<float>> voxelDensityLODs;
-};
+};*/
 
 struct VoxelGridDataCompressed
 {
@@ -87,6 +87,7 @@ struct VoxelGridDataCompressed
     std::vector<uint32_t> numLinesInVoxel;
 
     std::vector<float> voxelDensityLODs;
+    std::vector<uint32_t> octreeLODs;
 
 #ifdef PACK_LINES
     std::vector<LineSegmentCompressed> lineSegments;
@@ -104,6 +105,7 @@ struct VoxelGridDataGPU
     sgl::GeometryBufferPtr numLinesInVoxel;
 
     sgl::TexturePtr densityTexture;
+    sgl::TexturePtr octreeTexture;
 
     sgl::GeometryBufferPtr lineSegments;
 };
@@ -113,5 +115,6 @@ void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data
 void loadFromFile(const std::string &filename, VoxelGridDataCompressed &data);
 void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGridDataGPU &gpuData);
 std::vector<float> generateMipmapsForDensity(float *density, glm::ivec3 size);
+std::vector<uint32_t> generateMipmapsForOctree(uint32_t *numLines, glm::ivec3 size);
 
 #endif //PIXELSYNCOIT_VOXELDATA_HPP

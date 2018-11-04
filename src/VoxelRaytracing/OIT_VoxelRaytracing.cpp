@@ -88,10 +88,13 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     // Create shader program
     sgl::ShaderManager->invalidateShaderCache();
     sgl::ShaderManager->addPreprocessorDefine("gridResolution", ivec3ToString(data.gridResolution));
+    sgl::ShaderManager->addPreprocessorDefine("GRID_RESOLUTION_LOG2",
+            sgl::toString(sgl::intlog2(data.gridResolution.x)));
+    sgl::ShaderManager->addPreprocessorDefine("GRID_RESOLUTION", data.gridResolution.x);
     sgl::ShaderManager->addPreprocessorDefine("quantizationResolution", ivec3ToString(data.quantizationResolution));
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(data.quantizationResolution.x));
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION_LOG2",
-            sgl::toString((int)log2(data.quantizationResolution.x)));
+            sgl::toString(sgl::intlog2(data.quantizationResolution.x)));
     renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
 }
 
@@ -125,8 +128,11 @@ void OIT_VoxelRaytracing::setUniformData()
     if (renderShader->hasUniform("densityTexture")) {
         renderShader->setUniform("densityTexture", data.densityTexture, 0);
     }
+    if (renderShader->hasUniform("octreeTexture")) {
+        renderShader->setUniform("octreeTexture", data.octreeTexture, 1);
+    }
     if (renderShader->hasUniform("transferFunctionTexture")) {
-        renderShader->setUniform("transferFunctionTexture", this->tfTexture, 1);
+        renderShader->setUniform("transferFunctionTexture", this->tfTexture, 2);
     }
 
     renderShader->setUniform("worldSpaceToVoxelSpace", data.worldToVoxelGridMatrix);

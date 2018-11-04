@@ -7,7 +7,7 @@ float distanceSqr(vec3 v1, vec3 v2)
 }
 
 
-#define MAX_NUM_HITS 16
+#define MAX_NUM_HITS 8
 struct RayHit {
     vec4 color;
     float distance;
@@ -155,6 +155,11 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
 vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, inout uint blendedLineIDs)
 {
     RayHit hits[MAX_NUM_HITS];
+    for (int i = 0; i < MAX_NUM_HITS; i++) {
+        hits[i].color = vec4(0.0);
+        hits[i].distance = 0.0;
+        hits[i].lineID = 0;
+    }
     int numHits = 0;
 
     /*
