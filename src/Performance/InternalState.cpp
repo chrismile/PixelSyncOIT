@@ -114,11 +114,13 @@ void getTestModesNoSync(std::vector<InternalState> &states, InternalState state)
     state.testNoAtomicOperations = true;
 
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
-    state.name = std::string() + "MLAB " + sgl::toString(8) + " Layers, No Sync";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "numLayers", sgl::toString(8) },
-    });
-    states.push_back(state);
+    for (int numLayers = 1; numLayers <= 32; numLayers *= 2) {
+        state.name = std::string() + "MLAB " + sgl::toString(numLayers) + " Layers, No Sync";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "numLayers", sgl::toString(numLayers) },
+        });
+        states.push_back(state);
+    }
 
 
     state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
@@ -131,7 +133,7 @@ void getTestModesNoSync(std::vector<InternalState> &states, InternalState state)
     states.push_back(state);
 
 
-    state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
+    /*state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
     state.name = std::string() + "Linked List Priority Queue "
                  + sgl::toString(1024) + " Layers, "
                  + sgl::toString(32) + " Nodes per Pixel, No Atomic Operations";
@@ -140,7 +142,7 @@ void getTestModesNoSync(std::vector<InternalState> &states, InternalState state)
             { "maxNumFragmentsSorting", sgl::toString(1024) },
             { "expectedDepthComplexity", sgl::toString(32) },
     });
-    states.push_back(state);
+    states.push_back(state);*/
 }
 
 
@@ -292,7 +294,7 @@ std::vector<InternalState> getAllTestModes()
     std::vector<InternalState> states;
     InternalState state;
     //state.modelName = "Monkey";
-    state.modelName = "Streamlines (Triangles)";
+    state.modelName = "Streamlines";
 
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
