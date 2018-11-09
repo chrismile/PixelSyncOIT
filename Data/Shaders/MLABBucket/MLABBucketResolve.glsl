@@ -33,7 +33,7 @@ void main()
 	loadFragmentNodes(pixelIndex, nodeArray);
 
 	// Sort nodes
-    MLABBucketFragmentNode tmp;
+    /*MLABBucketFragmentNode tmp;
 	bool changed;
     do {
         changed = false;
@@ -45,7 +45,7 @@ void main()
                 changed = true;
             }
         }
-    } while (changed);
+    } while (changed);*/
 
 	// Read data from SSBO
 	vec3 color = vec3(0.0, 0.0, 0.0);

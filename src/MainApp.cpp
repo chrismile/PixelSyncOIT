@@ -75,7 +75,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	bandingColor = Color(165, 220, 84, 120);
 	if (perfMeasurementMode) {
 		// Transparent background in measurement mode! This way, reference metrics can compare opacity values.
-		clearColor = Color(0, 0, 0, 0);
+		//clearColor = Color(0, 0, 0, 0);
+		clearColor = Color(255, 255, 255, 255);
 	} else {
 		clearColor = Color(255, 255, 255, 255);
 	}

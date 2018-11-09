@@ -70,11 +70,17 @@ void TestPixelSyncPerformance::resolutionChanged(sgl::FramebufferObjectPtr &scen
 void TestPixelSyncPerformance::setNewState(const InternalState &newState)
 {
     sgl::ShaderManager->invalidateShaderCache();
-    if (newState.oitAlgorithmSettings.getBoolValue("usePixelSync")) {
+    if (newState.oitAlgorithmSettings.getValue("testMode") == "usePixelSync") {
         sgl::ShaderManager->addPreprocessorDefine("TEST_PIXEL_SYNC", "");
-    } else {
+        sgl::ShaderManager->removePreprocessorDefine("TEST_ATOMIC_OPERATIONS");
+    } else if (newState.oitAlgorithmSettings.getValue("testMode") == "useAtomicOps") {
         sgl::ShaderManager->removePreprocessorDefine("TEST_PIXEL_SYNC");
+        sgl::ShaderManager->addPreprocessorDefine("TEST_ATOMIC_OPERATIONS", "");
+    } else if (newState.oitAlgorithmSettings.getValue("testMode") == "noSync") {
+        sgl::ShaderManager->removePreprocessorDefine("TEST_PIXEL_SYNC");
+        sgl::ShaderManager->removePreprocessorDefine("TEST_ATOMIC_OPERATIONS");
     }
+
     if (newState.oitAlgorithmSettings.getValue("testType") == "compute") {
         sgl::ShaderManager->addPreprocessorDefine("TEST_COMPUTE", "");
         sgl::ShaderManager->removePreprocessorDefine("TEST_SUM");

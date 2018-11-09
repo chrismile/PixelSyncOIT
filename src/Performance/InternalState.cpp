@@ -249,7 +249,7 @@ void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, Intern
     state.oitAlgorithm = RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE;
     state.name = std::string() + "Pixel Sync Performance Test Compute (Unordered)";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "usePixelSync", "true" },
+            { "testMode", "usePixelSync" },
             { "testType", "compute" },
     });
     states.push_back(state);
@@ -261,15 +261,23 @@ void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, Intern
 
     state.name = std::string() + "Atomic Operations Performance Test Compute";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "usePixelSync", "false" },
+            { "testMode", "useAtomicOps" },
             { "testType", "compute" },
     });
     states.push_back(state);
 
+    state.name = std::string() + "No Synchronization Performance Test Compute";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "testMode", "noSync" },
+            { "testType", "compute" },
+    });
+    states.push_back(state);
+
+
     state.testPixelSyncOrdered = true;
     state.name = std::string() + "Pixel Sync Performance Test Sum (Unordered)";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "usePixelSync", "true" },
+            { "testMode", "usePixelSync" },
             { "testType", "sum" },
     });
     states.push_back(state);
@@ -280,7 +288,14 @@ void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, Intern
 
     state.name = std::string() + "Atomic Operations Performance Test Sum";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "usePixelSync", "false" },
+            { "testMode", "useAtomicOps" },
+            { "testType", "sum" },
+    });
+    states.push_back(state);
+
+    state.name = std::string() + "No Synchronization Performance Test Sum";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "testMode", "noSync" },
             { "testType", "sum" },
     });
     states.push_back(state);

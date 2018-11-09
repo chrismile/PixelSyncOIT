@@ -1,4 +1,3 @@
-
 uniform sampler2D depthReadTexture;
 uniform int iteration;
 
@@ -15,6 +14,5 @@ void gatherFragment(vec4 color)
         discard;
     }
 
-    gl_FragDepth = gl_FragCoord.z;
     fragColor = vec4(color.rgb * color.a, color.a);
 }

@@ -27,9 +27,7 @@ layout(pixel_interlock_unordered) in;
 #else
 #endif
 
-#ifdef ABC_TEST
 //#extension GL_NV_shader_atomic_float : require
-#endif
 
 
 uniform int viewportW;
@@ -50,18 +48,29 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 void main()
 {
 	uint idx = addrGen(uvec2(uint(gl_FragCoord.x), uint(gl_FragCoord.y)));
-#ifdef TEST_PIXEL_SYNC
+#if defined(TEST_PIXEL_SYNC)
 	// Code A - Pixel Sync
     beginInvocationInterlockARB();
-    float oldValue = data[idx];
-    float newValue = doSomeComputation(oldValue);
-    data[idx] = int(newValue);
+    float value = float(data[idx]);
+    for (int i = 0; i < 10; i++) {
+        value = doSomeComputation(value);
+    }
+    data[idx] = int(value);
     endInvocationInterlockARB();
-#else
+#elif defined(TEST_ATOMIC_OPERATIONS)
     // Code B - Atomic Operations
-    float oldValue = data[idx];
-    float newValue = doSomeComputation(oldValue);
-    atomicExchange(data[idx], int(newValue));
+    float value = float(data[idx]);
+    for (int i = 0; i < 10; i++) {
+        value = doSomeComputation(value);
+    }
+    atomicExchange(data[idx], int(value));
+#else
+    // Code C - No Synchronization
+    float value = float(data[idx]);
+    for (int i = 0; i < 10; i++) {
+        value = doSomeComputation(value);
+    }
+    data[idx] = int(value);
 #endif
 }
 
@@ -70,14 +79,17 @@ void main()
 void main()
 {
 	uint idx = addrGen(uvec2(uint(gl_FragCoord.x), uint(gl_FragCoord.y)));
-#ifdef TEST_PIXEL_SYNC
+#if defined(TEST_PIXEL_SYNC)
 	// Code A - Pixel Sync
     beginInvocationInterlockARB();
     data[idx] += 1;
     endInvocationInterlockARB();
-#else
+#elif defined(TEST_ATOMIC_OPERATIONS)
     // Code B - Atomic Operations
     atomicAdd(data[idx], 1);
+#else
+    // Code C - No Synchronization
+    data[idx] += 1;
 #endif
 }
 
