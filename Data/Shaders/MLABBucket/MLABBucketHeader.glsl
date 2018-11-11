@@ -36,47 +36,39 @@ float logDepthWarp(float z)
 #define DISTANCE_INFINITE (1E30)
 
 // Data structure for NODES_PER_BUCKET nodes, packed in vectors for faster access
-#if NODES_PER_BUCKET == 1
 struct MLABBucketFragmentNode_compressed
 {
+#ifdef MLAB_DEPTH_OPACITY_BUCKETS
+    vec4 boundingBox;
+#endif
+
+#if NODES_PER_BUCKET == 1
 	// Linear depth, i.e. distance to viewer
 	float depth[1];
 	// RGB color (3 bytes), opacity (1 byte)
 	uint premulColor[1];
-};
 #elif NODES_PER_BUCKET == 2
-struct MLABBucketFragmentNode_compressed
-{
 	// Linear depth, i.e. distance to viewer
 	vec2 depth;
 	// RGB color (3 bytes), opacity (1 byte)
 	uvec2 premulColor;
-};
 #elif NODES_PER_BUCKET == 4
-struct MLABBucketFragmentNode_compressed
-{
 	// Linear depth, i.e. distance to viewer
 	vec4 depth;
 	// RGB color (3 bytes), opacity (1 byte)
 	uvec4 premulColor;
-};
 #elif NODES_PER_BUCKET % 4 == 0
-struct MLABBucketFragmentNode_compressed
-{
 	// Linear depth, i.e. distance to viewer
 	vec4 depth[NODES_PER_BUCKET/4];
 	// RGB color (3 bytes), opacity (1 byte)
 	uvec4 premulColor[NODES_PER_BUCKET/4];
-};
 #else
-struct MLABBucketFragmentNode_compressed
-{
 	// Linear depth, i.e. distance to viewer
 	float depth[NODES_PER_BUCKET];
 	// RGB color (3 bytes), opacity (1 byte)
 	uint premulColor[NODES_PER_BUCKET];
-};
 #endif
+};
 
 struct MLABBucketFragmentNode
 {
@@ -92,10 +84,17 @@ layout (std430, binding = 0) coherent buffer FragmentNodes
 	MLABBucketFragmentNode_compressed nodes[];
 };
 
+layout (binding = 0, rgba32f) coherent uniform image2DArray boundingBoxes;
+layout (binding = 0, r8ui) coherent uniform image2DArray numUsedBuckets;
 
 
 // Load the fragments into "nodeArray"
-void loadFragmentNodesBucket(in uint pixelIndex, in int bucketIndex, out MLABBucketFragmentNode nodeArray[NODES_PER_BUCKET+1]) {
+void loadFragmentNodesBucket(in uint pixelIndex, in int bucketIndex,
+        out MLABBucketFragmentNode nodeArray[NODES_PER_BUCKET+1]
+#ifdef MLAB_DEPTH_OPACITY_BUCKETS
+        , out vec4 boundingBox
+#endif
+) {
     MLABBucketFragmentNode_compressed fragmentNode = nodes[pixelIndex*NUM_BUCKETS+bucketIndex];
 
 #if (NODES_PER_BUCKET % 4 == 0) && (NODES_PER_BUCKET > 4)
@@ -114,10 +113,19 @@ void loadFragmentNodesBucket(in uint pixelIndex, in int bucketIndex, out MLABBuc
 
     // For merging to see if last node is unused
     nodeArray[NODES_PER_BUCKET].depth = DISTANCE_INFINITE;
+
+#ifdef MLAB_DEPTH_OPACITY_BUCKETS
+    boundingBox = fragmentNode.boundingBox;
+#endif
 }
 
 // Store the fragments from "nodeArray" into VRAM
-void storeFragmentNodesBucket(in uint pixelIndex, in int bucketIndex, in MLABBucketFragmentNode nodeArray[NODES_PER_BUCKET+1]) {
+void storeFragmentNodesBucket(in uint pixelIndex, in int bucketIndex,
+        in MLABBucketFragmentNode nodeArray[NODES_PER_BUCKET+1]
+#ifdef MLAB_DEPTH_OPACITY_BUCKETS
+        , in vec4 boundingBox
+#endif
+) {
     MLABBucketFragmentNode_compressed fragmentNode;
 
 #if (NODES_PER_BUCKET % 4 == 0) && (NODES_PER_BUCKET > 4)
@@ -132,6 +140,10 @@ void storeFragmentNodesBucket(in uint pixelIndex, in int bucketIndex, in MLABBuc
         fragmentNode.depth[i] = nodeArray[i].depth;
         fragmentNode.premulColor[i] = nodeArray[i].premulColor;
     }
+#endif
+
+#ifdef MLAB_DEPTH_OPACITY_BUCKETS
+    fragmentNode.boundingBox = boundingBox;
 #endif
 
     nodes[pixelIndex*NUM_BUCKETS+bucketIndex] = fragmentNode;

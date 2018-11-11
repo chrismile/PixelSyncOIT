@@ -32,8 +32,9 @@ void main()
 	MLABBucketFragmentNode nodeArray[BUFFER_SIZE+1];
 	loadFragmentNodes(pixelIndex, nodeArray);
 
-	// Sort nodes
-    /*MLABBucketFragmentNode tmp;
+#ifdef MLAB_OPACITY_BUCKETS
+	// Sort the nodes if the buckets are not already sorted by depth
+    MLABBucketFragmentNode tmp;
 	bool changed;
     do {
         changed = false;
@@ -45,7 +46,8 @@ void main()
                 changed = true;
             }
         }
-    } while (changed);*/
+    } while (changed);
+#endif
 
 	// Read data from SSBO
 	vec3 color = vec3(0.0, 0.0, 0.0);

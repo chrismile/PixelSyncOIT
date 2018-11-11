@@ -48,9 +48,12 @@ void gatherFragment(vec4 color)
 	frag.depth = gl_FragCoord.z;
 	frag.premulColor = packUnorm4x8(vec4(color.rgb * color.a, 1.0 - color.a));
 
+#ifdef MLAB_DEPTH_BUCKETS
 	float depth = logDepthWarp(-screenSpacePosition.z);
     int bucketIdx = int(floor(depth * float(NUM_BUCKETS)));
-   // int bucketIdx = int(floor(color.a * float(NUM_BUCKETS)));
+#ifdef MLAB_OPACITY_BUCKETS
+    int bucketIdx = int(floor(color.a * float(NUM_BUCKETS)));
+#endif
 
     // Begin of actual algorithm code
 	MLABBucketFragmentNode nodeArray[NODES_PER_BUCKET+1];
