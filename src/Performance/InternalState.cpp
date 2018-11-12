@@ -310,6 +310,7 @@ std::vector<InternalState> getAllTestModes()
     InternalState state;
     //state.modelName = "Monkey";
     state.modelName = "Streamlines";
+    //state.modelName = "Streamlines (Triangles)";
 
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);

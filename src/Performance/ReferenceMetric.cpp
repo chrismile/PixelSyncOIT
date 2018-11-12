@@ -102,7 +102,7 @@ sgl::BitmapPtr computeNormalizedDifferenceMapRGBDiff(const sgl::BitmapPtr &expec
     }
 
     // Normalize the difference map
-    if (maxDifferenceRGB >= 1 && maxDifferenceAlpha >= 1) {
+    if (maxDifferenceRGB >= 1 /*&& maxDifferenceAlpha >= 1*/) {
         for (int i = 0; i < N; i++) {
             if (i % 4 == 3) {
                 //differenceMap->getPixels()[i] = static_cast<double>(differences[i])
