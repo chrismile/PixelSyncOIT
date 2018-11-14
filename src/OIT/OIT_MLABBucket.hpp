@@ -52,6 +52,11 @@ private:
     sgl::GeometryBufferPtr fragmentNodes;
     //sgl::GeometryBufferPtr numFragmentsBuffer;
 
+    sgl::TexturePtr boundingBoxesTexture;
+    sgl::TexturePtr numUsedBucketsTexture;
+    sgl::TextureSettings boundingBoxesTextureSettings;
+    sgl::TextureSettings numUsedBucketsTextureSettings;
+
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
     sgl::ShaderAttributesPtr clearRenderData;

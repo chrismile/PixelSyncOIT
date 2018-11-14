@@ -81,7 +81,7 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
     state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
 
     // sortingModeStrings
-    for (int expectedDepthComplexity = 32; expectedDepthComplexity <= 64; expectedDepthComplexity *= 2) {
+    for (int expectedDepthComplexity = 64; expectedDepthComplexity <= 64; expectedDepthComplexity *= 2) {
         for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
             for (int maxNumFragmentsSorting = 256; maxNumFragmentsSorting <= 512; maxNumFragmentsSorting *= 2) {
                 std::string sortingMode = sortingModeStrings[sortingModeIdx];

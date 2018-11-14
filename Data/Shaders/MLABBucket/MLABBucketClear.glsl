@@ -20,7 +20,6 @@ void main()
 
 void main()
 {
-	uint x = uint(gl_FragCoord.x);
-	uint y = uint(gl_FragCoord.y);
-	clearPixel(addrGen(uvec2(x,y)));
+    ivec2 fragPos2D = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
+	clearPixel(addrGen(uvec2(fragPos2D)), fragPos2D);
 }

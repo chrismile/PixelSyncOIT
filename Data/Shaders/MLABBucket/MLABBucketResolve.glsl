@@ -22,15 +22,14 @@ out vec4 fragColor;
 
 void main()
 {
-	uint x = uint(gl_FragCoord.x);
-	uint y = uint(gl_FragCoord.y);
-	uint pixelIndex = addrGen(uvec2(x,y));
+    ivec2 fragPos2D = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
+	uint pixelIndex = addrGen(uvec2(fragPos2D));
 
 	memoryBarrierBuffer();
 
 	// Read data from SSBO
 	MLABBucketFragmentNode nodeArray[BUFFER_SIZE+1];
-	loadFragmentNodes(pixelIndex, nodeArray);
+	loadFragmentNodes(pixelIndex, fragPos2D, nodeArray);
 
 #ifdef MLAB_OPACITY_BUCKETS
 	// Sort the nodes if the buckets are not already sorted by depth
@@ -60,7 +59,7 @@ void main()
 	}
 
     // Make sure data is cleared for next rendering pass
-    clearPixel(pixelIndex);
+    clearPixel(pixelIndex, fragPos2D);
 
     float alphaOut = 1.0 - trans;
     fragColor = vec4(color.rgb / alphaOut, alphaOut);

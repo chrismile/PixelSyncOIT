@@ -106,11 +106,11 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 0;
+    int usedModelIndex = 5;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
-    bool cullBackface = true;
+    bool cullBackface = false;
     bool transparencyMapping = true;
     float lineRadius = 0.001f;
     std::vector<float> fpsArray;
@@ -124,7 +124,7 @@ private:
 	TransferFunctionWindow transferFunctionWindow;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = false;
+    bool continuousRendering = true;
     bool reRender = true;
 
     // Profiling events

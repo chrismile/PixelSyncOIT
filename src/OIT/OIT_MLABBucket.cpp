@@ -12,6 +12,7 @@
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <Graphics/OpenGL/Shader.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "TilingMode.hpp"
@@ -26,7 +27,10 @@ static bool useStencilBuffer = true;
 static int numBuckets = 4;
 
 // Maximum number of nodes per bucket
-static int nodesPerBucket = 4;
+static int nodesPerBucket = 1;
+
+// How to assign pixels to buffers
+static int bucketMode = 0;
 
 
 OIT_MLABBucket::OIT_MLABBucket()
@@ -43,6 +47,7 @@ void OIT_MLABBucket::create()
     }
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABBucketGather.glsl\"");
+    ShaderManager->addPreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS", "");
 
     updateLayerMode();
 
@@ -60,6 +65,8 @@ void OIT_MLABBucket::create()
     geomBuffer = Renderer->createGeometryBuffer(sizeof(glm::vec3)*fullscreenQuad.size(),
                                                 (void*)&fullscreenQuad.front());
     clearRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
+
+
 }
 
 void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
@@ -76,6 +83,34 @@ void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     size_t bufferSizeBytes = (sizeof(uint32_t) + sizeof(float)) * numBuckets * nodesPerBucket * width * height;
     fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
+    /*textureSettingsB0 = TextureSettings();
+    textureSettingsB0.type = TEXTURE_2D_ARRAY;
+    textureSettingsB0.pixelType = GL_FLOAT;
+    textureSettingsB0.pixelFormat = pixelFormatB0;
+    textureSettingsB0.internalFormat = internalFormatB0;
+    b0 = TextureManager->createTexture(emptyData, width, height, depthB0, textureSettingsB0);*/
+
+
+    boundingBoxesTextureSettings = TextureSettings();
+    boundingBoxesTextureSettings.type = TEXTURE_2D_ARRAY;
+    boundingBoxesTextureSettings.pixelType = GL_FLOAT;
+    boundingBoxesTextureSettings.pixelFormat = GL_RGBA;
+    boundingBoxesTextureSettings.internalFormat = GL_RGBA32F; // TODO: GL_RGBA16
+    boundingBoxesTextureSettings.textureMinFilter = GL_NEAREST;
+    boundingBoxesTextureSettings.textureMagFilter = GL_NEAREST;
+
+    numUsedBucketsTextureSettings = TextureSettings();
+    numUsedBucketsTextureSettings.type = TEXTURE_2D;
+    numUsedBucketsTextureSettings.pixelType = GL_UNSIGNED_INT;
+    numUsedBucketsTextureSettings.pixelFormat = GL_RED_INTEGER;
+    numUsedBucketsTextureSettings.internalFormat = GL_R8UI; // GL_RGBA16
+    numUsedBucketsTextureSettings.textureMinFilter = GL_NEAREST;
+    numUsedBucketsTextureSettings.textureMagFilter = GL_NEAREST;
+
+    boundingBoxesTexture = sgl::TextureManager->createTexture(NULL, width, height, numBuckets, boundingBoxesTextureSettings);
+    numUsedBucketsTexture = sgl::TextureManager->createTexture(NULL, width, height, numUsedBucketsTextureSettings);
+
 
     // Buffer has to be cleared again
     clearBitSet = true;
@@ -94,6 +129,12 @@ void OIT_MLABBucket::renderGUI()
 
     if (ImGui::SliderInt("Nodes per Bucket", &nodesPerBucket, 1, 8)) {
         updateLayerMode();
+        reRender = true;
+    }
+
+    const char *bucketModes[] = {"Combined Buckets", "Depth Buckets", "Opacity Buckets"};
+    if (ImGui::Combo("Pixel Format", (int*)&bucketMode, bucketModes, IM_ARRAYSIZE(bucketModes))) {
+        reloadShaders();
         reRender = true;
     }
 
@@ -124,14 +165,31 @@ void OIT_MLABBucket::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, 
     maxViewZ = std::max(maxViewZ, camera->getNearClipDistance());
     float logmin = log(minViewZ);
     float logmax = log(maxViewZ);
-    gatherShader->setUniform("logDepthMin", logmin);
-    gatherShader->setUniform("logDepthMax", logmax);
-    //resolveShader->setUniform("logDepthMin", logmin);
-    //resolveShader->setUniform("logDepthMax", logmax);
+    if (gatherShader->hasUniform("logDepthMin")) {
+        gatherShader->setUniform("logDepthMin", logmin);
+        gatherShader->setUniform("logDepthMax", logmax);
+        //resolveShader->setUniform("logDepthMin", logmin);
+        //resolveShader->setUniform("logDepthMax", logmax);
+    }
 }
 
 void OIT_MLABBucket::reloadShaders()
 {
+    ShaderManager->invalidateShaderCache();
+    if (bucketMode == 0) {
+        ShaderManager->addPreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS", "");
+        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_BUCKETS");
+        ShaderManager->removePreprocessorDefine("MLAB_OPACITY_BUCKETS");
+    } else if (bucketMode == 1) {
+        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS");
+        ShaderManager->addPreprocessorDefine("MLAB_DEPTH_BUCKETS", "");
+        ShaderManager->removePreprocessorDefine("MLAB_OPACITY_BUCKETS");
+    } else {
+        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS");
+        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_BUCKETS");
+        ShaderManager->addPreprocessorDefine("MLAB_OPACITY_BUCKETS", "");
+    }
+
     gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
     resolveShader = ShaderManager->getShaderProgram({"MLABBucketResolve.Vertex", "MLABBucketResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABBucketClear.Vertex", "MLABBucketClear.Fragment"});
@@ -170,6 +228,21 @@ void OIT_MLABBucket::setUniformData()
 
     clearShader->setUniform("viewportW", width);
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+
+    //mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);
+
+    gatherShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
+                                         GL_READ_WRITE, 0, true, 0);
+    gatherShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
+                                         GL_READ_WRITE, 0, true, 0);
+    resolveShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
+                                          GL_READ_WRITE, 0, true, 0);
+    resolveShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
+                                          GL_READ_WRITE, 0, true, 0);
+    clearShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
+                                        GL_READ_WRITE, 0, true, 0);
+    clearShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
+                                        GL_READ_WRITE, 0, true, 0);
 }
 
 void OIT_MLABBucket::gatherBegin()
