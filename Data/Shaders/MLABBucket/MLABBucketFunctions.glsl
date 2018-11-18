@@ -69,10 +69,11 @@ void splitBucket(in uint pixelIndex, in ivec2 fragPos2D, in int bucketIndex, ino
 	}
 
 	// 2. Copy nodes starting with "splitNodeIndex" to "nextBucketIndex"
-	// 2.1 Copy the nodes and compute the bounding box of the split bucket
+	// 2.1 Copy the nodes (and clear afterwards) and compute the bounding box of the split bucket
 	vec4 nextBucketBB = EMPTY_BB;
 	for (int i = splitNodeIndex; i < NODES_PER_BUCKET+1; i++) {
 		nextBucketNodes[i-splitNodeIndex] = bucketNodes[i];
+		bucketNodes[i] = EMPTY_NODE;
 		combineBucketBB(nextBucketBB, nextBucketNodes[i-splitNodeIndex]);
 	}
 	// 2.2 Initialize rest with the clear value
@@ -82,25 +83,17 @@ void splitBucket(in uint pixelIndex, in ivec2 fragPos2D, in int bucketIndex, ino
 	// 2.3 Store result to memory
 	storeFragmentNodesBucket(pixelIndex, fragPos2D, nextBucketIndex, nextBucketNodes, nextBucketBB);
 
-	// 3. Clear nodes in "bucketIndex" right from "splitNodeIndex"
-	// 3.1 Initialize rest with clear value
-	for (int i = splitNodeIndex; i < NODES_PER_BUCKET+1; i++) {
-		bucketNodes[i] = EMPTY_NODE;
-	}
-	// 3.2 Compute the new bounding box
+	// 3. Compute the new bounding box
 	bucketBB = EMPTY_BB;
 	for (int i = 0; i < splitNodeIndex; i++) {
 		combineBucketBB(bucketBB, bucketNodes[i]);
 	}
-	//combineBucketBB(bucketBB, nextBucketNodes[0]);
-	// 3.3 Store result to memory (done later)
-	//storeFragmentNodesBucket(pixelIndex, bucketIndex, bucketNodes, bucketBB);
 }
 
 
 bool insertToBucket(in MLABBucketFragmentNode frag, inout MLABBucketFragmentNode list[NODES_PER_BUCKET+1])
 {
-	MLABBucketFragmentNode temp, merge;
+	MLABBucketFragmentNode temp;
 	// Use single pass bubble sort to insert new fragment node
 	for (int i = 0; i < NODES_PER_BUCKET+1; i++) {
 		if (frag.depth <= list[i].depth) {

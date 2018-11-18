@@ -84,7 +84,7 @@ private:
 
 	// Mode
 	// RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
-	RenderModeOIT mode = RENDER_MODE_OIT_MBOIT;
+	RenderModeOIT mode = RENDER_MODE_OIT_MLAB_BUCKET;
     RenderModeOIT oldMode = mode;
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
@@ -106,7 +106,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 5;
+    int usedModelIndex = 1;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -124,7 +124,7 @@ private:
 	TransferFunctionWindow transferFunctionWindow;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = true;
+    bool continuousRendering = false;
     bool reRender = true;
 
     // Profiling events

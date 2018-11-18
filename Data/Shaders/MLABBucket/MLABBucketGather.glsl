@@ -77,6 +77,7 @@ void gatherFragment(vec4 color)
     uint numBucketsUsed = imageLoad(numUsedBucketsTexture, fragPos2D).r;
 	MLABBucketFragmentNode bucketNodes[NODES_PER_BUCKET+1];
 	float depth = logDepthWarp(-screenSpacePosition.z);
+	frag.depth = depth; // TODO
 	int bucketIndex = getBucketIndex(pixelIndex, fragPos2D, depth, int(numBucketsUsed));
     vec4 bucketBB;
     loadFragmentNodesBucket(pixelIndex, fragPos2D, bucketIndex, bucketNodes, bucketBB);

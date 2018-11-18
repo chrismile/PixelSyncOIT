@@ -12,6 +12,10 @@
 bool selectTilingModeUI();
 
 /// For e.g. the automatic performance measuring tool.
-void setNewTilingMode(int newTileWidth, int newTileHeight);
+/// Morton code for now only supported for 8x8 tile size.
+void setNewTilingMode(int newTileWidth, int newTileHeight, bool useMortonCode = false);
+
+/// Returns screen width and screen height padded for tile size
+void getScreenSizeWithTiling(int &screenWidth, int &screenHeight);
 
 #endif //PIXELSYNCOIT_TILINGMODE_HPP

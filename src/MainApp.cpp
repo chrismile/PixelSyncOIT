@@ -389,7 +389,7 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 	}
 
 	// 2. Handle global state changes like SSAO, tiling mode
-	setNewTilingMode(newState.tilingWidth, newState.tilingHeight);
+	setNewTilingMode(newState.tilingWidth, newState.tilingHeight, newState.useMortonCodeForTiling);
 	if (useSSAO != newState.useSSAO) {
 		useSSAO = newState.useSSAO;
 		ShaderManager->invalidateShaderCache();

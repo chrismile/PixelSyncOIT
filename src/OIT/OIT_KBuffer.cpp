@@ -70,6 +70,7 @@ void OIT_KBuffer::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer,
 	Window *window = AppSettings::get()->getMainWindow();
 	int width = window->getWidth();
 	int height = window->getHeight();
+	getScreenSizeWithTiling(width, height);
 
 	size_t bufferSizeBytes = sizeof(FragmentNode) * maxNumNodes * width * height;
 	void *data = (void*)malloc(bufferSizeBytes);
@@ -138,6 +139,7 @@ void OIT_KBuffer::setUniformData()
 	Window *window = AppSettings::get()->getMainWindow();
 	int width = window->getWidth();
 	int height = window->getHeight();
+	getScreenSizeWithTiling(width, height);
 
 	gatherShader->setUniform("viewportW", width);
 	gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);

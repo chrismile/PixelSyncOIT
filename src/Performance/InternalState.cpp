@@ -150,11 +150,13 @@ void getTestModesNoSync(std::vector<InternalState> &states, InternalState state)
 void getTestModesOrderedSync(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
-    state.name = std::string() + "MLAB " + sgl::toString(8) + " Layers (Ordered)";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "numLayers", sgl::toString(8) },
-    });
-    states.push_back(state);
+    for (int numLayers = 1; numLayers <= 32; numLayers *= 2) {
+        state.name = std::string() + "MLAB " + sgl::toString(numLayers) + " Layers (Ordered)";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "numLayers", sgl::toString(numLayers) },
+        });
+        states.push_back(state);
+    }
 
 
     state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
@@ -182,14 +184,14 @@ void getTestModesTiling(std::vector<InternalState> &states, InternalState state)
     states.push_back(state);
 
 
-    state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
+    /*state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
     state.name = std::string() + "MBOIT " + sgl::toString(4) + " Power Moments Float, Tiling " + tilingString;
     state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
             { "usePowerMoments", "true" },
             { "numMoments", sgl::toString(4) },
             { "pixelFormat", "Float" },
     });
-    states.push_back(state);
+    states.push_back(state);*/
 }
 
 
@@ -339,6 +341,10 @@ std::vector<InternalState> getAllTestModes()
     getTestModesTiling(states, stateTiling);
     stateTiling.tilingWidth = 8;
     stateTiling.tilingHeight = 8;
+    getTestModesTiling(states, stateTiling);
+    stateTiling.tilingWidth = 8;
+    stateTiling.tilingHeight = 8;
+    stateTiling.useMortonCodeForTiling;
     getTestModesTiling(states, stateTiling);
 
     // Performance test: No synchronization operations

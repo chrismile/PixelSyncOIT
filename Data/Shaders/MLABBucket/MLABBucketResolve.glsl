@@ -57,6 +57,7 @@ void main()
 		color.rgb = color.rgb + trans * colorSrc.rgb;
 		trans *= colorSrc.a;
 	}
+    //uint numBucketsUsed = imageLoad(numUsedBucketsTexture, fragPos2D).r;
 
     // Make sure data is cleared for next rendering pass
     clearPixel(pixelIndex, fragPos2D);
@@ -64,4 +65,6 @@ void main()
     float alphaOut = 1.0 - trans;
     fragColor = vec4(color.rgb / alphaOut, alphaOut);
     //fragColor = vec4(vec3(alphaOut), 1.0); // Output opacity
+
+    //fragColor = vec4(vec3(float(numBucketsUsed) / 3.0), 1.0);
 }

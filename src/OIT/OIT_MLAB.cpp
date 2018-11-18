@@ -68,6 +68,7 @@ void OIT_MLAB::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sg
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
+    getScreenSizeWithTiling(width, height);
 
     size_t bufferSizeBytes = (sizeof(uint32_t) + sizeof(float)) * maxNumNodes * width * height;
     fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
@@ -133,6 +134,7 @@ void OIT_MLAB::setUniformData()
     Window *window = AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
+    getScreenSizeWithTiling(width, height);
 
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);

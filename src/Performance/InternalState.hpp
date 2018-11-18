@@ -95,6 +95,7 @@ struct InternalState
     SettingsMap oitAlgorithmSettings;
     int tilingWidth = 2;
     int tilingHeight = 8;
+    bool useMortonCodeForTiling = false;
     bool useSSAO = false;
     bool useStencilBuffer = true;
     bool testNoInvocationInterlock = false; // Test without pixel sync
