@@ -110,7 +110,7 @@ private:
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
-    bool cullBackface = false;
+    bool cullBackface = true;
     bool transparencyMapping = true;
     float lineRadius = 0.001f;
     std::vector<float> fpsArray;
