@@ -57,10 +57,10 @@ struct LineSegmentCompressed
     // Bit 0-2, 3-5: Face ID of start/end point.
     // For c = log2(QUANTIZATION_RESOLUTION^2) = 2*log2(QUANTIZATION_RESOLUTION):
     // Bit 6-(5+c), (6+c)-(5+2c): Quantized face position of start/end point.
-    uint linePosition;
+    uint32_t linePosition;
     // Bit 11-15: Line ID (5 bits for bitmask of 2^5 bits = 32 bits).
     // Bit 16-23, 24-31: Attribute of start/end point (normalized to [0,1]).
-    uint attributes;
+    uint32_t attributes;
 };
 
 
