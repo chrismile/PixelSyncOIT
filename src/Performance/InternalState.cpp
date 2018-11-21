@@ -175,6 +175,9 @@ void getTestModesTiling(std::vector<InternalState> &states, InternalState state)
 {
     std::string tilingString = std::string() + sgl::toString(state.tilingWidth)
             + "x" + sgl::toString(state.tilingHeight);
+    if (state.useMortonCodeForTiling) {
+        tilingString += " Morton";
+    }
 
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
     state.name = std::string() + "MLAB " + sgl::toString(8) + " Layers, Tiling " + tilingString;
@@ -311,8 +314,8 @@ std::vector<InternalState> getAllTestModes()
     std::vector<InternalState> states;
     InternalState state;
     //state.modelName = "Monkey";
-    state.modelName = "Streamlines";
-    //state.modelName = "Streamlines (Triangles)";
+    //state.modelName = "Streamlines";
+    state.modelName = "Streamlines (Triangles)";
 
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
@@ -344,7 +347,7 @@ std::vector<InternalState> getAllTestModes()
     getTestModesTiling(states, stateTiling);
     stateTiling.tilingWidth = 8;
     stateTiling.tilingHeight = 8;
-    stateTiling.useMortonCodeForTiling;
+    stateTiling.useMortonCodeForTiling = true;
     getTestModesTiling(states, stateTiling);
 
     // Performance test: No synchronization operations
