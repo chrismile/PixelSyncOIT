@@ -79,7 +79,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
         VoxelCurveDiscretizer discretizer(glm::ivec3(128), glm::ivec3(64));
         discretizer.createFromFile(modelFilenameObj, attributes, maxVorticity);
         compressedData = discretizer.compressData();
-        //saveToFile(modelFilenameVoxelGrid, compressedData); // TODO When format is stable
+        saveToFile(modelFilenameVoxelGrid, compressedData); // TODO When format is stable
     } else {
         loadFromFile(modelFilenameVoxelGrid, compressedData);
     }

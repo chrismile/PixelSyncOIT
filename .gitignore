@@ -68,6 +68,7 @@ cmake-build-*/
 *.obj
 *.binmesh
 *.binmesh_tri
+*.voxel
 *.nc
 
 Data/TransferFunctions/*
