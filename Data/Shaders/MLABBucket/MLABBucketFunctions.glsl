@@ -9,6 +9,7 @@
 // Empty node
 #define EMPTY_NODE MLABBucketFragmentNode(DISTANCE_INFINITE, 0xFF000000u)
 
+
 int getBucketIndex(in uint pixelIndex, in ivec2 fragPos2D, in float depth, in int numBucketsUsed)
 {
 	/*for (int bucketIndex = 0; bucketIndex < numBucketsUsed; bucketIndex++) {

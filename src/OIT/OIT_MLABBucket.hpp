@@ -21,7 +21,8 @@ public:
      *  The gather shader is used to render our transparent objects.
      *  Its purpose is to store the fragments in an offscreen-buffer.
      */
-    virtual sgl::ShaderProgramPtr getGatherShader() { return gatherShader; }
+    virtual sgl::ShaderProgramPtr getGatherShader();
+    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
 
     OIT_MLABBucket();
     virtual void create();
@@ -29,7 +30,7 @@ public:
                                    sgl::RenderbufferObjectPtr &sceneDepthRBO);
 
     virtual void gatherBegin();
-    // In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
+    virtual void renderScene();
     virtual void gatherEnd();
 
     // Blit accumulated transparent objects to screen
@@ -50,6 +51,7 @@ private:
     void setUniformData();
 
     sgl::GeometryBufferPtr fragmentNodes;
+    sgl::GeometryBufferPtr minDepthBuffer;
     //sgl::GeometryBufferPtr numFragmentsBuffer;
 
     sgl::TexturePtr boundingBoxesTexture;
@@ -60,6 +62,10 @@ private:
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;
     sgl::ShaderAttributesPtr clearRenderData;
+    sgl::ShaderProgramPtr minDepthPassShader;
+
+    // Internal state
+    int pass = 1;
 
     sgl::FramebufferObjectPtr sceneFramebuffer;
     sgl::TexturePtr sceneTexture;

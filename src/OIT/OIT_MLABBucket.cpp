@@ -85,6 +85,10 @@ void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
+    size_t minDepthBufferSizeBytes = sizeof(float) * width * height;
+    minDepthBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
+    minDepthBuffer = Renderer->createGeometryBuffer(minDepthBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
     /*textureSettingsB0 = TextureSettings();
     textureSettingsB0.type = TEXTURE_2D_ARRAY;
     textureSettingsB0.pixelType = GL_FLOAT;
@@ -133,9 +137,11 @@ void OIT_MLABBucket::renderGUI()
         reRender = true;
     }
 
-    const char *bucketModes[] = {"Combined Buckets", "Depth Buckets", "Opacity Buckets"};
+    const char *bucketModes[] = {"Combined Buckets", "Transmittance Buckets", "Min Depth Buckets",
+                                 "Depth Buckets", "Opacity Buckets"};
     if (ImGui::Combo("Pixel Format", (int*)&bucketMode, bucketModes, IM_ARRAYSIZE(bucketModes))) {
         reloadShaders();
+        clearBitSet = true;
         reRender = true;
     }
 
@@ -172,28 +178,61 @@ void OIT_MLABBucket::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, 
         //resolveShader->setUniform("logDepthMin", logmin);
         //resolveShader->setUniform("logDepthMax", logmax);
     }
+    if (bucketMode == 2 && minDepthPassShader->hasUniform("logDepthMin")) {
+        minDepthPassShader->setUniform("logDepthMin", logmin);
+        minDepthPassShader->setUniform("logDepthMax", logmax);
+    }
+}
+
+sgl::ShaderProgramPtr OIT_MLABBucket::getGatherShader()
+{
+    if (bucketMode != 2 || pass == 2) {
+        return gatherShader;
+    } else {
+        return minDepthPassShader;
+    }
+}
+
+void OIT_MLABBucket::setGatherShaderList(const std::list<std::string> &shaderIDs)
+{
+    gatherShaderIDs = shaderIDs;
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABBucketGather.glsl\"");
+    gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MinDepthPass.glsl\"");
+    minDepthPassShader = ShaderManager->getShaderProgram(gatherShaderIDs);
 }
 
 void OIT_MLABBucket::reloadShaders()
 {
     ShaderManager->invalidateShaderCache();
+
+    ShaderManager->removePreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS");
+    ShaderManager->removePreprocessorDefine("MLAB_TRANSMITTANCE_BUCKETS");
+    ShaderManager->removePreprocessorDefine("MLAB_MIN_DEPTH_BUCKETS");
+    ShaderManager->removePreprocessorDefine("MLAB_DEPTH_BUCKETS");
+    ShaderManager->removePreprocessorDefine("MLAB_OPACITY_BUCKETS");
+
     if (bucketMode == 0) {
         ShaderManager->addPreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS", "");
-        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_BUCKETS");
-        ShaderManager->removePreprocessorDefine("MLAB_OPACITY_BUCKETS");
     } else if (bucketMode == 1) {
-        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS");
+        ShaderManager->addPreprocessorDefine("MLAB_TRANSMITTANCE_BUCKETS", "");
+    } else if (bucketMode == 2) {
+        ShaderManager->addPreprocessorDefine("MLAB_MIN_DEPTH_BUCKETS", "");
+    } else if (bucketMode == 3) {
         ShaderManager->addPreprocessorDefine("MLAB_DEPTH_BUCKETS", "");
-        ShaderManager->removePreprocessorDefine("MLAB_OPACITY_BUCKETS");
     } else {
-        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS");
-        ShaderManager->removePreprocessorDefine("MLAB_DEPTH_BUCKETS");
         ShaderManager->addPreprocessorDefine("MLAB_OPACITY_BUCKETS", "");
     }
 
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABBucketGather.glsl\"");
     gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
     resolveShader = ShaderManager->getShaderProgram({"MLABBucketResolve.Vertex", "MLABBucketResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABBucketClear.Vertex", "MLABBucketClear.Fragment"});
+    ShaderManager->invalidateShaderCache();
+    ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MinDepthPass.glsl\"");
+    minDepthPassShader = ShaderManager->getShaderProgram(gatherShaderIDs);
     //needsNewShaders = true;
 
     if (blitRenderData) {
@@ -224,12 +263,20 @@ void OIT_MLABBucket::setUniformData()
 
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+    if (bucketMode == 2) {
+        gatherShader->setShaderStorageBuffer(1, "MinDepthBuffer", minDepthBuffer);
+    }
 
     resolveShader->setUniform("viewportW", width);
     resolveShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 
     clearShader->setUniform("viewportW", width);
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
+
+    if (bucketMode == 2) {
+        minDepthPassShader->setUniform("viewportW", width);
+        minDepthPassShader->setShaderStorageBuffer(1, "MinDepthBuffer", minDepthBuffer);
+    }
 
     //mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);
 
@@ -273,11 +320,30 @@ void OIT_MLABBucket::gatherBegin()
         glStencilMask(0xFF);
         glClear(GL_STENCIL_BUFFER_BIT);
     }
+
 }
+
+void OIT_MLABBucket::renderScene()
+{
+    pass = 1;
+    renderSceneFunction();
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
 
 void OIT_MLABBucket::gatherEnd()
 {
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    if (bucketMode == 2) {
+        //if (useStencilBuffer) {
+        //    glStencilMask(0x00);
+        //}
+
+        pass = 2;
+        renderSceneFunction();
+
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    }
 }
 
 void OIT_MLABBucket::renderToScreen()
@@ -288,11 +354,6 @@ void OIT_MLABBucket::renderToScreen()
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_DEPTH_TEST);
-
-    if (useStencilBuffer) {
-        glStencilFunc(GL_EQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-    }
 
     Renderer->render(blitRenderData);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

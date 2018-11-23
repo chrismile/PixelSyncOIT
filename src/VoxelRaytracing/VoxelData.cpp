@@ -37,6 +37,8 @@ void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data
     stream.writeArray(data.numLinesInVoxel);
     stream.writeArray(data.voxelDensityLODs);
     stream.writeArray(data.lineSegments);
+    std::cout << "Number of line segments written: " << data.lineSegments.size() << std::endl;
+    std::cout << "Buffer size (in bytes): " << stream.getSize() << std::endl;
 
     file.write((const char*)stream.getBuffer(), stream.getSize());
     file.close();

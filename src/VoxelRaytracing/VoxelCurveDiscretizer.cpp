@@ -242,14 +242,14 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
     voxelDensities.reserve(n);
     usedVoxels.reserve(n);
 
-    int lineOffset = 0;
+    size_t lineOffset = 0;
     dataCompressed.voxelLineListOffsets.reserve(n);
     dataCompressed.numLinesInVoxel.reserve(n);
     dataCompressed.lineSegments.clear();
 
     for (int i = 0; i < n; i++) {
         dataCompressed.voxelLineListOffsets.push_back(lineOffset);
-        int numLines = voxels[i].lines.size();
+        size_t numLines = voxels[i].lines.size();
         dataCompressed.numLinesInVoxel.push_back(numLines);
         voxelDensities.push_back(voxels[i].computeDensity(maxVorticity));
         usedVoxels.push_back(numLines > 0 ? 1 : 0);

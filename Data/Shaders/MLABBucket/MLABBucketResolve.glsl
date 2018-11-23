@@ -51,12 +51,25 @@ void main()
 	// Read data from SSBO
 	vec3 color = vec3(0.0, 0.0, 0.0);
 	float trans = 1.0;
+#ifdef MLAB_TRANSMITTANCE_BUCKETS
+	for (uint i = 0; i < NUM_BUCKETS; i++) {
+        float localTrans = trans;
+        for (uint j = 0; j < NODES_PER_BUCKET; j++) {
+            // Blend the accumulated color with the color of the fragment node
+            vec4 colorSrc = unpackUnorm4x8(nodeArray[j+i*NODES_PER_BUCKET].premulColor);
+            color.rgb = color.rgb + localTrans * colorSrc.rgb;
+            localTrans = trans * colorSrc.a;
+        }
+        trans = localTrans;
+	}
+#else
 	for (uint i = 0; i < BUFFER_SIZE; i++) {
 		// Blend the accumulated color with the color of the fragment node
 		vec4 colorSrc = unpackUnorm4x8(nodeArray[i].premulColor);
 		color.rgb = color.rgb + trans * colorSrc.rgb;
 		trans *= colorSrc.a;
 	}
+#endif
     //uint numBucketsUsed = imageLoad(numUsedBucketsTexture, fragPos2D).r;
 
     // Make sure data is cleared for next rendering pass
