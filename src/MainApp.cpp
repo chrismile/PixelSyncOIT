@@ -248,7 +248,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 				camera->setPosition(glm::vec3(0.15f, 0.8f, 2.4f));
 			} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/lagranto")) {
 				camera->setPosition(glm::vec3(0.6f, 0.0f, 8.8f));
-			}  else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+			} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/single_streamline")) {
+				camera->setPosition(glm::vec3(0.72f, 0.215f, 0.2f));
+			} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
 			} else {

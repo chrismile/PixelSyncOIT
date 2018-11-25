@@ -20,6 +20,24 @@ int intlog2(int x) {
 	return log2x;
 }
 
+ivec3 getNextVoxelIndex(ivec3 voxelIndex, float tMaxX, float tMaxY, float tMaxZ, int stepX, int stepY, int stepZ) {
+    ivec3 nextVoxelIndex = voxelIndex;
+    if (tMaxX < tMaxY) {
+        if (tMaxX < tMaxZ) {
+            nextVoxelIndex.x += stepX;
+        } else {
+            nextVoxelIndex.z += stepZ;
+        }
+    } else {
+        if (tMaxY < tMaxZ) {
+            nextVoxelIndex.y += stepY;
+        } else {
+            nextVoxelIndex.z += stepZ;
+        }
+    }
+    return nextVoxelIndex;
+}
+
 /**
  * Code inspired by "A Fast Voxel Traversal Algorithm for Ray Tracing" written by John Amanatides, Andrew Woo.
  * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
@@ -38,6 +56,7 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
     uint blendedLineIDs = 0;
     uint oldBlendedLineIDs1 = 0;
     uint oldBlendedLineIDs2 = 0;
+    uint newBlendedLineIDs = 0;
 
 
     float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
@@ -113,10 +132,13 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
         if (numElements > 0u) {
             if (lod == 0) {
                 // Voxel level is leaf
-                vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, blendedLineIDs);
+                ivec3 nextVoxelIndex = getNextVoxelIndex(voxelIndex, tMaxX, tMaxY, tMaxZ, stepX, stepY, stepZ);
+                vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex,
+                        blendedLineIDs, newBlendedLineIDs);
                 iterationNum++;
                 oldBlendedLineIDs1 = blendedLineIDs;
                 blendedLineIDs &= ~oldBlendedLineIDs2;
+                blendedLineIDs |= newBlendedLineIDs;
                 oldBlendedLineIDs2 = oldBlendedLineIDs1;
                 if (blendPremul(voxelColor, color)) {
                     // Early ray termination

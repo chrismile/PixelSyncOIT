@@ -36,6 +36,7 @@ void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data
     stream.writeArray(data.voxelLineListOffsets);
     stream.writeArray(data.numLinesInVoxel);
     stream.writeArray(data.voxelDensityLODs);
+    stream.writeArray(data.octreeLODs);
     stream.writeArray(data.lineSegments);
     std::cout << "Number of line segments written: " << data.lineSegments.size() << std::endl;
     std::cout << "Buffer size (in bytes): " << stream.getSize() << std::endl;
@@ -74,6 +75,7 @@ void loadFromFile(const std::string &filename, VoxelGridDataCompressed &data)
     stream.readArray(data.voxelLineListOffsets);
     stream.readArray(data.numLinesInVoxel);
     stream.readArray(data.voxelDensityLODs);
+    stream.readArray(data.octreeLODs);
     stream.readArray(data.lineSegments);
 
     //delete[] buffer; // BinaryReadStream does deallocation
@@ -262,13 +264,13 @@ sgl::TexturePtr generateOctreeTexture(const std::vector<uint32_t> &lods, glm::iv
         // TODO: GL_R8UI and only one bit indicator?
         glTexImage3D(GL_TEXTURE_3D, lodIndex, GL_R8UI, lodSize.x, lodSize.y, lodSize.z, 0, GL_RED_INTEGER,
                 GL_UNSIGNED_INT, data);
-        std::cout << data[0] << std::endl;
+        //std::cout << data[0] << std::endl;
         lodIndex++;
         data += lodSize.x * lodSize.y * lodSize.z;
     }
 #endif
 
-    std::cout << "LOD: " << lodIndex << std::endl;
+    //std::cout << "LOD: " << lodIndex << std::endl;
 
     /*if (lods.at(lods.size()-1) != 0) {
         std::cout << "HERE: " << lods.at(lods.size()-1) << std::endl;

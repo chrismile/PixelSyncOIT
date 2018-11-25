@@ -19,6 +19,20 @@ void insertHitSorted(in RayHit insertHit, inout int numHits, inout RayHit hits[M
     bool inserted = false;
     uint lineID = insertHit.lineID;
     int i;
+    /*for (i = 0; i < numHits; i++) {
+        if (insertHit.distance < hits[i].distance) {
+            inserted = true;
+            RayHit temp = insertHit;
+            insertHit = hits[i];
+            hits[i] = temp;
+        }
+        if (!inserted && hits[i].lineID == lineID) {
+            return;
+        }
+        if (inserted && insertHit.lineID == lineID) {
+            return;
+        }
+    }*/
     for (i = 0; i < numHits; i++) {
         if (insertHit.distance < hits[i].distance) {
             inserted = true;
@@ -44,7 +58,7 @@ void insertHitSorted(in RayHit insertHit, inout int numHits, inout RayHit hits[M
  * Returns the color of the voxel (or completely transparent color if no intersection with geometry stored in voxel).
  */
 void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ivec3 voxelIndex,
-        inout RayHit hits[MAX_NUM_HITS], inout int numHits, inout uint blendedLineIDs, inout uint nextBlendedLineIDs)
+        inout RayHit hits[MAX_NUM_HITS], inout int numHits, inout uint blendedLineIDs, inout uint newBlendedLineIDs)
 {
     vec3 centerVoxelPosMin = vec3(centerVoxelIndex);
     vec3 centerVoxelPosMax = vec3(centerVoxelIndex) + vec3(1);
@@ -56,7 +70,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
         uint lineID = currVoxelLines[i].lineID;
         uint lineBit = 1u << lineID;
         if ((blendedLineIDs & lineBit) != 0u) {
-            continue;
+             continue;
         }
 
         bool hasIntersection = false;
@@ -143,7 +157,8 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             hit.lineID = lineID;
 
             insertHitSorted(hit, numHits, hits);
-            nextBlendedLineIDs |= lineBit;
+            //blendedLineIDs |= lineBit;
+            newBlendedLineIDs |= lineBit;
         }
     }
 }
@@ -152,7 +167,8 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
  * Processes the intersections with the geometry of the voxel at "voxelIndex".
  * Returns the color of the voxel (or completely transparent color if no intersection with geometry stored in voxel).
  */
-vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, inout uint blendedLineIDs)
+vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVoxelIndex,
+        inout uint blendedLineIDs, inout uint newBlendedLineIDs)
 {
     RayHit hits[MAX_NUM_HITS];
     for (int i = 0; i < MAX_NUM_HITS; i++) {
@@ -250,7 +266,7 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, inout uint b
         //return vec4(vec3(1.0), texture(densityTexture, intersection/vec3(gridResolution-ivec3(1))).r);
     }*/
 
-    uint nextBlendedLineIDs = blendedLineIDs;
+    //uint nextBlendedLineIDs = blendedLineIDs;
 
     /*for (int i = 0; i <= 27; i++) {
         int x = i % 3 - 1;
@@ -260,9 +276,10 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, inout uint b
         if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
                 && all(lessThan(processedVoxelIndex, gridResolution))) {
             processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
-                    blendedLineIDs, nextBlendedLineIDs);
+                    blendedLineIDs, newBlendedLineIDs);
         }
     }*/
+    // TODO
     /*for (int z = -1; z <= 1; z++) {
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
@@ -270,20 +287,30 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, inout uint b
                 if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
                         && all(lessThan(processedVoxelIndex, gridResolution))) {
                     processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
-                            blendedLineIDs, nextBlendedLineIDs);
+                            blendedLineIDs, newBlendedLineIDs);
                 }
             }
         }
+    }
+    if (all(greaterThanEqual(nextVoxelIndex, ivec3(0)))
+            && all(lessThan(nextVoxelIndex, gridResolution))) {
+        processVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex, hits, numHits,
+                blendedLineIDs, newBlendedLineIDs);
     }*/
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits,
-            blendedLineIDs, nextBlendedLineIDs);
-    blendedLineIDs = nextBlendedLineIDs;
+            blendedLineIDs, newBlendedLineIDs);
+    //blendedLineIDs = newBlendedLineIDs;
+    blendedLineIDs |= newBlendedLineIDs;
 
     vec4 color = vec4(0.0);
     for (int i = 0; i < numHits; i++) {
         if (blend(hits[i].color, color)) {
             return color; // Early ray termination
         }
+    }
+
+    if (numHits == 0) {
+        //return vec4(vec3(0.8, mod(float(voxelIndex.x + voxelIndex.y + voxelIndex.z) * 0.39475587, 1.0), 0.0), 0.2);
     }
 
     return color;
