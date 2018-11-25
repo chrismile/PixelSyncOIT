@@ -38,7 +38,7 @@ public:
     std::vector<LineSegment> lines;
 
     // For clipping lines to voxel
-    std::list<AttributePoint> currentCurveIntersections;
+    std::vector<AttributePoint> currentCurveIntersections;
 };
 
 

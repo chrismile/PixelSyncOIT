@@ -20,7 +20,7 @@
 bool rayBoxPlaneIntersection(float rayOriginX, float rayDirectionX, float lowerX, float upperX,
                              float &tNear, float &tFar)
 {
-    if (abs(rayDirectionX) < BIAS) {
+    if (std::abs(rayDirectionX) < BIAS) {
         // Ray is parallel to the x planes
         if (rayOriginX < lowerX || rayOriginX > upperX) {
             return false;
@@ -101,6 +101,7 @@ bool VoxelDiscretizer::addPossibleIntersections(const glm::vec3 &v1, const glm::
             return true; // Intersection found
         }
     }
+
     return false;
 }
 
@@ -339,10 +340,7 @@ void VoxelCurveDiscretizer::nextStreamline(const Curve &line)
         }
     }
 
-    //std::cout << "Number of used voxels: " << usedVoxels.size() << std::endl;
-
     // Convert intersections to clipped line segments
-    int ctr = 0;
     for (VoxelDiscretizer *voxel : usedVoxels) {
         if (voxel->currentCurveIntersections.size() < 2) {
             continue;
@@ -356,7 +354,6 @@ void VoxelCurveDiscretizer::nextStreamline(const Curve &line)
             if (it1 == voxel->currentCurveIntersections.end()) break;
             it2++; it2++;
         }
-        ctr++;
     }
 }
 
@@ -511,8 +508,8 @@ bool VoxelCurveDiscretizer::checkLinesEqual(const LineSegment &originalLine, con
         sgl::Logfile::get()->writeError("VoxelCurveDiscretizer::checkLinesEqual: lineID");
     }
 
-    if (abs(originalLine.a1 - decompressedLine.a1) > 0.01f
-            || abs(originalLine.a2 - decompressedLine.a2) > 0.01f) {
+    if (std::abs(originalLine.a1 - decompressedLine.a1) > 0.01f
+            || std::abs(originalLine.a2 - decompressedLine.a2) > 0.01f) {
         linesEqual = false;
         sgl::Logfile::get()->writeError("VoxelCurveDiscretizer::checkLinesEqual: attribute");
     }
