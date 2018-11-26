@@ -167,10 +167,10 @@ void gatherFragment(vec4 color)
 	frag.depth = depth;
 	int bucketIndex = getBucketIndex(pixelIndex, fragPos2D, depth, int(numBucketsUsed));
     loadFragmentNodesBucket(pixelIndex, fragPos2D, bucketIndex, bucketNodes);
-	float oldTransmittance = unpackUnorm4x8(bucketNodes[NODES_PER_BUCKET-1].premulColor).a;
+	float oldTransmittance = unpackUnorm4x8(bucketNodes[NODES_PER_BUCKET].premulColor).a;
 	int insertionIndex = 0;
     bool tooFull = insertToBucketTransmittance(frag, bucketNodes, insertionIndex); // Without merging
-	float newTransmittance = unpackUnorm4x8(bucketNodes[NODES_PER_BUCKET-1].premulColor).a;
+	float newTransmittance = unpackUnorm4x8(bucketNodes[NODES_PER_BUCKET].premulColor).a;
     // Either split bucket or merge bucket content
     if (tooFull) {
     	bool shallMerge = false;

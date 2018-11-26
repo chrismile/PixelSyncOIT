@@ -117,6 +117,7 @@ void loadFragmentNodesBucket(in uint pixelIndex, in ivec2 fragPos2D, in int buck
 
     // For merging to see if last node is unused
     nodeArray[NODES_PER_BUCKET].depth = DISTANCE_INFINITE;
+    nodeArray[NODES_PER_BUCKET].premulColor = nodeArray[NODES_PER_BUCKET-1].premulColor & 0xFF000000u;
 
 #if defined(MLAB_DEPTH_OPACITY_BUCKETS)
     boundingBox = imageLoad(boundingBoxesTexture, ivec3(fragPos2D, bucketIndex));
@@ -213,7 +214,7 @@ void clearPixel(uint pixelIndex, ivec2 fragPos2D)
     MLABBucketFragmentNode nodeArray[BUFFER_SIZE+1];
     for (uint i = 0; i < BUFFER_SIZE; i++) {
         nodeArray[i].depth = DISTANCE_INFINITE;
-        nodeArray[i].premulColor = 0xFF000000u; // 100% transparency, i.e. 0% opacity
+        nodeArray[i].premulColor = 0xFF000000u; // 100% transmittance, i.e. 0% opacity
     }
     storeFragmentNodes(pixelIndex, fragPos2D, nodeArray);
 
