@@ -157,7 +157,6 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             hit.lineID = lineID;
 
             insertHitSorted(hit, numHits, hits);
-            //blendedLineIDs |= lineBit;
             newBlendedLineIDs |= lineBit;
         }
     }
@@ -300,7 +299,7 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVo
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits,
             blendedLineIDs, newBlendedLineIDs);
     //blendedLineIDs = newBlendedLineIDs;
-    blendedLineIDs |= newBlendedLineIDs;
+    //blendedLineIDs |= newBlendedLineIDs;
 
     vec4 color = vec4(0.0);
     for (int i = 0; i < numHits; i++) {

@@ -54,9 +54,8 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
 
     // Bit-mask for already blended lines
     uint blendedLineIDs = 0;
-    uint oldBlendedLineIDs1 = 0;
-    uint oldBlendedLineIDs2 = 0;
     uint newBlendedLineIDs = 0;
+    uint lastNewBlendedLineIDs = 0;
 
 
     float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
@@ -136,10 +135,9 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
                 vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex,
                         blendedLineIDs, newBlendedLineIDs);
                 iterationNum++;
-                oldBlendedLineIDs1 = blendedLineIDs;
-                blendedLineIDs &= ~oldBlendedLineIDs2;
-                blendedLineIDs |= newBlendedLineIDs;
-                oldBlendedLineIDs2 = oldBlendedLineIDs1;
+                blendedLineIDs = newBlendedLineIDs | lastNewBlendedLineIDs;
+                lastNewBlendedLineIDs = newBlendedLineIDs;
+                newBlendedLineIDs = 0;
                 if (blendPremul(voxelColor, color)) {
                     // Early ray termination
                     return color;
