@@ -2,7 +2,7 @@
 #define BLEND_GLSL
 
 /**
- * Blend colorSrc and colorDst using UNDER operator (front-to-back blending).
+ * Blend colorSrc and colorDst using OVER operator (front-to-back blending).
  * Returns true if ray should be terminated early.
  * colorDst is in pre-multiplied alpha format, colorSrc is not.
  */
@@ -14,7 +14,7 @@ bool blend(in vec4 colorSrc, inout vec4 colorDst)
 }
 
 /**
- * Blend colorSrc and colorDst using UNDER operator (front-to-back blending).
+ * Blend colorSrc and colorDst using OVER operator (front-to-back blending).
  * Returns true if ray should be terminated early.
  * Both colorSrc and colorDst are in pre-mulitplied alpha format.
  */

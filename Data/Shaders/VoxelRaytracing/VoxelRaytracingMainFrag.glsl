@@ -62,6 +62,7 @@ void main()
     vec3 voxelGridLower = vec3(0.0);
     vec3 voxelGridUpper = vec3(gridResolution);
     float tNear, tFar;
+    //rayBoxIntersectionRayCoords(rayOrigin, rayDirection, voxelGridLower, voxelGridUpper, tNear, tFar);
     if (rayBoxIntersectionRayCoords(rayOrigin, rayDirection, voxelGridLower, voxelGridUpper, tNear, tFar)) {
 		// First intersection point behind camera ray origin?
 		vec3 entrancePoint = rayOrigin + tNear * rayDirection + rayDirection*0.1;
