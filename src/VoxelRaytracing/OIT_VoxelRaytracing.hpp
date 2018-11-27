@@ -39,6 +39,11 @@ private:
     sgl::ShaderProgramPtr renderShader;
     sgl::TexturePtr renderImage;
 
+#ifndef VOXEL_RAYTRACING_COMPUTE_SHADER
+    // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
+    sgl::ShaderAttributesPtr blitRenderData;
+#endif
+
     // Data from MainApp
     sgl::CameraPtr camera;
     float lineRadius;

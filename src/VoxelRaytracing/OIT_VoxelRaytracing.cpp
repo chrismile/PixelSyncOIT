@@ -14,6 +14,8 @@
 #include "VoxelCurveDiscretizer.hpp"
 #include "OIT_VoxelRaytracing.hpp"
 
+//#define VOXEL_RAYTRACING_COMPUTE_SHADER
+
 OIT_VoxelRaytracing::OIT_VoxelRaytracing(sgl::CameraPtr &camera, const sgl::Color &clearColor) : camera(camera), clearColor(clearColor)
 {
     create();
@@ -42,6 +44,7 @@ void OIT_VoxelRaytracing::setTransferFunctionTexture(const sgl::TexturePtr &text
 void OIT_VoxelRaytracing::create()
 {
     //renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
+
 }
 
 void OIT_VoxelRaytracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
@@ -95,7 +98,22 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(data.quantizationResolution.x));
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION_LOG2",
             sgl::toString(sgl::intlog2(data.quantizationResolution.x)));
+#ifdef VOXEL_RAYTRACING_COMPUTE_SHADER
     renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
+#else
+    renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMainFrag.Vertex",
+                                                          "VoxelRaytracingMainFrag.Fragment" });
+
+    // Create blitting data (fullscreen rectangle in normalized device coordinates)
+    blitRenderData = sgl::ShaderManager->createShaderAttributes(renderShader);
+
+    std::vector<glm::vec3> fullscreenQuad{
+            glm::vec3(1,1,0), glm::vec3(-1,-1,0), glm::vec3(1,-1,0),
+            glm::vec3(-1,-1,0), glm::vec3(1,1,0), glm::vec3(-1,1,0)};
+    sgl::GeometryBufferPtr geomBuffer = sgl::Renderer->createGeometryBuffer(
+            sizeof(glm::vec3)*fullscreenQuad.size(), (void*)&fullscreenQuad.front());
+    blitRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", sgl::ATTRIB_FLOAT, 3);
+#endif
 }
 
 
@@ -174,8 +192,12 @@ void OIT_VoxelRaytracing::renderToScreen()
     int width = window->getWidth();
     int height = window->getHeight();
 
+#ifdef VOXEL_RAYTRACING_COMPUTE_SHADER
     //sgl::ShaderManager->getMaxComputeWorkGroupCount();
     glm::ivec2 numWorkGroups = getNumWorkGroups(glm::ivec2(width, height), glm::ivec2(8, 4)); // last vector: local work group size
     renderShader->dispatchCompute(numWorkGroups.x, numWorkGroups.y);
+#else
+    sgl::Renderer->render(blitRenderData);
+#endif
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }

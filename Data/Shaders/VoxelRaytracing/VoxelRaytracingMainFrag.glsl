@@ -1,3 +1,15 @@
+-- Vertex
+
+#version 430 core
+
+in vec4 vertexPosition;
+
+void main()
+{
+	gl_Position = mvpMatrix * vertexPosition;
+}
+
+
 -- Fragment
 
 #version 430

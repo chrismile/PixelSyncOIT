@@ -7,7 +7,7 @@ float distanceSqr(vec3 v1, vec3 v2)
 }
 
 
-#define MAX_NUM_HITS 8
+#define MAX_NUM_HITS 4
 struct RayHit {
     vec4 color;
     float distance;
@@ -60,8 +60,8 @@ void insertHitSorted(in RayHit insertHit, inout int numHits, inout RayHit hits[M
 void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ivec3 voxelIndex,
         inout RayHit hits[MAX_NUM_HITS], inout int numHits, inout uint blendedLineIDs, inout uint newBlendedLineIDs)
 {
-    vec3 centerVoxelPosMin = vec3(centerVoxelIndex);
-    vec3 centerVoxelPosMax = vec3(centerVoxelIndex) + vec3(1);
+    vec3 centerVoxelPosMin = vec3(voxelIndex);
+    vec3 centerVoxelPosMax = vec3(voxelIndex) + vec3(1);
     //uint currVoxelNumLines = 0;
     //LineSegment currVoxelLines[MAX_NUM_LINES_PER_VOXEL];
     //loadLinesInVoxel(voxelIndex, currVoxelNumLines, currVoxelLines);
