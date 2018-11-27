@@ -106,15 +106,32 @@ void decompressLine(in vec3 voxelPosition, in LineSegmentCompressed compressedLi
 }
 #endif
 
-/// Stores lines of voxel in global variables "currVoxelLines", "currVoxelNumLines"
-uint getNumLinesInVoxel(ivec3 voxelIndex)
+int getVoxelIndex1D(ivec3 voxelIndex)
 {
-    int voxelIndex1D = voxelIndex.x + voxelIndex.y*gridResolution.x + voxelIndex.z*gridResolution.x*gridResolution.y;
+    return voxelIndex.x + voxelIndex.y*gridResolution.x + voxelIndex.z*gridResolution.x*gridResolution.y;
+}
+
+uint getNumLinesInVoxel(int voxelIndex1D)
+{
     return min(numLinesInVoxel[voxelIndex1D], MAX_NUM_LINES_PER_VOXEL);
 }
 
+uint getLineListOffset(int voxelIndex1D)
+{
+    return voxelLineListOffsets[voxelIndex1D];
+}
+
+void loadLineInVoxel(vec3 voxelPosition, uint voxelLineListOffset, int lineIndex, out LineSegment currVoxelLine)
+{
+#ifdef PACK_LINES
+        decompressLine(voxelPosition, lineSegments[voxelLineListOffset+lineIndex], currVoxelLine);
+#else
+        currVoxelLine = lineSegments[voxelLineListOffset+lineIndex];
+#endif
+}
+
 /// Stores lines of voxel in global variables "currVoxelLines", "currVoxelNumLines"
-void loadLinesInVoxel(ivec3 voxelIndex, out uint currVoxelNumLines,
+/*void loadLinesInVoxel(ivec3 voxelIndex, out uint currVoxelNumLines,
         out LineSegment currVoxelLines[MAX_NUM_LINES_PER_VOXEL])
 {
     int voxelIndex1D = voxelIndex.x + voxelIndex.y*gridResolution.x + voxelIndex.z*gridResolution.x*gridResolution.y;
@@ -132,7 +149,7 @@ void loadLinesInVoxel(ivec3 voxelIndex, out uint currVoxelNumLines,
         currVoxelLines[i] = lineSegments[lineListOffset+i];
 #endif
     }
-}
+}*/
 
 // Get density at specified lod index
 float getVoxelDensity(vec3 coords, float lod)

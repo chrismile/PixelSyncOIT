@@ -62,19 +62,26 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
 {
     vec3 centerVoxelPosMin = vec3(centerVoxelIndex);
     vec3 centerVoxelPosMax = vec3(centerVoxelIndex) + vec3(1);
-    uint currVoxelNumLines = 0;
-    LineSegment currVoxelLines[MAX_NUM_LINES_PER_VOXEL];
-    loadLinesInVoxel(voxelIndex, currVoxelNumLines, currVoxelLines);
+    //uint currVoxelNumLines = 0;
+    //LineSegment currVoxelLines[MAX_NUM_LINES_PER_VOXEL];
+    //loadLinesInVoxel(voxelIndex, currVoxelNumLines, currVoxelLines);
 
-    for (int i = 0; i < currVoxelNumLines; i++) {
-        uint lineID = currVoxelLines[i].lineID;
+    int voxelIndex1D = getVoxelIndex1D(voxelIndex);
+    uint currVoxelNumLines = getNumLinesInVoxel(voxelIndex1D);
+    uint lineListOffset = getLineListOffset(voxelIndex1D);
+    LineSegment currVoxelLine;
+
+    for (int lineIndex = 0; lineIndex < currVoxelNumLines; lineIndex++) {
+        loadLineInVoxel(centerVoxelPosMin, lineListOffset, lineIndex, currVoxelLine);
+
+        uint lineID = currVoxelLine.lineID;
         uint lineBit = 1u << lineID;
         if ((blendedLineIDs & lineBit) != 0u) {
              continue;
         }
 
         bool hasIntersection = false;
-        vec3 tubePoint1 = currVoxelLines[i].v1, tubePoint2 = currVoxelLines[i].v2;
+        vec3 tubePoint1 = currVoxelLine.v1, tubePoint2 = currVoxelLine.v2;
 
         vec3 tubeIntersection, sphereIntersection1, sphereIntersection2;
         bool hasTubeIntersection, hasSphereIntersection1 = false, hasSphereIntersection2 = false;
@@ -126,16 +133,16 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
                 vec3 u = intersection - tubePoint1;
                 float t = dot(v, u) / dot(v, v);
                 vec3 centerPt = tubePoint1 + t*v;
-                closestIntersectionAttribute = (1-t)*currVoxelLines[i].a1 + t*currVoxelLines[i].a2;
+                closestIntersectionAttribute = (1-t)*currVoxelLine.a1 + t*currVoxelLine.a2;
                 closestIntersectionNormal =  normalize(intersection - centerPt);
             } else {
                 vec3 sphereCenter;
                 if (closestIntersectionIdx == 1) {
                     sphereCenter = tubePoint1;
-                    closestIntersectionAttribute = currVoxelLines[i].a1;
+                    closestIntersectionAttribute = currVoxelLine.a1;
                 } else {
                     sphereCenter = tubePoint2;
-                    closestIntersectionAttribute = currVoxelLines[i].a2;
+                    closestIntersectionAttribute = currVoxelLine.a2;
                 }
                 closestIntersectionNormal = normalize(intersection - sphereCenter);
             }
