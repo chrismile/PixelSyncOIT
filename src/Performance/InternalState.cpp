@@ -306,6 +306,46 @@ void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, Intern
     states.push_back(state);
 }
 
+void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
+
+    for (int bucketMode = 0; bucketMode < 5; bucketMode++) {
+        state.name = std::string() + "MLAB Buckets 4x4 Mode " + sgl::toString(bucketMode) + "";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "numBuckets", sgl::toString(4) },
+                { "nodesPerBucket", sgl::toString(4) },
+                { "bucketMode", sgl::toString(bucketMode) },
+        });
+        states.push_back(state);
+    }
+
+    for (int nodesPerBucket = 1; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+        state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "numBuckets", sgl::toString(1) },
+                { "nodesPerBucket", sgl::toString(nodesPerBucket) },
+                { "bucketMode", sgl::toString(4) },
+        });
+        states.push_back(state);
+    }
+}
+
+
+void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_VOXEL_RAYTRACING_LINES;
+    state.modelName = "Streamlines";
+
+    for (int gridResolution = 256; gridResolution <= 256; gridResolution *= 2) {
+        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 8)";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "gridResolution", sgl::toString(gridResolution) },
+                { "quantizationResolution", sgl::toString(8) },
+        });
+        states.push_back(state);
+    }
+}
 
 
 
@@ -369,6 +409,12 @@ std::vector<InternalState> getAllTestModes()
 
     // Performance test: Pixel sync vs. atomic operations
     getTestModesPixelSyncVsAtomicOps(states, state);
+
+    // MLAB with buckets
+    getTestModesMLABBuckets(states, state);
+
+    // Voxel ray casting
+    getTestModesVoxelRaytracing(states, state);
 
     return states;
 }

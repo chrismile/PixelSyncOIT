@@ -137,8 +137,8 @@ void OIT_MLABBucket::renderGUI()
         reRender = true;
     }
 
-    const char *bucketModes[] = {"Combined Buckets", "Transmittance Buckets", "Min Depth Buckets",
-                                 "Depth Buckets", "Opacity Buckets"};
+    const char *bucketModes[] = {"Depth Buckets", "Opacity Buckets", "Combined Buckets", "Transmittance Buckets",
+                                 "Min Depth Buckets"};
     if (ImGui::Combo("Pixel Format", (int*)&bucketMode, bucketModes, IM_ARRAYSIZE(bucketModes))) {
         reloadShaders();
         clearBitSet = true;
@@ -178,7 +178,7 @@ void OIT_MLABBucket::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, 
         //resolveShader->setUniform("logDepthMin", logmin);
         //resolveShader->setUniform("logDepthMax", logmax);
     }
-    if (bucketMode == 2 && minDepthPassShader->hasUniform("logDepthMin")) {
+    if (bucketMode == 4 && minDepthPassShader->hasUniform("logDepthMin")) {
         minDepthPassShader->setUniform("logDepthMin", logmin);
         minDepthPassShader->setUniform("logDepthMax", logmax);
     }
@@ -186,7 +186,7 @@ void OIT_MLABBucket::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, 
 
 sgl::ShaderProgramPtr OIT_MLABBucket::getGatherShader()
 {
-    if (bucketMode != 2 || pass == 2) {
+    if (bucketMode != 4 || pass == 2) {
         return gatherShader;
     } else {
         return minDepthPassShader;
@@ -215,15 +215,15 @@ void OIT_MLABBucket::reloadShaders()
     ShaderManager->removePreprocessorDefine("MLAB_OPACITY_BUCKETS");
 
     if (bucketMode == 0) {
-        ShaderManager->addPreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS", "");
-    } else if (bucketMode == 1) {
-        ShaderManager->addPreprocessorDefine("MLAB_TRANSMITTANCE_BUCKETS", "");
-    } else if (bucketMode == 2) {
-        ShaderManager->addPreprocessorDefine("MLAB_MIN_DEPTH_BUCKETS", "");
-    } else if (bucketMode == 3) {
         ShaderManager->addPreprocessorDefine("MLAB_DEPTH_BUCKETS", "");
-    } else {
+    } else if (bucketMode == 1) {
         ShaderManager->addPreprocessorDefine("MLAB_OPACITY_BUCKETS", "");
+    } else if (bucketMode == 2) {
+        ShaderManager->addPreprocessorDefine("MLAB_DEPTH_OPACITY_BUCKETS", "");
+    } else if (bucketMode == 3) {
+        ShaderManager->addPreprocessorDefine("MLAB_TRANSMITTANCE_BUCKETS", "");
+    } else {
+        ShaderManager->addPreprocessorDefine("MLAB_MIN_DEPTH_BUCKETS", "");
     }
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABBucketGather.glsl\"");
@@ -248,6 +248,7 @@ void OIT_MLABBucket::setNewState(const InternalState &newState)
 {
     numBuckets = newState.oitAlgorithmSettings.getIntValue("numBuckets");
     nodesPerBucket = newState.oitAlgorithmSettings.getIntValue("nodesPerBucket");
+    bucketMode = newState.oitAlgorithmSettings.getIntValue("bucketMode");
     useStencilBuffer = newState.useStencilBuffer;
     updateLayerMode();
 }
@@ -263,7 +264,7 @@ void OIT_MLABBucket::setUniformData()
 
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
-    if (bucketMode == 2) {
+    if (bucketMode == 4) {
         gatherShader->setShaderStorageBuffer(1, "MinDepthBuffer", minDepthBuffer);
     }
 
@@ -273,7 +274,7 @@ void OIT_MLABBucket::setUniformData()
     clearShader->setUniform("viewportW", width);
     clearShader->setShaderStorageBuffer(0, "FragmentNodes", fragmentNodes);
 
-    if (bucketMode == 2) {
+    if (bucketMode == 4) {
         minDepthPassShader->setUniform("viewportW", width);
         minDepthPassShader->setShaderStorageBuffer(1, "MinDepthBuffer", minDepthBuffer);
     }
@@ -334,7 +335,7 @@ void OIT_MLABBucket::renderScene()
 
 void OIT_MLABBucket::gatherEnd()
 {
-    if (bucketMode == 2) {
+    if (bucketMode == 4) {
         //if (useStencilBuffer) {
         //    glStencilMask(0x00);
         //}

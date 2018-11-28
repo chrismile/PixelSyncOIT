@@ -68,6 +68,13 @@ std::string ivec3ToString(const glm::ivec3 &v) {
     return std::string() + "ivec3(" + sgl::toString(v.x) + ", " + sgl::toString(v.y) + ", " + sgl::toString(v.z) + ")";
 }
 
+void OIT_VoxelRaytracing::setNewState(const InternalState &newState)
+{
+    int gridResolution = newState.oitAlgorithmSettings.getIntValue("gridResolution");
+    int quantizationResolution = newState.oitAlgorithmSettings.getIntValue("quantizationResolution");
+    //reloadFile(); // TODO
+}
+
 void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity)
 {
     // Check if voxel grid is already created

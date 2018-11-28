@@ -752,7 +752,9 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 		}
 
 		transparencyShader->setUniform("colorGlobal", bandingColor);
-		transparencyShader->setUniform("lightDirection", lightDirection);
+		if (transparencyShader->hasUniform("lightDirection")) {
+			transparencyShader->setUniform("lightDirection", lightDirection);
+		}
 	}
 
 	if (useSSAO) {

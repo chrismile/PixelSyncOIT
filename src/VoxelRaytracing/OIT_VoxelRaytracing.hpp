@@ -32,6 +32,9 @@ public:
     // Contains all logic in raytracing renderer
     virtual void renderToScreen();
 
+    // For changing performance measurement modes
+    void setNewState(const InternalState &newState);
+
 private:
     void fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
     void setUniformData();
