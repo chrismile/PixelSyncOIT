@@ -320,7 +320,7 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
         states.push_back(state);
     }
 
-    for (int nodesPerBucket = 1; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+    for (int nodesPerBucket = 2; nodesPerBucket <= 8; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
@@ -337,11 +337,11 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
     state.oitAlgorithm = RENDER_MODE_VOXEL_RAYTRACING_LINES;
     state.modelName = "Streamlines";
 
-    for (int gridResolution = 256; gridResolution <= 256; gridResolution *= 2) {
-        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 8)";
+    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
+        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64)";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "gridResolution", sgl::toString(gridResolution) },
-                { "quantizationResolution", sgl::toString(8) },
+                { "quantizationResolution", sgl::toString(64) },
         });
         states.push_back(state);
     }
@@ -402,10 +402,12 @@ std::vector<InternalState> getAllTestModes()
     getTestModesOrderedSync(states, stateOrderedSync);
 
     // Quality test: Shuffle geometry randomly
-    InternalState stateShuffleGeometry = state;
-    stateShuffleGeometry.testShuffleGeometry = true;
-    getTestModesShuffleGeometry(states, stateShuffleGeometry, 1);
-    getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);
+    if (state.modelName == "Streamlines") {
+        InternalState stateShuffleGeometry = state;
+        stateShuffleGeometry.testShuffleGeometry = true;
+        getTestModesShuffleGeometry(states, stateShuffleGeometry, 1);
+        getTestModesShuffleGeometry(states, stateShuffleGeometry, 2);
+    }
 
     // Performance test: Pixel sync vs. atomic operations
     getTestModesPixelSyncVsAtomicOps(states, state);
