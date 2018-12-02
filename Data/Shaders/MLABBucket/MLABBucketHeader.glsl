@@ -84,6 +84,7 @@ layout (std430, binding = 0) coherent buffer FragmentNodes
 layout (binding = 0, rgba32f) coherent uniform image2DArray boundingBoxesTexture;
 layout (binding = 1, r8ui) coherent uniform uimage2D numUsedBucketsTexture;
 #elif defined(MLAB_TRANSMITTANCE_BUCKETS)
+layout (binding = 0, r32f) coherent uniform image2DArray transmittanceTexture;
 layout (binding = 1, r8ui) coherent uniform uimage2D numUsedBucketsTexture;
 #elif defined(MLAB_MIN_DEPTH_BUCKETS)
 layout (std430, binding = 1) coherent buffer MinDepthBuffer
@@ -117,7 +118,6 @@ void loadFragmentNodesBucket(in uint pixelIndex, in ivec2 fragPos2D, in int buck
 
     // For merging to see if last node is unused
     nodeArray[NODES_PER_BUCKET].depth = DISTANCE_INFINITE;
-    nodeArray[NODES_PER_BUCKET].premulColor = nodeArray[NODES_PER_BUCKET-1].premulColor & 0xFF000000u;
 
 #if defined(MLAB_DEPTH_OPACITY_BUCKETS)
     boundingBox = imageLoad(boundingBoxesTexture, ivec3(fragPos2D, bucketIndex));
@@ -153,6 +153,35 @@ void storeFragmentNodesBucket(in uint pixelIndex, in ivec2 fragPos2D, in int buc
     imageStore(boundingBoxesTexture, ivec3(fragPos2D, bucketIndex), boundingBox);
 #endif
 }
+
+
+
+// Load the fragments into "nodeArray"
+void loadFirstFragmentNode(in uint pixelIndex, in ivec2 fragPos2D, out MLABBucketFragmentNode firstNode) {
+#if (NODES_PER_BUCKET % 4 == 0) && (NODES_PER_BUCKET > 4)
+    firstNode = MLABBucketFragmentNode(
+            nodes[pixelIndex*NUM_BUCKETS].depth[0][0],
+            nodes[pixelIndex*NUM_BUCKETS].premulColor[0][0]);
+#else
+    firstNode = MLABBucketFragmentNode(
+            nodes[pixelIndex*NUM_BUCKETS].depth[0],
+            nodes[pixelIndex*NUM_BUCKETS].premulColor[0]);
+#endif
+}
+
+// Store the fragments from "nodeArray" into VRAM
+void storeFirstFragmentNode(in uint pixelIndex, in ivec2 fragPos2D, in MLABBucketFragmentNode firstNode) {
+#if (NODES_PER_BUCKET % 4 == 0) && (NODES_PER_BUCKET > 4)
+    nodes[pixelIndex*NUM_BUCKETS].depth[0][0] = firstNode.depth;
+    nodes[pixelIndex*NUM_BUCKETS].premulColor[0][0] = firstNode.premulColor;
+#else
+    nodes[pixelIndex*NUM_BUCKETS].depth[0] = firstNode.depth;
+    nodes[pixelIndex*NUM_BUCKETS].premulColor[0] = firstNode.premulColor;
+#endif
+}
+
+
+
 
 
 // Load the fragments into "nodeArray"
@@ -226,6 +255,7 @@ void clearPixel(uint pixelIndex, ivec2 fragPos2D)
     imageStore(numUsedBucketsTexture, fragPos2D, uvec4(1u));
 #elif defined(MLAB_TRANSMITTANCE_BUCKETS)
     imageStore(numUsedBucketsTexture, fragPos2D, uvec4(1u));
+    imageStore(transmittanceTexture, ivec3(fragPos2D, 0), vec4(1.0));
 #elif defined(MLAB_MIN_DEPTH_BUCKETS)
     minDepth[pixelIndex] = 1.0;
 #endif

@@ -1,11 +1,11 @@
 
 #include "MLABBucketHeader.glsl"
+#include "ColorPack.glsl"
 #if defined(MLAB_DEPTH_OPACITY_BUCKETS)
 #include "MLABBucketFunctions.glsl"
 #elif defined(MLAB_TRANSMITTANCE_BUCKETS)
 #include "MLABBucketFunctionsTransmittance.glsl"
 #endif
-#include "ColorPack.glsl"
 #include "TiledAddress.glsl"
 
 #define REQUIRE_INVOCATION_INTERLOCK
@@ -167,10 +167,10 @@ void gatherFragment(vec4 color)
 	frag.depth = depth;
 	int bucketIndex = getBucketIndex(pixelIndex, fragPos2D, depth, int(numBucketsUsed));
     loadFragmentNodesBucket(pixelIndex, fragPos2D, bucketIndex, bucketNodes);
-	float oldTransmittance = unpackUnorm4x8(bucketNodes[NODES_PER_BUCKET].premulColor).a;
+	float oldTransmittance = imageLoad(transmittanceTexture, ivec3(fragPos2D, bucketIndex)).r;
 	int insertionIndex = 0;
     bool tooFull = insertToBucketTransmittance(frag, bucketNodes, insertionIndex); // Without merging
-	float newTransmittance = unpackUnorm4x8(bucketNodes[NODES_PER_BUCKET].premulColor).a;
+	float newTransmittance = oldTransmittance * (1.0 - color.a);
     // Either split bucket or merge bucket content
     if (tooFull) {
     	bool shallMerge = false;
@@ -190,8 +190,11 @@ void gatherFragment(vec4 color)
     	}
 
     	if (shallMerge) {
+    		imageStore(transmittanceTexture, ivec3(fragPos2D, bucketIndex), vec4(newTransmittance));
     		mergeLastTwoNodesInBucket(bucketNodes);
     	}
+    } else {
+        imageStore(transmittanceTexture, ivec3(fragPos2D, bucketIndex), vec4(newTransmittance));
     }
     storeFragmentNodesBucket(pixelIndex, fragPos2D, bucketIndex, bucketNodes);
 

@@ -52,7 +52,7 @@ void main()
 	vec3 color = vec3(0.0, 0.0, 0.0);
 	float trans = 1.0;
 #ifdef MLAB_TRANSMITTANCE_BUCKETS
-	for (uint i = 0; i < NUM_BUCKETS; i++) {
+	/*for (uint i = 0; i < NUM_BUCKETS; i++) {
         float localTrans = trans;
         for (uint j = 0; j < NODES_PER_BUCKET; j++) {
             // Blend the accumulated color with the color of the fragment node
@@ -61,6 +61,12 @@ void main()
             localTrans = trans * colorSrc.a;
         }
         trans = localTrans;
+	}*/
+	for (uint i = 0; i < BUFFER_SIZE; i++) {
+		// Blend the accumulated color with the color of the fragment node
+		vec4 colorSrc = unpackUnorm4x8(nodeArray[i].premulColor);
+		color.rgb = color.rgb + trans * colorSrc.rgb;
+		trans *= colorSrc.a;
 	}
 #else
 	for (uint i = 0; i < BUFFER_SIZE; i++) {

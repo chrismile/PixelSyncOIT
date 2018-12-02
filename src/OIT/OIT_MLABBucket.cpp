@@ -113,8 +113,17 @@ void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     numUsedBucketsTextureSettings.textureMinFilter = GL_NEAREST;
     numUsedBucketsTextureSettings.textureMagFilter = GL_NEAREST;
 
+    transmittanceTextureSettings = TextureSettings();
+    transmittanceTextureSettings.type = TEXTURE_2D;
+    transmittanceTextureSettings.pixelType = GL_FLOAT;
+    transmittanceTextureSettings.pixelFormat = GL_RED;
+    transmittanceTextureSettings.internalFormat = GL_R32F;
+    transmittanceTextureSettings.textureMinFilter = GL_NEAREST;
+    transmittanceTextureSettings.textureMagFilter = GL_NEAREST;
+
     boundingBoxesTexture = sgl::TextureManager->createTexture(NULL, width, height, numBuckets, boundingBoxesTextureSettings);
     numUsedBucketsTexture = sgl::TextureManager->createTexture(NULL, width, height, numUsedBucketsTextureSettings);
+    transmittanceTexture = sgl::TextureManager->createTexture(NULL, width, height, transmittanceTextureSettings);
 
 
     // Buffer has to be cleared again
@@ -281,18 +290,31 @@ void OIT_MLABBucket::setUniformData()
 
     //mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);
 
-    gatherShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
-                                         GL_READ_WRITE, 0, true, 0);
-    gatherShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
-                                         GL_READ_WRITE, 0, true, 0);
-    resolveShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
-                                          GL_READ_WRITE, 0, true, 0);
-    resolveShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
-                                          GL_READ_WRITE, 0, true, 0);
-    clearShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
-                                        GL_READ_WRITE, 0, true, 0);
-    clearShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
-                                        GL_READ_WRITE, 0, true, 0);
+    if (bucketMode == 2) {
+        gatherShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
+                                             GL_READ_WRITE, 0, true, 0);
+        resolveShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
+                                              GL_READ_WRITE, 0, true, 0);
+        clearShader->setUniformImageTexture(0, boundingBoxesTexture, boundingBoxesTextureSettings.internalFormat,
+                                            GL_READ_WRITE, 0, true, 0);
+    }
+    if (bucketMode == 3){
+        gatherShader->setUniformImageTexture(0, transmittanceTexture, transmittanceTextureSettings.internalFormat,
+                                             GL_READ_WRITE, 0, true, 0);
+        resolveShader->setUniformImageTexture(0, transmittanceTexture, transmittanceTextureSettings.internalFormat,
+                                              GL_READ_WRITE, 0, true, 0);
+        clearShader->setUniformImageTexture(0, transmittanceTexture, transmittanceTextureSettings.internalFormat,
+                                            GL_READ_WRITE, 0, true, 0);
+    }
+
+    if (bucketMode == 2 || bucketMode == 3) {
+        gatherShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
+                                             GL_READ_WRITE, 0, true, 0);
+        resolveShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
+                                              GL_READ_WRITE, 0, true, 0);
+        clearShader->setUniformImageTexture(1, numUsedBucketsTexture, numUsedBucketsTextureSettings.internalFormat,
+                                            GL_READ_WRITE, 0, true, 0);
+    }
 }
 
 void OIT_MLABBucket::gatherBegin()

@@ -293,7 +293,7 @@ std::vector<VoxelDiscretizer*> VoxelCurveDiscretizer::getVoxelsInAABB(const sgl:
     glm::vec3 minimum = aabb.getMinimum();
     glm::vec3 maximum = aabb.getMaximum();
 
-    glm::ivec3 lower = glm::ivec3(aabb.getMinimum()); // Round down
+    glm::ivec3 lower = glm::ivec3(minimum); // Round down
     glm::ivec3 upper = glm::ivec3(ceil(maximum.x), ceil(maximum.y), ceil(maximum.z)); // Round up
     lower = glm::max(lower, glm::ivec3(0));
     upper = glm::min(upper, gridResolution - glm::ivec3(1));
@@ -354,6 +354,7 @@ void VoxelCurveDiscretizer::nextStreamline(const Curve &line)
             if (it1 == voxel->currentCurveIntersections.end()) break;
             it2++; it2++;
         }
+        voxel->currentCurveIntersections.clear();
     }
 }
 

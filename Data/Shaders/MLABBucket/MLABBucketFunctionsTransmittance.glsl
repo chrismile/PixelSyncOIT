@@ -1,6 +1,6 @@
 // Maximum transmittance deviation for splitting
 // TODO: Idea - depending on bucket number
-#define TRANSMITTANCE_THRESHOLD 0.4
+#define TRANSMITTANCE_THRESHOLD 0.2
 // Empty node
 #define EMPTY_NODE MLABBucketFragmentNode(DISTANCE_INFINITE, 0xFF000000u)
 
@@ -48,13 +48,25 @@ void splitBucket(in uint pixelIndex, in ivec2 fragPos2D, in int bucketIndex, in 
 	}
 	// 2.3 Store result to memory
 	storeFragmentNodesBucket(pixelIndex, fragPos2D, nextBucketIndex, nextBucketNodes);
+
+	// 3. Compute the new total transmittance
+	// 3.1 ... of the bucket at bucketIndex.
+	float bucketTransmittance = 1.0, nextBucketTransmittance = 1.0;
+	for (int i = 0; i < splitNodeIndex; i++) {
+		bucketTransmittance *= unpackColorAlpha(bucketNodes[i].premulColor);
+	}
+	for (int i = splitNodeIndex; i < NODES_PER_BUCKET+1; i++) {
+		nextBucketTransmittance *= unpackColorAlpha(nextBucketNodes[i-splitNodeIndex].premulColor);
+	}
+	imageStore(transmittanceTexture, ivec3(fragPos2D, bucketIndex), vec4(bucketTransmittance));
+	imageStore(transmittanceTexture, ivec3(fragPos2D, nextBucketIndex), vec4(nextBucketTransmittance));
 }
 
 
 bool insertToBucketTransmittance(in MLABBucketFragmentNode frag, inout MLABBucketFragmentNode list[NODES_PER_BUCKET+1],
         out int insertionIndex)
 {
-    float fragTransmittance = unpackUnorm4x8(frag.premulColor).a;
+    /*float fragTransmittance = unpackUnorm4x8(frag.premulColor).a;
     insertionIndex = NODES_PER_BUCKET+1;
 	MLABBucketFragmentNode temp;
 
@@ -65,22 +77,9 @@ bool insertToBucketTransmittance(in MLABBucketFragmentNode frag, inout MLABBucke
 			list[i] = frag;
 			frag = temp;
 			if (insertionIndex > NODES_PER_BUCKET) {
-			    // Multiply transmittance with value of last fragment
-			    /*if (i > 0) {
-                    vec4 color = unpackUnorm4x8(list[i].premulColor);
-                    color.a *= unpackUnorm4x8(list[i-1].premulColor).a;
-                    list[i].premulColor = packUnorm4x8(color);
-			    }*/
                 insertionIndex = i;
 			}
 		}
-
-        // Multiply with new transmittance of new fragment node
-		/*if (i > insertionIndex) {
-            vec4 color = unpackUnorm4x8(list[i].premulColor);
-            color.a *= fragTransmittance;
-            list[i].premulColor = packUnorm4x8(color);
-		}*/
 	}
 
     if (insertionIndex > 0) {
@@ -100,12 +99,30 @@ bool insertToBucketTransmittance(in MLABBucketFragmentNode frag, inout MLABBucke
 	}
 
     // Bucket full?
+    return list[NODES_PER_BUCKET].depth != DISTANCE_INFINITE;*/
+
+    MLABBucketFragmentNode temp;
+    insertionIndex = NODES_PER_BUCKET+1;
+
+    // Use single pass bubble sort to insert new fragment node
+	for (int i = 0; i < NODES_PER_BUCKET+1; i++) {
+		if (frag.depth <= list[i].depth) {
+			temp = list[i];
+			list[i] = frag;
+			frag = temp;
+			if (insertionIndex > NODES_PER_BUCKET) {
+                insertionIndex = i;
+			}
+		}
+	}
+
+    // Bucket full?
     return list[NODES_PER_BUCKET].depth != DISTANCE_INFINITE;
 }
 
 void mergeLastTwoNodesInBucket(inout MLABBucketFragmentNode list[NODES_PER_BUCKET+1])
 {
-	MLABBucketFragmentNode merge;
+	/*MLABBucketFragmentNode merge;
     vec4 src = unpackUnorm4x8(list[NODES_PER_BUCKET-1].premulColor);
     vec4 dst = unpackUnorm4x8(list[NODES_PER_BUCKET].premulColor);
     vec4 mergedColor;
@@ -115,6 +132,16 @@ void mergeLastTwoNodesInBucket(inout MLABBucketFragmentNode list[NODES_PER_BUCKE
     mergedColor.rgb = src.rgb + dst.rgb * src.a;
     #endif
     mergedColor.a = dst.a; // Transmittance
+    merge.premulColor = packUnorm4x8(mergedColor);
+    merge.depth = list[NODES_PER_BUCKET-1].depth;
+    list[NODES_PER_BUCKET-1] = merge;*/
+
+    MLABBucketFragmentNode merge;
+    vec4 src = unpackUnorm4x8(list[NODES_PER_BUCKET-1].premulColor);
+    vec4 dst = unpackUnorm4x8(list[NODES_PER_BUCKET].premulColor);
+    vec4 mergedColor;
+    mergedColor.rgb = src.rgb + dst.rgb * src.a;
+    mergedColor.a = src.a * dst.a; // Transmittance
     merge.premulColor = packUnorm4x8(mergedColor);
     merge.depth = list[NODES_PER_BUCKET-1].depth;
     list[NODES_PER_BUCKET-1] = merge;
