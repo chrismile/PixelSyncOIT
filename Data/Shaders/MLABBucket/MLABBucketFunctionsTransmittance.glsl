@@ -1,6 +1,6 @@
 // Maximum transmittance deviation for splitting
 // TODO: Idea - depending on bucket number
-#define TRANSMITTANCE_THRESHOLD 0.2
+#define TRANSMITTANCE_THRESHOLD 0.1
 // Empty node
 #define EMPTY_NODE MLABBucketFragmentNode(DISTANCE_INFINITE, 0xFF000000u)
 

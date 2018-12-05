@@ -180,8 +180,8 @@ void gatherFragment(vec4 color)
     		shallMerge = true;
     	} else {
     		// Split or merge? (depending on maximum opacity difference of nodes in the bucket)
-    		float transmittanceDifference = oldTransmittance - newTransmittance;
-    		if (transmittanceDifference > TRANSMITTANCE_THRESHOLD && insertionIndex > 0) {
+    		//float transmittanceDifference = oldTransmittance - newTransmittance;
+    		if (newTransmittance < TRANSMITTANCE_THRESHOLD/**exp(-float(bucketIndex))*/ && insertionIndex > 0) {
     			splitBucket(pixelIndex, fragPos2D, bucketIndex, insertionIndex, numBucketsUsed, bucketNodes);
     			imageStore(numUsedBucketsTexture, fragPos2D, uvec4(numBucketsUsed+1));
     		} else {
