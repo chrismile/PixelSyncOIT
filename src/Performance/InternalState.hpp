@@ -51,12 +51,21 @@ public:
     template<typename T> inline void addKeyValue(const std::string &key, const T &value) { settings[key] = toString(value); }
     inline void clear() { settings.clear(); }
 
-    void getValueOpt(const char *key, std::string &toset) const { auto it = settings.find(key); if (it != settings.end()) { toset = it->second; } }
-    template<typename T> void getValueOpt(const char *key, T &toset) const {
+    bool getValueOpt(const char *key, std::string &toset) const {
+        auto it = settings.find(key);
+        if (it != settings.end()) {
+            toset = it->second;
+            return true;
+        }
+        return false;
+    }
+    template<typename T> bool getValueOpt(const char *key, T &toset) const {
         auto it = settings.find(key);
         if (it != settings.end()) {
             toset = sgl::fromString<T>(it->second);
+            return true;
         }
+        return false;
     }
 
     void set(std::map<std::string, std::string> stringMap) {

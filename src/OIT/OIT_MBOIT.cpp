@@ -237,6 +237,15 @@ void OIT_MBOIT::setNewState(const InternalState &newState)
     }
     usePowerMoments = newState.oitAlgorithmSettings.getBoolValue("usePowerMoments");
 
+    if (newState.oitAlgorithmSettings.getValueOpt("overestimationBeta", overestimationBeta)) {
+        momentUniformData.overestimation = overestimationBeta;
+        // subData already called in updateMomentMode
+        //momentOITUniformBuffer->subData(0, sizeof(MomentOITUniformData), &momentUniformData);
+    } else {
+        overestimationBeta = 0.1f;
+        momentUniformData.overestimation = overestimationBeta;
+    }
+
     useStencilBuffer = newState.useStencilBuffer;
 
     updateMomentMode();

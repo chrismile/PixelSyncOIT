@@ -31,6 +31,24 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
             }
         }
     }
+
+    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.1";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "overestimationBeta", "0.1" },
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(4) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
+
+    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.25";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "overestimationBeta", "0.25" },
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(4) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
 }
 
 void getTestModesMLAB(std::vector<InternalState> &states, InternalState state)
