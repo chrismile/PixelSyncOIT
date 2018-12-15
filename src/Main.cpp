@@ -5,6 +5,7 @@
 //============================================================================
 
 #include <iostream>
+#include <SDL2/SDL.h>
 #include <Utils/File/FileUtils.hpp>
 #include <Utils/AppSettings.hpp>
 #include <Graphics/Window.hpp>

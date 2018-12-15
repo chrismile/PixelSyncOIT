@@ -15,7 +15,7 @@ struct ATFragmentNode_compressed
     // Linear depth, i.e. distance to viewer
     float depth[AT_NUM_FRAGMENTS];
     // RGB color (3 bytes), translucency (1 byte)
-    uint premulColor[AT_NUM_FRAGMENTS];
+    uint32_t premulColor[AT_NUM_FRAGMENTS];
 };
 
 /**
