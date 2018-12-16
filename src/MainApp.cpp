@@ -84,8 +84,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(f
 	transferFunctionWindow.setClearColor(clearColor);
 	setNewTilingMode(2, 8);
 
-	//Timer->setFPSLimit(false, 60);
-	Timer->setFPSLimit(true, 60);
+	Timer->setFPSLimit(false, 60);
+	//Timer->setFPSLimit(true, 60);
 
 	fpsArray.resize(16, 60.0f);
 	framerateSmoother = FramerateSmoother(1);
