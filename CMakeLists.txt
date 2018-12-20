@@ -6,7 +6,11 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
 set (CMAKE_CXX_STANDARD 11)
 
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.c)
-add_executable(PixelSyncOIT WIN32 ${SOURCES})
+IF(WIN32)
+	add_executable(PixelSyncOIT WIN32 ${SOURCES})
+ELSE()
+	add_executable(PixelSyncOIT ${SOURCES})
+ENDIF()
 include_directories(src)
 
 #make VERBOSE=1

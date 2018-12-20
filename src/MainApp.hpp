@@ -139,7 +139,7 @@ private:
 
 	// Save video stream to file
 	const int FRAME_RATE = 60;
-	const float FULL_CIRCLE_TIME = 8.0f;
+	const float FULL_CIRCLE_TIME = 26.0f;
 	float recordingTime = 0.0f;
 
 	glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
@@ -148,7 +148,7 @@ private:
 	float outputTime = 0.0f;
 	bool testOutputPos = false;
 	bool testCameraFlight = false;
-	bool recording = false;
+	bool recording = true;
 	VideoWriter *videoWriter;
 
     CameraPath cameraPath;

@@ -828,7 +828,7 @@ void PixelSyncApp::update(float dt)
 	if (recording || testCameraFlight) {
 	    // Already recorded full cycle?
 	    if (recordingTime > FULL_CIRCLE_TIME) {
-			//quit();
+			quit();
 	    }
 
 	    // Otherwise, update camera position
