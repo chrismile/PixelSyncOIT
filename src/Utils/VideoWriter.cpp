@@ -16,21 +16,22 @@
 
 #include "VideoWriter.hpp"
 
-VideoWriter::VideoWriter(const char *filename, int frameW, int frameH) : frameW(frameW), frameH(frameH), framebuf(NULL) {
-	openFile(filename);
+VideoWriter::VideoWriter(const char *filename, int frameW, int frameH, int framerate)
+		: frameW(frameW), frameH(frameH), framebuf(NULL) {
+	openFile(filename, framerate);
 }
 
-VideoWriter::VideoWriter(const char *filename) : framebuf(NULL) {
+VideoWriter::VideoWriter(const char *filename, int framerate) : framebuf(NULL) {
 	sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
 	frameW = window->getWidth();
 	frameH = window->getHeight();
-	openFile(filename);
+	openFile(filename, framerate);
 }
 
-void VideoWriter::openFile(const char *filename) {
+void VideoWriter::openFile(const char *filename, int framerate) {
 	std::string command = std::string() + "avconv -y -f rawvideo -s "
-			+ sgl::toString(frameW) + "x" + sgl::toString(frameH) + " -pix_fmt rgb24 -r 25 "
-			+ "-i - -vf vflip -an -b:v 1000k \"" + filename + "\"";
+			+ sgl::toString(frameW) + "x" + sgl::toString(frameH) + " -pix_fmt rgb24 -r " + sgl::toString(framerate)
+			+ " -i - -vf vflip -an -b:v 1000k \"" + filename + "\"";
 	std::cout << command << std::endl;
 	avfile = popen(command.c_str(), "w");
 	if (avfile == NULL) {

@@ -24,13 +24,13 @@ using namespace sgl;
 static bool useStencilBuffer = true;
 
 // Maximum number of buckets
-static int numBuckets = 4;
+static int numBuckets = 1;
 
 // Maximum number of nodes per bucket
-static int nodesPerBucket = 1;
+static int nodesPerBucket = 4;
 
 // How to assign pixels to buffers
-static int bucketMode = 0;
+static int bucketMode = 4;
 
 
 OIT_MLABBucket::OIT_MLABBucket()

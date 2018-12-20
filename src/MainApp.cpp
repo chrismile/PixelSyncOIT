@@ -57,7 +57,20 @@ void openglErrorCallback()
     std::cerr << "Application callback" << std::endl;
 }
 
-PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), recording(false), videoWriter(NULL)
+PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter(NULL),
+                               cameraPath({/*ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),
+										   ControlPoint(4.0f, 0.8f, 0.325f, 1.005f, -sgl::PI / 4.0f, 0.0f),*/
+
+                                           ControlPoint(0, 0.3, 0.325, 1.005, -1.5708, 0),
+                                           ControlPoint(3, 0.172219, 0.325, 1.21505, -1.15908, 0.0009368),
+                                           ControlPoint(6, -0.229615, 0.350154, 1.00435, -0.425731, 0.116693),
+                                           ControlPoint(9, -0.09407, 0.353779, 0.331819, 0.563857, 0.0243558),
+                                           ControlPoint(12, 0.295731, 0.366529, -0.136542, 1.01983, -0.20646),
+                                           ControlPoint(15, 1.13902, 0.444444, -0.136205, 2.46893, -0.320944),
+                                           ControlPoint(18, 1.02484, 0.444444, 0.598137, 3.89793, -0.296935),
+                                           ControlPoint(21, 0.850409, 0.470433, 0.976859, 4.02133, -0.127355),
+                                           ControlPoint(24, 0.390787, 0.429582, 1.0748, 4.42395, -0.259301),
+										   ControlPoint(26, 0.3, 0.325, 1.005, -1.5708, 0)})
 {
 	plainShader = ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
 	whiteSolidShader = ShaderManager->getShaderProgram({"WhiteSolid.Vertex", "WhiteSolid.Fragment"});
@@ -480,7 +493,9 @@ void PixelSyncApp::render()
 
 	// Video recording enabled?
 	if (recording) {
-		videoWriter->pushWindowFrame();
+        Renderer->bindFBO(sceneFramebuffer);
+        videoWriter->pushWindowFrame();
+        Renderer->unbindFBO();
 	}
 }
 
@@ -808,6 +823,34 @@ void PixelSyncApp::update(float dt)
 	if (perfMeasurementMode && !measurer->update(dt)) {
 		// All modes were tested -> quit
 		quit();
+	}
+
+	if (recording || testCameraFlight) {
+	    // Already recorded full cycle?
+	    if (recordingTime > FULL_CIRCLE_TIME) {
+			//quit();
+	    }
+
+	    // Otherwise, update camera position
+	    float updateRate = 1.0f/FRAME_RATE;
+		recordingTime += updateRate;
+
+        cameraPath.update(dt);
+        camera->overwriteViewMatrix(cameraPath.getViewMatrix());
+		/*float circleAngle = recordingTime / FULL_CIRCLE_TIME * sgl::TWO_PI;
+		glm::vec3 cameraPosition = cameraLookAtCenter + rotationRadius*glm::vec3(cosf(circleAngle), 0.0f, sinf(circleAngle));
+		camera->setPosition(cameraPosition);
+		//glm::lookAt()
+		camera->setYaw(circleAngle + sgl::PI);*/
+
+		reRender = true;
+	}
+	if (testOutputPos && Keyboard->keyPressed(SDLK_p)) {
+		// ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),
+		std::cout << "ControlPoint(" << outputTime << ", " << camera->getPosition().x << ", " << camera->getPosition().y
+				<< ", " << camera->getPosition().z << ", " << camera->getYaw() << ", " << camera->getPitch()
+				<< ")," << std::endl;
+		outputTime += 1.0f;
 	}
 
 

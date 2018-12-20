@@ -21,6 +21,7 @@
 
 #include "Utils/VideoWriter.hpp"
 #include "Utils/MeshSerializer.hpp"
+#include "Utils/CameraPath.hpp"
 #include "OIT/OIT_Renderer.hpp"
 #include "AmbientOcclusion/SSAO.hpp"
 #include "Performance/InternalState.hpp"
@@ -106,7 +107,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 0;
+    int usedModelIndex = 1;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -137,8 +138,20 @@ private:
 #endif
 
 	// Save video stream to file
-	bool recording;
+	const int FRAME_RATE = 60;
+	const float FULL_CIRCLE_TIME = 8.0f;
+	float recordingTime = 0.0f;
+
+	glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
+	float rotationRadius = 1.0f;
+
+	float outputTime = 0.0f;
+	bool testOutputPos = false;
+	bool testCameraFlight = false;
+	bool recording = false;
 	VideoWriter *videoWriter;
+
+    CameraPath cameraPath;
 };
 
 #endif /* LOGIC_MainApp_HPP_ */

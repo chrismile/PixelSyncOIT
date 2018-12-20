@@ -19,9 +19,9 @@ class VideoWriter
 {
 public:
 	/// Open mp4 video file with specified frame width and height
-	VideoWriter(const char *filename, int frameW, int frameH);
+	VideoWriter(const char *filename, int frameW, int frameH, int framerate = 25);
 	/// Open mp4 video file with frame width and height specified by application window
-	VideoWriter(const char *filename);
+	VideoWriter(const char *filename, int framerate = 25);
 	/// Closes file automatically
 	~VideoWriter();
 	/// Push a 24-bit RGB frame (with width and height specified in constructor)
@@ -30,7 +30,7 @@ public:
 	void pushWindowFrame();
 
 private:
-	void openFile(const char *filename);
+	void openFile(const char *filename, int framerate = 25);
 	FILE *avfile;
 	int frameW;
 	int frameH;
