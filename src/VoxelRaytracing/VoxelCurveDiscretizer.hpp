@@ -69,7 +69,7 @@ private:
     int computeFaceIndex(const glm::vec3 &v, const glm::ivec3 &voxelIndex);
 
     // Test decompression
-    glm::vec3 getQuantizedPositionOffset(uint faceIndex, uint quantizedPos1D);
+    glm::vec3 getQuantizedPositionOffset(uint32_t faceIndex, uint32_t quantizedPos1D);
     void decompressLine(const glm::vec3 &voxelPosition, const LineSegmentCompressed &compressedLine,
             LineSegment &decompressedLine);
     bool checkLinesEqual(const LineSegment &originalLine, const LineSegment &decompressedLine);

@@ -459,7 +459,7 @@ int VoxelCurveDiscretizer::computeFaceIndex(const glm::vec3 &v, const glm::ivec3
 
 
 
-glm::vec3 VoxelCurveDiscretizer::getQuantizedPositionOffset(uint faceIndex, uint quantizedPos1D)
+glm::vec3 VoxelCurveDiscretizer::getQuantizedPositionOffset(uint32_t faceIndex, uint32_t quantizedPos1D)
 {
     glm::vec2 quantizedFacePosition = glm::vec2(
             float(quantizedPos1D % quantizationResolution.x),
@@ -484,15 +484,15 @@ glm::vec3 VoxelCurveDiscretizer::getQuantizedPositionOffset(uint faceIndex, uint
 void VoxelCurveDiscretizer::decompressLine(const glm::vec3 &voxelPosition, const LineSegmentCompressed &compressedLine,
         LineSegment &decompressedLine)
 {
-    const uint c = 2*log2(quantizationResolution.x);
-    const uint bitmaskQuantizedPos = quantizationResolution.x*quantizationResolution.x-1;
-    uint faceStartIndex = compressedLine.linePosition & 0x7u;
-    uint faceEndIndex = (compressedLine.linePosition >> 3) & 0x7u;
-    uint quantizedStartPos1D = (compressedLine.linePosition >> 6) & bitmaskQuantizedPos;
-    uint quantizedEndPos1D = (compressedLine.linePosition >> 6+c) & bitmaskQuantizedPos;
-    uint lineID = (compressedLine.attributes >> 11) & 32u;
-    uint attr1 = (compressedLine.attributes >> 16) & 0xFFu;
-    uint attr2 = (compressedLine.attributes >> 24) & 0xFFu;
+    const uint32_t c = 2*log2(quantizationResolution.x);
+    const uint32_t bitmaskQuantizedPos = quantizationResolution.x*quantizationResolution.x-1;
+    uint32_t faceStartIndex = compressedLine.linePosition & 0x7u;
+    uint32_t faceEndIndex = (compressedLine.linePosition >> 3) & 0x7u;
+    uint32_t quantizedStartPos1D = (compressedLine.linePosition >> 6) & bitmaskQuantizedPos;
+    uint32_t quantizedEndPos1D = (compressedLine.linePosition >> 6+c) & bitmaskQuantizedPos;
+    uint32_t lineID = (compressedLine.attributes >> 11) & 32u;
+    uint32_t attr1 = (compressedLine.attributes >> 16) & 0xFFu;
+    uint32_t attr2 = (compressedLine.attributes >> 24) & 0xFFu;
 
     decompressedLine.v1 = voxelPosition + getQuantizedPositionOffset(faceStartIndex, quantizedStartPos1D);
     decompressedLine.v2 = voxelPosition + getQuantizedPositionOffset(faceEndIndex, quantizedEndPos1D);
