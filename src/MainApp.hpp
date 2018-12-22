@@ -142,13 +142,13 @@ private:
 	const float FULL_CIRCLE_TIME = 26.0f;
 	float recordingTime = 0.0f;
 
-	glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
-	float rotationRadius = 1.0f;
+	//glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
+	//float rotationRadius = 1.0f;
 
 	float outputTime = 0.0f;
 	bool testOutputPos = false;
 	bool testCameraFlight = false;
-	bool recording = true;
+	bool recording = false;
 	VideoWriter *videoWriter;
 
     CameraPath cameraPath;

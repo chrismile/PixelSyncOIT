@@ -471,7 +471,7 @@ PixelSyncApp::~PixelSyncApp()
 void PixelSyncApp::render()
 {
 	if (videoWriter == NULL && recording) {
-		videoWriter = new VideoWriter("video.mp4");
+		videoWriter = new VideoWriter("video.mp4", 60);
 	}
 
 
@@ -835,7 +835,7 @@ void PixelSyncApp::update(float dt)
 	    float updateRate = 1.0f/FRAME_RATE;
 		recordingTime += updateRate;
 
-        cameraPath.update(dt);
+        cameraPath.update(updateRate);
         camera->overwriteViewMatrix(cameraPath.getViewMatrix());
 		/*float circleAngle = recordingTime / FULL_CIRCLE_TIME * sgl::TWO_PI;
 		glm::vec3 cameraPosition = cameraLookAtCenter + rotationRadius*glm::vec3(cosf(circleAngle), 0.0f, sinf(circleAngle));
