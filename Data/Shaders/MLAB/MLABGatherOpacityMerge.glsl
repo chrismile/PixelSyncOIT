@@ -7,35 +7,7 @@
 
 out vec4 fragColor;
 
-#ifndef MLAB_MERGE_OPACITY_BASED
 // Adapted version of "Multi-Layer Alpha Blending" [Salvi and Vaidyanathan 2014]
-void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
-{
-	MLABFragmentNode temp, merge;
-	// Use bubble sort to insert new fragment node (single pass)
-	for (int i = 0; i < MAX_NUM_NODES+1; i++) {
-		if (frag.depth <= list[i].depth) {
-			temp = list[i];
-			list[i] = frag;
-			frag = temp;
-		}
-	}
-
-    // Merge last two nodes if necessary
-    if (list[MAX_NUM_NODES].depth != DISTANCE_INFINITE) {
-        vec4 src = unpackUnorm4x8(list[MAX_NUM_NODES-1].premulColor);
-        vec4 dst = unpackUnorm4x8(list[MAX_NUM_NODES].premulColor);
-        vec4 mergedColor;
-        mergedColor.rgb = src.rgb + dst.rgb * src.a;
-        mergedColor.a = src.a * dst.a; // Transmittance
-        merge.premulColor = packUnorm4x8(mergedColor);
-        merge.depth = list[MAX_NUM_NODES-1].depth;
-        list[MAX_NUM_NODES-1] = merge;
-	}
-}
-#else
-// Deviation of MLAB that merges the most transparent fragment with its most transparent neighbor.
-// I created this function after I was asked whether this strategy might be reasonable. Use it at your own risk ;)
 void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
 {
 	MLABFragmentNode temp, merge;
@@ -61,6 +33,7 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
         int mergeIndex0 = minOpacityIndex;
         int mergeIndex1 = minOpacityIndex;
 
+		float fragOpacity = unpackColorAlpha(list[i].premulColor);
         if (minOpacityIndex == 0) {
             // Merge first two nodes
             mergeIndex1 += 1;
@@ -92,7 +65,6 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
         }
 	}
 }
-#endif
 
 
 void gatherFragment(vec4 color)

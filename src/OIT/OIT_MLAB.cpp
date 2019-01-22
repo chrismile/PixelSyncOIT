@@ -24,6 +24,9 @@ static bool useStencilBuffer = true;
 // Maximum number of layers
 static int maxNumNodes = 8;
 
+// Whether to use alternative merging strategy (see MLABGather.glsl)
+static bool mlabMergeOpacityBased = false;
+
 
 OIT_MLAB::OIT_MLAB()
 {
@@ -39,6 +42,12 @@ void OIT_MLAB::create()
     }
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABGather.glsl\"");
+
+    if (mlabMergeOpacityBased) {
+        ShaderManager->addPreprocessorDefine("MLAB_MERGE_OPACITY_BASED", "");
+    } else {
+        ShaderManager->removePreprocessorDefine("MLAB_MERGE_OPACITY_BASED");
+    }
 
     updateLayerMode();
 
@@ -89,6 +98,17 @@ void OIT_MLAB::renderGUI()
         reRender = true;
     }
 
+    if (ImGui::Checkbox("Opacity Merge", &mlabMergeOpacityBased)) {
+        if (mlabMergeOpacityBased) {
+            ShaderManager->addPreprocessorDefine("MLAB_MERGE_OPACITY_BASED", "");
+        } else {
+            ShaderManager->removePreprocessorDefine("MLAB_MERGE_OPACITY_BASED");
+        }
+        reloadShaders();
+        clearBitSet = true;
+        reRender = true;
+    }
+
     if (selectTilingModeUI()) {
         reloadShaders();
         clearBitSet = true;
@@ -106,6 +126,7 @@ void OIT_MLAB::updateLayerMode()
 
 void OIT_MLAB::reloadShaders()
 {
+    ShaderManager->invalidateShaderCache();
     gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
     resolveShader = ShaderManager->getShaderProgram({"MLABResolve.Vertex", "MLABResolve.Fragment"});
     clearShader = ShaderManager->getShaderProgram({"MLABClear.Vertex", "MLABClear.Fragment"});
