@@ -38,6 +38,7 @@
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
 #include "Utils/TrajectoryLoader.hpp"
+#include "Utils/HairLoader.hpp"
 #include "OIT/OIT_Dummy.hpp"
 #include "OIT/OIT_KBuffer.hpp"
 #include "OIT/OIT_LinkedList.hpp"
@@ -207,6 +208,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 		    } else {
 				convertObjTrajectoryDataToBinaryLineMesh(modelFilenameObj, modelFilenameOptimized);
             }
+		} else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+			modelFilenameObj = filename;
+			convertHairDataToBinaryTriangleMesh(modelFilenameObj, modelFilenameOptimized);
 		}
 	}
 	if (boost::starts_with(modelFilenamePure, "Data/Models")) {
@@ -218,6 +222,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 			gatherShaderIDs = {"PseudoPhongVorticity.Vertex", "PseudoPhongVorticity.Geometry",
 							   "PseudoPhongVorticity.Fragment"};
 		}
+	} else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+		gatherShaderIDs = {"PseudoPhongHair.Vertex", "PseudoPhongHair.Fragment"};
 	}
 
 	updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
@@ -252,7 +258,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 			camera->setPosition(glm::vec3(0.0f, 1.5f, 5.0f));
 		}
 	} else {
-		if (shaderMode != SHADER_MODE_VORTICITY) {
+		if (shaderMode != SHADER_MODE_VORTICITY && !boost::starts_with(modelFilenamePure, "Data/Hair")) {
 			transparencyShader->setUniform("bandedColorShading", 1);
 		}
 
@@ -266,14 +272,22 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 			} else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
-			} else {
+            } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+                //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
+                camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
+            } else {
 				camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
 			}
 		}
-		if (modelFilenamePure == "Data/Models/dragon") {
-			const float scalingFactor = 0.2f;
-			scaling = matrixScaling(glm::vec3(scalingFactor));
-		}
+        if (modelFilenamePure == "Data/Models/dragon") {
+            const float scalingFactor = 0.2f;
+            scaling = matrixScaling(glm::vec3(scalingFactor));
+        }
+        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            //transparencyShader->setUniform("bandedColorShading", 0);
+            const float scalingFactor = 0.005f;
+            scaling = matrixScaling(glm::vec3(scalingFactor));
+        }
 	}
 
 
@@ -339,7 +353,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 		if (shaderMode != SHADER_MODE_VORTICITY) {
 			if (modelFilenamePure == "Data/Models/Ship_04") {
 				transparencyShader->setUniform("bandedColorShading", 0);
-			} else {
+			} else if (!boost::starts_with(modelFilenamePure, "Data/Hair")) {
 				transparencyShader->setUniform("bandedColorShading", 1);
 			}
 		}
@@ -761,7 +775,7 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 			// Hack for supporting multiple passes...
 			if (modelFilenamePure == "Data/Models/Ship_04") {
 				transparencyShader->setUniform("bandedColorShading", 0);
-			} else {
+			} else if (!boost::starts_with(modelFilenamePure, "Data/Hair")) {
 				transparencyShader->setUniform("bandedColorShading", 1);
 			}
 		}

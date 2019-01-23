@@ -109,8 +109,9 @@ struct TubeNode
  * @param vertices: The (output) vertex points, which are a set of oriented circles around the centers (see above).
  * @param indices: The (output) indices specifying how tube triangles are built from the circle vertices.
  */
-void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
-                          const std::vector<float> &pathLineAttributes,
+template<typename T>
+void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
+                          const std::vector<T> &pathLineAttributes,
                           std::vector<glm::vec3> &vertices,
                           std::vector<float> &vertexAttributes,
                           std::vector<uint32_t> &indices)
@@ -128,7 +129,7 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
 
     std::vector<TubeNode> tubeNodes;
     tubeNodes.reserve(n);
-    int numVertexPts = n;
+    int numVertexPts = 0;
 
     // First, create a list of tube nodes
     glm::vec3 lastTangent = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -150,17 +151,19 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         if (glm::length(normal) < 0.0001f) {
             //normal = glm::vec3(1.0f, 0.0f, 0.0f);
             // In case the two vertices are almost identical, just skip this path line segment
-            numVertexPts--;
             continue;
         }
         node.normal = glm::normalize(normal);
         insertOrientedCirclePoints(vertices, node.center, node.normal, lastTangent);
         node.circleIndices.reserve(NUM_CIRCLE_SEGMENTS);
         for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
-            node.circleIndices.push_back(j + i*NUM_CIRCLE_SEGMENTS);
-            vertexAttributes.push_back(pathLineAttributes.at(i));
+            node.circleIndices.push_back(j + numVertexPts*NUM_CIRCLE_SEGMENTS);
+            if (pathLineAttributes.size() > 0) {
+                vertexAttributes.push_back(pathLineAttributes.at(i));
+            }
         }
         tubeNodes.push_back(node);
+        numVertexPts++;
     }
 
 
@@ -181,7 +184,22 @@ void  createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
             indices.push_back(circleIndicesNext.at(j));
         }
     }
+
+    // Only one vertex left -> Output nothing (tube consisting only of one point)
+    if (numVertexPts <= 1) {
+        vertices.clear();
+        vertexAttributes.clear();
+    }
 }
+
+template
+void createTubeRenderData<uint32_t>(const std::vector<glm::vec3> &pathLineCenters,
+                                           const std::vector<uint32_t> &pathLineAttributes,
+                                           std::vector<glm::vec3> &vertices,
+                                           std::vector<float> &vertexAttributes,
+                                           std::vector<uint32_t> &indices);
+
+
 
 
 /**

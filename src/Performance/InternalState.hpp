@@ -28,15 +28,24 @@ enum RenderModeOIT {
     RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
 };
 
-const int NUM_MODELS = 8;
+const int NUM_MODELS = 16; // 8 datasets + 8 hair
 const char *const MODEL_FILENAMES[] = {
         "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines",
         "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04", "Data/Models/Monkey", "Data/Models/Box",
-        "Data/Models/Plane", "Data/Models/dragon", "Data/Trajectories/lagranto_out"
+        "Data/Models/Plane", "Data/Models/dragon", //"Data/Trajectories/lagranto_out",
+        "Data/Hair/bear.hair",
+        "Data/Hair/blonde.hair",
+        "Data/Hair/dark.hair",
+        "Data/Hair/ponytail.hair",
+        "Data/Hair/straight.hair",
+        "Data/Hair/wCurly.hair",
+        "Data/Hair/wStraight.hair",
+        "Data/Hair/wWavy.hair",
 };
 const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline", "Streamlines", "Streamlines (Triangles)", "Ship", "Monkey", "Box", "Plane", "Dragon",
-        "Lagranto"
+       //"Lagranto",
+       "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy"
 };
 
 

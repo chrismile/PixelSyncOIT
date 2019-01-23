@@ -85,7 +85,7 @@ private:
 
 	// Mode
 	// RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
-	RenderModeOIT mode = RENDER_MODE_OIT_MLAB_BUCKET;
+	RenderModeOIT mode = RENDER_MODE_OIT_MLAB; // RENDER_MODE_OIT_MLAB_BUCKET
     RenderModeOIT oldMode = mode;
 	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
 	std::string modelFilenamePure;
@@ -107,7 +107,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 1;
+    int usedModelIndex = 6;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);

@@ -22,7 +22,7 @@ void main()
 // Values used are proposed by https://learnopengl.com/Advanced-Lighting/SSAO
 uniform vec3 samples[KERNEL_SIZE];
 uniform float radius = 0.05;
-uniform float bias = 0.025;
+uniform float bias = 0.005;
 
 uniform sampler2D gPositionTexture;
 uniform sampler2D gNormalTexture;

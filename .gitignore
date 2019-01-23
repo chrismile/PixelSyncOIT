@@ -70,5 +70,6 @@ cmake-build-*/
 *.binmesh_tri
 *.voxel
 *.nc
+*.hair
 
 Data/TransferFunctions/*
