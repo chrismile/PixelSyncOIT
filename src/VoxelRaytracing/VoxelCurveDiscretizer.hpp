@@ -15,6 +15,7 @@
 #include <Math/Geometry/Plane.hpp>
 #include <Math/Geometry/AABB3.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
+#include <Graphics/Color.hpp>
 
 #include "VoxelData.hpp"
 
@@ -50,14 +51,23 @@ public:
             const glm::ivec3 &gridResolution = glm::ivec3(256, 256, 256),
             const glm::ivec3 &quantizationResolution = glm::ivec3(8, 8, 8));
     ~VoxelCurveDiscretizer();
-    void createFromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
+    void createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
+    void createFromHairDataset(const std::string &filename, float &lineRadius, glm::vec4 &hairStrandColor);
     VoxelGridDataCompressed compressData();
     glm::mat4 getWorldToVoxelGridMatrix() { return linesToVoxel; }
 
 private:
+    bool isHairDataset = false;
     glm::ivec3 gridResolution, quantizationResolution;
     VoxelDiscretizer *voxels;
+
+    // Trajectory dataset
     float maxVorticity;
+    std::vector<float> attributes;
+
+    // Hair dataset
+    glm::vec4 hairStrandColor;
+    float hairThickness;
 
     void nextStreamline(const Curve &line);
 

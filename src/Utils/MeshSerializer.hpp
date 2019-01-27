@@ -10,6 +10,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <set>
 
 #include <Math/Geometry/AABB3.hpp>
 #include <Math/Geometry/Sphere.hpp>
@@ -89,8 +90,12 @@ public:
 	void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass = false);
 	void setNewShader(sgl::ShaderProgramPtr newShader);
 	bool isLoaded() { return shaderAttributes.size() > 0; }
+	bool hasAttributeWithName(const std::string &name) {
+		return shaderAttributeNames.find(name) != shaderAttributeNames.end();
+	}
 
 	std::vector<sgl::ShaderAttributesPtr> shaderAttributes;
+	std::set<std::string> shaderAttributeNames;
 	std::vector<ObjMaterial> materials;
 	sgl::AABB3 boundingBox;
 	sgl::Sphere boundingSphere;

@@ -17,7 +17,7 @@
 
 #include "VoxelData.hpp"
 
-const uint32_t VOXEL_GRID_FORMAT_VERSION = 1u;
+const uint32_t VOXEL_GRID_FORMAT_VERSION = 2u;
 
 void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data)
 {
@@ -32,6 +32,15 @@ void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data
     stream.write(data.gridResolution);
     stream.write(data.quantizationResolution);
     stream.write(data.worldToVoxelGridMatrix);
+    stream.write(data.dataType);
+
+    if (data.dataType == 0u) {
+        stream.write(data.maxVorticity);
+        stream.writeArray(data.attributes);
+    } else if (data.dataType == 1u) {
+        stream.write(data.hairStrandColor);
+        stream.write(data.hairThickness);
+    }
 
     stream.writeArray(data.voxelLineListOffsets);
     stream.writeArray(data.numLinesInVoxel);
@@ -71,6 +80,21 @@ void loadFromFile(const std::string &filename, VoxelGridDataCompressed &data)
     stream.read(data.gridResolution);
     stream.read(data.quantizationResolution);
     stream.read(data.worldToVoxelGridMatrix);
+
+    if (version > 1u) {
+        stream.read(data.dataType);
+
+        if (data.dataType == 0u) {
+            stream.read(data.maxVorticity);
+            stream.readArray(data.attributes);
+        } else if (data.dataType == 1u) {
+            stream.read(data.hairStrandColor);
+            stream.read(data.hairThickness);
+        }
+    } else {
+        data.dataType = 0u;
+        data.maxVorticity = 0.0f;
+    }
 
     stream.readArray(data.voxelLineListOffsets);
     stream.readArray(data.numLinesInVoxel);

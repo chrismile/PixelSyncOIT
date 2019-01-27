@@ -151,7 +151,11 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             //hit.color = vec4(diffuseColor.rgb * diffuseFactor, diffuseColor.a);
 
             const float occlusionFactor = 1.0;
+            #ifdef HAIR_RENDERING
+            vec4 diffuseColorVorticity = hairStrandColor;
+            #else
             vec4 diffuseColorVorticity = transferFunction(intersectionAttribute);
+            #endif
             vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(intersectionNormal,
                     lightDirection)/2.0 + 0.75 * occlusionFactor, 0.0, 1.0);
             hit.color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a); // * globalColor.a

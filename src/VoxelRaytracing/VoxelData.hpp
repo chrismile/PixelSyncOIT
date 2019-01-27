@@ -82,6 +82,15 @@ struct VoxelGridDataCompressed
 {
     glm::ivec3 gridResolution, quantizationResolution;
     glm::mat4 worldToVoxelGridMatrix;
+    uint32_t dataType; // 0 for trajectory data, 1 for hair data
+
+    // In case of trajectory data
+    float maxVorticity;
+    std::vector<float> attributes; // For histogram
+
+    // In case of hair data
+    glm::vec4 hairStrandColor;
+    float hairThickness;
 
     std::vector<uint32_t> voxelLineListOffsets;
     std::vector<uint32_t> numLinesInVoxel;

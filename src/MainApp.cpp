@@ -236,6 +236,24 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         }
         boundingBox = transparentObject.boundingBox;
+
+        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        	bool changed = false;
+        	bool hasColorArray = transparentObject.hasAttributeWithName("vertexColor");
+			if (hasColorArray && !colorArrayMode) {
+				sgl::ShaderManager->addPreprocessorDefine("COLOR_ARRAY", "");
+				changed = true;
+			} else if (!hasColorArray && colorArrayMode){
+				sgl::ShaderManager->removePreprocessorDefine("COLOR_ARRAY");
+				changed = true;
+			}
+			if (changed) {
+				colorArrayMode = !colorArrayMode;
+				sgl::ShaderManager->invalidateShaderCache();
+				updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
+				transparentObject.setNewShader(transparencyShader);
+			}
+        }
     } else {
 		std::vector<float> lineAttributes;
 		OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -285,8 +303,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             //transparencyShader->setUniform("bandedColorShading", 0);
-            const float scalingFactor = 0.005f;
-            scaling = matrixScaling(glm::vec3(scalingFactor));
+            scaling = matrixScaling(glm::vec3(HAIR_MODEL_SCALING_FACTOR));
         }
 	}
 
@@ -753,6 +770,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 {
 	ShaderProgramPtr transparencyShader;
+	bool isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
 
 	if (!useSSAO || !ssaoHelper.isPreRenderPass()) {
 		transparencyShader = oitRenderer->getGatherShader();
@@ -775,12 +793,14 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 			// Hack for supporting multiple passes...
 			if (modelFilenamePure == "Data/Models/Ship_04") {
 				transparencyShader->setUniform("bandedColorShading", 0);
-			} else if (!boost::starts_with(modelFilenamePure, "Data/Hair")) {
+			} else if (!isHairDataset) {
 				transparencyShader->setUniform("bandedColorShading", 1);
 			}
 		}
 
-		transparencyShader->setUniform("colorGlobal", bandingColor);
+        if (!isHairDataset) {
+            transparencyShader->setUniform("colorGlobal", bandingColor);
+        }
 		if (transparencyShader->hasUniform("lightDirection")) {
 			transparencyShader->setUniform("lightDirection", lightDirection);
 		}

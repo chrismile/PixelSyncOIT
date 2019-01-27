@@ -124,6 +124,9 @@ private:
 
 	TransferFunctionWindow transferFunctionWindow;
 
+	// Hair rendering
+	bool colorArrayMode = false;
+
     // Continuous rendering: Re-render each frame or only when scene changes?
     bool continuousRendering = false;
     bool reRender = true;

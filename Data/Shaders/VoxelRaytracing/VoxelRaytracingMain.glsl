@@ -27,6 +27,10 @@ uniform vec4 clearColor = vec4(0.0);
 // Global lighting data
 uniform vec3 lightDirection = vec3(1.0, 0.0, 0.0);
 
+#ifdef HAIR_RENDERING
+uniform vec4 hairStrandColor = vec4(1.0, 0.0, 0.0, 1.0);
+#endif
+
 #include "CollisionDetection.glsl"
 #include "TransferFunction.glsl"
 #include "Blend.glsl"

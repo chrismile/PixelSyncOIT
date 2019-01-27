@@ -3,6 +3,7 @@
 //
 
 #include <cmath>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <GL/glew.h>
 
@@ -82,16 +83,31 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     std::string modelFilenamePure = sgl::FileUtils::get()->removeExtension(filename);
 
     std::string modelFilenameVoxelGrid = modelFilenamePure + ".voxel";
-    std::string modelFilenameObj = modelFilenamePure + ".obj";
+
+    // Can be either hair dataset or trajectory dataset
+    isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
 
     VoxelGridDataCompressed compressedData;
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
         VoxelCurveDiscretizer discretizer(glm::ivec3(128), glm::ivec3(64));
-        discretizer.createFromFile(modelFilenameObj, attributes, maxVorticity);
+        if (isHairDataset) {
+            std::string modelFilenameHair = modelFilenamePure + ".hair";
+            discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor);
+        } else {
+            std::string modelFilenameObj = modelFilenamePure + ".obj";
+            discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity);
+        }
         compressedData = discretizer.compressData();
         saveToFile(modelFilenameVoxelGrid, compressedData); // TODO When format is stable
     } else {
         loadFromFile(modelFilenameVoxelGrid, compressedData);
+        if (isHairDataset) {
+            lineRadius = compressedData.hairThickness;
+            hairStrandColor = compressedData.hairStrandColor;
+        } else {
+            attributes = compressedData.attributes;
+            maxVorticity = compressedData.maxVorticity;
+        }
     }
     compressedToGPUData(compressedData, data);
 
@@ -105,6 +121,11 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(data.quantizationResolution.x));
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION_LOG2",
             sgl::toString(sgl::intlog2(data.quantizationResolution.x)));
+    if (isHairDataset) {
+        sgl::ShaderManager->addPreprocessorDefine("HAIR_RENDERING", "");
+    } else {
+        sgl::ShaderManager->removePreprocessorDefine("HAIR_RENDERING");
+    }
 #ifdef VOXEL_RAYTRACING_COMPUTE_SHADER
     renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
 #else
@@ -141,6 +162,10 @@ void OIT_VoxelRaytracing::setUniformData()
     renderShader->setUniform("clearColor", clearColor);
     if (renderShader->hasUniform("lightDirection")) {
         renderShader->setUniform("lightDirection", lightDirection);
+    }
+
+    if (isHairDataset) {
+        renderShader->setUniform("hairStrandColor", hairStrandColor);
     }
 
     //renderShader->setShaderStorageBuffer(0, "LineSegmentBuffer", NULL);

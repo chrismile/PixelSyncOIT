@@ -10,6 +10,7 @@
 #include <Utils/Convert.hpp>
 #include <Utils/File/Logfile.hpp>
 
+#include "Utils/HairLoader.hpp"
 #include "VoxelCurveDiscretizer.hpp"
 
 #define BIAS 0.001
@@ -144,7 +145,7 @@ VoxelCurveDiscretizer::~VoxelCurveDiscretizer()
     delete[] voxels;
 }
 
-void VoxelCurveDiscretizer::createFromFile(const std::string &filename, std::vector<float> &attributes,
+void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes,
         float &_maxVorticity)
 {
     std::ifstream file(filename.c_str());
@@ -160,6 +161,7 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename, std::vec
     Curve currentCurve;
     maxVorticity = 0.0f;
     int lineCounter = 0;
+    isHairDataset = false;
 
     std::string lineString;
     while (getline(file, lineString)) {
@@ -201,6 +203,7 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename, std::vec
         }
     }
     _maxVorticity = maxVorticity;
+    this->attributes = attributes;
 
     file.close();
 
@@ -229,6 +232,62 @@ void VoxelCurveDiscretizer::createFromFile(const std::string &filename, std::vec
 }
 
 
+void VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, float &lineRadius,
+        glm::vec4 &hairStrandColor)
+{
+    HairData hairData;
+    loadHairFile(filename, hairData);
+
+    // Assume default thickness, opacity and color for now to simplify the implementation
+    lineRadius = hairData.defaultThickness;
+    hairStrandColor = glm::vec4(hairData.defaultColor, hairData.defaulOpacity);
+    this->hairThickness = lineRadius;
+    this->hairStrandColor = hairStrandColor;
+
+
+    linesBoundingBox = sgl::AABB3();
+    std::vector<Curve> curves;
+    Curve currentCurve;
+    maxVorticity = 0.0f;
+    int lineCounter = 0;
+    isHairDataset = true;
+
+    // Process all strands and convert them to curves
+    for (HairStrand &strand : hairData.strands) {
+        lineCounter++;
+        if (lineCounter % 1000 == 999) {
+            sgl::Logfile::get()->writeInfo(std::string() + "Parsing hair strand " + sgl::toString(lineCounter) + "...");
+        }
+
+        for (glm::vec3 point : strand.points) {
+            glm::vec3 scaledPoint = HAIR_MODEL_SCALING_FACTOR * point;
+            currentCurve.points.push_back(scaledPoint);
+            currentCurve.attributes.push_back(0.0f); // Just push something, no attributes needed for hair strands
+            linesBoundingBox.combine(scaledPoint);
+        }
+
+        curves.push_back(currentCurve);
+        currentCurve = Curve();
+        currentCurve.lineID = lineCounter;
+    }
+
+    // Move to origin and scale to range from (0, 0, 0) to (rx, ry, rz).
+    linesToVoxel = sgl::matrixScaling(1.0f / linesBoundingBox.getDimensions() * glm::vec3(gridResolution))
+                   * sgl::matrixTranslation(-linesBoundingBox.getMinimum());
+    voxelToLines = glm::inverse(linesToVoxel);
+
+    // Transform curves to voxel grid space
+    for (Curve &curve : curves) {
+        for (glm::vec3 &v : curve.points) {
+            v = sgl::transformPoint(linesToVoxel, v);
+        }
+    }
+
+    for (const Curve &curve : curves) {
+        nextStreamline(curve);
+    }
+}
+
 
 VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
 {
@@ -236,6 +295,15 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
     dataCompressed.gridResolution = gridResolution;
     dataCompressed.quantizationResolution = quantizationResolution;
     dataCompressed.worldToVoxelGridMatrix = this->getWorldToVoxelGridMatrix();
+    dataCompressed.dataType = isHairDataset ? 1u : 0u;
+
+    if (isHairDataset) {
+        dataCompressed.hairStrandColor = hairStrandColor;
+        dataCompressed.hairThickness = hairThickness;
+    } else {
+        dataCompressed.attributes = attributes;
+        dataCompressed.maxVorticity = maxVorticity;
+    }
 
     int n = gridResolution.x * gridResolution.y * gridResolution.z;
     std::vector<float> voxelDensities;

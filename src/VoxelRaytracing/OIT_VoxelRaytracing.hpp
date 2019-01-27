@@ -53,6 +53,9 @@ private:
     sgl::Color clearColor;
     glm::vec3 lightDirection;
     sgl::TexturePtr tfTexture;
+    // For hair datasets
+    bool isHairDataset = false;
+    glm::vec4 hairStrandColor;
 
     // Data compressed for GPU
     VoxelGridDataGPU data;

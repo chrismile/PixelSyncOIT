@@ -13,29 +13,6 @@
 #include "TrajectoryLoader.hpp"
 #include "HairLoader.hpp"
 
-struct HairStrand {
-    // Obligatory data
-    std::vector<glm::vec3> points;
-
-    // --- For all following data fields: If the vector is empty, assume constant default value for all points ---
-    // Thickness
-    std::vector<float> thicknesses;
-
-    // Opacity & color (merge to one array if either opacity or color is given)
-    std::vector<uint32_t> colors;
-};
-
-struct HairData {
-    std::vector<HairStrand> strands;
-
-    // Only used if arrays in strands empty
-    bool hasThicknessArray;
-    bool hasColorArray;
-    float defaultThickness;
-    float defaulOpacity;
-    glm::vec3 defaultColor;
-};
-
 uint32_t toUint32Color(const glm::vec4 &vecColor) {
     uint packedColor;
     packedColor = uint(glm::round(glm::clamp(vecColor.r, 0.0f, 1.0f) * 255.0f)) & 0xFFu;
@@ -259,7 +236,7 @@ void convertHairDataToBinaryTriangleMesh(
 
         // Create tube render data
         std::vector<glm::vec3> localVertices;
-        std::vector<float> localColors;
+        std::vector<uint32_t> localColors;
         std::vector<glm::vec3> localNormals;
         std::vector<uint32_t> localIndices;
         if (hairData.hasThicknessArray) {
@@ -302,14 +279,25 @@ void convertHairDataToBinaryTriangleMesh(
     memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), globalNormals.size() * sizeof(glm::vec3));
     submesh.attributes.push_back(lineNormalsAttribute);
 
+    if (hairData.hasColorArray) {
+        BinaryMeshAttribute colorsAttribute;
+        colorsAttribute.name = "vertexColor";
+        colorsAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_INT;
+        colorsAttribute.numComponents = 1;
+        colorsAttribute.data.resize(globalColors.size() * sizeof(uint32_t));
+        memcpy(&colorsAttribute.data.front(), &globalColors.front(), globalColors.size() * sizeof(float));
+        submesh.attributes.push_back(colorsAttribute);
+    }
+
     if (hairData.hasThicknessArray) {
-        BinaryMeshAttribute vorticitiesAttribute;
-        vorticitiesAttribute.name = "vertexColor";
-        vorticitiesAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_INT;
-        vorticitiesAttribute.numComponents = 1;
-        vorticitiesAttribute.data.resize(globalColors.size() * sizeof(uint32_t));
-        memcpy(&vorticitiesAttribute.data.front(), &globalColors.front(), globalColors.size() * sizeof(float));
-        submesh.attributes.push_back(vorticitiesAttribute);
+        // TODO
+        /*BinaryMeshAttribute thicknessesAttribute;
+        thicknessesAttribute.name = "vertexThickness";
+        thicknessesAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_INT;
+        thicknessesAttribute.numComponents = 1;
+        thicknessesAttribute.data.resize(globalColors.size() * sizeof(uint32_t));
+        memcpy(&thicknessesAttribute.data.front(), &globalThicknesses.front(), globalThicknesses.size() * sizeof(float));
+        submesh.attributes.push_back(thicknessesAttribute);*/
     }
 
     sgl::Logfile::get()->writeInfo(std::string() + "Summary: "

@@ -113,7 +113,7 @@ template<typename T>
 void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
                           const std::vector<T> &pathLineAttributes,
                           std::vector<glm::vec3> &vertices,
-                          std::vector<float> &vertexAttributes,
+                          std::vector<T> &vertexAttributes,
                           std::vector<uint32_t> &indices)
 {
     int n = (int)pathLineCenters.size();
@@ -196,7 +196,7 @@ template
 void createTubeRenderData<uint32_t>(const std::vector<glm::vec3> &pathLineCenters,
                                            const std::vector<uint32_t> &pathLineAttributes,
                                            std::vector<glm::vec3> &vertices,
-                                           std::vector<float> &vertexAttributes,
+                                           std::vector<uint32_t> &vertexAttributes,
                                            std::vector<uint32_t> &indices);
 
 

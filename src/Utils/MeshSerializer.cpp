@@ -121,11 +121,21 @@ void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass)
 		if (!boost::starts_with(passShader->getShaderList().front()->getFileID(), "PseudoPhongVorticity")
 				&& !boost::starts_with(passShader->getShaderList().front()->getFileID(), "DepthPeelingGatherDepthComplexity")
 				&& !isGBufferPass) {
-			passShader->setUniform("ambientColor", materials.at(i).ambientColor);
-			passShader->setUniform("diffuseColor", materials.at(i).diffuseColor);
-			passShader->setUniform("specularColor", materials.at(i).specularColor);
-			passShader->setUniform("specularExponent", materials.at(i).specularExponent);
-			passShader->setUniform("opacity", materials.at(i).opacity);
+			if (passShader->hasUniform("ambientColor")) {
+				passShader->setUniform("ambientColor", materials.at(i).ambientColor);
+			}
+			if (passShader->hasUniform("diffuseColor")) {
+				passShader->setUniform("diffuseColor", materials.at(i).diffuseColor);
+			}
+			if (passShader->hasUniform("specularColor")) {
+				passShader->setUniform("specularColor", materials.at(i).specularColor);
+			}
+			if (passShader->hasUniform("specularExponent")) {
+				passShader->setUniform("specularExponent", materials.at(i).specularExponent);
+			}
+			if (passShader->hasUniform("opacity")) {
+				passShader->setUniform("opacity", materials.at(i).opacity);
+			}
 		}
 		Renderer->render(shaderAttributes.at(i), passShader);
 	}
@@ -291,10 +301,12 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 
 		for (size_t j = 0; j < submesh.attributes.size(); j++) {
 			BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
+            bool isNormalizedColor = (meshAttribute.name == "vertexColor");
 			GeometryBufferPtr attributeBuffer = Renderer->createGeometryBuffer(
 					meshAttribute.data.size(), (void*)&meshAttribute.data.front(), VERTEX_BUFFER);
-			renderData->addGeometryBuffer(attributeBuffer, meshAttribute.name.c_str(), meshAttribute.attributeFormat,
-					meshAttribute.numComponents);
+			renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
+			        meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, isNormalizedColor);
+			meshRenderer.shaderAttributeNames.insert(meshAttribute.name);
 
 			if (meshAttribute.name == "vertexPosition") {
 				std::vector<glm::vec3> vertices;

@@ -66,7 +66,7 @@ private:
     sgl::ShaderProgramPtr minDepthPassShader;
 
     // Internal state
-    int pass = 1;
+    int pass = 2;
 
     sgl::FramebufferObjectPtr sceneFramebuffer;
     sgl::TexturePtr sceneTexture;
