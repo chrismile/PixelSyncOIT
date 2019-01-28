@@ -14,11 +14,11 @@
 #include "HairLoader.hpp"
 
 uint32_t toUint32Color(const glm::vec4 &vecColor) {
-    uint packedColor;
-    packedColor = uint(glm::round(glm::clamp(vecColor.r, 0.0f, 1.0f) * 255.0f)) & 0xFFu;
-    packedColor |= (uint(glm::round(glm::clamp(vecColor.g, 0.0f, 1.0f) * 255.0f)) & 0xFFu) << 8;
-    packedColor |= (uint(glm::round(glm::clamp(vecColor.b, 0.0f, 1.0f) * 255.0f)) & 0xFFu) << 16;
-    packedColor |= (uint(glm::round(glm::clamp(vecColor.a, 0.0f, 1.0f) * 255.0f)) & 0xFFu) << 24;
+    uint32_t packedColor;
+    packedColor = uint32_t(glm::round(glm::clamp(vecColor.r, 0.0f, 1.0f) * 255.0f)) & 0xFFu;
+    packedColor |= (uint32_t(glm::round(glm::clamp(vecColor.g, 0.0f, 1.0f) * 255.0f)) & 0xFFu) << 8;
+    packedColor |= (uint32_t(glm::round(glm::clamp(vecColor.b, 0.0f, 1.0f) * 255.0f)) & 0xFFu) << 16;
+    packedColor |= (uint32_t(glm::round(glm::clamp(vecColor.a, 0.0f, 1.0f) * 255.0f)) & 0xFFu) << 24;
     return packedColor;
 }
 
