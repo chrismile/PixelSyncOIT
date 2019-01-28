@@ -107,7 +107,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 6;
+    int usedModelIndex = 12;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -128,7 +128,7 @@ private:
 	bool colorArrayMode = false;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = false;
+    bool continuousRendering = true;
     bool reRender = true;
 
     // Profiling events
