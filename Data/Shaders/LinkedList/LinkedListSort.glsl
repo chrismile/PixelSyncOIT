@@ -1,7 +1,6 @@
 /**
  * This code was written by Maximilian Bandle for his bachelor's thesis "Opacity-Based Rendering of Lagrangian Particle
- * Trajectories in Met.3D". Most of his code was published under the GNU General Public License for the 3D visualization
- * software Met.3D (https://met3d.readthedocs.io/en/latest/).
+ * Trajectories in Met.3D".
  */
 
 

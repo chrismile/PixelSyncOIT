@@ -24,9 +24,6 @@ static bool useStencilBuffer = true;
 // Maximum number of layers
 static int maxNumNodes = 4;
 
-// Whether to use alternative merging strategy (see MLABGather.glsl)
-static bool mlabMergeOpacityBased = false;
-
 
 OIT_MLAB::OIT_MLAB()
 {
@@ -42,13 +39,6 @@ void OIT_MLAB::create()
     }
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"MLABGather.glsl\"");
-
-    if (mlabMergeOpacityBased) {
-        ShaderManager->addPreprocessorDefine("MLAB_MERGE_OPACITY_BASED", "");
-    } else {
-        ShaderManager->removePreprocessorDefine("MLAB_MERGE_OPACITY_BASED");
-    }
-
     updateLayerMode();
 
     // Create blitting data (fullscreen rectangle in normalized device coordinates)
@@ -95,17 +85,6 @@ void OIT_MLAB::renderGUI()
 
     if (ImGui::SliderInt("Num Layers", &maxNumNodes, 1, 64)) {
         updateLayerMode();
-        reRender = true;
-    }
-
-    if (ImGui::Checkbox("Opacity Merge", &mlabMergeOpacityBased)) {
-        if (mlabMergeOpacityBased) {
-            ShaderManager->addPreprocessorDefine("MLAB_MERGE_OPACITY_BASED", "");
-        } else {
-            ShaderManager->removePreprocessorDefine("MLAB_MERGE_OPACITY_BASED");
-        }
-        reloadShaders();
-        clearBitSet = true;
         reRender = true;
     }
 

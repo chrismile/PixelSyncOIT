@@ -7,7 +7,6 @@
 
 out vec4 fragColor;
 
-#ifndef MLAB_MERGE_OPACITY_BASED
 // Adapted version of "Multi-Layer Alpha Blending" [Salvi and Vaidyanathan 2014]
 void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
 {
@@ -33,66 +32,6 @@ void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode li
         list[MAX_NUM_NODES-1] = merge;
 	}
 }
-#else
-// Deviation of MLAB that merges the most transparent fragment with its most transparent neighbor.
-// I created this function after I was asked whether this strategy might be reasonable. Use it at your own risk ;)
-void multiLayerAlphaBlending(in MLABFragmentNode frag, inout MLABFragmentNode list[MAX_NUM_NODES+1])
-{
-	MLABFragmentNode temp, merge;
-	int minOpacityIndex = 0;
-	float minOpacity = 1.0;
-	// Use bubble sort to insert new fragment node (single pass)
-	for (int i = 0; i < MAX_NUM_NODES+1; i++) {
-		if (frag.depth <= list[i].depth) {
-			temp = list[i];
-			list[i] = frag;
-			frag = temp;
-		}
-
-		float fragOpacity = unpackColorAlpha(list[i].premulColor);
-        if (fragOpacity < minOpacity) {
-            minOpacityIndex = i;
-            minOpacity = fragOpacity;
-        }
-	}
-
-    // Merge last two nodes if necessary
-    if (list[MAX_NUM_NODES].depth != DISTANCE_INFINITE) {
-        int mergeIndex0 = minOpacityIndex;
-        int mergeIndex1 = minOpacityIndex;
-
-        if (minOpacityIndex == 0) {
-            // Merge first two nodes
-            mergeIndex1 += 1;
-        } else if (minOpacityIndex == MAX_NUM_NODES) {
-            // Merge last two nodes
-            mergeIndex0 -= 1;
-        } else {
-            float fragOpacityLast = unpackColorAlpha(list[minOpacityIndex-1].premulColor);
-            float fragOpacityNext = unpackColorAlpha(list[minOpacityIndex+1].premulColor);
-            if (fragOpacityLast < fragOpacityNext) {
-                mergeIndex0 -= 1;
-            } else {
-                mergeIndex1 += 1;
-            }
-        }
-
-        vec4 src = unpackUnorm4x8(list[mergeIndex0].premulColor);
-        vec4 dst = unpackUnorm4x8(list[mergeIndex1].premulColor);
-        vec4 mergedColor;
-        mergedColor.rgb = src.rgb + dst.rgb * src.a;
-        mergedColor.a = src.a * dst.a; // Transmittance
-        merge.premulColor = packUnorm4x8(mergedColor);
-        merge.depth = list[mergeIndex0].depth;
-        list[mergeIndex0] = merge;
-
-        // Move back
-        for (int i = mergeIndex1; i < MAX_NUM_NODES; i++) {
-            list[i] = list[i+1];
-        }
-	}
-}
-#endif
 
 
 void gatherFragment(vec4 color)
@@ -124,4 +63,3 @@ void gatherFragment(vec4 color)
 
 	fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 }
-

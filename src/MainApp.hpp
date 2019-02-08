@@ -128,7 +128,7 @@ private:
 	bool colorArrayMode = false;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
-    bool continuousRendering = true;
+    bool continuousRendering = false;
     bool reRender = true;
 
     // Profiling events
