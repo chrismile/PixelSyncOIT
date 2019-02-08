@@ -123,9 +123,9 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     }
 
     /// Circle points (circle with center of tube node, in plane with normal vector of tube node)
-    vertices.reserve(n*NUM_CIRCLE_SEGMENTS);
-    vertexAttributes.reserve(n*NUM_CIRCLE_SEGMENTS);
-    indices.reserve((n-1)*NUM_CIRCLE_SEGMENTS*6);
+    vertices.reserve(n*circlePoints2D.size());
+    vertexAttributes.reserve(n*circlePoints2D.size());
+    indices.reserve((n-1)*circlePoints2D.size()*6);
 
     std::vector<TubeNode> tubeNodes;
     tubeNodes.reserve(n);
@@ -155,9 +155,9 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         }
         node.normal = glm::normalize(normal);
         insertOrientedCirclePoints(vertices, node.center, node.normal, lastTangent);
-        node.circleIndices.reserve(NUM_CIRCLE_SEGMENTS);
-        for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
-            node.circleIndices.push_back(j + numVertexPts*NUM_CIRCLE_SEGMENTS);
+        node.circleIndices.reserve(circlePoints2D.size());
+        for (int j = 0; j < circlePoints2D.size(); j++) {
+            node.circleIndices.push_back(j + numVertexPts*circlePoints2D.size());
             if (pathLineAttributes.size() > 0) {
                 vertexAttributes.push_back(pathLineAttributes.at(i));
             }
@@ -171,16 +171,16 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     for (int i = 0; i < numVertexPts-1; i++) {
         std::vector<uint32_t> &circleIndicesCurrent = tubeNodes.at(i).circleIndices;
         std::vector<uint32_t> &circleIndicesNext = tubeNodes.at(i+1).circleIndices;
-        for (int j = 0; j < NUM_CIRCLE_SEGMENTS; j++) {
+        for (int j = 0; j < circlePoints2D.size(); j++) {
             // Build two CCW triangles (one quad) for each side
             // Triangle 1
             indices.push_back(circleIndicesCurrent.at(j));
-            indices.push_back(circleIndicesCurrent.at((j+1)%NUM_CIRCLE_SEGMENTS));
-            indices.push_back(circleIndicesNext.at((j+1)%NUM_CIRCLE_SEGMENTS));
+            indices.push_back(circleIndicesCurrent.at((j+1)%circlePoints2D.size()));
+            indices.push_back(circleIndicesNext.at((j+1)%circlePoints2D.size()));
 
             // Triangle 2
             indices.push_back(circleIndicesCurrent.at(j));
-            indices.push_back(circleIndicesNext.at((j+1)%NUM_CIRCLE_SEGMENTS));
+            indices.push_back(circleIndicesNext.at((j+1)%circlePoints2D.size()));
             indices.push_back(circleIndicesNext.at(j));
         }
     }

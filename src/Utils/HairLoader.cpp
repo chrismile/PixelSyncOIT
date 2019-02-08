@@ -226,7 +226,7 @@ void convertHairDataToBinaryTriangleMesh(
     std::vector<uint32_t> globalColors;
     std::vector<uint32_t> globalIndices;
 
-    initializeCircleData(8, hairData.defaultThickness);
+    initializeCircleData(3, hairData.defaultThickness);
 
     size_t numStrands = hairData.strands.size();
     for (HairStrand &strand : hairData.strands) {

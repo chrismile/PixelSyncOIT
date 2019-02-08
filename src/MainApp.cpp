@@ -98,8 +98,12 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
 	transferFunctionWindow.setClearColor(clearColor);
 	setNewTilingMode(2, 8);
 
-	//Timer->setFPSLimit(false, 60);
-	Timer->setFPSLimit(true, 60);
+	bool useVsync = AppSettings::get()->getSettings().getBoolValue("window-vSync");
+	if (useVsync) {
+        Timer->setFPSLimit(true, 60);
+	} else {
+        Timer->setFPSLimit(false, 60);
+	}
 
 	fpsArray.resize(16, 60.0f);
 	framerateSmoother = FramerateSmoother(1);

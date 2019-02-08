@@ -22,7 +22,7 @@ using namespace sgl;
 static bool useStencilBuffer = true;
 
 // Maximum number of layers
-static int maxNumNodes = 8;
+static int maxNumNodes = 4;
 
 // Whether to use alternative merging strategy (see MLABGather.glsl)
 static bool mlabMergeOpacityBased = false;
