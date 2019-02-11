@@ -14,6 +14,17 @@
 
 #include <glm/glm.hpp>
 
+struct MomentOITUniformData
+{
+    glm::vec4 wrapping_zone_parameters;
+    float overestimation;
+    float moment_bias;
+};
+
+enum MBOITPixelFormat {
+    MBOIT_PIXEL_FORMAT_FLOAT_32, MBOIT_PIXEL_FORMAT_UNORM_16
+};
+
 // Circle constant.
 #ifndef M_PI
 #define M_PI 3.14159265358979323f

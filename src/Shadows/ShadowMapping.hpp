@@ -20,10 +20,9 @@ public:
     virtual void setUniformValuesRenderScene(sgl::ShaderProgramPtr transparencyShader);
     virtual void setShaderDefines();
     virtual void resolutionChanged();
-    virtual void renderGUI();
+    virtual bool renderGUI();
 
 private:
-
     // For rendering to the shadow map
     sgl::FramebufferObjectPtr shadowMapFBO;
     sgl::TexturePtr shadowMap;

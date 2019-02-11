@@ -10,9 +10,10 @@
 #include <Graphics/OpenGL/GeometryBuffer.hpp>
 #include <Graphics/OpenGL/ShaderAttributes.hpp>
 #include <Utils/AppSettings.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 #include "ShadowMapping.hpp"
 
-const float SHADOW_MAP_RESOLUTION = 1024;
+static int SHADOW_MAP_RESOLUTION = 2048;
 
 ShadowMapping::ShadowMapping()
 {
@@ -23,7 +24,7 @@ ShadowMapping::ShadowMapping()
 void ShadowMapping::loadShaders()
 {
     createShadowMapShader = sgl::ShaderManager->getShaderProgram(
-            {"GenerateShadowMap.Vertex", "GenerateShadowMap.Fragment"}, true);
+            {"GenerateShadowMap.Vertex", "GenerateShadowMap.Fragment"});
 }
 
 void ShadowMapping::createShadowMapPass(std::function<void()> sceneRenderFunction)
@@ -84,7 +85,12 @@ void ShadowMapping::resolutionChanged()
     shadowMapFBO->bindTexture(shadowMap, sgl::DEPTH_ATTACHMENT);
 }
 
-void ShadowMapping::renderGUI()
+bool ShadowMapping::renderGUI()
 {
-    // TODO
+    bool reRender = false;
+    if (ImGui::SliderInt("", &SHADOW_MAP_RESOLUTION, 256, 4096)) {
+        reRender = true;
+        resolutionChanged();
+    }
+    return reRender;
 }

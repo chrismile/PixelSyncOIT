@@ -408,6 +408,7 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
 
 	if (gatherShaderIDs.size() != 0) {
 		oitRenderer->setGatherShaderList(gatherShaderIDs);
+		shadowTechnique->setGatherShaderList(gatherShaderIDs);
 		transparencyShader = oitRenderer->getGatherShader();
 	}
 	// TODO: SHADER_MODE_UPDATE_SSAO_CHANGE
@@ -604,6 +605,9 @@ void PixelSyncApp::renderOIT()
 		AABB3 screenSpaceBoundingBox = boundingBox.transformed(camera->getViewMatrix());
 		static_cast<OIT_MLABBucket*>(oitRenderer.get())->setScreenSpaceBoundingBox(screenSpaceBoundingBox, camera);
 	}
+	if (currentShadowTechnique == MOMENT_SHADOW_MAPPING) {
+		static_cast<MomentShadowMapping*>(shadowTechnique.get())->setSceneBoundingBox(boundingBox);
+	}
 
 	if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 		if (currentAOTechnique == AO_TECHNIQUE_VOXEL_AO) {
@@ -799,7 +803,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 		reRender = true;
 	} ImGui::SameLine();
 	ImGui::Checkbox("Continuous rendering", &continuousRendering);
-    ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);ImGui::SameLine();
+    ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);
 
     if (shaderMode == SHADER_MODE_VORTICITY) {
         ImGui::SameLine();
@@ -829,6 +833,10 @@ void PixelSyncApp::renderSceneSettingsGUI()
 		ShaderManager->invalidateShaderCache();
 		updateShadowMode();
 		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+		reRender = true;
+	}
+
+	if (shadowTechnique->renderGUI()) {
 		reRender = true;
 	}
 
@@ -885,18 +893,7 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 		}
 	}
 
-	if (currentAOTechnique == AO_TECHNIQUE_SSAO && !shadowTechnique->isShadowMapCreatePass()) {
-		if (ssaoHelper->isPreRenderPass()) {
-			transparencyShader = ssaoHelper->getGeometryPassShader();
-		} else {
-			TexturePtr ssaoTexture = ssaoHelper->getSSAOTexture();
-			transparencyShader->setUniform("ssaoTexture", ssaoTexture, 4);
-		}
-	} else if (currentAOTechnique == AO_TECHNIQUE_VOXEL_AO) {
-		voxelAOHelper->setUniformValues(transparencyShader);
-	}
-
-	if (currentShadowTechnique != NO_SHADOW_MAPPING) {
+    if (currentShadowTechnique != NO_SHADOW_MAPPING) {
         if (shadowTechnique->isShadowMapCreatePass()) {
             transparencyShader = shadowTechnique->getShadowMapCreationShader();
             shadowTechnique->setUniformValuesCreateShadowMap();
@@ -906,7 +903,20 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             shadowTechnique->setUniformValuesRenderScene(transparencyShader);
         }
 
-	}
+    }
+
+    if (!shadowTechnique->isShadowMapCreatePass()) {
+		if (currentAOTechnique == AO_TECHNIQUE_SSAO && transparencyShader->hasUniform("ssaoTexture")) {
+			if (ssaoHelper->isPreRenderPass()) {
+				transparencyShader = ssaoHelper->getGeometryPassShader();
+			} else {
+				TexturePtr ssaoTexture = ssaoHelper->getSSAOTexture();
+				transparencyShader->setUniform("ssaoTexture", ssaoTexture, 4);
+			}
+		} else if (currentAOTechnique == AO_TECHNIQUE_VOXEL_AO && transparencyShader->hasUniform("aoTexture")) {
+			voxelAOHelper->setUniformValues(transparencyShader);
+		}
+    }
 
 	return transparencyShader;
 }

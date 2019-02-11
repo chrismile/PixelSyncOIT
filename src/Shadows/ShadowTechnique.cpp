@@ -9,8 +9,7 @@
 
 void ShadowTechnique::setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter)
 {
-    float near_plane = -2.0f, far_plane = 2.0f;
-    lightProjectionMatrix = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, near_plane, far_plane);
+    lightProjectionMatrix = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, LIGHT_NEAR_CLIP_DISTANCE, LIGHT_FAR_CLIP_DISTANCE);
     lightViewMatrix = glm::lookAt(lightDirection+sceneCenter, glm::vec3(0.0f, 0.0f,  0.0f)+sceneCenter, glm::vec3(0.0f, 1.0f,  0.0f));
     lightSpaceMatrix = lightProjectionMatrix * lightViewMatrix;
     this->lightDirection = lightDirection;
