@@ -15,8 +15,6 @@ public:
     SSAOHelper() { init(); }
     void resolutionChanged();
 
-    inline const std::string &getGatherShaderName();
-
     // Call "preRender" to generate the SSAO texture, then fetch it using "getSSAOTexture"
     void preRender(std::function<void()> sceneRenderFunction);
     inline sgl::TexturePtr getSSAOTexture() { return ssaoTexture; }

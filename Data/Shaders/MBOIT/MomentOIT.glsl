@@ -27,9 +27,9 @@ layout(std140, binding = 1) uniform MomentOITUniformData
 
 #include "MomentMath.glsl"
 
-const float ABSORBANCE_MAX_VALUE = 10.0;
-
 #if MOMENT_GENERATION
+
+const float ABSORBANCE_MAX_VALUE = 10.0;
 
 /*! Generation of moments in case that rasterizer ordered views are used. 
 	This includes the case if moments are stored in 16 bits. */

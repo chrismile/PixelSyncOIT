@@ -32,7 +32,7 @@ struct HairData {
     bool hasThicknessArray;
     bool hasColorArray;
     float defaultThickness;
-    float defaulOpacity;
+    float defaultOpacity;
     glm::vec3 defaultColor;
 };
 

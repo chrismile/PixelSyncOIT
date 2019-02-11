@@ -42,6 +42,8 @@ void SSAOHelper::init()
     generateSSAORenderData = ShaderManager->createShaderAttributes(generateSSAOTextureShader);
     generateSSAORenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3, 0, stride);
     generateSSAORenderData->addGeometryBuffer(geomBuffer, "vertexTexcoord", ATTRIB_FLOAT, 2, sizeof(glm::vec3), stride);
+
+    resolutionChanged();
 }
 
 void SSAOHelper::loadShaders()

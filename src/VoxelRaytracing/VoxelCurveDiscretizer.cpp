@@ -120,6 +120,15 @@ float VoxelDiscretizer::computeDensity(float maxVorticity)
     return density;
 }
 
+float VoxelDiscretizer::computeDensityHair(float opacity)
+{
+    float density = 0.0f;
+    for (LineSegment &line : lines) {
+        density += line.length() * opacity;
+    }
+    return density;
+}
+
 
 
 
@@ -240,9 +249,10 @@ void VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, f
 
     // Assume default thickness, opacity and color for now to simplify the implementation
     lineRadius = hairData.defaultThickness;
-    hairStrandColor = glm::vec4(hairData.defaultColor, hairData.defaulOpacity);
+    hairStrandColor = glm::vec4(hairData.defaultColor, hairData.defaultOpacity);
     this->hairThickness = lineRadius;
     this->hairStrandColor = hairStrandColor;
+    this->hairOpacity = hairData.defaultOpacity;
 
 
     linesBoundingBox = sgl::AABB3();
@@ -320,7 +330,11 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
         dataCompressed.voxelLineListOffsets.push_back(lineOffset);
         size_t numLines = voxels[i].lines.size();
         dataCompressed.numLinesInVoxel.push_back(numLines);
-        voxelDensities.push_back(voxels[i].computeDensity(maxVorticity));
+        if (isHairDataset) {
+            voxelDensities.push_back(voxels[i].computeDensityHair(hairOpacity));
+        } else {
+            voxelDensities.push_back(voxels[i].computeDensity(maxVorticity));
+        }
         usedVoxels.push_back(numLines > 0 ? 1 : 0);
 
 #ifdef PACK_LINES
@@ -348,7 +362,12 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
         lineOffset += numLines;
     }
 
+    std::vector<float> voxelAOFactors;
+    voxelAOFactors.resize(n);
+    generateVoxelAOFactorsFromDensity(voxelDensities, voxelAOFactors, gridResolution, isHairDataset);
+
     dataCompressed.voxelDensityLODs = generateMipmapsForDensity(&voxelDensities.front(), gridResolution);
+    dataCompressed.voxelAOLODs = generateMipmapsForDensity(&voxelAOFactors.front(), gridResolution);
     dataCompressed.octreeLODs = generateMipmapsForOctree(&usedVoxels.front(), gridResolution);
     return dataCompressed;
 }

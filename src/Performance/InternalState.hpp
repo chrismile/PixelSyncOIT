@@ -48,6 +48,12 @@ const char *const MODEL_DISPLAYNAMES[] = {
        "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy"
 };
 
+enum AOTechniqueName {
+    AO_TECHNIQUE_NONE = 0, AO_TECHNIQUE_SSAO = 1, AO_TECHNIQUE_VOXEL_AO = 2
+};
+const char *const AO_TECHNIQUE_DISPLAYNAMES[] = {
+        "No Ambient Occlusion", "Screen Space AO", "Voxel Ambient Occlusion"
+};
 
 
 class SettingsMap {
@@ -99,7 +105,7 @@ struct InternalState
         return this->name == rhs.name && this->modelName == rhs.modelName && this->oitAlgorithm == rhs.oitAlgorithm
                && this->oitAlgorithmSettings.getMap() == rhs.oitAlgorithmSettings.getMap()
                && this->tilingWidth == rhs.tilingWidth && this->tilingHeight == rhs.tilingHeight
-               && this->useSSAO == rhs.useSSAO && this->useStencilBuffer == rhs.useStencilBuffer
+               && this->aoTechnique == rhs.aoTechnique && this->useStencilBuffer == rhs.useStencilBuffer
                && this->testNoInvocationInterlock == rhs.testNoInvocationInterlock
                && this->testNoAtomicOperations == rhs.testNoAtomicOperations
                && this->testShuffleGeometry == rhs.testShuffleGeometry;
@@ -114,7 +120,7 @@ struct InternalState
     int tilingWidth = 2;
     int tilingHeight = 8;
     bool useMortonCodeForTiling = false;
-    bool useSSAO = false;
+    AOTechniqueName aoTechnique = AO_TECHNIQUE_NONE;
     bool useStencilBuffer = true;
     bool testNoInvocationInterlock = false; // Test without pixel sync
     bool testNoAtomicOperations = false; // Test without atomic operations

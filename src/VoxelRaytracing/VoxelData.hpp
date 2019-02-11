@@ -15,9 +15,7 @@
 
 #define PACK_LINES
 
-inline float opacityMapping(float attr, float maxVorticity) {
-    return glm::clamp(attr/maxVorticity, 0.0f, 1.0f);
-}
+float opacityMapping(float attr, float maxVorticity);
 
 struct Curve
 {
@@ -96,6 +94,7 @@ struct VoxelGridDataCompressed
     std::vector<uint32_t> numLinesInVoxel;
 
     std::vector<float> voxelDensityLODs;
+    std::vector<float> voxelAOLODs;
     std::vector<uint32_t> octreeLODs;
 
 #ifdef PACK_LINES
@@ -114,6 +113,7 @@ struct VoxelGridDataGPU
     sgl::GeometryBufferPtr numLinesInVoxel;
 
     sgl::TexturePtr densityTexture;
+    sgl::TexturePtr aoTexture;
     sgl::TexturePtr octreeTexture;
 
     sgl::GeometryBufferPtr lineSegments;
@@ -125,5 +125,8 @@ void loadFromFile(const std::string &filename, VoxelGridDataCompressed &data);
 void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGridDataGPU &gpuData);
 std::vector<float> generateMipmapsForDensity(float *density, glm::ivec3 size);
 std::vector<uint32_t> generateMipmapsForOctree(uint32_t *numLines, glm::ivec3 size);
+sgl::TexturePtr generateDensityTexture(const std::vector<float> &lods, glm::ivec3 size);
+void generateVoxelAOFactorsFromDensity(const std::vector<float> &voxelDensities, std::vector<float> &voxelAOFactors,
+                                       glm::ivec3 size, bool isHairDataset);
 
 #endif //PIXELSYNCOIT_VOXELDATA_HPP

@@ -120,9 +120,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
 	Renderer->setErrorCallback(&openglErrorCallback);
 	Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
-	if (useSSAO) {
-		ShaderManager->addPreprocessorDefine("USE_SSAO", "");
-	}
+	shadowTechnique = boost::shared_ptr<ShadowTechnique>(new NoShadowMapping);
+	updateAOMode();
 
 	setRenderMode(mode, true);
 	loadModel(MODEL_FILENAMES[usedModelIndex]);
@@ -162,7 +161,9 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
 	camera->onResolutionChanged(event);
 	camera->onResolutionChanged(event);
 	oitRenderer->resolutionChanged(sceneFramebuffer, sceneTexture, sceneDepthRBO);
-	ssaoHelper.resolutionChanged();
+	if (currentAOTechnique == AO_TECHNIQUE_SSAO) {
+		ssaoHelper->resolutionChanged();
+	}
 	if (perfMeasurementMode && measurer != NULL) {
 		measurer->resolutionChanged(sceneFramebuffer);
 	}
@@ -197,7 +198,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 		return;
 	}
 
-	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh"; // TODO
+	std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
 	if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Triangles)")) {
 		// Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
 		modelFilenameOptimized += "_tri";
@@ -313,6 +314,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
 
 	boundingBox = boundingBox.transformed(rotation * scaling);
+	updateAOMode();
+	shadowTechnique->newModelLoaded(modelFilenamePure);
 	reRender = true;
 }
 
@@ -407,6 +410,7 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
 		oitRenderer->setGatherShaderList(gatherShaderIDs);
 		transparencyShader = oitRenderer->getGatherShader();
 	}
+	// TODO: SHADER_MODE_UPDATE_SSAO_CHANGE
 	if (boost::starts_with(modelFilenamePure, "Data/Trajectories/")) {
 		if (shaderMode != SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_NEW_OIT_RENDERER
 				|| modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
@@ -440,14 +444,10 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 
 	// 2. Handle global state changes like SSAO, tiling mode
 	setNewTilingMode(newState.tilingWidth, newState.tilingHeight, newState.useMortonCodeForTiling);
-	if (useSSAO != newState.useSSAO) {
-		useSSAO = newState.useSSAO;
+	if (currentAOTechnique != newState.aoTechnique) {
+		currentAOTechnique = newState.aoTechnique;
+		updateAOMode();
 		ShaderManager->invalidateShaderCache();
-		if (useSSAO) {
-			ShaderManager->addPreprocessorDefine("USE_SSAO", "");
-		} else {
-			ShaderManager->removePreprocessorDefine("USE_SSAO");
-		}
 		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
 	}
 
@@ -480,6 +480,53 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 	firstState = false;
 }
 
+void PixelSyncApp::updateAOMode()
+{
+	// First delete/remove old SSAO data
+	if (ssaoHelper != NULL) {
+		delete ssaoHelper;
+		ssaoHelper = NULL;
+	}
+	if (voxelAOHelper != NULL) {
+		delete voxelAOHelper;
+		voxelAOHelper = NULL;
+	}
+
+	// Now, set data for new technique
+	if (currentAOTechnique == AO_TECHNIQUE_NONE) {
+		ShaderManager->removePreprocessorDefine("USE_SSAO");
+		ShaderManager->removePreprocessorDefine("VOXEL_SSAO");
+		ssaoHelper = new SSAOHelper();
+	}
+	if (currentAOTechnique == AO_TECHNIQUE_SSAO) {
+		ShaderManager->removePreprocessorDefine("VOXEL_SSAO");
+		ShaderManager->addPreprocessorDefine("USE_SSAO", "");
+		ssaoHelper = new SSAOHelper();
+	}
+	if (currentAOTechnique == AO_TECHNIQUE_VOXEL_AO) {
+		ShaderManager->removePreprocessorDefine("USE_SSAO");
+		ShaderManager->addPreprocessorDefine("VOXEL_SSAO", "");
+		voxelAOHelper = new VoxelAOHelper();
+		voxelAOHelper->loadAOFactorsFromVoxelFile(modelFilenamePure);
+	}
+}
+
+void PixelSyncApp::updateShadowMode()
+{
+	if (currentShadowTechnique == NO_SHADOW_MAPPING) {
+		shadowTechnique = boost::shared_ptr<ShadowTechnique>(new NoShadowMapping);
+	} else if (currentShadowTechnique == SHADOW_MAPPING) {
+		shadowTechnique = boost::shared_ptr<ShadowTechnique>(new ShadowMapping);
+	} else if (currentShadowTechnique == MOMENT_SHADOW_MAPPING) {
+		shadowTechnique = boost::shared_ptr<ShadowTechnique>(new MomentShadowMapping);
+	}
+
+	shadowTechnique->setLightDirection(lightDirection, boundingBox.getCenter());
+	shadowTechnique->setShaderDefines();
+}
+
+
+
 
 
 PixelSyncApp::~PixelSyncApp()
@@ -492,6 +539,16 @@ PixelSyncApp::~PixelSyncApp()
 	timer.printTotalAvgTime();
 	timer.deleteAll();
 #endif
+
+	// Delete SSAO data
+	if (ssaoHelper != NULL) {
+		delete ssaoHelper;
+		ssaoHelper = NULL;
+	}
+	if (voxelAOHelper != NULL) {
+		delete voxelAOHelper;
+		voxelAOHelper = NULL;
+	}
 
 	if (perfMeasurementMode) {
 		delete measurer;
@@ -549,6 +606,10 @@ void PixelSyncApp::renderOIT()
 	}
 
 	if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+		if (currentAOTechnique == AO_TECHNIQUE_VOXEL_AO) {
+			voxelAOHelper->setUniformValues(oitRenderer->getGatherShader());
+		}
+
 #ifdef PROFILING_MODE
 		oitRenderer->renderToScreen();
 #else
@@ -566,8 +627,12 @@ void PixelSyncApp::renderOIT()
 	}
 	//Renderer->setBlendMode(BLEND_ALPHA);
 
-	if (useSSAO) {
-		ssaoHelper.preRender([this]() { this->renderScene(); });
+	if (currentAOTechnique == AO_TECHNIQUE_SSAO) {
+		ssaoHelper->preRender([this]() { this->renderScene(); });
+	}
+
+	if (currentShadowTechnique != NO_SHADOW_MAPPING) {
+		shadowTechnique->createShadowMapPass([this]() { this->renderScene(); });
 	}
 
 	Renderer->bindFBO(sceneFramebuffer);
@@ -716,6 +781,9 @@ void PixelSyncApp::renderSceneSettingsGUI()
 		if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
 			static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLightDirection(lightDirection);
 		}
+		if (currentShadowTechnique != NO_SHADOW_MAPPING) {
+			shadowTechnique->setLightDirection(lightDirection, boundingBox.getCenter());
+		}
 		reRender = true;
 	}
 
@@ -733,16 +801,6 @@ void PixelSyncApp::renderSceneSettingsGUI()
 	ImGui::Checkbox("Continuous rendering", &continuousRendering);
     ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);ImGui::SameLine();
 
-	if (ImGui::Checkbox("SSAO", &useSSAO)) {
-		ShaderManager->invalidateShaderCache();
-		if (useSSAO) {
-			ShaderManager->addPreprocessorDefine("USE_SSAO", "");
-		} else {
-			ShaderManager->removePreprocessorDefine("USE_SSAO");
-		}
-		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
-		reRender = true;
-	}
     if (shaderMode == SHADER_MODE_VORTICITY) {
         ImGui::SameLine();
         if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
@@ -756,6 +814,22 @@ void PixelSyncApp::renderSceneSettingsGUI()
             }
             reRender = true;
 		}
+	}
+
+	if (ImGui::Combo("AO Mode", (int*)&currentAOTechnique, AO_TECHNIQUE_DISPLAYNAMES,
+					 IM_ARRAYSIZE(AO_TECHNIQUE_DISPLAYNAMES))) {
+		ShaderManager->invalidateShaderCache();
+		updateAOMode();
+		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+		reRender = true;
+	}
+
+	if (ImGui::Combo("Shadow Mode", (int*)&currentShadowTechnique, SHADOW_MAPPING_TECHNIQUE_DISPLAYNAMES,
+					 IM_ARRAYSIZE(SHADOW_MAPPING_TECHNIQUE_DISPLAYNAMES))) {
+		ShaderManager->invalidateShaderCache();
+		updateShadowMode();
+		updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+		reRender = true;
 	}
 
 	ImGui::SliderFloat("Move speed", &MOVE_SPEED, 0.1f, 1.0f);
@@ -776,7 +850,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 	ShaderProgramPtr transparencyShader;
 	bool isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
 
-	if (!useSSAO || !ssaoHelper.isPreRenderPass()) {
+	if ((currentAOTechnique != AO_TECHNIQUE_SSAO || !ssaoHelper->isPreRenderPass())
+	        && (currentShadowTechnique == NO_SHADOW_MAPPING || !shadowTechnique->isShadowMapCreatePass())) {
 		transparencyShader = oitRenderer->getGatherShader();
 		if (shaderMode == SHADER_MODE_VORTICITY) {
 			transparencyShader->setUniform("minVorticity", 0.0f);
@@ -810,13 +885,27 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 		}
 	}
 
-	if (useSSAO) {
-		if (ssaoHelper.isPreRenderPass()) {
-			transparencyShader = ssaoHelper.getGeometryPassShader();
+	if (currentAOTechnique == AO_TECHNIQUE_SSAO && !shadowTechnique->isShadowMapCreatePass()) {
+		if (ssaoHelper->isPreRenderPass()) {
+			transparencyShader = ssaoHelper->getGeometryPassShader();
 		} else {
-			TexturePtr ssaoTexture = ssaoHelper.getSSAOTexture();
+			TexturePtr ssaoTexture = ssaoHelper->getSSAOTexture();
 			transparencyShader->setUniform("ssaoTexture", ssaoTexture, 4);
 		}
+	} else if (currentAOTechnique == AO_TECHNIQUE_VOXEL_AO) {
+		voxelAOHelper->setUniformValues(transparencyShader);
+	}
+
+	if (currentShadowTechnique != NO_SHADOW_MAPPING) {
+        if (shadowTechnique->isShadowMapCreatePass()) {
+            transparencyShader = shadowTechnique->getShadowMapCreationShader();
+            shadowTechnique->setUniformValuesCreateShadowMap();
+        }
+        if (!shadowTechnique->isShadowMapCreatePass()) {
+            transparencyShader = oitRenderer->getGatherShader();
+            shadowTechnique->setUniformValuesRenderScene(transparencyShader);
+        }
+
 	}
 
 	return transparencyShader;
@@ -832,11 +921,14 @@ void PixelSyncApp::renderScene()
 		transparencyShader = oitRenderer->getGatherShader();
 	}
 
-	Renderer->setProjectionMatrix(camera->getProjectionMatrix());
-	Renderer->setViewMatrix(camera->getViewMatrix());
+	if (!shadowTechnique->isShadowMapCreatePass()) {
+		Renderer->setProjectionMatrix(camera->getProjectionMatrix());
+		Renderer->setViewMatrix(camera->getViewMatrix());
+	}
 	Renderer->setModelMatrix(rotation * scaling);
 
-	transparentObject.render(transparencyShader, ssaoHelper.isPreRenderPass());
+	bool isGBufferPass = currentAOTechnique == AO_TECHNIQUE_SSAO && ssaoHelper->isPreRenderPass();
+	transparentObject.render(transparencyShader, isGBufferPass);
 }
 
 

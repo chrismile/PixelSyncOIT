@@ -17,7 +17,7 @@
 
 #include "VoxelData.hpp"
 
-const uint32_t VOXEL_GRID_FORMAT_VERSION = 2u;
+const uint32_t VOXEL_GRID_FORMAT_VERSION = 3u;
 
 void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data)
 {
@@ -45,6 +45,7 @@ void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data
     stream.writeArray(data.voxelLineListOffsets);
     stream.writeArray(data.numLinesInVoxel);
     stream.writeArray(data.voxelDensityLODs);
+    stream.writeArray(data.voxelAOLODs);
     stream.writeArray(data.octreeLODs);
     stream.writeArray(data.lineSegments);
     std::cout << "Number of line segments written: " << data.lineSegments.size() << std::endl;
@@ -99,6 +100,7 @@ void loadFromFile(const std::string &filename, VoxelGridDataCompressed &data)
     stream.readArray(data.voxelLineListOffsets);
     stream.readArray(data.numLinesInVoxel);
     stream.readArray(data.voxelDensityLODs);
+    stream.readArray(data.voxelAOLODs);
     stream.readArray(data.octreeLODs);
     stream.readArray(data.lineSegments);
 
@@ -343,6 +345,7 @@ void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGri
     }*/
 
     gpuData.densityTexture = generateDensityTexture(compressedData.voxelDensityLODs, gpuData.gridResolution);
+    gpuData.aoTexture = generateDensityTexture(compressedData.voxelAOLODs, gpuData.gridResolution);
     gpuData.octreeTexture = generateOctreeTexture(compressedData.octreeLODs, gpuData.gridResolution);
 
 #ifdef PACK_LINES
@@ -354,4 +357,149 @@ void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGri
     gpuData.lineSegments = sgl::Renderer->createGeometryBuffer(
             baseSize*compressedData.lineSegments.size(),
             (void*)&compressedData.lineSegments.front());
+}
+
+
+void generateBoxBlurKernel(float *filterKernel, int filterSize)
+{
+    const float FILTER_NUM_FIELDS = filterSize*filterSize*filterSize;
+    const int FILTER_EXTENT = (filterSize - 1) / 2;
+
+    for (int offsetZ = -FILTER_EXTENT; offsetZ <= FILTER_EXTENT; offsetZ++) {
+        for (int offsetY = -FILTER_EXTENT; offsetY <= FILTER_EXTENT; offsetY++) {
+            for (int offsetX = -FILTER_EXTENT; offsetX <= FILTER_EXTENT; offsetX++) {
+                int filterIdx = offsetZ*filterSize*filterSize + offsetY*filterSize + offsetX;
+                filterKernel[filterIdx] = 1.0f / FILTER_NUM_FIELDS;
+            }
+        }
+    }
+}
+void generateGaussianBlurKernel(float *filterKernel, int filterSize, float sigma)
+{
+    const float FILTER_NUM_FIELDS = filterSize*filterSize*filterSize;
+    const int FILTER_EXTENT = (filterSize - 1) / 2;
+
+    for (int offsetZ = -FILTER_EXTENT; offsetZ <= FILTER_EXTENT; offsetZ++) {
+        for (int offsetY = -FILTER_EXTENT; offsetY <= FILTER_EXTENT; offsetY++) {
+            for (int offsetX = -FILTER_EXTENT; offsetX <= FILTER_EXTENT; offsetX++) {
+                int filterIdx = (offsetZ+FILTER_EXTENT)*filterSize*filterSize + (offsetY+FILTER_EXTENT)*filterSize
+                        + (offsetX+FILTER_EXTENT);
+                filterKernel[filterIdx] = 1.0f / (sgl::TWO_PI * sigma * sigma)
+                        * std::exp(-(offsetX*offsetX + offsetY*offsetY + offsetZ*offsetZ) / (2.0f * sigma * sigma));
+            }
+        }
+    }
+}
+
+void generateVoxelAOFactorsFromDensity(const std::vector<float> &voxelDensities, std::vector<float> &voxelAOFactors,
+                                       glm::ivec3 size, bool isHairDataset)
+{
+    const int FILTER_SIZE = 7;
+    const int FILTER_EXTENT = (FILTER_SIZE - 1) / 2;
+    const int FILTER_NUM_FIELDS = FILTER_SIZE*FILTER_SIZE*FILTER_SIZE;
+    float blurKernel[FILTER_NUM_FIELDS];
+    generateGaussianBlurKernel(blurKernel, FILTER_SIZE, FILTER_EXTENT);
+
+    // 1. Filter the densities
+    #pragma omp parallel for
+    for (int gz = 0; gz < size.z; gz++) {
+        for (int gy = 0; gy < size.y; gy++) {
+            for (int gx = 0; gx < size.x; gx++) {
+                int writeIdx = gz*size.y*size.x + gy*size.x + gx;
+                voxelAOFactors[writeIdx] = 0.0f;
+                // 3x3 box filter
+                for (int offsetZ = -FILTER_EXTENT; offsetZ <= FILTER_EXTENT; offsetZ++) {
+                    for (int offsetY = -FILTER_EXTENT; offsetY <= FILTER_EXTENT; offsetY++) {
+                        for (int offsetX = -FILTER_EXTENT; offsetX <= FILTER_EXTENT; offsetX++) {
+                            int readX = gx + offsetX;
+                            int readY = gy + offsetY;
+                            int readZ = gz + offsetZ;
+                            if (readX >= 0 && readY >= 0 && readZ >= 0 && readX < size.x
+                                    && readY < size.y && readZ < size.z) {
+                                int filterIdx = (offsetZ+FILTER_EXTENT)*FILTER_SIZE*FILTER_SIZE
+                                        + (offsetY+FILTER_EXTENT)*FILTER_SIZE + (offsetX+FILTER_EXTENT);
+                                int readIdx = readZ*size.y*size.x + readY*size.y + readX;
+                                voxelAOFactors[writeIdx] += voxelDensities[readIdx] * blurKernel[filterIdx];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Find maximum and normalize the values
+    float maxAccumDensity = 0.0f;
+    #pragma omp parallel for reduction(max:maxAccumDensity)
+    for (int gz = 0; gz < size.z; gz++) {
+        for (int gy = 0; gy < size.y; gy++) {
+            for (int gx = 0; gx < size.x; gx++) {
+                int readIdx = gz*size.y*size.x + gy*size.x + gx;
+                maxAccumDensity = std::max(maxAccumDensity, voxelAOFactors[readIdx]);
+            }
+        }
+    }
+    std::cout << "Maximum accumulated density: " << maxAccumDensity << std::endl;
+
+    // Now divide all the values by the maximum, and save 1 - density as occlusion factor.
+    #pragma omp parallel for
+    for (int gz = 0; gz < size.z; gz++) {
+        for (int gy = 0; gy < size.y; gy++) {
+            for (int gx = 0; gx < size.x; gx++) {
+                int writeIdx = gz*size.y*size.x + gy*size.x + gx;
+                if (isHairDataset) {
+                    voxelAOFactors[writeIdx] = 1.0f - glm::clamp((voxelAOFactors[writeIdx] / maxAccumDensity) * 3.0f, 0.0f, 1.0f);
+                } else {
+                    voxelAOFactors[writeIdx] = 1.0f - glm::clamp((voxelAOFactors[writeIdx] / maxAccumDensity - 0.1f) * 2.0f, 0.0f, 1.0f);
+                }
+            }
+        }
+    }
+}
+
+
+
+/**
+ * Uses standard transfer function (Data/TransferFunctions/Standard.xml).
+ */
+struct OpacityNode
+{
+    float attribute;
+    float opacity;
+
+    OpacityNode(float attribute, float opacity) : attribute(attribute), opacity(opacity) { }
+};
+
+float opacityMapping(float attr, float maxVorticity) {
+    const std::vector<OpacityNode> opacityNodes = {
+            OpacityNode(0.0f, 0.0f),
+            OpacityNode(0.15955056250095367f, 0.0f),
+            OpacityNode(0.25168538093566895f, 0.0f),
+            //OpacityNode(0.15955056250095367f, 0.016778528690338135f),
+            //OpacityNode(0.25168538093566895f, 0.013422846794128418f),
+            OpacityNode(0.36629214882850647f, 0.0f),
+            OpacityNode(0.45842695236206055f, 0.5402684211730957f),
+            OpacityNode(0.56629210710525513f, 1.0f),
+            OpacityNode(0.80674159526824951f, 0.20805370807647705f),
+            OpacityNode(0.88988763093948364f, 0.51677852869033813f),
+            OpacityNode(1.0f, 0.89932882785797119f),
+    };
+
+    attr = glm::clamp(attr/maxVorticity, 0.0f, 1.0f);
+
+    const int N = opacityNodes.size();
+    for (int i = 0; i < N; i++) {
+        if (opacityNodes.at(i).attribute == attr) {
+            return opacityNodes.at(i).opacity;
+        } else if (attr < opacityNodes.at(i).attribute) {
+            float pos0 = opacityNodes.at(i-1).attribute;
+            float pos1 = opacityNodes.at(i).attribute;
+            float opacity0 = opacityNodes.at(i-1).opacity;
+            float opacity1 = opacityNodes.at(i).opacity;
+            float factor = 1.0 - (pos1 - attr) / (pos1 - pos0);
+            return sgl::interpolateLinear(opacity0, opacity1, factor);
+        }
+    }
+
+    return opacityNodes.back().opacity;
 }

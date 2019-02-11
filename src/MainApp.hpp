@@ -24,6 +24,9 @@
 #include "Utils/CameraPath.hpp"
 #include "OIT/OIT_Renderer.hpp"
 #include "AmbientOcclusion/SSAO.hpp"
+#include "AmbientOcclusion/VoxelAO.hpp"
+#include "Shadows/ShadowMapping.hpp"
+#include "Shadows/MomentShadowMapping.hpp"
 #include "Performance/InternalState.hpp"
 #include "Performance/AutoPerfMeasurer.hpp"
 #include "TransferFunctionWindow.hpp"
@@ -80,8 +83,15 @@ private:
 	ShaderProgramPtr whiteSolidShader;
 
 	// Screen space ambient occlusion
-	SSAOHelper ssaoHelper;
-	bool useSSAO = false;
+	SSAOHelper *ssaoHelper = NULL;
+	VoxelAOHelper *voxelAOHelper = NULL;
+	AOTechniqueName currentAOTechnique = AO_TECHNIQUE_NONE;
+	void updateAOMode();
+
+	// Shadow rendering
+	boost::shared_ptr<ShadowTechnique> shadowTechnique;
+	ShadowMappingTechniqueName currentShadowTechnique = NO_SHADOW_MAPPING;
+	void updateShadowMode();
 
 	// Mode
 	// RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
@@ -107,7 +117,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 12;
+    int usedModelIndex = 2;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);

@@ -136,7 +136,7 @@ void loadHairFile(const std::string &hairFilename, HairData &hairData) {
 
     // Next: Read opacity and color array (optional)
     hairData.hasColorArray = hasOpacityArray || hasColorArray;
-    hairData.defaulOpacity = defaultOpacity;
+    hairData.defaultOpacity = defaultOpacity;
     hairData.defaultColor = defaultColor;
     if (hairData.hasColorArray) {
         // 1. Read color and opacity arrays (optional)
@@ -260,7 +260,7 @@ void convertHairDataToBinaryTriangleMesh(
 
 
     submesh.material.diffuseColor = hairData.defaultColor;
-    submesh.material.opacity = hairData.defaulOpacity;
+    submesh.material.opacity = hairData.defaultOpacity;
     submesh.indices = globalIndices;
 
     BinaryMeshAttribute positionAttribute;

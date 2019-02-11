@@ -150,7 +150,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             //vec4 diffuseColor = vec4(vec3(186.0, 106.0, 57.0) / 255.0, 1.0); // Test color w/o transfer function
             //hit.color = vec4(diffuseColor.rgb * diffuseFactor, diffuseColor.a);
 
-            const float occlusionFactor = 1.0;
+            float occlusionFactor = 1.0;//texture(densityTexture, vec3(0.0)).x;
             #ifdef HAIR_RENDERING
             vec4 diffuseColorVorticity = hairStrandColor;
             #else

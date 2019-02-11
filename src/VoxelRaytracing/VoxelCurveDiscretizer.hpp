@@ -34,6 +34,7 @@ public:
     void setIndex(glm::ivec3 index);
     const glm::ivec3 &getIndex() const { return index; }
     float computeDensity(float maxVorticity);
+    float computeDensityHair(float opacity);
 
     glm::ivec3 index;
     std::vector<LineSegment> lines;
@@ -68,6 +69,7 @@ private:
     // Hair dataset
     glm::vec4 hairStrandColor;
     float hairThickness;
+    float hairOpacity;
 
     void nextStreamline(const Curve &line);
 

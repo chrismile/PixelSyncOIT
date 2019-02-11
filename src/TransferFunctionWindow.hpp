@@ -51,6 +51,9 @@ public:
     inline bool &getShowTransferFunctionWindow() { return showTransferFunctionWindow; }
     void computeHistogram(const std::vector<float> &attributes, float minAttr, float maxAttr);
 
+    // For querying transfer function in application
+    float getOpacityAtAttribute(float attribute); // attribute: Between 0 and 1
+
     // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
     std::vector<sgl::Color> getTransferFunctionMap();
     sgl::TexturePtr &getTransferFunctionMapTexture();

@@ -168,7 +168,11 @@ out vec4 fragColor;
 
 #ifdef USE_SSAO
 uniform sampler2D ssaoTexture;
+#elif defined(VOXEL_SSAO)
+#include "VoxelAO.glsl"
 #endif
+
+#include "Shadows.glsl"
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 
@@ -197,10 +201,14 @@ void main()
     // Read ambient occlusion factor from texture
     vec2 texCoord = vec2(gl_FragCoord.xy + vec2(0.5, 0.5))/textureSize(ssaoTexture, 0);
     float occlusionFactor = texture(ssaoTexture, texCoord).r;
+#elif defined(VOXEL_SSAO)
+    float occlusionFactor = getAmbientOcclusionTermVoxelGrid(fragmentPositonWorld);
 #else
     // No ambient occlusion
     const float occlusionFactor = 1.0;
 #endif
+
+    float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
 
 	// Use vorticity
 	vec4 diffuseColorVorticity = transferFunction(vorticity);
@@ -211,8 +219,11 @@ void main()
 	}
 
 	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(normal, lightDirection)/2.0
-	        + 0.75 * occlusionFactor, 0.0, 1.0);
+	        + 0.75 * occlusionFactor * shadowFactor, 0.0, 1.0);
 	vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a); //  colorGlobal.a
+	//color = vec4(vec3(occlusionFactor), 1.0);
+	//color = vec4(vec3(shadowFactor), 1.0);
+	//color.rgb = vec3(occlusionFactor);
 
 	if (!transparencyMapping) {
 	    color.a = colorGlobal.a;
