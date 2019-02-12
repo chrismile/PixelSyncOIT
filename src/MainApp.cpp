@@ -906,7 +906,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
     }
 
     if (!shadowTechnique->isShadowMapCreatePass()) {
-		if (currentAOTechnique == AO_TECHNIQUE_SSAO && transparencyShader->hasUniform("ssaoTexture")) {
+		if (currentAOTechnique == AO_TECHNIQUE_SSAO
+		        && (!transparencyShader || transparencyShader->hasUniform("ssaoTexture"))) {
 			if (ssaoHelper->isPreRenderPass()) {
 				transparencyShader = ssaoHelper->getGeometryPassShader();
 			} else {
@@ -1027,7 +1028,6 @@ void PixelSyncApp::update(float dt)
 		camera->rotate(rot);
 		reRender = true;
 	}
-
 
 
 	glm::mat4 rotationMatrix = camera->getRotationMatrix();//glm::mat4(camera->getOrientation());

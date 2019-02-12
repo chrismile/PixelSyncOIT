@@ -48,7 +48,7 @@ void resolveMomentsShadow(out float transmittance_at_depth, out float total_tran
 
 	float b_0 = texture(zeroth_moment_shadow, idx0).x;
 	if (b_0 < 0.00100050033f) {
-        discard;
+        return;
     }
 	total_transmittance = exp(-b_0);
 

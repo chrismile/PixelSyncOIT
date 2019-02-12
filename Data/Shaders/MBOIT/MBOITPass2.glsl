@@ -1,5 +1,6 @@
 
 #define MOMENT_GENERATION 0
+#define MOMENT_BASED_OIT
 
 uniform int viewportW;
 

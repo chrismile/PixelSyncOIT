@@ -31,7 +31,7 @@ void main()
 
 in vec3 screenSpacePosition;
 
-#ifndef DIRECT_BLIT_GATHER
+#if !defined(DIRECT_BLIT_GATHER) || defined(SHADOW_MAPPING_MOMENTS_GENERATE)
 #include OIT_GATHER_HEADER
 #endif
 
@@ -40,7 +40,7 @@ in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
 in vec3 fragmentPositonWorld;
 
-#ifdef DIRECT_BLIT_GATHER
+#if defined(DIRECT_BLIT_GATHER) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
 out vec4 fragColor;
 #endif
 
@@ -96,7 +96,7 @@ void main()
 	}
 	//color.rgb = vec3(vec3(shadowFactor));
 
-#ifdef DIRECT_BLIT_GATHER
+#if defined(DIRECT_BLIT_GATHER) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
 	// Direct rendering
 	fragColor = color;
 #else

@@ -73,7 +73,10 @@ void MomentShadowMapping::createShadowMapPass(std::function<void()> sceneRenderF
     glDisable(GL_BLEND);
     glDepthMask(GL_FALSE);
     glDisable(GL_DEPTH_TEST);
+    glStencilMask(0);
+    glDisable(GL_STENCIL_TEST);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    sgl::Renderer->render(clearRenderData);
 
     //sgl::Renderer->bindFBO(shadowMapFBO);
     sgl::Renderer->setViewMatrix(lightViewMatrix);
@@ -86,6 +89,7 @@ void MomentShadowMapping::createShadowMapPass(std::function<void()> sceneRenderF
 
     //Renderer->blurTexture(ssaoTexture);
     //sgl::Renderer->unbindFBO();
+    sgl::Renderer->unbindFBO();
     sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
     int width = window->getWidth();
     int height = window->getHeight();
@@ -98,7 +102,7 @@ void MomentShadowMapping::createShadowMapPass(std::function<void()> sceneRenderF
 
 void MomentShadowMapping::setUniformValuesCreateShadowMap()
 {
-    // TODO: Different binding points than normal MBOIT
+    // Different binding points than normal MBOIT
     createShadowMapShader->setUniformImageTexture(3, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);
     createShadowMapShader->setUniformImageTexture(4, b, textureSettingsB.internalFormat, GL_READ_WRITE, 0, true, 0);
     if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
