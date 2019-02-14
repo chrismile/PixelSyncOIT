@@ -1,6 +1,7 @@
 
 #define REQUIRE_INVOCATION_INTERLOCK
 #define MOMENT_GENERATION 1
+#define MOMENT_BASED_OIT
 
 uniform int viewportW;
 

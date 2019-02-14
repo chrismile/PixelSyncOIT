@@ -36,7 +36,7 @@ void main()
 
 in vec3 screenSpacePosition;
 
-#ifndef DIRECT_BLIT_GATHER
+#if !defined(DIRECT_BLIT_GATHER) || defined(SHADOW_MAPPING_MOMENTS_GENERATE)
 #include OIT_GATHER_HEADER
 #endif
 

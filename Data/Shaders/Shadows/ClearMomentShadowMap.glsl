@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+	gl_Position = vec4(vertexPosition, 1.0);
 }
 
 
@@ -24,24 +24,24 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 uniform int viewportW;
 
-layout (binding = 0, r32f) coherent uniform image2DArray zeroth_moment_shadow; // float
+layout (binding = 3, r32f) coherent uniform image2DArray zeroth_moment_shadow; // float
 #if SINGLE_PRECISION
 #if NUM_MOMENTS == 6
-layout (binding = 1, rg32f) coherent uniform image2DArray moments_shadow; // vec2
+layout (binding = 4, rg32f) coherent uniform image2DArray moments_shadow; // vec2
 #if USE_R_RG_RGBA_FOR_MBOIT6
-layout (binding = 2, rgba32f) coherent uniform image2DArray extra_moments_shadow; // vec4
+layout (binding = 5, rgba32f) coherent uniform image2DArray extra_moments_shadow; // vec4
 #endif
 #else
-layout (binding = 1, rgba32f) coherent uniform image2DArray moments_shadow; // vec4
+layout (binding = 4, rgba32f) coherent uniform image2DArray moments_shadow; // vec4
 #endif
 #else
 #if NUM_MOMENTS == 6
-layout (binding = 1, rg16) coherent uniform image2DArray moments_shadow;
+layout (binding = 4, rg16) coherent uniform image2DArray moments_shadow;
 #if USE_R_RG_RGBA_FOR_MBOIT6
-layout (binding = 2, rgba16) coherent uniform image2DArray extra_moments_shadow;
+layout (binding = 5, rgba16) coherent uniform image2DArray extra_moments_shadow;
 #endif
 #else
-layout (binding = 1, rgba16) coherent uniform image2DArray moments_shadow;
+layout (binding = 4, rgba16) coherent uniform image2DArray moments_shadow;
 #endif
 #endif
 

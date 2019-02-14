@@ -10,14 +10,7 @@
 #include <Graphics/Texture/TextureManager.hpp>
 
 #include "OIT_Renderer.hpp"
-
-struct MomentOITUniformData
-{
-    glm::vec4 wrapping_zone_parameters;
-    float overestimation;
-    float moment_bias;
-};
-
+#include "OIT_MBOIT_Utils.hpp"
 
 /**
  * An order independent transparency renderer using pixel sync.

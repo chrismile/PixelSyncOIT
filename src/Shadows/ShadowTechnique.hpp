@@ -14,6 +14,9 @@ const char *const SHADOW_MAPPING_TECHNIQUE_DISPLAYNAMES[] = {
         "No Shadows", "Shadow Mapping", "Moment Shadow Mapping"
 };
 
+const float LIGHT_NEAR_CLIP_DISTANCE = -2.0f;
+const float LIGHT_FAR_CLIP_DISTANCE = 2.0f;
+
 
 class ShadowTechnique
 {
@@ -29,7 +32,7 @@ public:
     virtual void setUniformValuesRenderScene(sgl::ShaderProgramPtr transparencyShader)=0;
     virtual void setShaderDefines()=0;
     virtual void resolutionChanged()=0;
-    virtual void renderGUI()=0;
+    virtual bool renderGUI()=0;
 
     // Called by MainApp if the direction of the directional light changes
     void setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter);
@@ -39,6 +42,9 @@ public:
 
     // Returns whether the 1st pass for generating the shadow map is active
     inline bool isShadowMapCreatePass() { return preRenderPass; }
+
+    // Called by MainApp. For shadow techniques that need access to the gather shader.
+    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs) {}
 
 protected:
     // Geometry pass to generate the shadow map
@@ -61,7 +67,7 @@ public:
     virtual void setUniformValuesRenderScene(sgl::ShaderProgramPtr transparencyShader) {}
     virtual void setShaderDefines();
     virtual void resolutionChanged() {}
-    virtual void renderGUI() {}
+    virtual bool renderGUI() { return false; }
 };
 
 #endif //PIXELSYNCOIT_SHADOWTECHNIQUE_HPP

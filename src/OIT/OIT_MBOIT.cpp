@@ -19,17 +19,12 @@
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "TilingMode.hpp"
-#include "OIT_MBOIT_Utils.hpp"
 #include "OIT_MBOIT.hpp"
 
 using namespace sgl;
 
 // Use stencil buffer to mask unused pixels
 static bool useStencilBuffer = true;
-
-enum MBOITPixelFormat {
-    MBOIT_PIXEL_FORMAT_FLOAT_32, MBOIT_PIXEL_FORMAT_UNORM_16
-};
 
 // Internal mode
 static bool usePowerMoments = true;
