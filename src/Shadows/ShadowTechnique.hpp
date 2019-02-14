@@ -21,9 +21,10 @@ const float LIGHT_FAR_CLIP_DISTANCE = 2.0f;
 class ShadowTechnique
 {
 public:
-    ShadowTechnique() : preRenderPass(false) {}
+    ShadowTechnique() : preRenderPass(false), needsNewTransparencyShader(false) {}
     virtual ShadowMappingTechniqueName getShadowMappingTechnique()=0;
     sgl::ShaderProgramPtr getShadowMapCreationShader() { return createShadowMapShader; }
+    bool getNeedsNewTransparencyShader() { return needsNewTransparencyShader; }
 
     // Call "createShadowMapPass" to generate the shadow map
     virtual void createShadowMapPass(std::function<void()> sceneRenderFunction)=0;
@@ -54,6 +55,7 @@ protected:
     glm::mat4 lightViewMatrix, lightProjectionMatrix, lightSpaceMatrix;
     glm::vec3 lightDirection;
     bool preRenderPass;
+    bool needsNewTransparencyShader;
 };
 
 class NoShadowMapping : public ShadowTechnique

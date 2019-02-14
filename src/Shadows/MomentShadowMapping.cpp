@@ -214,6 +214,8 @@ void MomentShadowMapping::reloadShaders()
         // Copy data to new shader if this function is not called by the constructor
         clearRenderData = clearRenderData->copy(clearShadowMapShader);
     }
+
+    needsNewTransparencyShader = true;
 }
 
 void MomentShadowMapping::updateMomentMode()

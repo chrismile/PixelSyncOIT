@@ -32,7 +32,7 @@ void getPointsOnCircle(std::vector<glm::vec2> &points, const glm::vec2 &center, 
     }
 }
 
-const int NUM_CIRCLE_SEGMENTS = 8;
+const int NUM_CIRCLE_SEGMENTS = 5;
 const float TUBE_RADIUS = 0.001f;
 
 void initializeCircleData(int numSegments, float radius)

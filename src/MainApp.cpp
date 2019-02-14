@@ -684,6 +684,27 @@ void PixelSyncApp::renderOIT()
 	}
 #endif
 
+	// Render light direction sphere
+	if (true) {
+		auto solidShader = sgl::ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
+		solidShader->setUniform("color", sgl::Color(255, 255, 0));
+		auto lightPlaneRenderData = sgl::ShaderManager->createShaderAttributes(solidShader);
+
+		Renderer->setViewMatrix(camera->getViewMatrix());
+		Renderer->setProjectionMatrix(camera->getProjectionMatrix());
+
+		std::vector<glm::vec3> lightPlane{
+				glm::vec3(0.1,0.1,0), glm::vec3(-0.1,-0.1,0), glm::vec3(0.1,-0.1,0),
+				glm::vec3(-0.1,-0.1,0), glm::vec3(0.1,0.1,0), glm::vec3(-0.1,0.1,0)};
+		sgl::GeometryBufferPtr lightPlaneBuffer = sgl::Renderer->createGeometryBuffer(
+				sizeof(glm::vec3)*lightPlane.size(), (void*)&lightPlane.front());
+		lightPlaneRenderData->addGeometryBuffer(lightPlaneBuffer, "vertexPosition", sgl::ATTRIB_FLOAT, 3);
+
+		glEnable(GL_DEPTH_TEST);
+		Renderer->render(lightPlaneRenderData);
+		glDisable(GL_DEPTH_TEST);
+	}
+
 	// Wireframe mode
 	if (wireframe) {
 		Renderer->setModelMatrix(matrixIdentity());
@@ -838,6 +859,11 @@ void PixelSyncApp::renderSceneSettingsGUI()
 
 	if (shadowTechnique->renderGUI()) {
 		reRender = true;
+
+		// Needs new transparency shader because of changed global settings?
+		if (shadowTechnique->getNeedsNewTransparencyShader()) {
+			updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+		}
 	}
 
 	ImGui::SliderFloat("Move speed", &MOVE_SPEED, 0.1f, 1.0f);
