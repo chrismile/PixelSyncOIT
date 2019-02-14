@@ -50,6 +50,23 @@ struct ObjMesh
 	std::vector<ObjSubmesh> submeshes;
 };
 
+/**
+ * Binmesh Format: A mesh consists of one or many submeshes.
+ * A submesh consists of:
+ *  - A material encoding ambient color, specular exponent etc. for Phong Shading.
+ *    This is ignored for e.g. the aneurism dataset, as color and opacity are computed using a transfer function.
+ *  - A vertex mode (points, lines, triangles, ...).
+ *  - A list of indices (optional, can be empty). 32-bit indices were chosen, as all scientific datasets have more than 2^16 vertices anyways.
+ *  - A list of vertex attributes.
+ *
+ * An attribute could be e.g. the vertex position, normal, color, vorticity, ... and consists of:
+ *  - A name (string), which is used as the binding point for the vertex shader.
+ *  - The attribute format (e.g. byte, unsigned int, float, ...).
+ *  - Die number of components, e.g. 3 for a vector containing three elements or 1 for a scalar value.
+ *  - The actual attribute data as an array of bytes. It is expected that the number of vertices is the same for each attribute.
+ *    The number of vertices can be explicitly computed by "data.size() / numComponents / dataFormatNumBytes".
+ */
+
 struct BinaryMeshAttribute
 {
     std::string name; // e.g. "vertexPosition"
