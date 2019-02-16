@@ -88,15 +88,15 @@ RowMap parseCSV(const std::string &filename, bool filterComments) {
 
 // Test main method
 /*int main() {
-	RowMap rows = parseCSV("test.csv");
+    RowMap rows = parseCSV("test.csv");
 
-	for (auto &row : rows) {
-		for (string &cell : row) {
-			cout << cell << endl;
-		}
-		cout << "--- NEWROW ---" << endl;
-	}
-	cout << "--- END OF FILE ---" << endl;
+    for (auto &row : rows) {
+        for (string &cell : row) {
+            cout << cell << endl;
+        }
+        cout << "--- NEWROW ---" << endl;
+    }
+    cout << "--- END OF FILE ---" << endl;
 
-	return 0;
+    return 0;
 }*/

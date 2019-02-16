@@ -37,36 +37,36 @@ using namespace sgl;
 //#define PROFILING_MODE
 
 enum ShaderMode {
-	SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_VORTICITY, SHADER_MODE_AMBIENT_OCCLUSION
+    SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_VORTICITY, SHADER_MODE_AMBIENT_OCCLUSION
 };
 
 class PixelSyncApp : public AppLogic
 {
 public:
-	PixelSyncApp();
-	~PixelSyncApp();
-	void render(); // Calls renderOIT and renderGUI
-	void renderOIT(); // Uses renderScene and "oitRenderer" to render the scene
-	void renderScene(); // Renders lighted scene
-	void update(float dt);
-	void resolutionChanged(EventPtr event);
-	void processSDLEvent(const SDL_Event &event);
+    PixelSyncApp();
+    ~PixelSyncApp();
+    void render(); // Calls renderOIT and renderGUI
+    void renderOIT(); // Uses renderScene and "oitRenderer" to render the scene
+    void renderScene(); // Renders lighted scene
+    void update(float dt);
+    void resolutionChanged(EventPtr event);
+    void processSDLEvent(const SDL_Event &event);
 
 
 protected:
-	// State changes
-	void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
-	enum ShaderModeUpdate {
-		SHADER_MODE_UPDATE_NEW_OIT_RENDERER, SHADER_MODE_UPDATE_NEW_MODEL, SHADER_MODE_UPDATE_SSAO_CHANGE
-	};
-	void updateShaderMode(ShaderModeUpdate modeUpdate);
-	void loadModel(const std::string &filename, bool resetCamera = true);
+    // State changes
+    void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
+    enum ShaderModeUpdate {
+        SHADER_MODE_UPDATE_NEW_OIT_RENDERER, SHADER_MODE_UPDATE_NEW_MODEL, SHADER_MODE_UPDATE_SSAO_CHANGE
+    };
+    void updateShaderMode(ShaderModeUpdate modeUpdate);
+    void loadModel(const std::string &filename, bool resetCamera = true);
 
-	// For changing performance measurement modes
-	void setNewState(const InternalState &newState);
+    // For changing performance measurement modes
+    void setNewState(const InternalState &newState);
 
-	// Override screenshot function to exclude GUI (if wanted by the user)
-	void saveScreenshot(const std::string &filename);
+    // Override screenshot function to exclude GUI (if wanted by the user)
+    void saveScreenshot(const std::string &filename);
 
 
     sgl::ShaderProgramPtr setUniformValues();
@@ -76,44 +76,44 @@ private:
     void renderSceneSettingsGUI();
 
     // Lighting & rendering
-	boost::shared_ptr<Camera> camera;
+    boost::shared_ptr<Camera> camera;
     float fovy;
-	ShaderProgramPtr transparencyShader;
-	ShaderProgramPtr plainShader;
-	ShaderProgramPtr whiteSolidShader;
+    ShaderProgramPtr transparencyShader;
+    ShaderProgramPtr plainShader;
+    ShaderProgramPtr whiteSolidShader;
 
-	// Screen space ambient occlusion
-	SSAOHelper *ssaoHelper = NULL;
-	VoxelAOHelper *voxelAOHelper = NULL;
-	AOTechniqueName currentAOTechnique = AO_TECHNIQUE_NONE;
-	void updateAOMode();
+    // Screen space ambient occlusion
+    SSAOHelper *ssaoHelper = NULL;
+    VoxelAOHelper *voxelAOHelper = NULL;
+    AOTechniqueName currentAOTechnique = AO_TECHNIQUE_NONE;
+    void updateAOMode();
 
-	// Shadow rendering
-	boost::shared_ptr<ShadowTechnique> shadowTechnique;
-	ShadowMappingTechniqueName currentShadowTechnique = NO_SHADOW_MAPPING;
-	void updateShadowMode();
+    // Shadow rendering
+    boost::shared_ptr<ShadowTechnique> shadowTechnique;
+    ShadowMappingTechniqueName currentShadowTechnique = NO_SHADOW_MAPPING;
+    void updateShadowMode();
 
-	// Mode
-	// RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
-	RenderModeOIT mode = RENDER_MODE_OIT_MLAB; // RENDER_MODE_OIT_MLAB_BUCKET
+    // Mode
+    // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
+    RenderModeOIT mode = RENDER_MODE_OIT_MLAB; // RENDER_MODE_OIT_MLAB_BUCKET
     RenderModeOIT oldMode = mode;
-	ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
-	std::string modelFilenamePure;
-	float maxVorticity = 1.0f;
-	bool shuffleGeometry = false; // For testing order dependency of OIT algorithms on triangle order
+    ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
+    std::string modelFilenamePure;
+    float maxVorticity = 1.0f;
+    bool shuffleGeometry = false; // For testing order dependency of OIT algorithms on triangle order
     std::list<std::string> gatherShaderIDs;
 
-	// Off-screen rendering
-	FramebufferObjectPtr sceneFramebuffer;
-	TexturePtr sceneTexture;
-	RenderbufferObjectPtr sceneDepthRBO;
+    // Off-screen rendering
+    FramebufferObjectPtr sceneFramebuffer;
+    TexturePtr sceneTexture;
+    RenderbufferObjectPtr sceneDepthRBO;
 
-	// Objects in the scene
-	boost::shared_ptr<OIT_Renderer> oitRenderer;
-	MeshRenderer transparentObject;
-	glm::mat4 rotation;
-	glm::mat4 scaling;
-	sgl::AABB3 boundingBox;
+    // Objects in the scene
+    boost::shared_ptr<OIT_Renderer> oitRenderer;
+    MeshRenderer transparentObject;
+    glm::mat4 rotation;
+    glm::mat4 scaling;
+    sgl::AABB3 boundingBox;
 
     // User interface
     bool showSettingsWindow = true;
@@ -132,10 +132,10 @@ private:
     float ROT_SPEED = 1.0f;
     float MOUSE_ROT_SPEED = 0.05f;
 
-	TransferFunctionWindow transferFunctionWindow;
+    TransferFunctionWindow transferFunctionWindow;
 
-	// Hair rendering
-	bool colorArrayMode = false;
+    // Hair rendering
+    bool colorArrayMode = false;
 
     // Continuous rendering: Re-render each frame or only when scene changes?
     bool continuousRendering = false;
@@ -144,25 +144,25 @@ private:
     // Profiling events
     AutoPerfMeasurer *measurer;
     bool perfMeasurementMode = false;
-	InternalState lastState;
-	bool firstState = true;
+    InternalState lastState;
+    bool firstState = true;
 #ifdef PROFILING_MODE
     sgl::TimerGL timer;
 #endif
 
-	// Save video stream to file
-	const int FRAME_RATE = 60;
-	const float FULL_CIRCLE_TIME = 26.0f;
-	float recordingTime = 0.0f;
+    // Save video stream to file
+    const int FRAME_RATE = 60;
+    const float FULL_CIRCLE_TIME = 26.0f;
+    float recordingTime = 0.0f;
 
-	//glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
-	//float rotationRadius = 1.0f;
+    //glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
+    //float rotationRadius = 1.0f;
 
-	float outputTime = 0.0f;
-	bool testOutputPos = false;
-	bool testCameraFlight = false;
-	bool recording = false;
-	VideoWriter *videoWriter;
+    float outputTime = 0.0f;
+    bool testOutputPos = false;
+    bool testCameraFlight = false;
+    bool recording = false;
+    VideoWriter *videoWriter;
 
     CameraPath cameraPath;
 };

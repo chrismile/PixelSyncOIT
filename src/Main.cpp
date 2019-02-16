@@ -16,26 +16,26 @@ using namespace std;
 using namespace sgl;
 
 int main(int argc, char *argv[]) {
-	// Initialize the filesystem utilities
-	FileUtils::get()->initialize("pixel-sync-oit", argc, argv);
+    // Initialize the filesystem utilities
+    FileUtils::get()->initialize("pixel-sync-oit", argc, argv);
 
-	// Load the file containing the app settings
-	string settingsFile = FileUtils::get()->getConfigDirectory() + "settings.txt";
-	AppSettings::get()->loadSettings(settingsFile.c_str());
-	AppSettings::get()->getSettings().addKeyValue("window-multisamples", 0);
-	AppSettings::get()->getSettings().addKeyValue("window-debugContext", true);
-	AppSettings::get()->getSettings().addKeyValue("window-vSync", true);
-	AppSettings::get()->setLoadGUI();
+    // Load the file containing the app settings
+    string settingsFile = FileUtils::get()->getConfigDirectory() + "settings.txt";
+    AppSettings::get()->loadSettings(settingsFile.c_str());
+    AppSettings::get()->getSettings().addKeyValue("window-multisamples", 0);
+    AppSettings::get()->getSettings().addKeyValue("window-debugContext", true);
+    AppSettings::get()->getSettings().addKeyValue("window-vSync", true);
+    AppSettings::get()->setLoadGUI();
 
-	Window *window = AppSettings::get()->createWindow();
-	AppSettings::get()->initializeSubsystems();
+    Window *window = AppSettings::get()->createWindow();
+    AppSettings::get()->initializeSubsystems();
 
-	AppLogic *app = new PixelSyncApp();
-	app->run();
+    AppLogic *app = new PixelSyncApp();
+    app->run();
 
-	delete app;
-	AppSettings::get()->release();
-	delete window;
+    delete app;
+    AppSettings::get()->release();
+    delete window;
 
-	return 0;
+    return 0;
 }

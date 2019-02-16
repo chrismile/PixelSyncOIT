@@ -26,28 +26,28 @@
   */
 struct ObjMaterial
 {
-	ObjMaterial() : ambientColor(0.75f, 0.75f, 0.75f), diffuseColor(0.75f, 0.75f, 0.75f),
-					specularColor(0.0f, 0.0f, 0.0f), specularExponent(1.0f), opacity(1.0f) {}
+    ObjMaterial() : ambientColor(0.75f, 0.75f, 0.75f), diffuseColor(0.75f, 0.75f, 0.75f),
+                    specularColor(0.0f, 0.0f, 0.0f), specularExponent(1.0f), opacity(1.0f) {}
 
-	glm::vec3 ambientColor;
-	glm::vec3 diffuseColor;
-	glm::vec3 specularColor;
-	float specularExponent;
-	float opacity;
+    glm::vec3 ambientColor;
+    glm::vec3 diffuseColor;
+    glm::vec3 specularColor;
+    float specularExponent;
+    float opacity;
 };
 
 struct ObjSubmesh
 {
-	ObjMaterial material;
-	std::vector<uint32_t> indices;
-	std::vector<glm::vec3> vertices;
-	std::vector<glm::vec2> texcoords;
-	std::vector<glm::vec3> normals;
+    ObjMaterial material;
+    std::vector<uint32_t> indices;
+    std::vector<glm::vec3> vertices;
+    std::vector<glm::vec2> texcoords;
+    std::vector<glm::vec3> normals;
 };
 
 struct ObjMesh
 {
-	std::vector<ObjSubmesh> submeshes;
+    std::vector<ObjSubmesh> submeshes;
 };
 
 /**
@@ -104,18 +104,18 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh);
 class MeshRenderer
 {
 public:
-	void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass = false);
-	void setNewShader(sgl::ShaderProgramPtr newShader);
-	bool isLoaded() { return shaderAttributes.size() > 0; }
-	bool hasAttributeWithName(const std::string &name) {
-		return shaderAttributeNames.find(name) != shaderAttributeNames.end();
-	}
+    void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass = false);
+    void setNewShader(sgl::ShaderProgramPtr newShader);
+    bool isLoaded() { return shaderAttributes.size() > 0; }
+    bool hasAttributeWithName(const std::string &name) {
+        return shaderAttributeNames.find(name) != shaderAttributeNames.end();
+    }
 
-	std::vector<sgl::ShaderAttributesPtr> shaderAttributes;
-	std::set<std::string> shaderAttributeNames;
-	std::vector<ObjMaterial> materials;
-	sgl::AABB3 boundingBox;
-	sgl::Sphere boundingSphere;
+    std::vector<sgl::ShaderAttributesPtr> shaderAttributes;
+    std::set<std::string> shaderAttributeNames;
+    std::vector<ObjMaterial> materials;
+    sgl::AABB3 boundingBox;
+    sgl::Sphere boundingSphere;
 };
 
 
@@ -125,6 +125,6 @@ public:
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader,
-		std::vector<float> &lineAttributes, float *maxVorticity = NULL, bool shuffleData = false);
+        std::vector<float> &lineAttributes, float *maxVorticity = NULL, bool shuffleData = false);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */

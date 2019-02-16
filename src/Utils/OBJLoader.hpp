@@ -20,7 +20,7 @@
  * @return: The loaded mesh stores in a ShaderAttributes object.
  */
 void convertObjMeshToBinary(
-		const std::string &objFilename,
-		const std::string &binaryFilename);
+        const std::string &objFilename,
+        const std::string &binaryFilename);
 
 #endif /* OBJLOADER_HPP_ */
