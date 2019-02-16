@@ -40,8 +40,8 @@ uniform sampler2DArray extra_moments_shadow;
 	function to reconstruct the transmittance at the specified depth.*/
 void resolveMomentsShadow(out float transmittance_at_depth, out float total_transmittance, float depth, vec2 sv_pos)
 {
-	vec3 idx0 = vec3(sv_pos, 0);
-	vec3 idx1 = vec3(idx0.xy, 1);
+	vec3 idx0 = vec3(sv_pos, 0.0);
+	vec3 idx1 = vec3(idx0.xy, 1.0);
 
 	transmittance_at_depth = 1;
 	total_transmittance = 1;
@@ -91,7 +91,7 @@ void resolveMomentsShadow(out float transmittance_at_depth, out float total_tran
 	        MomentOITShadow.moment_bias, MomentOITShadow.overestimation, bias_vector);
 #endif
 #elif NUM_MOMENTS_SHADOW == 6
-	ivec3 idx2 = ivec3(idx0.xy, 2);
+	vec3 idx2 = vec3(idx0.xy, 2);
 #if TRIGONOMETRIC_SHADOW
 	vec2 trig_b[3];
 	trig_b[0] = texture(moments_shadow, idx0).xy;

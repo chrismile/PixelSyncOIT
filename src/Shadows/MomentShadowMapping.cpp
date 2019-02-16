@@ -22,7 +22,7 @@ static bool usePowerMoments = true;
 static int numMoments = 4;
 static MBOITPixelFormat pixelFormat = MBOIT_PIXEL_FORMAT_FLOAT_32;
 static bool USE_R_RG_RGBA_FOR_MBOIT6 = true;
-static float overestimationBeta = 0.1;
+static float overestimationBeta = 0.0;
 
 MomentShadowMapping::MomentShadowMapping()
 {
@@ -75,17 +75,74 @@ void MomentShadowMapping::createShadowMapPass(std::function<void()> sceneRenderF
     glDisable(GL_DEPTH_TEST);
     glStencilMask(0);
     glDisable(GL_STENCIL_TEST);
+    glDisable(GL_SCISSOR_TEST);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    sgl::Renderer->render(clearRenderData);
 
-    //sgl::Renderer->bindFBO(shadowMapFBO);
+    sgl::Renderer->bindFBO(shadowMapFBO);
     sgl::Renderer->setViewMatrix(lightViewMatrix);
     sgl::Renderer->setProjectionMatrix(lightProjectionMatrix);
     glViewport(0, 0, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION);
+    sgl::Renderer->render(clearRenderData);
     preRenderPass = true;
     sceneRenderFunction();
     preRenderPass = false;
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+
+
+
+    // TODO: Resolution change of map, depends on size of framebuffer, need to adapt b0 etc. size on slider change
+
+    sgl::Renderer->unbindFBO();
+    glDisable(GL_DEPTH_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    auto shadowMapDebugFBO = sgl::Renderer->createFBO();
+
+    sgl::TextureSettings textureSettings;
+    textureSettings.internalFormat = GL_RGBA;
+    textureSettings.pixelFormat = GL_RGBA;
+    textureSettings.pixelType = GL_UNSIGNED_BYTE;
+    auto shadowColorMap = sgl::TextureManager->createEmptyTexture(SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, textureSettings);
+    shadowMapDebugFBO->bindTexture(shadowColorMap);
+
+
+    auto blitShadowMapShader = sgl::ShaderManager->getShaderProgram(
+            {"BlitMomentShadowMap.Vertex", "BlitMomentShadowMap.Fragment"});
+
+
+    // Generate render data for fullscreen SSAO texture generation pass
+    std::vector<sgl::VertexTextured> fullscreenQuad(sgl::Renderer->createTexturedQuad(
+            sgl::AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f))));
+    const int stride = sizeof(sgl::VertexTextured);
+    sgl::GeometryBufferPtr geomBuffer = sgl::Renderer->createGeometryBuffer(
+            sizeof(sgl::VertexTextured)*fullscreenQuad.size(), &fullscreenQuad.front());
+    auto generateSSAORenderData = sgl::ShaderManager->createShaderAttributes(blitShadowMapShader);
+    generateSSAORenderData->addGeometryBuffer(geomBuffer, "vertexPosition", sgl::ATTRIB_FLOAT, 3, 0, stride);
+    generateSSAORenderData->addGeometryBuffer(geomBuffer, "vertexTexcoord", sgl::ATTRIB_FLOAT, 2, sizeof(glm::vec3), stride);
+
+    if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
+        blitShadowMapShader->setUniform("shadowMap", b);
+        //blitShadowMapShader->setUniform("shadowMap", bExtra);
+    } else {
+        blitShadowMapShader->setUniform("shadowMap", b);
+    }
+
+    sgl::Renderer->bindFBO(shadowMapDebugFBO);
+    sgl::Renderer->render(generateSSAORenderData);
+
+    //glFinish();
+
+    sgl::BitmapPtr bitmap(new sgl::Bitmap(SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, 32));
+    glReadPixels(0, 0, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, GL_RGBA, GL_UNSIGNED_BYTE, bitmap->getPixels());
+    //glGetTextureImage(static_cast<sgl::TextureGL*>(shadowMap.get())->getTexture(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+    //        SHADOW_MAP_RESOLUTION*SHADOW_MAP_RESOLUTION*32, (void*)bitmap->getPixels());
+    bitmap->savePNG("shadowmap.png", true);
+
+
+
+
+
+
 
     //Renderer->blurTexture(ssaoTexture);
     //sgl::Renderer->unbindFBO();
@@ -142,6 +199,13 @@ void MomentShadowMapping::resolutionChanged()
     int height = window->getHeight();
 
     shadowMapFBO = sgl::Renderer->createFBO();
+
+    sgl::TextureSettings textureSettings;
+    textureSettings.internalFormat = GL_DEPTH_COMPONENT;
+    textureSettings.pixelFormat = GL_DEPTH_COMPONENT;
+    textureSettings.pixelType = GL_FLOAT;
+    shadowMap = sgl::TextureManager->createEmptyTexture(SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, textureSettings);
+    shadowMapFBO->bindTexture(shadowMap, sgl::DEPTH_ATTACHMENT);
 }
 
 bool MomentShadowMapping::renderGUI()
@@ -188,6 +252,7 @@ bool MomentShadowMapping::renderGUI()
     if (ImGui::SliderInt("", &SHADOW_MAP_RESOLUTION, 256, 4096)) {
         reRender = true;
         resolutionChanged();
+        createMomentTextures();
     }
     return reRender;
 }
@@ -204,6 +269,8 @@ void MomentShadowMapping::reloadShaders()
     sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"GenerateMomentShadowMap.glsl\"");
     sgl::ShaderManager->addPreprocessorDefine("SHADOW_MAPPING_MOMENTS_GENERATE", "");
     createShadowMapShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
+    createShadowMapShader->setUniform("logDepthMinShadow", logDepthMinShadow);
+    createShadowMapShader->setUniform("logDepthMaxShadow", logDepthMaxShadow);
     sgl::ShaderManager->removePreprocessorDefine("SHADOW_MAPPING_MOMENTS_GENERATE");
     sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", oldGatherHeader);
 
@@ -218,20 +285,8 @@ void MomentShadowMapping::reloadShaders()
     needsNewTransparencyShader = true;
 }
 
-void MomentShadowMapping::updateMomentMode()
+void MomentShadowMapping::createMomentTextures()
 {
-    // 1. Set shader state dependent on the selected mode
-    sgl::ShaderManager->addPreprocessorDefine("ROV_SHADOW", "1"); // Always use fragment shader interlock
-    sgl::ShaderManager->addPreprocessorDefine("NUM_MOMENTS_SHADOW", sgl::toString(numMoments));
-    sgl::ShaderManager->addPreprocessorDefine("SINGLE_PRECISION_SHADOW",
-            sgl::toString((int)(pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32)));
-    sgl::ShaderManager->addPreprocessorDefine("TRIGONOMETRIC_SHADOW", sgl::toString((int)(!usePowerMoments)));
-    sgl::ShaderManager->addPreprocessorDefine("USE_R_RG_RGBA_FOR_MBOIT6_SHADOW", sgl::toString((int)USE_R_RG_RGBA_FOR_MBOIT6));
-
-    // 2. Re-load the shaders
-    reloadShaders();
-
-    // 3. Load textures
     //const GLint internalFormat1 = pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32 ? GL_R32F : GL_R16;
     const GLint internalFormat1 = GL_R32F;
     const GLint internalFormat2 = pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32 ? GL_RG32F : GL_RG16;
@@ -275,23 +330,42 @@ void MomentShadowMapping::updateMomentMode()
     textureSettingsB0.pixelFormat = pixelFormatB0;
     textureSettingsB0.internalFormat = internalFormatB0;
     b0 = sgl::TextureManager->createTexture(emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, depthB0,
-            textureSettingsB0);
+                                            textureSettingsB0);
 
     textureSettingsB = textureSettingsB0;
     textureSettingsB.pixelFormat = pixelFormatB;
     textureSettingsB.internalFormat = internalFormatB;
     b = sgl::TextureManager->createTexture(emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, depthB,
-            textureSettingsB);
+                                           textureSettingsB);
 
     if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
         textureSettingsBExtra = textureSettingsB0;
         textureSettingsBExtra.pixelFormat = pixelFormatBExtra;
         textureSettingsBExtra.internalFormat = internalFormatBExtra;
         bExtra = sgl::TextureManager->createTexture(emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION,
-                depthBExtra, textureSettingsBExtra);
+                                                    depthBExtra, textureSettingsBExtra);
     }
 
     free(emptyData);
+}
+
+
+void MomentShadowMapping::updateMomentMode()
+{
+    // 1. Set shader state dependent on the selected mode
+    sgl::ShaderManager->addPreprocessorDefine("ROV_SHADOW", "1"); // Always use fragment shader interlock
+    sgl::ShaderManager->addPreprocessorDefine("NUM_MOMENTS_SHADOW", sgl::toString(numMoments));
+    sgl::ShaderManager->addPreprocessorDefine("SINGLE_PRECISION_SHADOW",
+                                              sgl::toString((int)(pixelFormat == MBOIT_PIXEL_FORMAT_FLOAT_32)));
+    sgl::ShaderManager->addPreprocessorDefine("TRIGONOMETRIC_SHADOW", sgl::toString((int)(!usePowerMoments)));
+    sgl::ShaderManager->addPreprocessorDefine("USE_R_RG_RGBA_FOR_MBOIT6_SHADOW",
+                                              sgl::toString((int)USE_R_RG_RGBA_FOR_MBOIT6));
+
+    // 2. Re-load the shaders
+    reloadShaders();
+
+    // 3. Load textures
+    createMomentTextures();
 
 
     // Set algorithm-dependent bias
@@ -352,7 +426,7 @@ void MomentShadowMapping::updateMomentMode()
 }*/
 
 
-void MomentShadowMapping::setSceneBoundingBox(const sgl::AABB3 &sceneBB)
+void MomentShadowMapping::updateDepthRange()
 {
     sgl::AABB3 lightSpaceBB = sceneBB.transformed(lightViewMatrix);
     float minViewZ = lightSpaceBB.getMaximum().z;
@@ -361,9 +435,20 @@ void MomentShadowMapping::setSceneBoundingBox(const sgl::AABB3 &sceneBB)
     maxViewZ = std::min(-maxViewZ, LIGHT_FAR_CLIP_DISTANCE);
     minViewZ = std::min(minViewZ, LIGHT_FAR_CLIP_DISTANCE);
     maxViewZ = std::max(maxViewZ, LIGHT_NEAR_CLIP_DISTANCE);
-    float logDepthMinShadow = log(minViewZ);
-    float logDepthMaxShadow = log(maxViewZ);
+    logDepthMinShadow = log(minViewZ);
+    logDepthMaxShadow = log(maxViewZ);
     createShadowMapShader->setUniform("logDepthMinShadow", logDepthMinShadow);
     createShadowMapShader->setUniform("logDepthMaxShadow", logDepthMaxShadow);
 }
 
+void MomentShadowMapping::setSceneBoundingBox(const sgl::AABB3 &sceneBB)
+{
+    this->sceneBB = sceneBB;
+    updateDepthRange();
+}
+
+void MomentShadowMapping::setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter)
+{
+    ShadowTechnique::setLightDirection(lightDirection, sceneCenter);
+    updateDepthRange();
+}

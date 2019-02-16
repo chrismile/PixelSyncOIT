@@ -71,7 +71,7 @@ out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 out float vorticity;
 
-#define NUM_SEGMENTS 8
+#define NUM_SEGMENTS 5
 
 void main()
 {
@@ -220,10 +220,7 @@ void main()
 
 	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(normal, lightDirection)/2.0
 	        + 0.75 * occlusionFactor * shadowFactor, 0.0, 1.0);
-	vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a); //  colorGlobal.a
-	//color = vec4(vec3(occlusionFactor), 1.0);
-	//color = vec4(vec3(shadowFactor), 1.0);
-	//color.rgb = vec3(occlusionFactor);
+	vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a);
 
 	if (!transparencyMapping) {
 	    color.a = colorGlobal.a;

@@ -14,8 +14,8 @@ const char *const SHADOW_MAPPING_TECHNIQUE_DISPLAYNAMES[] = {
         "No Shadows", "Shadow Mapping", "Moment Shadow Mapping"
 };
 
-const float LIGHT_NEAR_CLIP_DISTANCE = -2.0f;
-const float LIGHT_FAR_CLIP_DISTANCE = 2.0f;
+const float LIGHT_NEAR_CLIP_DISTANCE = 0.1f;
+const float LIGHT_FAR_CLIP_DISTANCE = 4.0f;
 
 
 class ShadowTechnique
@@ -36,7 +36,7 @@ public:
     virtual bool renderGUI()=0;
 
     // Called by MainApp if the direction of the directional light changes
-    void setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter);
+    virtual void setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter);
 
     // Called by MainApp
     void newModelLoaded(const std::string &filename);

@@ -923,6 +923,14 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
         if (shadowTechnique->isShadowMapCreatePass()) {
             transparencyShader = shadowTechnique->getShadowMapCreationShader();
             shadowTechnique->setUniformValuesCreateShadowMap();
+            transparencyShader->setUniform("minVorticity", 0.0f);
+            transparencyShader->setUniform("maxVorticity", maxVorticity);
+            if (transparencyShader->hasUniform("radius")) {
+                transparencyShader->setUniform("radius", lineRadius);
+            }
+            transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+            transparencyShader->setUniform("transferFunctionTexture",
+                                           transferFunctionWindow.getTransferFunctionMapTexture(), 5);
         }
         if (!shadowTechnique->isShadowMapCreatePass()) {
             transparencyShader = oitRenderer->getGatherShader();

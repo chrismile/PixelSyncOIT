@@ -37,7 +37,7 @@ layout (binding = 4, rgba32f) coherent uniform image2DArray moments_shadow; // v
 #else
 #if NUM_MOMENTS_SHADOW == 6
 layout (binding = 4, rg16) coherent uniform image2DArray moments_shadow;
-#if USE_R_RG_RGBA_FOR_MBOIT6
+#if USE_R_RG_RGBA_FOR_MBOIT6_SHADOW
 layout (binding = 5, rgba16) coherent uniform image2DArray extra_moments_shadow;
 #endif
 #else

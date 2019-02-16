@@ -25,12 +25,18 @@ public:
     // Called by MainApp
     virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
     void setSceneBoundingBox(const sgl::AABB3 &sceneBB);
+    // Called by MainApp if the direction of the directional light changes
+    virtual void setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter);
 
 private:
     // Called when new moment mode was set
     void updateMomentMode();
+    // Reloads b0, b, bExtra
+    void createMomentTextures();
     // Called when some setting was changed and the shaders need to be reloaded
     void reloadShaders();
+    // Called by "setSceneBoundingBox" and "setLightDirection"
+    void updateDepthRange();
 
     // Gather shader name used for shading
     std::list<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
@@ -58,6 +64,10 @@ private:
     // For computing logarithmic depth
     float logDepthMinShadow = 0.1f;
     float logDepthMaxShadow = 1.0f;
+    sgl::AABB3 sceneBB;
+
+    // TODO dummy
+    sgl::TexturePtr shadowMap;
 };
 
 
