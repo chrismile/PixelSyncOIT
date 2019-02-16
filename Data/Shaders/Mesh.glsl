@@ -6,7 +6,7 @@ in vec4 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vertexPosition;
+    gl_Position = mvpMatrix * vertexPosition;
 }
 
 -- Fragment.Plain
@@ -18,7 +18,7 @@ out vec4 fragColor;
 
 void main()
 {
-	fragColor = color;
+    fragColor = color;
 }
 
 
@@ -33,8 +33,8 @@ out vec2 fragTexCoord;
 
 void main()
 {
-	fragTexCoord = texcoord;
-	gl_Position = mvpMatrix * vertexPosition;
+    fragTexCoord = texcoord;
+    gl_Position = mvpMatrix * vertexPosition;
 }
 
 -- Fragment.Textured
@@ -48,5 +48,5 @@ out vec4 fragColor;
 
 void main()
 {
-	fragColor = color * texture2D(texture, fragTexCoord);
+    fragColor = color * texture2D(texture, fragTexCoord);
 }

@@ -7,8 +7,8 @@ uniform sampler3D aoTexture;
 
 float getAmbientOcclusionTermVoxelGrid(vec3 posWorld)
 {
-	vec3 texCoord = (worldSpaceToVoxelTextureSpace * vec4(posWorld, 1.0)).xyz;
-	return texture(aoTexture, texCoord).x;
+    vec3 texCoord = (worldSpaceToVoxelTextureSpace * vec4(posWorld, 1.0)).xyz;
+    return texture(aoTexture, texCoord).x;
 }
 
 #endif

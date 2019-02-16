@@ -15,12 +15,12 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 // A fragment node stores rendering information about one specific fragment
 struct LinkedListFragmentNode
 {
-	// RGBA color of the node
-	uint color;
-	// Depth value of the fragment (in view space)
-	float depth;
-	// The index of the next node in "nodes" array
-	uint next;
+    // RGBA color of the node
+    uint color;
+    // Depth value of the fragment (in view space)
+    float depth;
+    // The index of the next node in "nodes" array
+    uint next;
 };
 
 // fragment-and-link buffer and a start-offset buffer
@@ -28,13 +28,13 @@ struct LinkedListFragmentNode
 // Fragment-and-link buffer (linked list). Stores "nodesPerPixel" number of fragments.
 layout (std430, binding = 0) coherent buffer FragmentBuffer
 {
-	LinkedListFragmentNode fragmentBuffer[];
+    LinkedListFragmentNode fragmentBuffer[];
 };
 
 // Start-offset buffer (mapping pixels to first pixel in the buffer) of size viewportW*viewportH.
 layout (std430, binding = 1) coherent buffer StartOffsetBuffer
 {
-	uint startOffset[];
+    uint startOffset[];
 };
 
 

@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -28,35 +28,35 @@ out vec4 fragColor;
 
 void main()
 {
-	int x = int(gl_FragCoord.x);
-	int y = int(gl_FragCoord.y);
-	int pixelIndex = viewportW*y + x;
+    int x = int(gl_FragCoord.x);
+    int y = int(gl_FragCoord.y);
+    int pixelIndex = viewportW*y + x;
 
-	// Get start offset from array
-	uint fragOffset = startOffset[pixelIndex];
+    // Get start offset from array
+    uint fragOffset = startOffset[pixelIndex];
 
     // Collect all fragments for this pixel
-	int numFrags = 0;
-	LinkedListFragmentNode fragment;
-	for (int i = 0; i < MAX_NUM_FRAGS; i++)
-	{
+    int numFrags = 0;
+    LinkedListFragmentNode fragment;
+    for (int i = 0; i < MAX_NUM_FRAGS; i++)
+    {
         if (fragOffset == -1) {
             // End of list reached
             break;
         }
 
         fragment = fragmentBuffer[fragOffset];
-		fragOffset = fragment.next;
+        fragOffset = fragment.next;
 
         colorList[i] = fragment.color;
         depthList[i] = fragment.depth;
 
-		numFrags++;
-	}
+        numFrags++;
+    }
 
-	if (numFrags == 0) {
-	    discard;
-	}
+    if (numFrags == 0) {
+        discard;
+    }
 
-	fragColor = sortingAlgorithm(numFrags);
+    fragColor = sortingAlgorithm(numFrags);
 }

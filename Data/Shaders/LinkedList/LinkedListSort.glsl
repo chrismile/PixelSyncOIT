@@ -17,15 +17,15 @@ void swapFrags(uint i, uint j) {
 vec4 blendFTB(uint fragsCount)
 {
     vec4 color = vec4(0.0);
-	for (uint i = 0; i < fragsCount; i++) {
-		// Front-to-Back (FTB) blending
-		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackUnorm4x8(colorList[i]);
-		float alphaSrc = colorSrc.a;
-		color.rgb = color.rgb + (1.0 - color.a) * alphaSrc * colorSrc.rgb;
-		color.a = color.a + (1.0 - color.a) * alphaSrc;
-	}
-	return vec4(color.rgb / color.a, color.a);
+    for (uint i = 0; i < fragsCount; i++) {
+        // Front-to-Back (FTB) blending
+        // Blend the accumulated color with the color of the fragment node
+        vec4 colorSrc = unpackUnorm4x8(colorList[i]);
+        float alphaSrc = colorSrc.a;
+        color.rgb = color.rgb + (1.0 - color.a) * alphaSrc * colorSrc.rgb;
+        color.a = color.a + (1.0 - color.a) * alphaSrc;
+    }
+    return vec4(color.rgb / color.a, color.a);
 }
 
 
@@ -199,8 +199,8 @@ vec4 frontToBackPQ(uint fragsCount)
         minHeapSink4(0, fragsCount - i++); // Sink it right + increment i
         vec4 colorSrc = unpackUnorm4x8(colorList[0]); // Heap first is min
         // FTB Blending
-		rayColor.rgb = rayColor.rgb + (1.0 - rayColor.a) * colorSrc.a * colorSrc.rgb;
-		rayColor.a = rayColor.a + (1.0 - rayColor.a) * colorSrc.a;
+        rayColor.rgb = rayColor.rgb + (1.0 - rayColor.a) * colorSrc.a * colorSrc.rgb;
+        rayColor.a = rayColor.a + (1.0 - rayColor.a) * colorSrc.a;
 
         // Move Fragments up for next run
         colorList[0] = colorList[fragsCount-i];

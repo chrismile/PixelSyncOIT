@@ -16,12 +16,12 @@ uniform vec4 colorGlobal;
 
 void main()
 {
-	fragmentColor = colorGlobal;
-	fragmentNormal = vertexNormal;
-	fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
-	fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
-	screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    fragmentColor = colorGlobal;
+    fragmentNormal = vertexNormal;
+    fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
+    fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -78,35 +78,35 @@ void main()
 
     float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
 
-	// Pseudo Phong shading
-	vec4 bandColor = fragmentColor;
-	float stripWidth = 2.0;
-	if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
-		bandColor = vec4(1.0,1.0,1.0,1.0);
-	}
-	vec4 color = vec4(bandColor.rgb * (dot(normalize(fragmentNormal), lightDirection)/4.0+0.75
-	        * occlusionFactor * shadowFactor), fragmentColor.a);
+    // Pseudo Phong shading
+    vec4 bandColor = fragmentColor;
+    float stripWidth = 2.0;
+    if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
+        bandColor = vec4(1.0,1.0,1.0,1.0);
+    }
+    vec4 color = vec4(bandColor.rgb * (dot(normalize(fragmentNormal), lightDirection)/4.0+0.75
+            * occlusionFactor * shadowFactor), fragmentColor.a);
 
-	if (bandedColorShading == 0) {
-	    vec3 ambientShading = ambientColor * 0.1 * occlusionFactor * shadowFactor;
-	    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75
-	            * occlusionFactor * shadowFactor, 0.0, 1.0);
-	    vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
-	    color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
-	}
-	//color.rgb = vec3(vec3(shadowFactor));
+    if (bandedColorShading == 0) {
+        vec3 ambientShading = ambientColor * 0.1 * occlusionFactor * shadowFactor;
+        vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75
+                * occlusionFactor * shadowFactor, 0.0, 1.0);
+        vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
+        color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
+    }
+    //color.rgb = vec3(vec3(shadowFactor));
 
 #if defined(DIRECT_BLIT_GATHER) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
-	// Direct rendering
-	fragColor = color;
+    // Direct rendering
+    fragColor = color;
 #else
 #if defined(REQUIRE_INVOCATION_INTERLOCK) && !defined(TEST_NO_INVOCATION_INTERLOCK)
-	// Area of mutual exclusion for fragments mapping to the same pixel
-	beginInvocationInterlockARB();
-	gatherFragment(color);
-	endInvocationInterlockARB();
+    // Area of mutual exclusion for fragments mapping to the same pixel
+    beginInvocationInterlockARB();
+    gatherFragment(color);
+    endInvocationInterlockARB();
 #else
-	gatherFragment(color);
+    gatherFragment(color);
 #endif
 #endif
 }

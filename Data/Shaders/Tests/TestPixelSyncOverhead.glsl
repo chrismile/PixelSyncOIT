@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 -- Fragment
@@ -33,11 +33,11 @@ layout(pixel_interlock_unordered) in;
 uniform int viewportW;
 layout (std430, binding = 0) coherent buffer DataBuffer
 {
-	uint data[];
+    uint data[];
 };
 
 float doSomeComputation(float x) {
-	return log(2*exp(x) + 1.0);
+    return log(2*exp(x) + 1.0);
 }
 
 #include "TiledAddress.glsl"
@@ -47,9 +47,9 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 #if defined(TEST_COMPUTE)
 void main()
 {
-	uint idx = addrGen(uvec2(uint(gl_FragCoord.x), uint(gl_FragCoord.y)));
+    uint idx = addrGen(uvec2(uint(gl_FragCoord.x), uint(gl_FragCoord.y)));
 #if defined(TEST_PIXEL_SYNC)
-	// Code A - Pixel Sync
+    // Code A - Pixel Sync
     beginInvocationInterlockARB();
     float value = float(data[idx]);
     for (int i = 0; i < 10; i++) {
@@ -78,9 +78,9 @@ void main()
 
 void main()
 {
-	uint idx = addrGen(uvec2(uint(gl_FragCoord.x), uint(gl_FragCoord.y)));
+    uint idx = addrGen(uvec2(uint(gl_FragCoord.x), uint(gl_FragCoord.y)));
 #if defined(TEST_PIXEL_SYNC)
-	// Code A - Pixel Sync
+    // Code A - Pixel Sync
     beginInvocationInterlockARB();
     data[idx] += 1;
     endInvocationInterlockARB();

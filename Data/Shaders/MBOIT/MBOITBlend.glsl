@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -53,8 +53,8 @@ uniform sampler2D transparentSurfaceAccumulator;
 
 void clearMoments(ivec3 idx0)
 {
-	ivec3 idx1 = ivec3(idx0.xy, 1);
-	ivec3 idx2 = ivec3(idx0.xy, 2);
+    ivec3 idx1 = ivec3(idx0.xy, 1);
+    ivec3 idx2 = ivec3(idx0.xy, 2);
 
     imageStore(zeroth_moment, idx0, vec4(0.0));
     imageStore(moments, idx0, vec4(0.0));
@@ -72,8 +72,8 @@ void clearMoments(ivec3 idx0)
 
 void main()
 {
-	//ivec2 addr2D = addrGen2D(ivec2(gl_FragCoord.xy));
-	ivec2 addr2D = ivec2(gl_FragCoord.xy);
+    //ivec2 addr2D = addrGen2D(ivec2(gl_FragCoord.xy));
+    ivec2 addr2D = ivec2(gl_FragCoord.xy);
     ivec3 idx0Tiled = ivec3(addr2D, 0);
     ivec3 idx0 = ivec3(ivec2(gl_FragCoord.xy), 0);
     vec4 color = texelFetch(transparentSurfaceAccumulator, idx0.xy, 0);

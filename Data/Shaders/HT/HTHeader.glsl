@@ -32,89 +32,89 @@ uniform int viewportW;
 #if MAX_NUM_NODES == 1
 struct HTFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	float depth[1];
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor[1];
+    // Linear depth, i.e. distance to viewer
+    float depth[1];
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor[1];
 };
 #elif MAX_NUM_NODES == 2
 struct HTFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	vec2 depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec2 premulColor;
+    // Linear depth, i.e. distance to viewer
+    vec2 depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec2 premulColor;
 };
 #elif MAX_NUM_NODES == 4
 struct HTFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	vec4 depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec4 premulColor;
+    // Linear depth, i.e. distance to viewer
+    vec4 depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec4 premulColor;
 };
 #elif MAX_NUM_NODES % 4 == 0
 struct HTFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	vec4 depth[MAX_NUM_NODES/4];
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec4 premulColor[MAX_NUM_NODES/4];
+    // Linear depth, i.e. distance to viewer
+    vec4 depth[MAX_NUM_NODES/4];
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec4 premulColor[MAX_NUM_NODES/4];
 };
 #else
 struct HTFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	float depth[MAX_NUM_NODES];
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor[MAX_NUM_NODES];
+    // Linear depth, i.e. distance to viewer
+    float depth[MAX_NUM_NODES];
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor[MAX_NUM_NODES];
 };
 #endif
 
 struct HTFragmentNode
 {
-	// Linear depth, i.e. distance to viewer
-	float depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor;
+    // Linear depth, i.e. distance to viewer
+    float depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor;
 };
 
 
 #ifdef COMPRESS_HT_TAIL
 struct HTFragmentTail_compressed
 {
-	// Accumulated alpha (16 bit) and fragment count (16 bit)
-	uint accumAlphaAndCount;
-	// RGB Color (30 bit, i.e. 10 bits per component)
-	uint accumColor;
+    // Accumulated alpha (16 bit) and fragment count (16 bit)
+    uint accumAlphaAndCount;
+    // RGB Color (30 bit, i.e. 10 bits per component)
+    uint accumColor;
 };
 #else
 struct HTFragmentTail_compressed
 {
-	// RGB Color (32 bit floating point accumulator per component)
-	vec3 accumColor;
-	// Accumulated alpha (16 bit) and fragment count (16 bit)
+    // RGB Color (32 bit floating point accumulator per component)
+    vec3 accumColor;
+    // Accumulated alpha (16 bit) and fragment count (16 bit)
     uint accumAlphaAndCount;
 };
 #endif
 
 struct HTFragmentTail
 {
-	// Accumulated fragment count
-	uint accumFragCount;
-	// RGB Color (30 bit, i.e. 10 bits per component) and accumulated alpha
-	vec4 accumColor;
+    // Accumulated fragment count
+    uint accumFragCount;
+    // RGB Color (30 bit, i.e. 10 bits per component) and accumulated alpha
+    vec4 accumColor;
 };
 
 // Stores viewportW * viewportH * MAX_NUM_NODES fragments.
 // Access fragment i at screen position (x,y) using "nodes[w*npp*y + npp*x + i]".
 layout (std430, binding = 0) coherent buffer FragmentNodes
 {
-	HTFragmentNode_compressed nodes[];
+    HTFragmentNode_compressed nodes[];
 };
 layout (std430, binding = 1) buffer FragmentTails
 {
-	HTFragmentTail_compressed tails[];
+    HTFragmentTail_compressed tails[];
 };
 
 

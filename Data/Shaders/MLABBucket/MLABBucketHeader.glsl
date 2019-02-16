@@ -28,8 +28,8 @@ uniform float logDepthMax;
 // Maps depth to range [0,1] with logarithmic scale
 float logDepthWarp(float z)
 {
-	return (log(z) - logDepthMin) / (logDepthMax - logDepthMin);
-	//return (z - exp(logmin)) / (exp(logmax) - exp(logmin));
+    return (log(z) - logDepthMin) / (logDepthMax - logDepthMin);
+    //return (z - exp(logmin)) / (exp(logmax) - exp(logmin));
 }
 
 // Distance of infinitely far away fragments (used for initialization)
@@ -39,45 +39,45 @@ float logDepthWarp(float z)
 struct MLABBucketFragmentNode_compressed
 {
 #if NODES_PER_BUCKET == 1
-	// Linear depth, i.e. distance to viewer
-	float depth[1];
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor[1];
+    // Linear depth, i.e. distance to viewer
+    float depth[1];
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor[1];
 #elif NODES_PER_BUCKET == 2
-	// Linear depth, i.e. distance to viewer
-	vec2 depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec2 premulColor;
+    // Linear depth, i.e. distance to viewer
+    vec2 depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec2 premulColor;
 #elif NODES_PER_BUCKET == 4
-	// Linear depth, i.e. distance to viewer
-	vec4 depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec4 premulColor;
+    // Linear depth, i.e. distance to viewer
+    vec4 depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec4 premulColor;
 #elif NODES_PER_BUCKET % 4 == 0
-	// Linear depth, i.e. distance to viewer
-	vec4 depth[NODES_PER_BUCKET/4];
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec4 premulColor[NODES_PER_BUCKET/4];
+    // Linear depth, i.e. distance to viewer
+    vec4 depth[NODES_PER_BUCKET/4];
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec4 premulColor[NODES_PER_BUCKET/4];
 #else
-	// Linear depth, i.e. distance to viewer
-	float depth[NODES_PER_BUCKET];
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor[NODES_PER_BUCKET];
+    // Linear depth, i.e. distance to viewer
+    float depth[NODES_PER_BUCKET];
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor[NODES_PER_BUCKET];
 #endif
 };
 
 struct MLABBucketFragmentNode
 {
-	// Linear depth, i.e. distance to viewer
-	float depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor;
+    // Linear depth, i.e. distance to viewer
+    float depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor;
 };
 
 // Stores viewportW * viewportH * BUFFER_SIZE fragments.
 layout (std430, binding = 0) coherent buffer FragmentNodes
 {
-	MLABBucketFragmentNode_compressed nodes[];
+    MLABBucketFragmentNode_compressed nodes[];
 };
 
 #if defined(MLAB_DEPTH_OPACITY_BUCKETS)
@@ -89,7 +89,7 @@ layout (binding = 1, r8ui) coherent uniform uimage2D numUsedBucketsTexture;
 #elif defined(MLAB_MIN_DEPTH_BUCKETS)
 layout (std430, binding = 1) coherent buffer MinDepthBuffer
 {
-	float minDepth[];
+    float minDepth[];
 };
 #endif
 
@@ -249,9 +249,9 @@ void clearPixel(uint pixelIndex, ivec2 fragPos2D)
 
 #if defined(MLAB_DEPTH_OPACITY_BUCKETS)
     /*for (int i = 0; i < NUM_BUCKETS; i++) {
-    	imageStore(boundingBoxesTexture, ivec3(fragPos2D, i), vec4(1.0, 0.0, 1.0, 0.0));
+        imageStore(boundingBoxesTexture, ivec3(fragPos2D, i), vec4(1.0, 0.0, 1.0, 0.0));
     }*/
-	imageStore(boundingBoxesTexture, ivec3(fragPos2D, 0), vec4(1.0, 0.0, 1.0, 0.0));
+    imageStore(boundingBoxesTexture, ivec3(fragPos2D, 0), vec4(1.0, 0.0, 1.0, 0.0));
     imageStore(numUsedBucketsTexture, fragPos2D, uvec4(1u));
 #elif defined(MLAB_TRANSMITTANCE_BUCKETS)
     imageStore(numUsedBucketsTexture, fragPos2D, uvec4(1u));

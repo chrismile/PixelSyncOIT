@@ -8,8 +8,8 @@ out vec2 fragTexCoord;
 
 void main()
 {
-	fragTexCoord = texcoord;
-	gl_Position = mvpMatrix * position;
+    fragTexCoord = texcoord;
+    gl_Position = mvpMatrix * position;
 }
 
 -- Fragment
@@ -29,16 +29,16 @@ uniform vec2 texSize;
 
 void main()
 {
-	vec4 fragColor = texture2D(texture, fragTexCoord) * weights[0];
-	for (int i = 1; i < 3; i++) {
-		vec2 offset;
-		if (horzBlur) {
-			offset = vec2(offsets[i] / texSize.x, 0.0) ;
-		} else {
-			offset = vec2(0.0, offsets[i] / texSize.y);
-		}
-		fragColor += texture2D(texture, fragTexCoord+offset) * weights[i];
-		fragColor += texture2D(texture, fragTexCoord-offset) * weights[i];
-	}
-	fragColorOut = vec4(fragColor.xyz, 1.0);
+    vec4 fragColor = texture2D(texture, fragTexCoord) * weights[0];
+    for (int i = 1; i < 3; i++) {
+        vec2 offset;
+        if (horzBlur) {
+            offset = vec2(offsets[i] / texSize.x, 0.0) ;
+        } else {
+            offset = vec2(0.0, offsets[i] / texSize.y);
+        }
+        fragColor += texture2D(texture, fragTexCoord+offset) * weights[i];
+        fragColor += texture2D(texture, fragTexCoord-offset) * weights[i];
+    }
+    fragColorOut = vec4(fragColor.xyz, 1.0);
 }

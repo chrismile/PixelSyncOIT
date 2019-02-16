@@ -29,58 +29,58 @@ uniform int viewportW;
 #if MAX_NUM_NODES == 1
 struct MLABFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	float depth[1];
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor[1];
+    // Linear depth, i.e. distance to viewer
+    float depth[1];
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor[1];
 };
 #elif MAX_NUM_NODES == 2
 struct MLABFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	vec2 depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec2 premulColor;
+    // Linear depth, i.e. distance to viewer
+    vec2 depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec2 premulColor;
 };
 #elif MAX_NUM_NODES == 4
 struct MLABFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	vec4 depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec4 premulColor;
+    // Linear depth, i.e. distance to viewer
+    vec4 depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec4 premulColor;
 };
 #elif MAX_NUM_NODES % 4 == 0
 struct MLABFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	vec4 depth[MAX_NUM_NODES/4];
-	// RGB color (3 bytes), opacity (1 byte)
-	uvec4 premulColor[MAX_NUM_NODES/4];
+    // Linear depth, i.e. distance to viewer
+    vec4 depth[MAX_NUM_NODES/4];
+    // RGB color (3 bytes), opacity (1 byte)
+    uvec4 premulColor[MAX_NUM_NODES/4];
 };
 #else
 struct MLABFragmentNode_compressed
 {
-	// Linear depth, i.e. distance to viewer
-	float depth[MAX_NUM_NODES];
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor[MAX_NUM_NODES];
+    // Linear depth, i.e. distance to viewer
+    float depth[MAX_NUM_NODES];
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor[MAX_NUM_NODES];
 };
 #endif
 
 struct MLABFragmentNode
 {
-	// Linear depth, i.e. distance to viewer
-	float depth;
-	// RGB color (3 bytes), opacity (1 byte)
-	uint premulColor;
+    // Linear depth, i.e. distance to viewer
+    float depth;
+    // RGB color (3 bytes), opacity (1 byte)
+    uint premulColor;
 };
 
 // Stores viewportW * viewportH * MAX_NUM_NODES fragments.
 // Access fragment i at screen position (x,y) using "nodes[w*npp*y + npp*x + i]".
 layout (std430, binding = 0) coherent buffer FragmentNodes
 {
-	MLABFragmentNode_compressed nodes[];
+    MLABFragmentNode_compressed nodes[];
 };
 
 

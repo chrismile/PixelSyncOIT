@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = vec4(vertexPosition, 1.0);
+    gl_Position = vec4(vertexPosition, 1.0);
 }
 
 
@@ -47,8 +47,8 @@ layout (binding = 4, rgba16) coherent uniform image2DArray moments_shadow;
 
 void clearMoments(ivec3 idx0)
 {
-	ivec3 idx1 = ivec3(idx0.xy, 1);
-	ivec3 idx2 = ivec3(idx0.xy, 2);
+    ivec3 idx1 = ivec3(idx0.xy, 1);
+    ivec3 idx2 = ivec3(idx0.xy, 2);
 
     imageStore(zeroth_moment_shadow, idx0, vec4(0.0));
     imageStore(moments_shadow, idx0, vec4(0.0));

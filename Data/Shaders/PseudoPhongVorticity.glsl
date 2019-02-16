@@ -13,11 +13,11 @@ out float vorticity;
 
 void main()
 {
-	fragmentNormal = vertexNormal;
-	fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
-	screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
-	vorticity = vertexVorticity;
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    fragmentNormal = vertexNormal;
+    fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    vorticity = vertexVorticity;
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -210,37 +210,37 @@ void main()
 
     float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
 
-	// Use vorticity
-	vec4 diffuseColorVorticity = transferFunction(vorticity);
+    // Use vorticity
+    vec4 diffuseColorVorticity = transferFunction(vorticity);
 
     vec3 normal = fragmentNormal;
-	if (length(normal) < 0.5) {
-	    normal = vec3(1.0, 0.0, 0.0);
-	}
+    if (length(normal) < 0.5) {
+        normal = vec3(1.0, 0.0, 0.0);
+    }
 
-	vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(normal, lightDirection)/2.0
-	        + 0.75 * occlusionFactor * shadowFactor, 0.0, 1.0);
-	vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a);
+    vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(normal, lightDirection)/2.0
+            + 0.75 * occlusionFactor * shadowFactor, 0.0, 1.0);
+    vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a);
 
-	if (!transparencyMapping) {
-	    color.a = colorGlobal.a;
-	}
+    if (!transparencyMapping) {
+        color.a = colorGlobal.a;
+    }
 
     if (color.a < 1.0/255.0) {
         discard;
     }
 
 #ifdef DIRECT_BLIT_GATHER
-	// Direct rendering
-	fragColor = color;
+    // Direct rendering
+    fragColor = color;
 #else
 #if defined(REQUIRE_INVOCATION_INTERLOCK) && !defined(TEST_NO_INVOCATION_INTERLOCK)
-	// Area of mutual exclusion for fragments mapping to the same pixel
-	beginInvocationInterlockARB();
-	gatherFragment(color);
-	endInvocationInterlockARB();
+    // Area of mutual exclusion for fragments mapping to the same pixel
+    beginInvocationInterlockARB();
+    gatherFragment(color);
+    endInvocationInterlockARB();
 #else
-	gatherFragment(color);
+    gatherFragment(color);
 #endif
 #endif
 }

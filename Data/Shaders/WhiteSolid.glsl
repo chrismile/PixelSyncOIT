@@ -6,7 +6,7 @@ in vec4 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vertexPosition;
+    gl_Position = mvpMatrix * vertexPosition;
 }
 
 -- Fragment
@@ -18,5 +18,5 @@ out vec4 fragColor;
 
 void main()
 {
-	fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }

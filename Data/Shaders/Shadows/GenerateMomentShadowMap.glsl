@@ -42,7 +42,7 @@
 
 void gatherFragment(vec4 color)
 {
-	float depth = logDepthWarp(-screenSpacePosition.z, logDepthMinShadow, logDepthMaxShadow);
+    float depth = logDepthWarp(-screenSpacePosition.z, logDepthMinShadow, logDepthMaxShadow);
 
     float transmittance = 1.0 - color.a;
     ivec2 addr2D = ivec2(gl_FragCoord.xy);

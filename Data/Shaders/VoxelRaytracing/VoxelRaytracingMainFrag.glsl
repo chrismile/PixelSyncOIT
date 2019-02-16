@@ -6,7 +6,7 @@ in vec4 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vertexPosition;
+    gl_Position = mvpMatrix * vertexPosition;
 }
 
 
@@ -52,8 +52,8 @@ uniform vec4 hairStrandColor = vec4(1.0, 0.0, 0.0, 1.0);
 
 void main()
 {
-	ivec2 fragCoord = ivec2(gl_FragCoord.xy);
-	vec4 fragColor = clearColor;
+    ivec2 fragCoord = ivec2(gl_FragCoord.xy);
+    vec4 fragColor = clearColor;
 
     vec3 rayOrigin = (worldSpaceToVoxelSpace * inverseViewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     vec2 rayDirCameraSpace;
@@ -68,16 +68,16 @@ void main()
     float tNear, tFar;
     //rayBoxIntersectionRayCoords(rayOrigin, rayDirection, voxelGridLower, voxelGridUpper, tNear, tFar);
     if (rayBoxIntersectionRayCoords(rayOrigin, rayDirection, voxelGridLower, voxelGridUpper, tNear, tFar)) {
-		// First intersection point behind camera ray origin?
-		vec3 entrancePoint = rayOrigin + tNear * rayDirection + rayDirection*0.1;
+        // First intersection point behind camera ray origin?
+        vec3 entrancePoint = rayOrigin + tNear * rayDirection + rayDirection*0.1;
         vec3 exitPoint = rayOrigin + tFar * rayDirection - rayDirection*0.1;
-		if (tNear < 0.0) {
+        if (tNear < 0.0) {
             entrancePoint = rayOrigin;
         }
         fragColor = traverseVoxelGrid(rayOrigin, rayDirection, entrancePoint, exitPoint);
         blend(clearColor, fragColor);
         fragColor = vec4(fragColor.rgb / fragColor.a, fragColor.a);
-	}
+    }
 
-	imageStore(imageOutput, fragCoord, fragColor);
+    imageStore(imageOutput, fragCoord, fragColor);
 }

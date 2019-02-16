@@ -8,8 +8,8 @@ out vec2 fragTexCoord;
 
 void main()
 {
-	fragTexCoord = texcoord;
-	gl_Position = mvpMatrix * position;
+    fragTexCoord = texcoord;
+    gl_Position = mvpMatrix * position;
 }
 
 -- Fragment
@@ -23,11 +23,11 @@ out vec4 fragColor;
 
 void main()
 {
-	ivec2 size = textureSize(texture);
-	ivec2 iCoords = ivec2(int(fragTexCoord.x*size.x), int(fragTexCoord.y*size.y));
-	vec3 color = vec3(0, 0, 0); 
-	for (int currSample = 0; currSample < numSamples; currSample++) {
-		color += texelFetch(texture, iCoords, currSample).rgb;
-	}
-	fragColor = vec4(color / numSamples, 1);
+    ivec2 size = textureSize(texture);
+    ivec2 iCoords = ivec2(int(fragTexCoord.x*size.x), int(fragTexCoord.y*size.y));
+    vec3 color = vec3(0, 0, 0); 
+    for (int currSample = 0; currSample < numSamples; currSample++) {
+        color += texelFetch(texture, iCoords, currSample).rgb;
+    }
+    fragColor = vec4(color / numSamples, 1);
 }

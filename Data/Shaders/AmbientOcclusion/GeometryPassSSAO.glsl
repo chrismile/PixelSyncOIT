@@ -14,7 +14,7 @@ void main()
     mat3 invModelViewMatrix = transpose(inverse(mat3(modelViewMatrix)));
     fragPosition = (modelViewMatrix * vec4(vertexPosition, 1.0)).xyz;
     fragNormal = invModelViewMatrix * vertexNormal;
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 -- Fragment

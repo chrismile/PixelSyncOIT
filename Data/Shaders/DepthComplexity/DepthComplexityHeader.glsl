@@ -22,12 +22,12 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 // Size: viewportW * viewportH.
 layout (std430, binding = 1) coherent buffer NumFragmentsBuffer
 {
-	uint numFragmentsBuffer[];
+    uint numFragmentsBuffer[];
 };
 
 uniform int viewportW;
 
 uint addrGen(uvec2 addr2D)
 {
-	return addr2D.x + viewportW * addr2D.y;
+    return addr2D.x + viewportW * addr2D.y;
 }

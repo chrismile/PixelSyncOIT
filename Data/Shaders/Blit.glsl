@@ -8,8 +8,8 @@ out vec2 fragTexCoord;
 
 void main()
 {
-	fragTexCoord = texcoord;
-	gl_Position = mvpMatrix * position;
+    fragTexCoord = texcoord;
+    gl_Position = mvpMatrix * position;
 }
 
 -- Fragment
@@ -22,5 +22,5 @@ out vec4 fragColor;
 
 void main()
 {
-	fragColor = texture2D(texture, fragTexCoord);
+    fragColor = texture2D(texture, fragTexCoord);
 }

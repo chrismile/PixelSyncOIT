@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -23,18 +23,18 @@ out vec4 fragColor;
 void main()
 {
     ivec2 fragPos2D = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
-	uint pixelIndex = addrGen(uvec2(fragPos2D));
+    uint pixelIndex = addrGen(uvec2(fragPos2D));
 
-	memoryBarrierBuffer();
+    memoryBarrierBuffer();
 
-	// Read data from SSBO
-	MLABBucketFragmentNode nodeArray[BUFFER_SIZE+1];
-	loadFragmentNodes(pixelIndex, fragPos2D, nodeArray);
+    // Read data from SSBO
+    MLABBucketFragmentNode nodeArray[BUFFER_SIZE+1];
+    loadFragmentNodes(pixelIndex, fragPos2D, nodeArray);
 
 #ifdef MLAB_OPACITY_BUCKETS
-	// Sort the nodes if the buckets are not already sorted by depth
+    // Sort the nodes if the buckets are not already sorted by depth
     MLABBucketFragmentNode tmp;
-	bool changed;
+    bool changed;
     do {
         changed = false;
         for (uint i = 0; i < BUFFER_SIZE - 1; ++i) {
@@ -48,11 +48,11 @@ void main()
     } while (changed);
 #endif
 
-	// Read data from SSBO
-	vec3 color = vec3(0.0, 0.0, 0.0);
-	float trans = 1.0;
+    // Read data from SSBO
+    vec3 color = vec3(0.0, 0.0, 0.0);
+    float trans = 1.0;
 #ifdef MLAB_TRANSMITTANCE_BUCKETS
-	/*for (uint i = 0; i < NUM_BUCKETS; i++) {
+    /*for (uint i = 0; i < NUM_BUCKETS; i++) {
         float localTrans = trans;
         for (uint j = 0; j < NODES_PER_BUCKET; j++) {
             // Blend the accumulated color with the color of the fragment node
@@ -61,20 +61,20 @@ void main()
             localTrans = trans * colorSrc.a;
         }
         trans = localTrans;
-	}*/
-	for (uint i = 0; i < BUFFER_SIZE; i++) {
-		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackUnorm4x8(nodeArray[i].premulColor);
-		color.rgb = color.rgb + trans * colorSrc.rgb;
-		trans *= colorSrc.a;
-	}
+    }*/
+    for (uint i = 0; i < BUFFER_SIZE; i++) {
+        // Blend the accumulated color with the color of the fragment node
+        vec4 colorSrc = unpackUnorm4x8(nodeArray[i].premulColor);
+        color.rgb = color.rgb + trans * colorSrc.rgb;
+        trans *= colorSrc.a;
+    }
 #else
-	for (uint i = 0; i < BUFFER_SIZE; i++) {
-		// Blend the accumulated color with the color of the fragment node
-		vec4 colorSrc = unpackUnorm4x8(nodeArray[i].premulColor);
-		color.rgb = color.rgb + trans * colorSrc.rgb;
-		trans *= colorSrc.a;
-	}
+    for (uint i = 0; i < BUFFER_SIZE; i++) {
+        // Blend the accumulated color with the color of the fragment node
+        vec4 colorSrc = unpackUnorm4x8(nodeArray[i].premulColor);
+        color.rgb = color.rgb + trans * colorSrc.rgb;
+        trans *= colorSrc.a;
+    }
 #endif
     //uint numBucketsUsed = imageLoad(numUsedBucketsTexture, fragPos2D).r;
 

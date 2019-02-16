@@ -23,24 +23,24 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 // A fragment node stores rendering information about one specific fragment
 struct FragmentNode
 {
-	// RGBA color of the node
-	uint color;
-	// Depth value of the fragment (in view space)
-	float depth;
+    // RGBA color of the node
+    uint color;
+    // Depth value of the fragment (in view space)
+    float depth;
 };
 
 // Stores viewportW * viewportH * MAX_NUM_NODES fragments.
 // Access fragment i at screen position (x,y) using "nodes[w*npp*y + npp*x + i]".
 layout (std430, binding = 0) coherent buffer FragmentNodes
 {
-	FragmentNode nodes[];
+    FragmentNode nodes[];
 };
 
 // States how many fragment nodes are stored in the nodes buffer for each pixel.
 // Size: viewportW * viewportH.
 layout (std430, binding = 1) coherent buffer NumFragmentsBuffer
 {
-	uint numFragmentsBuffer[];
+    uint numFragmentsBuffer[];
 };
 
 uniform int viewportW;

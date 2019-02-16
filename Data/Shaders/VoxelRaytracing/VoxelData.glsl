@@ -12,11 +12,11 @@ uniform float lineRadius = 0.2;
 
 struct LineSegment
 {
-	vec3 v1; // Vertex position
-	float a1; // Vertex attribute
-	vec3 v2; // Vertex position
-	float a2; // Vertex attribute
-	uint lineID;
+    vec3 v1; // Vertex position
+    float a1; // Vertex attribute
+    vec3 v2; // Vertex position
+    float a2; // Vertex attribute
+    uint lineID;
 };
 
 // Works until quantization resolution of 64^2 (6 + 2 * 2log2(64) = 30)
@@ -25,31 +25,31 @@ struct LineSegmentCompressed
     // Bit 0-2, 3-5: Face ID of start/end point.
     // For c = log2(QUANTIZATION_RESOLUTION^2) = 2*log2(QUANTIZATION_RESOLUTION):
     // Bit 6-(5+c), (6+c)-(5+2c): Quantized face position of start/end point.
-	uint linePosition;
+    uint linePosition;
     // Bit 11-15: Line ID (5 bits for bitmask of 2^5 bits = 32 bits).
-	// Bit 16-23, 24-31: Attribute of start/end point (normalized to [0,1]).
-	uint attributes;
+    // Bit 16-23, 24-31: Attribute of start/end point (normalized to [0,1]).
+    uint attributes;
 };
 
 // Offset of voxels in buffer above
 layout (std430, binding = 0) readonly buffer VoxelLineListOffsetBuffer
 {
-	uint voxelLineListOffsets[];
+    uint voxelLineListOffsets[];
 };
 
 // Offset of voxels in buffer above
 layout (std430, binding = 1) readonly buffer NumLinesBuffer
 {
-	uint numLinesInVoxel[];
+    uint numLinesInVoxel[];
 };
 
 // Buffer containing all line segments
 layout (std430, binding = 2) readonly buffer LineSegmentBuffer
 {
 #ifdef PACK_LINES
-	LineSegmentCompressed lineSegments[];
+    LineSegmentCompressed lineSegments[];
 #else
-	LineSegment lineSegments[];
+    LineSegment lineSegments[];
 #endif
 };
 

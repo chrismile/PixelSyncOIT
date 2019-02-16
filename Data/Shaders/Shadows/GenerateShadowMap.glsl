@@ -14,7 +14,7 @@ void main()
 #ifdef MODEL_WITH_VORTICITY
     fragVorticity = vertexVorticity;
 #endif
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 

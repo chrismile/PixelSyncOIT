@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -21,5 +21,5 @@ void main()
 void main()
 {
     ivec2 fragPos2D = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
-	clearPixel(addrGen(uvec2(fragPos2D)), fragPos2D);
+    clearPixel(addrGen(uvec2(fragPos2D)), fragPos2D);
 }

@@ -6,7 +6,7 @@ layout(location = 0) in vec3 vertexPosition;
 
 void main()
 {
-	gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -19,7 +19,7 @@ void main()
 
 void main()
 {
-	uint x = uint(gl_FragCoord.x);
-	uint y = uint(gl_FragCoord.y);
-	numFragmentsBuffer[addrGen(uvec2(x,y))] = 0;
+    uint x = uint(gl_FragCoord.x);
+    uint y = uint(gl_FragCoord.y);
+    numFragmentsBuffer[addrGen(uvec2(x,y))] = 0;
 }

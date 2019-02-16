@@ -41,35 +41,35 @@ uniform vec4 hairStrandColor = vec4(1.0, 0.0, 0.0, 1.0);
 
 void main()
 {
-	uvec2 globalID = gl_GlobalInvocationID.xy;
-	if (globalID.x >= viewportSize.x || globalID.y >= viewportSize.y) {
-		// Outside of viewport
-		return;
-	}
+    uvec2 globalID = gl_GlobalInvocationID.xy;
+    if (globalID.x >= viewportSize.x || globalID.y >= viewportSize.y) {
+        // Outside of viewport
+        return;
+    }
 
-	ivec2 fragCoord = ivec2(globalID);
-	vec4 fragColor = clearColor;
+    ivec2 fragCoord = ivec2(globalID);
+    vec4 fragColor = clearColor;
 
-	// Testing code
-	/*if (length(vec2(fragCoord)) < 200.0f) {
-		//fragColor = vec4(0.0, 1.0, 0.0, 1.0);
-	}
+    // Testing code
+    /*if (length(vec2(fragCoord)) < 200.0f) {
+        //fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    }
 
-	vec2 centeredWindowCoords = vec2(fragCoord) - vec2(viewportSize) / 2.0;
-	vec3 rayOrigin = vec3(centeredWindowCoords, 0.0);
-	vec3 rayDirection = vec3(0.0, 0.0, -1.0);
+    vec2 centeredWindowCoords = vec2(fragCoord) - vec2(viewportSize) / 2.0;
+    vec3 rayOrigin = vec3(centeredWindowCoords, 0.0);
+    vec3 rayDirection = vec3(0.0, 0.0, -1.0);
 
-	float tubeRadius = 100.0f;
+    float tubeRadius = 100.0f;
     bool hasIntersection = false;
 
-	vec3 tubePoint1 = vec3(-300.0, -49.0, -200.0);
-	vec3 tubePoint2 = vec3(300.0, 100.0, -150.0);
-	vec3 tubeIntersection, sphereIntersection1, sphereIntersection2;
-	bool hasTubeIntersection, hasSphereIntersection1, hasSphereIntersection2;
-	hasSphereIntersection1 = raySphereIntersection(rayOrigin, rayDirection, tubePoint1, tubeRadius, sphereIntersection1);
-	hasSphereIntersection2 = raySphereIntersection(rayOrigin, rayDirection, tubePoint2, tubeRadius, sphereIntersection2);
-	hasTubeIntersection = rayTubeIntersection(rayOrigin, rayDirection, tubePoint1, tubePoint2, tubeRadius, tubeIntersection);
-	hasIntersection = hasTubeIntersection || hasSphereIntersection1 || hasSphereIntersection2;
+    vec3 tubePoint1 = vec3(-300.0, -49.0, -200.0);
+    vec3 tubePoint2 = vec3(300.0, 100.0, -150.0);
+    vec3 tubeIntersection, sphereIntersection1, sphereIntersection2;
+    bool hasTubeIntersection, hasSphereIntersection1, hasSphereIntersection2;
+    hasSphereIntersection1 = raySphereIntersection(rayOrigin, rayDirection, tubePoint1, tubeRadius, sphereIntersection1);
+    hasSphereIntersection2 = raySphereIntersection(rayOrigin, rayDirection, tubePoint2, tubeRadius, sphereIntersection2);
+    hasTubeIntersection = rayTubeIntersection(rayOrigin, rayDirection, tubePoint1, tubePoint2, tubeRadius, tubeIntersection);
+    hasIntersection = hasTubeIntersection || hasSphereIntersection1 || hasSphereIntersection2;
 
     // Get closest intersection point
     int closestIntersectionIdx = 0;
@@ -94,7 +94,7 @@ void main()
         dist = distSphere2;
     }
 
-	if (hasIntersection) {
+    if (hasIntersection) {
         vec3 closestIntersectionNormal;
         float closestIntersectionAttribute;
         if (closestIntersectionIdx == 0) {
@@ -132,9 +132,9 @@ void main()
     vec3 upper = boxPosition + vec3(100, 100, 0);
     vec3 entrancePoint;
     vec3 exitPoint;
-	if (rayBoxIntersection(rayOrigin, rayDirection, lower, upper, entrancePoint, exitPoint)) {
-		fragColor = vec4(0.0, 1.0, 0.0, 1.0);
-	}*/
+    if (rayBoxIntersection(rayOrigin, rayDirection, lower, upper, entrancePoint, exitPoint)) {
+        fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    }*/
 
 
 
@@ -151,16 +151,16 @@ void main()
     vec3 voxelGridUpper = vec3(gridResolution);
     float tNear, tFar;
     if (rayBoxIntersectionRayCoords(rayOrigin, rayDirection, voxelGridLower, voxelGridUpper, tNear, tFar)) {
-		// First intersection point behind camera ray origin?
-		vec3 entrancePoint = rayOrigin + tNear * rayDirection + rayDirection*0.1;
+        // First intersection point behind camera ray origin?
+        vec3 entrancePoint = rayOrigin + tNear * rayDirection + rayDirection*0.1;
         vec3 exitPoint = rayOrigin + tFar * rayDirection - rayDirection*0.1;
-		if (tNear < 0.0) {
+        if (tNear < 0.0) {
             entrancePoint = rayOrigin;
         }
         fragColor = traverseVoxelGrid(rayOrigin, rayDirection, entrancePoint, exitPoint);
         blend(clearColor, fragColor);
         fragColor = vec4(fragColor.rgb / fragColor.a, fragColor.a);
-	}
+    }
 
-	imageStore(imageOutput, fragCoord, fragColor);
+    imageStore(imageOutput, fragCoord, fragColor);
 }

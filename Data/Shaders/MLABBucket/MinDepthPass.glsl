@@ -23,13 +23,13 @@ uniform float logDepthMax;
 // Maps depth to range [0,1] with logarithmic scale
 float logDepthWarp(float z)
 {
-	return (log(z) - logDepthMin) / (logDepthMax - logDepthMin);
-	//return (z - exp(logmin)) / (exp(logmax) - exp(logmin));
+    return (log(z) - logDepthMin) / (logDepthMax - logDepthMin);
+    //return (z - exp(logmin)) / (exp(logmax) - exp(logmin));
 }
 
 layout (std430, binding = 1) coherent buffer MinDepthBuffer
 {
-	float minDepth[];
+    float minDepth[];
 };
 
 #include "TiledAddress.glsl"
@@ -40,10 +40,10 @@ layout (std430, binding = 1) coherent buffer MinDepthBuffer
 void gatherFragment(vec4 color)
 {
     ivec2 fragPos2D = ivec2(int(gl_FragCoord.x), int(gl_FragCoord.y));
-	uint pixelIndex = addrGen(uvec2(fragPos2D));
+    uint pixelIndex = addrGen(uvec2(fragPos2D));
 
-	float depth = logDepthWarp(-screenSpacePosition.z);
-	if (color.a > OPACITY_THRESHOLD && depth < minDepth[pixelIndex]) {
+    float depth = logDepthWarp(-screenSpacePosition.z);
+    if (color.a > OPACITY_THRESHOLD && depth < minDepth[pixelIndex]) {
         minDepth[pixelIndex] = depth;
-	}
+    }
 }
