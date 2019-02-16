@@ -561,6 +561,7 @@ PixelSyncApp::~PixelSyncApp()
     }
 }
 
+#include <Graphics/OpenGL/RendererGL.hpp>
 void PixelSyncApp::render()
 {
     if (videoWriter == NULL && recording) {
@@ -581,6 +582,7 @@ void PixelSyncApp::render()
     Renderer->setViewMatrix(matrixIdentity());
     Renderer->setModelMatrix(matrixIdentity());
     Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
+    sgl::RendererGL *rgl = (sgl::RendererGL*)Renderer;
 
     renderGUI();
 
@@ -684,8 +686,8 @@ void PixelSyncApp::renderOIT()
     }
 #endif
 
-    // Render light direction sphere
-    if (true) {
+    // Render light direction sphere TODO
+    /*if (true) {
         auto solidShader = sgl::ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
         solidShader->setUniform("color", sgl::Color(255, 255, 0));
         auto lightPlaneRenderData = sgl::ShaderManager->createShaderAttributes(solidShader);
@@ -703,7 +705,7 @@ void PixelSyncApp::renderOIT()
         glEnable(GL_DEPTH_TEST);
         Renderer->render(lightPlaneRenderData);
         glDisable(GL_DEPTH_TEST);
-    }
+    }*/
 
     // Wireframe mode
     if (wireframe) {

@@ -91,7 +91,7 @@ void resolveMomentsShadow(out float transmittance_at_depth, out float total_tran
             MomentOITShadow.moment_bias, MomentOITShadow.overestimation, bias_vector);
 #endif
 #elif NUM_MOMENTS_SHADOW == 6
-    vec3 idx2 = vec3(idx0.xy, 2);
+    vec3 idx2 = vec3(idx0.xy, 2.0);
 #if TRIGONOMETRIC_SHADOW
     vec2 trig_b[3];
     trig_b[0] = texture(moments_shadow, idx0).xy;
@@ -146,7 +146,7 @@ void resolveMomentsShadow(out float transmittance_at_depth, out float total_tran
             MomentOITShadow.moment_bias, MomentOITShadow.overestimation, bias_vector);
 #endif
 #elif NUM_MOMENTS_SHADOW == 8
-#if TRIGONOMETRIC
+#if TRIGONOMETRIC_SHADOW
     vec4 b_tmp = texture(moments_shadow, idx0);
     vec4 b_tmp2 = texture(moments_shadow, idx1);
 #if SINGLE_PRECISION_SHADOW

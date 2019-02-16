@@ -93,7 +93,7 @@ void MomentShadowMapping::createShadowMapPass(std::function<void()> sceneRenderF
 
     // TODO: Resolution change of map, depends on size of framebuffer, need to adapt b0 etc. size on slider change
 
-    sgl::Renderer->unbindFBO();
+    /*sgl::Renderer->unbindFBO();
     glDisable(GL_DEPTH_TEST);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     auto shadowMapDebugFBO = sgl::Renderer->createFBO();
@@ -136,7 +136,7 @@ void MomentShadowMapping::createShadowMapPass(std::function<void()> sceneRenderF
     glReadPixels(0, 0, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, GL_RGBA, GL_UNSIGNED_BYTE, bitmap->getPixels());
     //glGetTextureImage(static_cast<sgl::TextureGL*>(shadowMap.get())->getTexture(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
     //        SHADOW_MAP_RESOLUTION*SHADOW_MAP_RESOLUTION*32, (void*)bitmap->getPixels());
-    bitmap->savePNG("shadowmap.png", true);
+    bitmap->savePNG("shadowmap.png", true);*/
 
 
 
@@ -166,7 +166,9 @@ void MomentShadowMapping::setUniformValuesCreateShadowMap()
         createShadowMapShader->setUniformImageTexture(5, bExtra, textureSettingsBExtra.internalFormat, GL_READ_WRITE, 0, true, 0);
     }
     sgl::ShaderManager->bindUniformBuffer(2, momentOITUniformBuffer);
-    //createShadowMapShader->setUniformBuffer(2, "MomentOITUniformDataShadow", momentOITUniformBuffer);
+
+    createShadowMapShader->setUniform("logDepthMinShadow", logDepthMinShadow);
+    createShadowMapShader->setUniform("logDepthMaxShadow", logDepthMaxShadow);
 }
 
 void MomentShadowMapping::setUniformValuesRenderScene(sgl::ShaderProgramPtr transparencyShader)
@@ -269,8 +271,6 @@ void MomentShadowMapping::reloadShaders()
     sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"GenerateMomentShadowMap.glsl\"");
     sgl::ShaderManager->addPreprocessorDefine("SHADOW_MAPPING_MOMENTS_GENERATE", "");
     createShadowMapShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
-    createShadowMapShader->setUniform("logDepthMinShadow", logDepthMinShadow);
-    createShadowMapShader->setUniform("logDepthMaxShadow", logDepthMaxShadow);
     sgl::ShaderManager->removePreprocessorDefine("SHADOW_MAPPING_MOMENTS_GENERATE");
     sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", oldGatherHeader);
 
@@ -437,8 +437,6 @@ void MomentShadowMapping::updateDepthRange()
     maxViewZ = std::max(maxViewZ, LIGHT_NEAR_CLIP_DISTANCE);
     logDepthMinShadow = log(minViewZ);
     logDepthMaxShadow = log(maxViewZ);
-    createShadowMapShader->setUniform("logDepthMinShadow", logDepthMinShadow);
-    createShadowMapShader->setUniform("logDepthMaxShadow", logDepthMaxShadow);
 }
 
 void MomentShadowMapping::setSceneBoundingBox(const sgl::AABB3 &sceneBB)
