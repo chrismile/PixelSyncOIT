@@ -157,7 +157,8 @@ void TransferFunctionWindow::computeHistogram(const std::vector<float> &attribut
     histogram.clear();
     histogram.resize(histogramResolution);
     for (float attr : attributes) {
-        int index = (attr - maxAttr) / (minAttr - maxAttr) * (histogramResolution-1);
+        int index = glm::clamp(static_cast<int>((attr - minAttr) / (maxAttr - minAttr) * (histogramResolution-1)),
+                0, 255);
         histogram.at(index) += 1;
     }
 
