@@ -43,16 +43,23 @@ const char *const MODEL_FILENAMES[] = {
         "Data/Hair/wWavy.hair",
 };
 const char *const MODEL_DISPLAYNAMES[] = {
-        "Single Streamline", "Streamlines", "Streamlines (Triangles)", "Ship", "Monkey", "Box", "Plane", "Dragon",
+        "Single Streamline", "Streamlines (Lines)", "Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon",
        //"Lagranto",
        "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy"
 };
 
 enum AOTechniqueName {
-    AO_TECHNIQUE_NONE = 0, AO_TECHNIQUE_SSAO = 1, AO_TECHNIQUE_VOXEL_AO = 2
+        AO_TECHNIQUE_NONE = 0, AO_TECHNIQUE_SSAO, AO_TECHNIQUE_VOXEL_AO
 };
 const char *const AO_TECHNIQUE_DISPLAYNAMES[] = {
         "No Ambient Occlusion", "Screen Space AO", "Voxel Ambient Occlusion"
+};
+
+enum ImportanceCriterionType {
+        IMPORTANCE_CRITERION_VORTICITY = 0, IMPORTANCE_CRITERION_LINE_CURVATURE, IMPORTANCE_CRITERION_LINE_LENGTH
+};
+const char *const IMPORTANCE_CRITERION_DISPLAYNAMES[] = {
+        "Vorticity", "Line Curvature", "Line Length"
 };
 
 

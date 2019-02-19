@@ -3,6 +3,7 @@
 //
 
 #include <cstring>
+#include <cassert>
 #include <fstream>
 
 #include <GL/glew.h>
@@ -15,6 +16,7 @@
 #include <Graphics/Renderer.hpp>
 #include <Graphics/OpenGL/Texture.hpp>
 
+#include "../TransferFunctionWindow.hpp"
 #include "VoxelData.hpp"
 
 const uint32_t VOXEL_GRID_FORMAT_VERSION = 3u;
@@ -459,47 +461,9 @@ void generateVoxelAOFactorsFromDensity(const std::vector<float> &voxelDensities,
 
 
 
-/**
- * Uses standard transfer function (Data/TransferFunctions/Standard.xml).
- */
-struct OpacityNode
-{
-    float attribute;
-    float opacity;
-
-    OpacityNode(float attribute, float opacity) : attribute(attribute), opacity(opacity) { }
-};
-
-float opacityMapping(float attr, float maxVorticity) {
-    const std::vector<OpacityNode> opacityNodes = {
-            OpacityNode(0.0f, 0.0f),
-            OpacityNode(0.15955056250095367f, 0.0f),
-            OpacityNode(0.25168538093566895f, 0.0f),
-            //OpacityNode(0.15955056250095367f, 0.016778528690338135f),
-            //OpacityNode(0.25168538093566895f, 0.013422846794128418f),
-            OpacityNode(0.36629214882850647f, 0.0f),
-            OpacityNode(0.45842695236206055f, 0.5402684211730957f),
-            OpacityNode(0.56629210710525513f, 1.0f),
-            OpacityNode(0.80674159526824951f, 0.20805370807647705f),
-            OpacityNode(0.88988763093948364f, 0.51677852869033813f),
-            OpacityNode(1.0f, 0.89932882785797119f),
-    };
-
-    attr = glm::clamp(attr/maxVorticity, 0.0f, 1.0f);
-
-    const int N = opacityNodes.size();
-    for (int i = 0; i < N; i++) {
-        if (opacityNodes.at(i).attribute == attr) {
-            return opacityNodes.at(i).opacity;
-        } else if (attr < opacityNodes.at(i).attribute) {
-            float pos0 = opacityNodes.at(i-1).attribute;
-            float pos1 = opacityNodes.at(i).attribute;
-            float opacity0 = opacityNodes.at(i-1).opacity;
-            float opacity1 = opacityNodes.at(i).opacity;
-            float factor = 1.0 - (pos1 - attr) / (pos1 - pos0);
-            return sgl::interpolateLinear(opacity0, opacity1, factor);
-        }
-    }
-
-    return opacityNodes.back().opacity;
+// Uses global transfer function window handle to get transfer function.
+float opacityMapping(float attr, float maxAttr) {
+    assert(g_TransferFunctionWindowHandle);
+    attr = glm::clamp(attr/maxAttr, 0.0f, 1.0f);
+    return g_TransferFunctionWindowHandle->getOpacityAtAttribute(attr);
 }

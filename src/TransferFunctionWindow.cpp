@@ -22,6 +22,8 @@
 
 using namespace tinyxml2;
 
+TransferFunctionWindow *g_TransferFunctionWindowHandle = NULL;
+
 TransferFunctionWindow::TransferFunctionWindow()
 {
     colorPoints = { ColorPoint(sgl::Color(255, 255, 255), 0.0f), ColorPoint(sgl::Color(255, 0, 0), 1.0f) };
@@ -38,6 +40,8 @@ TransferFunctionWindow::TransferFunctionWindow()
     if (sgl::FileUtils::get()->exists(saveDirectory + "Standard.xml")) {
         loadFunctionFromFile(saveDirectory + "Standard.xml");
     }
+
+    g_TransferFunctionWindowHandle = this;
 }
 
 bool TransferFunctionWindow::saveFunctionToFile(const std::string &filename)

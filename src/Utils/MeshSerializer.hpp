@@ -58,18 +58,29 @@ struct ObjMesh
  *  - A vertex mode (points, lines, triangles, ...).
  *  - A list of indices (optional, can be empty). 32-bit indices were chosen, as all scientific datasets have more than 2^16 vertices anyways.
  *  - A list of vertex attributes.
+ *  - A list of uniform attributes.
  *
- * An attribute could be e.g. the vertex position, normal, color, vorticity, ... and consists of:
+ * A vertex attribute could be e.g. the vertex position, normal, color, vorticity, ... and consists of:
  *  - A name (string), which is used as the binding point for the vertex shader.
  *  - The attribute format (e.g. byte, unsigned int, float, ...).
  *  - Die number of components, e.g. 3 for a vector containing three elements or 1 for a scalar value.
  *  - The actual attribute data as an array of bytes. It is expected that the number of vertices is the same for each attribute.
  *    The number of vertices can be explicitly computed by "data.size() / numComponents / dataFormatNumBytes".
+ *
+ * A uniform attribute is an attribute constant over all vertices.
  */
 
 struct BinaryMeshAttribute
 {
     std::string name; // e.g. "vertexPosition"
+    sgl::VertexAttributeFormat attributeFormat;
+    uint32_t numComponents;
+    std::vector<uint8_t> data;
+};
+
+struct BinaryMeshUniform
+{
+    std::string name; // e.g. "maxVorticity"
     sgl::VertexAttributeFormat attributeFormat;
     uint32_t numComponents;
     std::vector<uint8_t> data;
@@ -81,6 +92,7 @@ struct BinarySubMesh
     sgl::VertexMode vertexMode;
     std::vector<uint32_t> indices;
     std::vector<BinaryMeshAttribute> attributes;
+    std::vector<BinaryMeshUniform> uniforms;
 };
 
 struct BinaryMesh
@@ -100,6 +112,12 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh);
  */
 void readMesh3D(const std::string &filename, BinaryMesh &mesh);
 
+struct ImportanceCriterionAttribute {
+    std::string name;
+    std::vector<float> attributes;
+    float minAttribute;
+    float maxAttribute;
+};
 
 class MeshRenderer
 {
@@ -116,6 +134,7 @@ public:
     std::vector<ObjMaterial> materials;
     sgl::AABB3 boundingBox;
     sgl::Sphere boundingSphere;
+    std::vector<ImportanceCriterionAttribute> importanceCriterionAttributes;
 };
 
 
@@ -124,7 +143,6 @@ public:
  * @param shader: The shader to use for the mesh.
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
-MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader,
-        std::vector<float> &lineAttributes, float *maxVorticity = NULL, bool shuffleData = false);
+MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData = false);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */

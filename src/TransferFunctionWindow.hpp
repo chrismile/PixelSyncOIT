@@ -99,5 +99,7 @@ private:
     std::vector<ColorPoint> colorPoints;
 };
 
+extern TransferFunctionWindow *g_TransferFunctionWindowHandle;
+
 
 #endif //PIXELSYNCOIT_TRANSFERFUNCTIONWINDOW_HPP

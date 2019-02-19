@@ -26,7 +26,7 @@
 using namespace std;
 using namespace sgl;
 
-const uint32_t MESH_FORMAT_VERSION = 3u;
+const uint32_t MESH_FORMAT_VERSION = 4u;
 
 void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
     std::ofstream file(filename.c_str(), std::ofstream::binary);
@@ -43,13 +43,23 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
         stream.write(submesh.material);
         stream.write((uint32_t)submesh.vertexMode);
         stream.writeArray(submesh.indices);
-        stream.write((uint32_t)submesh.attributes.size());
 
+        // Write attributes
+        stream.write((uint32_t)submesh.attributes.size());
         for (const BinaryMeshAttribute &attribute : submesh.attributes) {
             stream.write(attribute.name);
             stream.write((uint32_t)attribute.attributeFormat);
             stream.write((uint32_t)attribute.numComponents);
             stream.writeArray(attribute.data);
+        }
+
+        // Write uniforms
+        stream.write((uint32_t)submesh.uniforms.size());
+        for (const BinaryMeshUniform &uniform : submesh.uniforms) {
+            stream.write(uniform.name);
+            stream.write((uint32_t)uniform.attributeFormat);
+            stream.write((uint32_t)uniform.numComponents);
+            stream.writeArray(uniform.data);
         }
     }
 
@@ -91,6 +101,7 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
         submesh.vertexMode = (sgl::VertexMode)vertexMode;
         stream.readArray(mesh.submeshes.at(i).indices);
 
+        // Read attributes
         uint32_t numAttributes;
         stream.read(numAttributes);
         submesh.attributes.resize(numAttributes);
@@ -103,6 +114,21 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
             attribute.attributeFormat = (sgl::VertexAttributeFormat)format;
             stream.read(attribute.numComponents);
             stream.readArray(attribute.data);
+        }
+
+        // Read uniforms
+        uint32_t numUniforms;
+        stream.read(numUniforms);
+        submesh.uniforms.resize(numUniforms);
+
+        for (uint32_t j = 0; j < numUniforms; j++) {
+            BinaryMeshUniform &uniform = submesh.uniforms.at(j);
+            stream.read(uniform.name);
+            uint32_t format;
+            stream.read(format);
+            uniform.attributeFormat = (sgl::VertexAttributeFormat)format;
+            stream.read(uniform.numComponents);
+            stream.readArray(uniform.data);
         }
     }
 
@@ -254,8 +280,7 @@ std::vector<uint32_t> shuffleIndicesTriangles(const std::vector<uint32_t> &indic
     return shuffledIndices;
 }
 
-MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader,
-        std::vector<float> &lineAttributes, float *maxVorticity, bool shuffleData)
+MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData)
 {
     MeshRenderer meshRenderer;
     BinaryMesh mesh;
@@ -273,6 +298,10 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
     // Bounding box of all submeshes combined
     AABB3 totalBoundingBox(glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 
+    // Importance criterion attributes are bound to location 3 and onwards in vertex shader
+    int importanceCriterionLocationCounter = 3;
+
+    // Iterate over all submeshes and create rendering data
     for (size_t i = 0; i < mesh.submeshes.size(); i++) {
         BinarySubMesh &submesh = mesh.submeshes.at(i);
         ShaderAttributesPtr renderData = ShaderManager->createShaderAttributes(shader);
@@ -301,11 +330,44 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
             BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
-            bool isNormalizedColor = (meshAttribute.name == "vertexColor");
+
+            // Assume only one component means importance criterion like vorticity, line width, ...
+            if (meshAttribute.numComponents == 1) {
+                ImportanceCriterionAttribute importanceCriterionAttribute;
+                importanceCriterionAttribute.name = meshAttribute.name;
+
+                // Copy values to mesh renderer data structure
+                float *attributeValues = (float*)&meshAttribute.data.front();
+                size_t numAttributeValues = meshAttribute.data.size() / sizeof(float);
+                importanceCriterionAttribute.attributes.resize(numAttributeValues);
+                memcpy(&importanceCriterionAttribute.attributes.front(), &meshAttribute.data.front(),
+                        meshAttribute.data.size());
+
+                // Compute minimum and maximum value
+                float minValue = FLT_MAX, maxValue = 0.0f;
+                #pragma omp parallel for reduction(min:minValue) reduction(max:maxValue)
+                for (size_t k = 0; k < numAttributeValues; k++) {
+                    minValue = std::min(minValue, attributeValues[k]);
+                    maxValue = std::max(maxValue, attributeValues[k]);
+                }
+                importanceCriterionAttribute.minAttribute = minValue;
+                importanceCriterionAttribute.maxAttribute = maxValue;
+
+                meshRenderer.importanceCriterionAttributes.push_back(importanceCriterionAttribute);
+            }
+
             GeometryBufferPtr attributeBuffer = Renderer->createGeometryBuffer(
                     meshAttribute.data.size(), (void*)&meshAttribute.data.front(), VERTEX_BUFFER);
-            renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
-                    meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, isNormalizedColor);
+            if (meshAttribute.numComponents == 1) {
+                // Importance criterion attributes are bound to location 3 and onwards in vertex shader
+                renderData->addGeometryBuffer(attributeBuffer, importanceCriterionLocationCounter,
+                        meshAttribute.attributeFormat, meshAttribute.numComponents);
+                importanceCriterionLocationCounter += 1;
+            } else {
+                bool isNormalizedColor = (meshAttribute.name == "vertexColor");
+                renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
+                        meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, isNormalizedColor);
+            }
             meshRenderer.shaderAttributeNames.insert(meshAttribute.name);
 
             if (meshAttribute.name == "vertexPosition") {
@@ -313,16 +375,6 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 vertices.resize(meshAttribute.data.size() / sizeof(glm::vec3));
                 memcpy(&vertices.front(), &meshAttribute.data.front(), meshAttribute.data.size());
                 totalBoundingBox.combine(computeAABB(vertices));
-            }
-            if (maxVorticity != NULL && meshAttribute.name == "vertexVorticity") {
-                float *vorticities = (float*)&meshAttribute.data.front();
-                size_t numVorticityValues = meshAttribute.data.size() / sizeof(float);
-                *maxVorticity = 0.0f;
-                lineAttributes.reserve(numVorticityValues);
-                for (size_t k = 0; k < numVorticityValues; k++) {
-                    *maxVorticity = std::max(*maxVorticity, vorticities[k]);
-                    lineAttributes.push_back(vorticities[k]);
-                }
             }
         }
 

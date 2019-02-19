@@ -4,12 +4,16 @@
 
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
-layout(location = 2) in float vertexVorticity;
+layout(location = 3) in float vertexVorticity;
+layout(location = 4) in float vertexLineCurvature;
+layout(location = 5) in float vertexLineLength;
 
 out vec3 fragmentNormal;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 out float vorticity;
+out float lineCurvature;
+out float lineLength;
 
 void main()
 {
@@ -17,6 +21,8 @@ void main()
     fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
     screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
     vorticity = vertexVorticity;
+    lineCurvature = vertexLineCurvature;
+    lineLength = vertexLineLength;
     gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
@@ -30,6 +36,8 @@ layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexLineNormal;
 layout(location = 2) in vec3 vertexLineTangent;
 layout(location = 3) in float vertexVorticity;
+layout(location = 4) in float vertexLineCurvature;
+layout(location = 5) in float vertexLineLength;
 
 out VertexData
 {
@@ -37,6 +45,8 @@ out VertexData
     vec3 lineNormal;
     vec3 lineTangent;
     float lineVorticity;
+    float lineCurvature;
+    float lineLength;
 };
 
 void main()
@@ -45,6 +55,8 @@ void main()
     lineNormal = vertexLineNormal;
     lineTangent = vertexLineTangent;
     lineVorticity = vertexVorticity;
+    lineCurvature = vertexLineCurvature;
+    lineLength = vertexLineLength;
 }
 
 
@@ -64,12 +76,16 @@ in VertexData
     vec3 lineNormal;
     vec3 lineTangent;
     float lineVorticity;
+    float lineCurvature;
+    float lineLength;
 } v_in[];
 
 out vec3 fragmentNormal;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 out float vorticity;
+out float lineCurvature;
+out float lineLength;
 
 #define NUM_SEGMENTS 5
 
@@ -119,6 +135,8 @@ void main()
         fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         vorticity = v_in[0].lineVorticity;
+        lineCurvature = v_in[0].lineCurvature;
+        lineLength = v_in[0].lineLength;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0);
@@ -126,6 +144,8 @@ void main()
         fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         vorticity = v_in[0].lineVorticity;
+        lineCurvature = v_in[0].lineCurvature;
+        lineLength = v_in[0].lineLength;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
@@ -133,6 +153,8 @@ void main()
         fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         vorticity = v_in[1].lineVorticity;
+        lineCurvature = v_in[1].lineCurvature;
+        lineLength = v_in[1].lineLength;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0);
@@ -140,6 +162,8 @@ void main()
         fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         vorticity = v_in[1].lineVorticity;
+        lineCurvature = v_in[1].lineCurvature;
+        lineLength = v_in[1].lineLength;
         EmitVertex();
 
         EndPrimitive();
@@ -160,6 +184,8 @@ in vec3 screenSpacePosition;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonWorld;
 in float vorticity;
+in float lineCurvature;
+in float lineLength;
 
 #ifdef DIRECT_BLIT_GATHER
 out vec4 fragColor;
@@ -176,8 +202,8 @@ uniform sampler2D ssaoTexture;
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 
-uniform float minVorticity;
-uniform float maxVorticity;
+uniform float minCriterionValue;
+uniform float maxCriterionValue;
 uniform bool transparencyMapping = true;
 
 // Color of the object
@@ -190,7 +216,7 @@ uniform sampler1D transferFunctionTexture;
 vec4 transferFunction(float attr)
 {
     // Transfer to range [0,1]
-    float posFloat = clamp((attr - minVorticity) / (maxVorticity - minVorticity), 0.0, 1.0);
+    float posFloat = clamp((attr - minCriterionValue) / (maxCriterionValue - minCriterionValue), 0.0, 1.0);
     // Look up the color value
     return texture(transferFunctionTexture, posFloat);
 }
@@ -210,17 +236,25 @@ void main()
 
     float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
 
+    #if IMPORTANCE_CRITERION_INDEX == 0
     // Use vorticity
-    vec4 diffuseColorVorticity = transferFunction(vorticity);
+    vec4 colorAttribute = transferFunction(vorticity);
+    #elif IMPORTANCE_CRITERION_INDEX == 1
+    // Use line curvature
+    vec4 colorAttribute = transferFunction(lineCurvature);
+    #else
+    // Use line length
+    vec4 colorAttribute = transferFunction(lineLength);
+    #endif
 
     vec3 normal = fragmentNormal;
     if (length(normal) < 0.5) {
         normal = vec3(1.0, 0.0, 0.0);
     }
 
-    vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(normal, lightDirection)/2.0
+    vec3 colorShading = colorAttribute.rgb * clamp(dot(normal, lightDirection)/2.0
             + 0.75 * occlusionFactor * shadowFactor, 0.0, 1.0);
-    vec4 color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a);
+    vec4 color = vec4(colorShading, colorAttribute.a);
 
     if (!transparencyMapping) {
         color.a = colorGlobal.a;

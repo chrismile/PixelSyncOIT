@@ -120,6 +120,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     Renderer->setErrorCallback(&openglErrorCallback);
     Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
+    ShaderManager->addPreprocessorDefine("IMPORTANCE_CRITERION_INDEX", (int)importanceCriterionType);
+
     shadowTechnique = boost::shared_ptr<ShadowTechnique>(new NoShadowMapping);
     updateAOMode();
 
@@ -199,19 +201,23 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
 
     std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
-    if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Triangles)")) {
+    if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Lines)")) {
         // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
-        modelFilenameOptimized += "_tri";
+        modelFilenameOptimized += "_lines";
+        usesGeometryShader = true;
+    } else {
+        usesGeometryShader = false;
     }
+
     std::string modelFilenameObj = modelFilenamePure + ".obj";
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
         if (boost::starts_with(modelFilenamePure, "Data/Models")) {
             convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
         } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             if (boost::ends_with(modelFilenameOptimized, "_tri")) {
-                convertObjTrajectoryDataToBinaryTriangleMesh(modelFilenameObj, modelFilenameOptimized);
-            } else {
                 convertObjTrajectoryDataToBinaryLineMesh(modelFilenameObj, modelFilenameOptimized);
+            } else {
+                convertObjTrajectoryDataToBinaryTriangleMesh(modelFilenameObj, modelFilenameOptimized);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             modelFilenameObj = filename;
@@ -221,11 +227,11 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     if (boost::starts_with(modelFilenamePure, "Data/Models")) {
         gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
     } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-        if (boost::ends_with(modelFilenameOptimized, "_tri")) {
-            gatherShaderIDs = {"PseudoPhongVorticity.TriangleVertex", "PseudoPhongVorticity.Fragment"};
-        } else {
+        if (boost::ends_with(modelFilenameOptimized, "_lines")) {
             gatherShaderIDs = {"PseudoPhongVorticity.Vertex", "PseudoPhongVorticity.Geometry",
                                "PseudoPhongVorticity.Fragment"};
+        } else {
+            gatherShaderIDs = {"PseudoPhongVorticity.TriangleVertex", "PseudoPhongVorticity.Fragment"};
         }
     } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
         gatherShaderIDs = {"PseudoPhongHair.Vertex", "PseudoPhongHair.Fragment"};
@@ -234,11 +240,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-        std::vector<float> lineAttributes;
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, lineAttributes, &maxVorticity,
-                shuffleGeometry);
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry);
         if (shaderMode == SHADER_MODE_VORTICITY) {
-            transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
+            recomputeHistogramForMesh();
         }
         boundingBox = transparentObject.boundingBox;
 
@@ -262,6 +266,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     } else {
         std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
+        float maxVorticity = 0.0f;
         voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         transparentObject = MeshRenderer();
@@ -317,6 +322,17 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     updateAOMode();
     shadowTechnique->newModelLoaded(modelFilenamePure);
     reRender = true;
+}
+
+void PixelSyncApp::recomputeHistogramForMesh()
+{
+    ShaderManager->addPreprocessorDefine("IMPORTANCE_CRITERION_INDEX", (int)importanceCriterionType);
+    ImportanceCriterionAttribute importanceCriterionAttribute =
+            transparentObject.importanceCriterionAttributes.at((int)importanceCriterionType);
+    minCriterionValue = importanceCriterionAttribute.minAttribute;
+    maxCriterionValue = importanceCriterionAttribute.maxAttribute;
+    transferFunctionWindow.computeHistogram(importanceCriterionAttribute.attributes,
+            minCriterionValue, maxCriterionValue);
 }
 
 void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
@@ -385,6 +401,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
     if (modelFilenamePure.length() > 0 && mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
+        float maxVorticity = 0.0f;
         voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
     }
@@ -835,12 +852,24 @@ void PixelSyncApp::renderSceneSettingsGUI()
         }
         ImGui::Checkbox("Show transfer function window", &transferFunctionWindow.getShowTransferFunctionWindow());
 
-        if (ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
+        if (usesGeometryShader && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
                 static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLineRadius(lineRadius);
             }
             reRender = true;
         }
+
+        // Switch importance criterion
+        if (!usesGeometryShader && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
+                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionType, IMPORTANCE_CRITERION_DISPLAYNAMES,
+                        IM_ARRAYSIZE(IMPORTANCE_CRITERION_DISPLAYNAMES))) {
+            recomputeHistogramForMesh();
+            ShaderManager->invalidateShaderCache();
+            updateAOMode();
+            updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+            reRender = true;
+        }
+
     }
 
     if (ImGui::Combo("AO Mode", (int*)&currentAOTechnique, AO_TECHNIQUE_DISPLAYNAMES,
@@ -890,8 +919,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             && (currentShadowTechnique == NO_SHADOW_MAPPING || !shadowTechnique->isShadowMapCreatePass())) {
         transparencyShader = oitRenderer->getGatherShader();
         if (shaderMode == SHADER_MODE_VORTICITY) {
-            transparencyShader->setUniform("minVorticity", 0.0f);
-            transparencyShader->setUniform("maxVorticity", maxVorticity);
+            transparencyShader->setUniform("minCriterionValue", minCriterionValue);
+            transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
             if (transparencyShader->hasUniform("radius")) {
                 transparencyShader->setUniform("radius", lineRadius);
             }
@@ -925,8 +954,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
         if (shadowTechnique->isShadowMapCreatePass()) {
             transparencyShader = shadowTechnique->getShadowMapCreationShader();
             shadowTechnique->setUniformValuesCreateShadowMap();
-            transparencyShader->setUniform("minVorticity", 0.0f);
-            transparencyShader->setUniform("maxVorticity", maxVorticity);
+            transparencyShader->setUniform("minCriterionValue", minCriterionValue);
+            transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
             if (transparencyShader->hasUniform("radius")) {
                 transparencyShader->setUniform("radius", lineRadius);
             }

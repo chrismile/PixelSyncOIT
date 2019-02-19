@@ -99,7 +99,6 @@ private:
     RenderModeOIT oldMode = mode;
     ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
     std::string modelFilenamePure;
-    float maxVorticity = 1.0f;
     bool shuffleGeometry = false; // For testing order dependency of OIT algorithms on triangle order
     std::list<std::string> gatherShaderIDs;
 
@@ -133,6 +132,12 @@ private:
     float MOUSE_ROT_SPEED = 0.05f;
 
     TransferFunctionWindow transferFunctionWindow;
+
+    // Trajectory rendering
+    bool usesGeometryShader = false;
+    ImportanceCriterionType importanceCriterionType = IMPORTANCE_CRITERION_VORTICITY;
+    float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
+    void recomputeHistogramForMesh();
 
     // Hair rendering
     bool colorArrayMode = false;

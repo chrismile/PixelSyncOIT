@@ -15,7 +15,7 @@
 
 #define PACK_LINES
 
-float opacityMapping(float attr, float maxVorticity);
+float opacityMapping(float attr, float maxAttr);
 
 struct Curve
 {

@@ -4,6 +4,7 @@
 
 #include <Utils/File/Logfile.hpp>
 #include <Utils/Convert.hpp>
+#include <Math/Math.hpp>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -94,8 +95,8 @@ struct TubeNode
     /// Center vertex position
     glm::vec3 center;
 
-    /// Normal pointing in direction of next node (or negative direction of last node for the final node in the list).
-    glm::vec3 normal;
+    /// Tangent pointing in direction of next node (or negative direction of last node for the final node in the list).
+    glm::vec3 tangent;
 
     /// Circle points (circle with center of tube node, in plane with normal vector of tube node)
     std::vector<glm::vec3> circleVertices;
@@ -132,29 +133,30 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     int numVertexPts = 0;
 
     // First, create a list of tube nodes
-    glm::vec3 lastTangent = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 lastNormal = glm::vec3(1.0f, 0.0f, 0.0f);
     for (int i = 0; i < n; i++) {
-        TubeNode node;
-        node.center = pathLineCenters.at(i);
-        glm::vec3 normal;
+        glm::vec3 tangent;
         if (i == 0) {
             // First node
-            normal = pathLineCenters.at(i+1) - pathLineCenters.at(i);
+            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
         } else if (i == n-1) {
             // Last node
-            normal = pathLineCenters.at(i) - pathLineCenters.at(i-1);
+            tangent = pathLineCenters.at(i) - pathLineCenters.at(i-1);
         } else {
             // Node with two neighbors - use both normals
-            normal = pathLineCenters.at(i+1) - pathLineCenters.at(i);
+            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
             //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
-        if (glm::length(normal) < 0.0001f) {
-            //normal = glm::vec3(1.0f, 0.0f, 0.0f);
+
+        if (glm::length(tangent) < 0.0001f) {
             // In case the two vertices are almost identical, just skip this path line segment
             continue;
         }
-        node.normal = glm::normalize(normal);
-        insertOrientedCirclePoints(vertices, node.center, node.normal, lastTangent);
+
+        TubeNode node;
+        node.center = pathLineCenters.at(i);
+        node.tangent = glm::normalize(tangent);
+        insertOrientedCirclePoints(vertices, node.center, node.tangent, lastNormal);
         node.circleIndices.reserve(circlePoints2D.size());
         for (int j = 0; j < circlePoints2D.size(); j++) {
             node.circleIndices.push_back(j + numVertexPts*circlePoints2D.size());
@@ -189,6 +191,111 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     if (numVertexPts <= 1) {
         vertices.clear();
         vertexAttributes.clear();
+    }
+}
+void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
+                          const std::vector<float> &pathLineVorticities,
+                          std::vector<glm::vec3> &vertices,
+                          std::vector<float> &vorticities,
+                          std::vector<float> &lineCurvatures,
+                          std::vector<float> &lineLengths,
+                          std::vector<uint32_t> &indices)
+{
+    int n = (int)pathLineCenters.size();
+    if (n < 2) {
+        sgl::Logfile::get()->writeError("Error in createTube: n < 2");
+        return;
+    }
+
+    /// Circle points (circle with center of tube node, in plane with normal vector of tube node)
+    vertices.reserve(n*circlePoints2D.size());
+    vorticities.reserve(n*circlePoints2D.size());
+    lineCurvatures.reserve(n*circlePoints2D.size());
+    lineLengths.reserve(n*circlePoints2D.size());
+    indices.reserve((n-1)*circlePoints2D.size()*6);
+
+    // List of all line nodes (points with data)
+    std::vector<TubeNode> tubeNodes;
+    tubeNodes.reserve(n);
+    int numVertexPts = 0;
+
+    // First, create a list of tube nodes
+    glm::vec3 lastNormal = glm::vec3(1.0f, 0.0f, 0.0f);
+    for (int i = 0; i < n; i++) {
+        // Normal of line, e.g.
+        glm::vec3 tangent;
+        float curvatureAngle = 0.0f;
+
+        if (i == 0) {
+            // First node
+            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
+        } else if (i == n-1) {
+            // Last node
+            tangent = pathLineCenters.at(i) - pathLineCenters.at(i-1);
+        } else {
+            // Node with two neighbors - use both normals
+            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
+            //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
+        }
+
+        float lineSegmentLength = glm::length(tangent);
+
+        if (lineSegmentLength < 0.0001f) {
+            //normal = glm::vec3(1.0f, 0.0f, 0.0f);
+            // In case the two vertices are almost identical, just skip this path line segment
+            continue;
+        }
+        tangent = glm::normalize(tangent);
+
+        // Compute curvature, i.e. angle between neighboring line segment tangents.
+        // Fallback for first and last line point: Assume zero curvature.
+        if (i != 0 && i != n-1) {
+            // glm::dot(tangent, tubeNodes.back().tangent)
+            glm::vec3 lastTangent = tubeNodes.back().tangent;
+            float cosAngle = glm::clamp(glm::dot(tangent, lastTangent), 0.0f, 1.0f);
+            curvatureAngle = glm::acos(cosAngle) / sgl::PI;
+        }
+
+        TubeNode node;
+        node.center = pathLineCenters.at(i);
+        node.tangent = tangent;
+        insertOrientedCirclePoints(vertices, node.center, node.tangent, lastNormal);
+        node.circleIndices.reserve(circlePoints2D.size());
+        for (int j = 0; j < circlePoints2D.size(); j++) {
+            node.circleIndices.push_back(j + numVertexPts*circlePoints2D.size());
+            vorticities.push_back(pathLineVorticities.at(i));
+            lineCurvatures.push_back(curvatureAngle);
+            lineLengths.push_back(lineSegmentLength);
+        }
+        tubeNodes.push_back(node);
+        numVertexPts++;
+    }
+
+
+    // Create tube triangles/indices for the vertex data
+    for (int i = 0; i < numVertexPts-1; i++) {
+        std::vector<uint32_t> &circleIndicesCurrent = tubeNodes.at(i).circleIndices;
+        std::vector<uint32_t> &circleIndicesNext = tubeNodes.at(i+1).circleIndices;
+        for (int j = 0; j < circlePoints2D.size(); j++) {
+            // Build two CCW triangles (one quad) for each side
+            // Triangle 1
+            indices.push_back(circleIndicesCurrent.at(j));
+            indices.push_back(circleIndicesCurrent.at((j+1)%circlePoints2D.size()));
+            indices.push_back(circleIndicesNext.at((j+1)%circlePoints2D.size()));
+
+            // Triangle 2
+            indices.push_back(circleIndicesCurrent.at(j));
+            indices.push_back(circleIndicesNext.at((j+1)%circlePoints2D.size()));
+            indices.push_back(circleIndicesNext.at(j));
+        }
+    }
+
+    // Only one vertex left -> Output nothing (tube consisting only of one point)
+    if (numVertexPts <= 1) {
+        vertices.clear();
+        vorticities.clear();
+        lineCurvatures.clear();
+        lineLengths.clear();
     }
 }
 
@@ -276,6 +383,8 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
     std::vector<glm::vec3> globalVertexPositions;
     std::vector<glm::vec3> globalNormals;
     std::vector<float> globalVorticities;
+    std::vector<float> globalLineCurvatures;
+    std::vector<float> globalLineLengths;
     std::vector<uint32_t> globalIndices;
 
     std::vector<glm::vec3> globalLineVertices;
@@ -326,9 +435,12 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
             // Create tube render data
             std::vector<glm::vec3> localVertices;
             std::vector<float> localVorticites;
+            std::vector<float> localLineCurvatures;
+            std::vector<float> localLineLengths;
             std::vector<glm::vec3> localNormals;
             std::vector<uint32_t> localIndices;
-            createTubeRenderData(pathLineCenters, pathLineVorticities, localVertices, localVorticites, localIndices);
+            createTubeRenderData(pathLineCenters, pathLineVorticities, localVertices,
+                    localVorticites, localLineCurvatures, localLineLengths, localIndices);
             createNormals(localVertices, localIndices, localNormals);
 
             // Local -> global
@@ -337,6 +449,8 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
             }
             globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
             globalVorticities.insert(globalVorticities.end(), localVorticites.begin(), localVorticites.end());
+            globalLineCurvatures.insert(globalLineCurvatures.end(), localLineCurvatures.begin(), localLineCurvatures.end());
+            globalLineLengths.insert(globalLineLengths.end(), localLineLengths.begin(), localLineLengths.end());
             globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
@@ -372,6 +486,31 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
     vorticitiesAttribute.data.resize(globalVorticities.size() * sizeof(float));
     memcpy(&vorticitiesAttribute.data.front(), &globalVorticities.front(), globalVorticities.size() * sizeof(float));
     submesh.attributes.push_back(vorticitiesAttribute);
+
+    BinaryMeshAttribute curvatureAttribute;
+    curvatureAttribute.name = "vertexLineCurvature";
+    curvatureAttribute.attributeFormat = ATTRIB_FLOAT;
+    curvatureAttribute.numComponents = 1;
+    curvatureAttribute.data.resize(globalLineCurvatures.size() * sizeof(float));
+    memcpy(&curvatureAttribute.data.front(), &globalLineCurvatures.front(), globalLineCurvatures.size() * sizeof(float));
+    submesh.attributes.push_back(curvatureAttribute);
+
+    BinaryMeshAttribute lineLengthAttribute;
+    lineLengthAttribute.name = "vertexLineLength";
+    lineLengthAttribute.attributeFormat = ATTRIB_FLOAT;
+    lineLengthAttribute.numComponents = 1;
+    lineLengthAttribute.data.resize(globalLineLengths.size() * sizeof(float));
+    memcpy(&lineLengthAttribute.data.front(), &globalLineLengths.front(), globalLineLengths.size() * sizeof(float));
+    submesh.attributes.push_back(lineLengthAttribute);
+
+    // Now add min/max uniform values.
+    /*BinaryMeshUniform minLineLengthUniform;
+    minLineLengthUniform.name = "minLineLength";
+    minLineLengthUniform.attributeFormat = ATTRIB_FLOAT;
+    minLineLengthUniform.numComponents = 1;
+    minLineLengthUniform.data.push_back(minLineLength);
+    submesh.uniforms.push_back(minLineLengthUniform);*/
+
 
     file.close();
 
