@@ -175,7 +175,7 @@ void TransferFunctionWindow::computeHistogram(const std::vector<float> &attribut
 
 float TransferFunctionWindow::getOpacityAtAttribute(float attribute)
 {
-    int idx = glm::clamp((int)std::round(attribute), 0, 255);
+    int idx = glm::clamp((int)std::round(attribute*255), 0, 255);
     return transferFunctionMap[idx].getFloatA();
 }
 

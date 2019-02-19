@@ -45,12 +45,7 @@ out vec4 fragColor;
 #endif
 
 
-#ifdef USE_SSAO
-uniform sampler2D ssaoTexture;
-#elif defined(VOXEL_SSAO)
-#include "VoxelAO.glsl"
-#endif
-
+#include "AmbientOcclusion.glsl"
 #include "Shadows.glsl"
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
@@ -65,17 +60,7 @@ uniform int bandedColorShading = 1;
 
 void main()
 {
-#ifdef USE_SSAO
-    // Read ambient occlusion factor from texture
-    vec2 texCoord = vec2(gl_FragCoord.xy + vec2(0.5, 0.5))/textureSize(ssaoTexture, 0);
-    float occlusionFactor = texture(ssaoTexture, texCoord).r;
-#elif defined(VOXEL_SSAO)
-    float occlusionFactor = getAmbientOcclusionTermVoxelGrid(fragmentPositonWorld);
-#else
-    // No ambient occlusion
-    const float occlusionFactor = 1.0;
-#endif
-
+    float occlusionFactor = getAmbientOcclusionFactor(vec4(fragmentPositonWorld, 1.0));
     float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
 
     // Pseudo Phong shading
