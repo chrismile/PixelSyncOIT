@@ -22,10 +22,16 @@ public:
     virtual void resolutionChanged();
     virtual bool renderGUI();
 
+    // Called by MainApp
+    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
+
 private:
     // For rendering to the shadow map
     sgl::FramebufferObjectPtr shadowMapFBO;
     sgl::TexturePtr shadowMap;
+
+    // Gather shader name used for shading
+    std::list<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
 };
 
 

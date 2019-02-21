@@ -50,6 +50,8 @@ out vec4 fragColor;
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 uniform vec3 cameraPosition; // world space
+uniform float aoFactorGlobal = 1.0f;
+uniform float shadowFactorGlobal = 1.0f;
 
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
@@ -60,8 +62,15 @@ uniform int bandedColorShading = 1;
 
 void main()
 {
+#if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
     float occlusionFactor = getAmbientOcclusionFactor(vec4(fragmentPositonWorld, 1.0));
     float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
+    occlusionFactor = mix(1.0f, occlusionFactor, aoFactorGlobal);
+    shadowFactor = mix(1.0f, shadowFactor, shadowFactorGlobal);
+#else
+    float occlusionFactor = 1.0f;
+    float shadowFactor = 1.0f;
+#endif
 
     // Pseudo Phong shading
     vec4 bandColor = fragmentColor;
@@ -79,7 +88,15 @@ void main()
         vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
         color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
     }
-    //color.rgb = vec3(vec3(shadowFactor));
+
+    #if REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
+    color.rgb = vec3(occlusionFactor * shadowFactor);
+    #elif REFLECTION_MODEL == 2 // LOCAL_SHADOW_MAP_OCCLUSION
+    color.rgb = vec3(shadowFactor);
+    #elif REFLECTION_MODEL == 3 // AMBIENT_OCCLUSION_FACTOR
+    color.rgb = vec3(occlusionFactor);
+    #endif
+
 
 #if defined(DIRECT_BLIT_GATHER) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
     // Direct rendering

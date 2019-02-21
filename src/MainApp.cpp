@@ -121,6 +121,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
     ShaderManager->addPreprocessorDefine("IMPORTANCE_CRITERION_INDEX", (int)importanceCriterionType);
+    ShaderManager->addPreprocessorDefine("REFLECTION_MODEL", (int)reflectionModelType);
 
     shadowTechnique = boost::shared_ptr<ShadowTechnique>(new NoShadowMapping);
     updateAOMode();
@@ -321,6 +322,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     boundingBox = boundingBox.transformed(rotation * scaling);
     updateAOMode();
     shadowTechnique->newModelLoaded(modelFilenamePure);
+    shadowTechnique->setLightDirection(lightDirection, boundingBox);
     reRender = true;
 }
 
@@ -539,7 +541,7 @@ void PixelSyncApp::updateShadowMode()
         shadowTechnique = boost::shared_ptr<ShadowTechnique>(new MomentShadowMapping);
     }
 
-    shadowTechnique->setLightDirection(lightDirection, boundingBox.getCenter());
+    shadowTechnique->setLightDirection(lightDirection, boundingBox);
     shadowTechnique->setShaderDefines();
 }
 
@@ -826,7 +828,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
             static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLightDirection(lightDirection);
         }
         if (currentShadowTechnique != NO_SHADOW_MAPPING) {
-            shadowTechnique->setLightDirection(lightDirection, boundingBox.getCenter());
+            shadowTechnique->setLightDirection(lightDirection, boundingBox);
         }
         reRender = true;
     }
@@ -880,10 +882,26 @@ void PixelSyncApp::renderSceneSettingsGUI()
         reRender = true;
     }
 
+    if (ImGui::SliderFloat("AO Factor", &aoFactor, 0.0f, 1.0f)) {
+        reRender = true;
+    }
+
     if (ImGui::Combo("Shadow Mode", (int*)&currentShadowTechnique, SHADOW_MAPPING_TECHNIQUE_DISPLAYNAMES,
                      IM_ARRAYSIZE(SHADOW_MAPPING_TECHNIQUE_DISPLAYNAMES))) {
         ShaderManager->invalidateShaderCache();
         updateShadowMode();
+        updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+        reRender = true;
+    }
+
+    if (ImGui::SliderFloat("Shadow Factor", &shadowFactor, 0.0f, 1.0f)) {
+        reRender = true;
+    }
+
+    if (ImGui::Combo("Reflection Model", (int*)&reflectionModelType, REFLECTION_MODEL_DISPLAY_NAMES,
+                     IM_ARRAYSIZE(REFLECTION_MODEL_DISPLAY_NAMES))) {
+        ShaderManager->addPreprocessorDefine("REFLECTION_MODEL", (int)reflectionModelType);
+        ShaderManager->invalidateShaderCache();
         updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
         reRender = true;
     }
@@ -954,14 +972,16 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
         if (shadowTechnique->isShadowMapCreatePass()) {
             transparencyShader = shadowTechnique->getShadowMapCreationShader();
             shadowTechnique->setUniformValuesCreateShadowMap();
-            transparencyShader->setUniform("minCriterionValue", minCriterionValue);
-            transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
-            if (transparencyShader->hasUniform("radius")) {
-                transparencyShader->setUniform("radius", lineRadius);
+            if (shaderMode == SHADER_MODE_VORTICITY) {
+                transparencyShader->setUniform("minCriterionValue", minCriterionValue);
+                transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
+                if (transparencyShader->hasUniform("radius")) {
+                    transparencyShader->setUniform("radius", lineRadius);
+                }
+                transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+                transparencyShader->setUniform("transferFunctionTexture",
+                                               transferFunctionWindow.getTransferFunctionMapTexture(), 5);
             }
-            transparencyShader->setUniform("transparencyMapping", transparencyMapping);
-            transparencyShader->setUniform("transferFunctionTexture",
-                                           transferFunctionWindow.getTransferFunctionMapTexture(), 5);
         }
         if (!shadowTechnique->isShadowMapCreatePass()) {
             transparencyShader = oitRenderer->getGatherShader();
@@ -982,6 +1002,17 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
         } else if (currentAOTechnique == AO_TECHNIQUE_VOXEL_AO && transparencyShader->hasUniform("aoTexture")) {
             voxelAOHelper->setUniformValues(transparencyShader);
         }
+    }
+
+
+    if (currentAOTechnique != AO_TECHNIQUE_NONE
+            && (currentAOTechnique != AO_TECHNIQUE_SSAO || !ssaoHelper->isPreRenderPass())
+            && reflectionModelType != LOCAL_SHADOW_MAP_OCCLUSION) {
+        transparencyShader->setUniform("aoFactorGlobal", aoFactor);
+    }
+    if (currentShadowTechnique != NO_SHADOW_MAPPING && !shadowTechnique->isShadowMapCreatePass()
+            && reflectionModelType != AMBIENT_OCCLUSION_FACTOR) {
+        transparencyShader->setUniform("shadowFactorGlobal", shadowFactor);
     }
 
     return transparencyShader;

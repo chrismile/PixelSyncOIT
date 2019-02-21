@@ -88,6 +88,11 @@ private:
     AOTechniqueName currentAOTechnique = AO_TECHNIQUE_NONE;
     void updateAOMode();
 
+    // Current rendering/shading/lighting model
+    ReflectionModelType reflectionModelType = PSEUDO_PHONG_LIGHTING;
+    float aoFactor = 0.8f;
+    float shadowFactor = 0.5f;
+
     // Shadow rendering
     boost::shared_ptr<ShadowTechnique> shadowTechnique;
     ShadowMappingTechniqueName currentShadowTechnique = NO_SHADOW_MAPPING;

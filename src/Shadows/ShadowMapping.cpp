@@ -23,8 +23,18 @@ ShadowMapping::ShadowMapping()
 
 void ShadowMapping::loadShaders()
 {
-    createShadowMapShader = sgl::ShaderManager->getShaderProgram(
-            {"GenerateShadowMap.Vertex", "GenerateShadowMap.Fragment"});
+}
+
+void ShadowMapping::setGatherShaderList(const std::list<std::string> &shaderIDs)
+{
+    gatherShaderIDs = shaderIDs;
+    sgl::ShaderManager->invalidateShaderCache();
+    std::string oldGatherHeader = sgl::ShaderManager->getPreprocessorDefine("OIT_GATHER_HEADER");
+    sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"GenerateShadowMap.glsl\"");
+    sgl::ShaderManager->addPreprocessorDefine("SHADOW_MAP_GENERATE", "");
+    createShadowMapShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
+    sgl::ShaderManager->removePreprocessorDefine("SHADOW_MAP_GENERATE");
+    sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", oldGatherHeader);
 }
 
 void ShadowMapping::createShadowMapPass(std::function<void()> sceneRenderFunction)
@@ -53,7 +63,6 @@ void ShadowMapping::createShadowMapPass(std::function<void()> sceneRenderFunctio
 
 void ShadowMapping::setUniformValuesCreateShadowMap()
 {
-    ;
 }
 
 void ShadowMapping::setUniformValuesRenderScene(sgl::ShaderProgramPtr transparencyShader)

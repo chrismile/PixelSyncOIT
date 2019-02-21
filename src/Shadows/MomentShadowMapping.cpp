@@ -445,8 +445,8 @@ void MomentShadowMapping::setSceneBoundingBox(const sgl::AABB3 &sceneBB)
     updateDepthRange();
 }
 
-void MomentShadowMapping::setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter)
+void MomentShadowMapping::setLightDirection(const glm::vec3 &lightDirection, const sgl::AABB3 &sceneBoundingBox)
 {
-    ShadowTechnique::setLightDirection(lightDirection, sceneCenter);
+    ShadowTechnique::setLightDirection(lightDirection, sceneBoundingBox);
     updateDepthRange();
 }

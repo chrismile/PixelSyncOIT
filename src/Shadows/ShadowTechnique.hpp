@@ -6,6 +6,7 @@
 #define PIXELSYNCOIT_SHADOWTECHNIQUE_HPP
 
 #include <glm/glm.hpp>
+#include <Math/Geometry/AABB3.hpp>
 
 enum ShadowMappingTechniqueName {
         NO_SHADOW_MAPPING, SHADOW_MAPPING, MOMENT_SHADOW_MAPPING
@@ -36,7 +37,7 @@ public:
     virtual bool renderGUI()=0;
 
     // Called by MainApp if the direction of the directional light changes
-    virtual void setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter);
+    virtual void setLightDirection(const glm::vec3 &lightDirection, const sgl::AABB3 &sceneBoundingBox);
 
     // Called by MainApp
     void newModelLoaded(const std::string &filename);

@@ -196,6 +196,9 @@ out vec4 fragColor;
 #include "Shadows.glsl"
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
+uniform float aoFactorGlobal = 1.0f;
+uniform float shadowFactorGlobal = 1.0f;
+
 
 uniform float minCriterionValue;
 uniform float maxCriterionValue;
@@ -218,8 +221,15 @@ vec4 transferFunction(float attr)
 
 void main()
 {
+#if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
     float occlusionFactor = getAmbientOcclusionFactor(vec4(fragmentPositonWorld, 1.0));
     float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
+    occlusionFactor = mix(1.0f, occlusionFactor, aoFactorGlobal);
+    shadowFactor = mix(1.0f, shadowFactor, shadowFactorGlobal);
+#else
+    float occlusionFactor = 1.0f;
+    float shadowFactor = 1.0f;
+#endif
 
     #if IMPORTANCE_CRITERION_INDEX == 0
     // Use vorticity
@@ -237,8 +247,16 @@ void main()
         normal = vec3(1.0, 0.0, 0.0);
     }
 
+    #if REFLECTION_MODEL == 0 // PSEUDO_PHONG_LIGHTING
     vec3 colorShading = colorAttribute.rgb * clamp(dot(normal, lightDirection)/2.0
             + 0.75 * occlusionFactor * shadowFactor, 0.0, 1.0);
+    #elif REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
+    vec3 colorShading = vec3(occlusionFactor * shadowFactor);
+    #elif REFLECTION_MODEL == 2 // LOCAL_SHADOW_MAP_OCCLUSION
+    vec3 colorShading = vec3(shadowFactor);
+    #elif REFLECTION_MODEL == 3 // AMBIENT_OCCLUSION_FACTOR
+    vec3 colorShading = vec3(occlusionFactor);
+    #endif
     vec4 color = vec4(colorShading, colorAttribute.a);
 
     if (!transparencyMapping) {

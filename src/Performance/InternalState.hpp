@@ -55,6 +55,14 @@ const char *const AO_TECHNIQUE_DISPLAYNAMES[] = {
         "No Ambient Occlusion", "Screen Space AO", "Voxel Ambient Occlusion"
 };
 
+enum ReflectionModelType {
+    PSEUDO_PHONG_LIGHTING = 0, COMBINED_SHADOW_MAP_AND_AO, LOCAL_SHADOW_MAP_OCCLUSION, AMBIENT_OCCLUSION_FACTOR
+};
+const char *const REFLECTION_MODEL_DISPLAY_NAMES[] = {
+        "Pseudo Phong Lighting", "Combined Shadow Map and AO",
+        "Local Shadow Map Occlusion", "Ambient Occlusion Factor"
+};
+
 enum ImportanceCriterionType {
         IMPORTANCE_CRITERION_VORTICITY = 0, IMPORTANCE_CRITERION_LINE_CURVATURE, IMPORTANCE_CRITERION_LINE_LENGTH
 };

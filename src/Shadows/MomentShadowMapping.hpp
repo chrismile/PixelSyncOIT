@@ -26,7 +26,7 @@ public:
     virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
     void setSceneBoundingBox(const sgl::AABB3 &sceneBB);
     // Called by MainApp if the direction of the directional light changes
-    virtual void setLightDirection(const glm::vec3 &lightDirection, const glm::vec3 &sceneCenter);
+    virtual void setLightDirection(const glm::vec3 &lightDirection, const sgl::AABB3 &sceneBoundingBox);
 
 private:
     // Called when new moment mode was set
