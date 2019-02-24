@@ -1007,11 +1007,13 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 
     if (currentAOTechnique != AO_TECHNIQUE_NONE
             && (currentAOTechnique != AO_TECHNIQUE_SSAO || !ssaoHelper->isPreRenderPass())
-            && reflectionModelType != LOCAL_SHADOW_MAP_OCCLUSION) {
+            && reflectionModelType != LOCAL_SHADOW_MAP_OCCLUSION
+            && transparencyShader->hasUniform("aoFactorGlobal")) {
         transparencyShader->setUniform("aoFactorGlobal", aoFactor);
     }
     if (currentShadowTechnique != NO_SHADOW_MAPPING && !shadowTechnique->isShadowMapCreatePass()
-            && reflectionModelType != AMBIENT_OCCLUSION_FACTOR) {
+            && reflectionModelType != AMBIENT_OCCLUSION_FACTOR
+            && transparencyShader->hasUniform("shadowFactorGlobal")) {
         transparencyShader->setUniform("shadowFactorGlobal", shadowFactor);
     }
 
