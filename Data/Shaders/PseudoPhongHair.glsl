@@ -79,9 +79,15 @@ void main()
     vec3 diffuseColor = fragmentColor.rgb; // TODO opacity
 #endif
 
+    vec3 normal = fragmentNormal;
+    if (length(normal) < 0.5) {
+        normal = vec3(1.0, 0.0, 0.0);
+    }
+    normal = normalize(fragmentNormal);
+
     // Pseudo Phong shading
     vec3 ambientShading = ambientColor * 0.1 * occlusionFactor * shadowFactor;
-    vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75
+    vec3 diffuseShading = diffuseColor * clamp(dot(normal, lightDirection)/2.0+0.75
             * occlusionFactor * shadowFactor, 0.0, 1.0);
     vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
     vec4 color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a); // TODO opacity

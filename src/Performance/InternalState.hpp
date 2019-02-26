@@ -41,11 +41,15 @@ const char *const MODEL_FILENAMES[] = {
         "Data/Hair/wCurly.hair",
         "Data/Hair/wStraight.hair",
         "Data/Hair/wWavy.hair",
+        "Data/WCB/EUR_LL025/20121015_00_lagranto_ensemble_forecast__START_20121019_18.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121019_18.nc",
+        "Data/ConvectionRolls/turbulence80000.obj",
+        "Data/ConvectionRolls/turbulence20000.obj",
 };
 const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline", "Streamlines (Lines)", "Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon",
-       //"Lagranto",
-       "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy"
+       "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy",
+        "Warm Conveyor Belt", "Warm Conveyor Belt (low-res)", "Convection Rolls", "Convection Rolls (low-res)"
 };
 
 enum AOTechniqueName {

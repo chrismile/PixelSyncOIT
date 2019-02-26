@@ -243,11 +243,11 @@ void convertHairDataToBinaryTriangleMesh(
             sgl::Logfile::get()->writeError("Error in convertHairDataToBinaryTriangleMesh: Variable thickness not yet "
                                             "supported.");
         } else {
-            createTubeRenderData(pathLineCenters, pathLineColors, localVertices, localColors, localIndices);
+            createTubeRenderData(pathLineCenters, pathLineColors, localVertices, localNormals, localColors, localIndices);
         }
         //createTubeRenderData(pathLineCenters, pathLineThicknesses, hairData.defaultThickness, pathLineColors,
         //        localVertices, localColors, localIndices);
-        createNormals(localVertices, localIndices, localNormals);
+        //createNormals(localVertices, localIndices, localNormals);
 
         // Local -> global
         for (size_t i = 0; i < localIndices.size(); i++) {

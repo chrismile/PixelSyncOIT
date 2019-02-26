@@ -246,6 +246,7 @@ void main()
     if (length(normal) < 0.5) {
         normal = vec3(1.0, 0.0, 0.0);
     }
+    normal = normalize(fragmentNormal);
 
     #if REFLECTION_MODEL == 0 // PSEUDO_PHONG_LIGHTING
     vec3 colorShading = colorAttribute.rgb * clamp(dot(normal, lightDirection)/2.0

@@ -33,7 +33,7 @@ void getPointsOnCircle(std::vector<glm::vec2> &points, const glm::vec2 &center, 
     }
 }
 
-const int NUM_CIRCLE_SEGMENTS = 5;
+const int NUM_CIRCLE_SEGMENTS = 3;
 const float TUBE_RADIUS = 0.001f;
 
 void initializeCircleData(int numSegments, float radius)
@@ -50,8 +50,8 @@ void initializeCircleData(int numSegments, float radius)
  * @param lastTangent: The tangent of the last circle.
  * @return The points on the oriented circle.
  */
-void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, const glm::vec3 &center, const glm::vec3 &normal,
-        glm::vec3 &lastTangent)
+void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, std::vector<glm::vec3> &normals,
+        const glm::vec3 &center, const glm::vec3 &normal, glm::vec3 &lastTangent)
 {
     if (circlePoints2D.size() == 0) {
         initializeCircleData(NUM_CIRCLE_SEGMENTS, TUBE_RADIUS);
@@ -86,6 +86,9 @@ void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, const glm::vec
     for (const glm::vec2 &circlePoint : circlePoints2D) {
         glm::vec4 transformedPoint = transform * glm::vec4(circlePoint.x, circlePoint.y, 0.0f, 1.0f);
         vertices.push_back(glm::vec3(transformedPoint.x, transformedPoint.y, transformedPoint.z));
+        glm::vec3 normal = glm::vec3(transformedPoint.x, transformedPoint.y, transformedPoint.z) - center;
+        normal = glm::normalize(normal);
+        normals.push_back(normal);
     }
 }
 
@@ -114,6 +117,7 @@ template<typename T>
 void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
                           const std::vector<T> &pathLineAttributes,
                           std::vector<glm::vec3> &vertices,
+                          std::vector<glm::vec3> &normals,
                           std::vector<T> &vertexAttributes,
                           std::vector<uint32_t> &indices)
 {
@@ -125,6 +129,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
 
     /// Circle points (circle with center of tube node, in plane with normal vector of tube node)
     vertices.reserve(n*circlePoints2D.size());
+    normals.reserve(n*circlePoints2D.size());
     vertexAttributes.reserve(n*circlePoints2D.size());
     indices.reserve((n-1)*circlePoints2D.size()*6);
 
@@ -156,7 +161,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         TubeNode node;
         node.center = pathLineCenters.at(i);
         node.tangent = glm::normalize(tangent);
-        insertOrientedCirclePoints(vertices, node.center, node.tangent, lastNormal);
+        insertOrientedCirclePoints(vertices, normals, node.center, node.tangent, lastNormal);
         node.circleIndices.reserve(circlePoints2D.size());
         for (int j = 0; j < circlePoints2D.size(); j++) {
             node.circleIndices.push_back(j + numVertexPts*circlePoints2D.size());
@@ -190,12 +195,14 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     // Only one vertex left -> Output nothing (tube consisting only of one point)
     if (numVertexPts <= 1) {
         vertices.clear();
+        normals.clear();
         vertexAttributes.clear();
     }
 }
 void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
                           const std::vector<float> &pathLineVorticities,
                           std::vector<glm::vec3> &vertices,
+                          std::vector<glm::vec3> &normals,
                           std::vector<float> &vorticities,
                           std::vector<float> &lineCurvatures,
                           std::vector<float> &lineLengths,
@@ -209,6 +216,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
 
     /// Circle points (circle with center of tube node, in plane with normal vector of tube node)
     vertices.reserve(n*circlePoints2D.size());
+    normals.reserve(n*circlePoints2D.size());
     vorticities.reserve(n*circlePoints2D.size());
     lineCurvatures.reserve(n*circlePoints2D.size());
     lineLengths.reserve(n*circlePoints2D.size());
@@ -259,7 +267,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         TubeNode node;
         node.center = pathLineCenters.at(i);
         node.tangent = tangent;
-        insertOrientedCirclePoints(vertices, node.center, node.tangent, lastNormal);
+        insertOrientedCirclePoints(vertices, normals, node.center, node.tangent, lastNormal);
         node.circleIndices.reserve(circlePoints2D.size());
         for (int j = 0; j < circlePoints2D.size(); j++) {
             node.circleIndices.push_back(j + numVertexPts*circlePoints2D.size());
@@ -293,6 +301,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     // Only one vertex left -> Output nothing (tube consisting only of one point)
     if (numVertexPts <= 1) {
         vertices.clear();
+        normals.clear();
         vorticities.clear();
         lineCurvatures.clear();
         lineLengths.clear();
@@ -301,10 +310,11 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
 
 template
 void createTubeRenderData<uint32_t>(const std::vector<glm::vec3> &pathLineCenters,
-                                           const std::vector<uint32_t> &pathLineAttributes,
-                                           std::vector<glm::vec3> &vertices,
-                                           std::vector<uint32_t> &vertexAttributes,
-                                           std::vector<uint32_t> &indices);
+                                    const std::vector<uint32_t> &pathLineAttributes,
+                                    std::vector<glm::vec3> &vertices,
+                                    std::vector<glm::vec3> &normals,
+                                    std::vector<uint32_t> &vertexAttributes,
+                                    std::vector<uint32_t> &indices);
 
 
 
@@ -439,9 +449,9 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
             std::vector<float> localLineLengths;
             std::vector<glm::vec3> localNormals;
             std::vector<uint32_t> localIndices;
-            createTubeRenderData(pathLineCenters, pathLineVorticities, localVertices,
+            createTubeRenderData(pathLineCenters, pathLineVorticities, localVertices, localNormals,
                     localVorticites, localLineCurvatures, localLineLengths, localIndices);
-            createNormals(localVertices, localIndices, localNormals);
+            //createNormals(localVertices, localIndices, localNormals);
 
             // Local -> global
             for (size_t i = 0; i < localIndices.size(); i++) {

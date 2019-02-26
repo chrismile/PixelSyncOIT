@@ -118,6 +118,7 @@ private:
     glm::mat4 rotation;
     glm::mat4 scaling;
     sgl::AABB3 boundingBox;
+    bool modelContainsTrajectories;
 
     // User interface
     bool showSettingsWindow = true;

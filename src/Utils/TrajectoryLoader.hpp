@@ -30,6 +30,7 @@ template<typename T>
 void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
                           const std::vector<T> &pathLineAttributes,
                           std::vector<glm::vec3> &vertices,
+                          std::vector<glm::vec3> &normals,
                           std::vector<T> &vertexAttributes,
                           std::vector<uint32_t> &indices);
 /*extern template
@@ -42,6 +43,7 @@ extern template
 void createTubeRenderData<uint32_t>(const std::vector<glm::vec3> &pathLineCenters,
                                     const std::vector<uint32_t> &pathLineAttributes,
                                     std::vector<glm::vec3> &vertices,
+                                    std::vector<glm::vec3> &normals,
                                     std::vector<uint32_t> &vertexAttributes,
                                     std::vector<uint32_t> &indices);
 

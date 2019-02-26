@@ -201,6 +201,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
+    modelContainsTrajectories =boost::starts_with(modelFilenamePure, "Data/Trajectories")
+            || boost::starts_with(modelFilenamePure, "Data/WCB")
+            || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls");
+
     std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
     if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Lines)")) {
         // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
@@ -214,7 +218,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
         if (boost::starts_with(modelFilenamePure, "Data/Models")) {
             convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
-        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+        } else if (modelContainsTrajectories) {
             if (boost::ends_with(modelFilenameOptimized, "_tri")) {
                 convertObjTrajectoryDataToBinaryLineMesh(modelFilenameObj, modelFilenameOptimized);
             } else {
@@ -227,7 +231,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
     if (boost::starts_with(modelFilenamePure, "Data/Models")) {
         gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
-    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+    } else if (modelContainsTrajectories) {
         if (boost::ends_with(modelFilenameOptimized, "_lines")) {
             gatherShaderIDs = {"PseudoPhongVorticity.Vertex", "PseudoPhongVorticity.Geometry",
                                "PseudoPhongVorticity.Fragment"};
@@ -294,12 +298,14 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         if (resetCamera) {
             if (modelFilenamePure == "Data/Models/dragon") {
                 camera->setPosition(glm::vec3(0.15f, 0.8f, 2.4f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/lagranto")) {
-                camera->setPosition(glm::vec3(0.6f, 0.0f, 8.8f));
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/single_streamline")) {
                 camera->setPosition(glm::vec3(0.72f, 0.215f, 0.2f));
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
+                camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
+            } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+                camera->setPosition(glm::vec3(0.6f, 0.0f, 8.8f));
+            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
@@ -431,7 +437,7 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
         transparencyShader = oitRenderer->getGatherShader();
     }
     // TODO: SHADER_MODE_UPDATE_SSAO_CHANGE
-    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/")) {
+    if (modelContainsTrajectories) {
         if (shaderMode != SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_NEW_OIT_RENDERER
                 || modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
             shaderMode = SHADER_MODE_VORTICITY;
