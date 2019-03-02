@@ -5,8 +5,11 @@
 #ifndef PIXELSYNCOIT_SHADOWTECHNIQUE_HPP
 #define PIXELSYNCOIT_SHADOWTECHNIQUE_HPP
 
+#include <list>
 #include <glm/glm.hpp>
+
 #include <Math/Geometry/AABB3.hpp>
+#include <Graphics/Shader/Shader.hpp>
 
 enum ShadowMappingTechniqueName {
         NO_SHADOW_MAPPING, SHADOW_MAPPING, MOMENT_SHADOW_MAPPING
@@ -40,7 +43,7 @@ public:
     virtual void setLightDirection(const glm::vec3 &lightDirection, const sgl::AABB3 &sceneBoundingBox);
 
     // Called by MainApp
-    void newModelLoaded(const std::string &filename);
+    void newModelLoaded(const std::string &filename, bool modelContainsTrajectories);
 
     // Returns whether the 1st pass for generating the shadow map is active
     inline bool isShadowMapCreatePass() { return preRenderPass; }

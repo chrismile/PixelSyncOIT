@@ -2,16 +2,17 @@
 
 #version 430 core
 
+#define CONCAT_VERTEX_ATTRIBUTE_NAME(n) vertexAttribute##n
+#define vertexAttribute CONCAT_VERTEX_ATTRIBUTE_NAME(IMPORTANCE_CRITERION_INDEX)
+
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
-layout(location = 3) in float vertexVorticity;
-layout(location = 4) in float vertexLineCurvature;
-layout(location = 5) in float vertexLineLength;
+layout(location = 3) in float vertexAttribute;
 
 out vec3 fragmentNormal;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
-out float vorticity;
+out float fragmentAttribute;
 out float lineCurvature;
 out float lineLength;
 
@@ -20,9 +21,7 @@ void main()
     fragmentNormal = vertexNormal;
     fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
     screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
-    vorticity = vertexVorticity;
-    lineCurvature = vertexLineCurvature;
-    lineLength = vertexLineLength;
+    fragmentAttribute = vertexAttribute;
     gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
@@ -31,22 +30,20 @@ void main()
 
 #version 430 core
 
+#define CONCAT_VERTEX_ATTRIBUTE_NAME(n) vertexAttribute##n
+#define vertexAttribute CONCAT_VERTEX_ATTRIBUTE_NAME(IMPORTANCE_CRITERION_INDEX)
 
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexLineNormal;
 layout(location = 2) in vec3 vertexLineTangent;
-layout(location = 3) in float vertexVorticity;
-layout(location = 4) in float vertexLineCurvature;
-layout(location = 5) in float vertexLineLength;
+layout(location = 3) in float vertexAttribute;
 
 out VertexData
 {
     vec3 linePosition;
     vec3 lineNormal;
     vec3 lineTangent;
-    float lineVorticity;
-    float lineCurvature;
-    float lineLength;
+    float lineAttribute;
 };
 
 void main()
@@ -54,9 +51,7 @@ void main()
     linePosition = vertexPosition;
     lineNormal = vertexLineNormal;
     lineTangent = vertexLineTangent;
-    lineVorticity = vertexVorticity;
-    lineCurvature = vertexLineCurvature;
-    lineLength = vertexLineLength;
+    lineAttribute = vertexAttribute;
 }
 
 
@@ -75,17 +70,13 @@ in VertexData
     vec3 linePosition;
     vec3 lineNormal;
     vec3 lineTangent;
-    float lineVorticity;
-    float lineCurvature;
-    float lineLength;
+    float lineAttribute;
 } v_in[];
 
 out vec3 fragmentNormal;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
-out float vorticity;
-out float lineCurvature;
-out float lineLength;
+out float fragmentAttribute;
 
 #define NUM_SEGMENTS 5
 
@@ -134,36 +125,28 @@ void main()
         fragmentNormal = vertexNormalsCurrent[i];
         fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
-        vorticity = v_in[0].lineVorticity;
-        lineCurvature = v_in[0].lineCurvature;
-        lineLength = v_in[0].lineLength;
+        fragmentAttribute = v_in[0].lineAttribute;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0);
         fragmentNormal = vertexNormalsCurrent[(i+1)%NUM_SEGMENTS];
         fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
-        vorticity = v_in[0].lineVorticity;
-        lineCurvature = v_in[0].lineCurvature;
-        lineLength = v_in[0].lineLength;
+        fragmentAttribute = v_in[0].lineAttribute;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
         fragmentNormal = vertexNormalsNext[i];
         fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
-        vorticity = v_in[1].lineVorticity;
-        lineCurvature = v_in[1].lineCurvature;
-        lineLength = v_in[1].lineLength;
+        fragmentAttribute = v_in[1].lineAttribute;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0);
         fragmentNormal = vertexNormalsNext[(i+1)%NUM_SEGMENTS];
         fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
-        vorticity = v_in[1].lineVorticity;
-        lineCurvature = v_in[1].lineCurvature;
-        lineLength = v_in[1].lineLength;
+        fragmentAttribute = v_in[1].lineAttribute;
         EmitVertex();
 
         EndPrimitive();
@@ -183,7 +166,7 @@ in vec3 screenSpacePosition;
 
 in vec3 fragmentNormal;
 in vec3 fragmentPositonWorld;
-in float vorticity;
+in float fragmentAttribute;
 in float lineCurvature;
 in float lineLength;
 
@@ -200,8 +183,8 @@ uniform float aoFactorGlobal = 1.0f;
 uniform float shadowFactorGlobal = 1.0f;
 
 
-uniform float minCriterionValue;
-uniform float maxCriterionValue;
+uniform float minCriterionValue = 0.0;
+uniform float maxCriterionValue = 1.0;
 uniform bool transparencyMapping = true;
 
 // Color of the object
@@ -231,16 +214,7 @@ void main()
     float shadowFactor = 1.0f;
 #endif
 
-    #if IMPORTANCE_CRITERION_INDEX == 0
-    // Use vorticity
-    vec4 colorAttribute = transferFunction(vorticity);
-    #elif IMPORTANCE_CRITERION_INDEX == 1
-    // Use line curvature
-    vec4 colorAttribute = transferFunction(lineCurvature);
-    #else
-    // Use line length
-    vec4 colorAttribute = transferFunction(lineLength);
-    #endif
+    vec4 colorAttribute = transferFunction(fragmentAttribute);
 
     vec3 normal = fragmentNormal;
     if (length(normal) < 0.5) {

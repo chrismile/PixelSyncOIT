@@ -22,6 +22,7 @@
 #include "Utils/VideoWriter.hpp"
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/CameraPath.hpp"
+#include "Utils/ImportanceCriteria.hpp"
 #include "OIT/OIT_Renderer.hpp"
 #include "AmbientOcclusion/SSAO.hpp"
 #include "AmbientOcclusion/VoxelAO.hpp"
@@ -57,7 +58,7 @@ protected:
     // State changes
     void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
     enum ShaderModeUpdate {
-        SHADER_MODE_UPDATE_NEW_OIT_RENDERER, SHADER_MODE_UPDATE_NEW_MODEL, SHADER_MODE_UPDATE_SSAO_CHANGE
+        SHADER_MODE_UPDATE_NEW_OIT_RENDERER, SHADER_MODE_UPDATE_NEW_MODEL, SHADER_MODE_UPDATE_EFFECT_CHANGE
     };
     void updateShaderMode(ShaderModeUpdate modeUpdate);
     void loadModel(const std::string &filename, bool resetCamera = true);
@@ -118,7 +119,6 @@ private:
     glm::mat4 rotation;
     glm::mat4 scaling;
     sgl::AABB3 boundingBox;
-    bool modelContainsTrajectories;
 
     // User interface
     bool showSettingsWindow = true;
@@ -140,9 +140,18 @@ private:
     TransferFunctionWindow transferFunctionWindow;
 
     // Trajectory rendering
-    bool usesGeometryShader = false;
-    ImportanceCriterionType importanceCriterionType = IMPORTANCE_CRITERION_VORTICITY;
+    bool modelContainsTrajectories;
+    TrajectoryType trajectoryType;
+    ImportanceCriterionTypeAneurism importanceCriterionTypeAneurism
+            = IMPORTANCE_CRITERION_ANEURISM_VORTICITY;
+    ImportanceCriterionTypeWCB importanceCriterionTypeWCB
+            = IMPORTANCE_CRITERION_WCB_TOTAL_PRESSURE_DIFFERENCE;
+    ImportanceCriterionTypeConvectionRolls importanceCriterionTypeConvectionRolls
+            = IMPORTANCE_CRITERION_CONVECTION_ROLLS_LINE_CURVATURE;
+    int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
+    bool usesGeometryShader = false;
+    void changeImportanceCriterionType();
     void recomputeHistogramForMesh();
 
     // Hair rendering

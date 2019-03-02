@@ -76,7 +76,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     plainShader = ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
     whiteSolidShader = ShaderManager->getShaderProgram({"WhiteSolid.Vertex", "WhiteSolid.Fragment"});
 
-    EventManager::get()->addListener(RESOLUTION_CHANGED_EVENT, [this](EventPtr event){ this->resolutionChanged(event); });
+    EventManager::get()->addListener(RESOLUTION_CHANGED_EVENT,
+            [this](EventPtr event){ this->resolutionChanged(event); });
 
     camera->setNearClipDistance(0.01f);
     camera->setFarClipDistance(100.0f);
@@ -120,7 +121,6 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     Renderer->setErrorCallback(&openglErrorCallback);
     Renderer->setDebugVerbosity(DEBUG_OUTPUT_CRITICAL_ONLY);
 
-    ShaderManager->addPreprocessorDefine("IMPORTANCE_CRITERION_INDEX", (int)importanceCriterionType);
     ShaderManager->addPreprocessorDefine("REFLECTION_MODEL", (int)reflectionModelType);
 
     shadowTechnique = boost::shared_ptr<ShadowTechnique>(new NoShadowMapping);
@@ -201,9 +201,19 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    modelContainsTrajectories =boost::starts_with(modelFilenamePure, "Data/Trajectories")
+    modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
             || boost::starts_with(modelFilenamePure, "Data/WCB")
             || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls");
+    if (modelContainsTrajectories) {
+        if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+            trajectoryType = TRAJECTORY_TYPE_ANEURISM;
+        } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+            trajectoryType = TRAJECTORY_TYPE_WCB;
+        } else {
+            trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS;
+        }
+        changeImportanceCriterionType();
+    }
 
     std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
     if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Lines)")) {
@@ -219,10 +229,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         if (boost::starts_with(modelFilenamePure, "Data/Models")) {
             convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
         } else if (modelContainsTrajectories) {
-            if (boost::ends_with(modelFilenameOptimized, "_tri")) {
-                convertObjTrajectoryDataToBinaryLineMesh(modelFilenameObj, modelFilenameOptimized);
+            if (boost::ends_with(modelFilenameOptimized, "_lines")) {
+                convertObjTrajectoryDataToBinaryLineMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
             } else {
-                convertObjTrajectoryDataToBinaryTriangleMesh(modelFilenameObj, modelFilenameOptimized);
+                convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             modelFilenameObj = filename;
@@ -304,7 +314,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
-                camera->setPosition(glm::vec3(0.6f, 0.0f, 8.8f));
+                //camera->setPosition(glm::vec3(0.6f, 0.0f, 8.8f));
+                camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
@@ -327,16 +338,27 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     boundingBox = boundingBox.transformed(rotation * scaling);
     updateAOMode();
-    shadowTechnique->newModelLoaded(modelFilenamePure);
+    shadowTechnique->newModelLoaded(modelFilenamePure, modelContainsTrajectories);
     shadowTechnique->setLightDirection(lightDirection, boundingBox);
     reRender = true;
 }
 
+void PixelSyncApp::changeImportanceCriterionType()
+{
+    if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+        importanceCriterionIndex = (int)importanceCriterionTypeAneurism;
+    } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+        importanceCriterionIndex = (int)importanceCriterionTypeWCB;
+    } else {
+        importanceCriterionIndex = (int)importanceCriterionTypeConvectionRolls;
+    }
+    ShaderManager->addPreprocessorDefine("IMPORTANCE_CRITERION_INDEX", importanceCriterionIndex);
+}
+
 void PixelSyncApp::recomputeHistogramForMesh()
 {
-    ShaderManager->addPreprocessorDefine("IMPORTANCE_CRITERION_INDEX", (int)importanceCriterionType);
     ImportanceCriterionAttribute importanceCriterionAttribute =
-            transparentObject.importanceCriterionAttributes.at((int)importanceCriterionType);
+            transparentObject.importanceCriterionAttributes.at(importanceCriterionIndex);
     minCriterionValue = importanceCriterionAttribute.minAttribute;
     maxCriterionValue = importanceCriterionAttribute.maxAttribute;
     transferFunctionWindow.computeHistogram(importanceCriterionAttribute.attributes,
@@ -436,14 +458,14 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
         shadowTechnique->setGatherShaderList(gatherShaderIDs);
         transparencyShader = oitRenderer->getGatherShader();
     }
-    // TODO: SHADER_MODE_UPDATE_SSAO_CHANGE
+    // TODO: SHADER_MODE_UPDATE_EFFECT_CHANGE
     if (modelContainsTrajectories) {
         if (shaderMode != SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_NEW_OIT_RENDERER
-                || modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
+                || modeUpdate == SHADER_MODE_UPDATE_EFFECT_CHANGE) {
             shaderMode = SHADER_MODE_VORTICITY;
         }
     } else {
-        if (shaderMode == SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_SSAO_CHANGE) {
+        if (shaderMode == SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_EFFECT_CHANGE) {
             shaderMode = SHADER_MODE_PSEUDO_PHONG;
         }
     }
@@ -468,16 +490,28 @@ void PixelSyncApp::setNewState(const InternalState &newState)
         ShaderManager->removePreprocessorDefine("PIXEL_SYNC_ORDERED");
     }
 
-    // 2. Handle global state changes like SSAO, tiling mode
+    // 2.1. Handle global state changes like ambient occlusion, shadowing, tiling mode
     setNewTilingMode(newState.tilingWidth, newState.tilingHeight, newState.useMortonCodeForTiling);
-    if (currentAOTechnique != newState.aoTechnique) {
-        currentAOTechnique = newState.aoTechnique;
-        updateAOMode();
+    bool shallReloadShader = false;
+    if (currentAOTechnique != newState.aoTechniqueName || currentShadowTechnique != newState.shadowTechniqueName) {
+        shallReloadShader = true;
         ShaderManager->invalidateShaderCache();
-        updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+    }
+    if (currentAOTechnique != newState.aoTechniqueName) {
+        currentAOTechnique = newState.aoTechniqueName;
+        updateAOMode();
+    }
+    if (currentShadowTechnique != newState.shadowTechniqueName) {
+        currentShadowTechnique = newState.shadowTechniqueName;
+        updateShadowMode();
+    }
+    if (shallReloadShader) {
+        ShaderManager->invalidateShaderCache();
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
     }
 
-    // 3. Load right model file
+    // 3.1. Load right model file
     std::string modelFilename = "";
     for (int i = 0; i < NUM_MODELS; i++) {
         if (MODEL_DISPLAYNAMES[i] == newState.modelName) {
@@ -493,6 +527,24 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     }
     shuffleGeometry = newState.testShuffleGeometry;
     loadModel(modelFilename);
+
+    // 3.2. If trajectory model: Set correct importance criterion
+    if (modelContainsTrajectories && importanceCriterionIndex != newState.importanceCriterionIndex) {
+        if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+            importanceCriterionTypeAneurism = (ImportanceCriterionTypeAneurism)newState.importanceCriterionIndex;
+        } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+            importanceCriterionTypeWCB = (ImportanceCriterionTypeWCB)newState.importanceCriterionIndex;
+        } else {
+            importanceCriterionTypeConvectionRolls
+                    = (ImportanceCriterionTypeConvectionRolls)newState.importanceCriterionIndex;
+        }
+        changeImportanceCriterionType();
+        recomputeHistogramForMesh();
+        ShaderManager->invalidateShaderCache();
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+        transparentObject.setNewShader(transparencyShader);
+        reRender = true;
+    }
 
     // 4. Set OIT algorithm
     setRenderMode(newState.oitAlgorithm, true);
@@ -850,7 +902,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
         }
         reRender = true;
     } ImGui::SameLine();
-    ImGui::Checkbox("Continuous rendering", &continuousRendering);
+    ImGui::Checkbox("Continuous Rendering", &continuousRendering);
     ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);
 
     if (shaderMode == SHADER_MODE_VORTICITY) {
@@ -858,7 +910,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
         if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
             reRender = true;
         }
-        ImGui::Checkbox("Show transfer function window", &transferFunctionWindow.getShowTransferFunctionWindow());
+        ImGui::Checkbox("Show Transfer Function Window", &transferFunctionWindow.getShowTransferFunctionWindow());
 
         if (usesGeometryShader && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
@@ -868,23 +920,33 @@ void PixelSyncApp::renderSceneSettingsGUI()
         }
 
         // Switch importance criterion
-        if (!usesGeometryShader && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
-                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionType, IMPORTANCE_CRITERION_DISPLAYNAMES,
-                        IM_ARRAYSIZE(IMPORTANCE_CRITERION_DISPLAYNAMES))) {
+        if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
+                && ((trajectoryType == TRAJECTORY_TYPE_ANEURISM
+                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeAneurism,
+                                IMPORTANCE_CRITERION_ANEURISM_DISPLAYNAMES,
+                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_ANEURISM_DISPLAYNAMES)))
+                || (trajectoryType == TRAJECTORY_TYPE_WCB
+                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeWCB,
+                                IMPORTANCE_CRITERION_WCB_DISPLAYNAMES,
+                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_WCB_DISPLAYNAMES)))
+                || (trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS
+                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeConvectionRolls,
+                                IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES,
+                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES))))) {
+            changeImportanceCriterionType();
             recomputeHistogramForMesh();
             ShaderManager->invalidateShaderCache();
-            updateAOMode();
-            updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+            transparentObject.setNewShader(transparencyShader);
             reRender = true;
         }
-
     }
 
     if (ImGui::Combo("AO Mode", (int*)&currentAOTechnique, AO_TECHNIQUE_DISPLAYNAMES,
                      IM_ARRAYSIZE(AO_TECHNIQUE_DISPLAYNAMES))) {
         ShaderManager->invalidateShaderCache();
         updateAOMode();
-        updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
         reRender = true;
     }
 
@@ -896,7 +958,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
                      IM_ARRAYSIZE(SHADOW_MAPPING_TECHNIQUE_DISPLAYNAMES))) {
         ShaderManager->invalidateShaderCache();
         updateShadowMode();
-        updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
         reRender = true;
     }
 
@@ -908,7 +970,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
                      IM_ARRAYSIZE(REFLECTION_MODEL_DISPLAY_NAMES))) {
         ShaderManager->addPreprocessorDefine("REFLECTION_MODEL", (int)reflectionModelType);
         ShaderManager->invalidateShaderCache();
-        updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
         reRender = true;
     }
 
@@ -917,7 +979,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 
         // Needs new transparency shader because of changed global settings?
         if (shadowTechnique->getNeedsNewTransparencyShader()) {
-            updateShaderMode(SHADER_MODE_UPDATE_SSAO_CHANGE);
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
         }
     }
 
@@ -1082,11 +1144,6 @@ void PixelSyncApp::update(float dt)
 
         cameraPath.update(updateRate);
         camera->overwriteViewMatrix(cameraPath.getViewMatrix());
-        /*float circleAngle = recordingTime / FULL_CIRCLE_TIME * sgl::TWO_PI;
-        glm::vec3 cameraPosition = cameraLookAtCenter + rotationRadius*glm::vec3(cosf(circleAngle), 0.0f, sinf(circleAngle));
-        camera->setPosition(cameraPosition);
-        //glm::lookAt()
-        camera->setYaw(circleAngle + sgl::PI);*/
 
         reRender = true;
     }
@@ -1182,8 +1239,8 @@ void PixelSyncApp::update(float dt)
         float pitch = -dt*MOUSE_ROT_SPEED*pixelMovement.y;
 
         glm::quat rotYaw = glm::quat(glm::vec3(0.0f, yaw, 0.0f));
-        glm::quat rotPitch = glm::quat(pitch*glm::vec3(rotationMatrix[0][0], rotationMatrix[1][0], rotationMatrix[2][0]));
-        //camera->rotate(rotYaw*rotPitch);
+        glm::quat rotPitch = glm::quat(pitch*glm::vec3(rotationMatrix[0][0], rotationMatrix[1][0],
+                rotationMatrix[2][0]));
         camera->rotateYaw(yaw);
         camera->rotatePitch(pitch);
         reRender = true;

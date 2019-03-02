@@ -10,12 +10,15 @@
 #include <Utils/File/FileUtils.hpp>
 #include <Graphics/Texture/TextureManager.hpp>
 #include <Graphics/Scene/Camera.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
 #include "../Performance/InternalState.hpp"
 #include "VoxelCurveDiscretizer.hpp"
 #include "OIT_VoxelRaytracing.hpp"
 
 //#define VOXEL_RAYTRACING_COMPUTE_SHADER
+
+static bool useNeighborSearch = true;
 
 OIT_VoxelRaytracing::OIT_VoxelRaytracing(sgl::CameraPtr &camera, const sgl::Color &clearColor) : camera(camera), clearColor(clearColor)
 {
@@ -44,8 +47,27 @@ void OIT_VoxelRaytracing::setTransferFunctionTexture(const sgl::TexturePtr &text
 
 void OIT_VoxelRaytracing::create()
 {
+    if (useNeighborSearch) {
+        sgl::ShaderManager->removePreprocessorDefine("VOXEL_RAY_CASTING_FAST");
+    } else {
+        sgl::ShaderManager->addPreprocessorDefine("VOXEL_RAY_CASTING_FAST", "");
+    }
     //renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
+}
 
+void OIT_VoxelRaytracing::renderGUI()
+{
+    ImGui::Separator();
+
+    if (ImGui::Checkbox("Voxel Neighbor Search (Slow)", &useNeighborSearch)) {
+        if (useNeighborSearch) {
+            sgl::ShaderManager->removePreprocessorDefine("VOXEL_RAY_CASTING_FAST");
+        } else {
+            sgl::ShaderManager->addPreprocessorDefine("VOXEL_RAY_CASTING_FAST", "");
+        }
+        reloadShader();
+        reRender = true;
+    }
 }
 
 void OIT_VoxelRaytracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
@@ -71,9 +93,16 @@ std::string ivec3ToString(const glm::ivec3 &v) {
 
 void OIT_VoxelRaytracing::setNewState(const InternalState &newState)
 {
-    int gridResolution = newState.oitAlgorithmSettings.getIntValue("gridResolution");
-    int quantizationResolution = newState.oitAlgorithmSettings.getIntValue("quantizationResolution");
-    //reloadFile(); // TODO
+    //int gridResolution = newState.oitAlgorithmSettings.getIntValue("gridResolution");
+    //int quantizationResolution = newState.oitAlgorithmSettings.getIntValue("quantizationResolution");
+
+    newState.oitAlgorithmSettings.getValueOpt("useNeighborSearch", useNeighborSearch);
+    if (useNeighborSearch) {
+        sgl::ShaderManager->removePreprocessorDefine("VOXEL_RAY_CASTING_FAST");
+    } else {
+        sgl::ShaderManager->addPreprocessorDefine("VOXEL_RAY_CASTING_FAST", "");
+    }
+    reloadShader();
 }
 
 void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity)
@@ -98,7 +127,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
             discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity);
         }
         compressedData = discretizer.compressData();
-        saveToFile(modelFilenameVoxelGrid, compressedData); // TODO When format is stable
+        saveToFile(modelFilenameVoxelGrid, compressedData);
     } else {
         loadFromFile(modelFilenameVoxelGrid, compressedData);
         if (isHairDataset) {
@@ -144,6 +173,13 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
 #endif
 }
 
+void OIT_VoxelRaytracing::reloadShader()
+{
+    sgl::ShaderManager->invalidateShaderCache();
+    renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMainFrag.Vertex",
+                                                          "VoxelRaytracingMainFrag.Fragment" });
+    blitRenderData = blitRenderData->copy(renderShader);
+}
 
 void OIT_VoxelRaytracing::setUniformData()
 {

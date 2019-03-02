@@ -32,11 +32,15 @@ public:
     // Contains all logic in raytracing renderer
     virtual void renderToScreen();
 
+    // Render options in GUI menu controlling parameters of ray caster
+    virtual void renderGUI();
+
     // For changing performance measurement modes
     void setNewState(const InternalState &newState);
 
 private:
     void fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
+    void reloadShader();
     void setUniformData();
 
     sgl::ShaderProgramPtr renderShader;

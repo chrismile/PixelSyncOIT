@@ -200,15 +200,14 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     }
 }
 void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
-                          const std::vector<float> &pathLineVorticities,
+                          std::vector<std::vector<float>> &importanceCriteriaLine,
                           std::vector<glm::vec3> &vertices,
                           std::vector<glm::vec3> &normals,
-                          std::vector<float> &vorticities,
-                          std::vector<float> &lineCurvatures,
-                          std::vector<float> &lineLengths,
+                          std::vector<std::vector<float>> &importanceCriteriaVertex,
                           std::vector<uint32_t> &indices)
 {
     int n = (int)pathLineCenters.size();
+    int numImportanceCriteria = (int)importanceCriteriaLine.size();
     if (n < 2) {
         sgl::Logfile::get()->writeError("Error in createTube: n < 2");
         return;
@@ -217,9 +216,10 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     /// Circle points (circle with center of tube node, in plane with normal vector of tube node)
     vertices.reserve(n*circlePoints2D.size());
     normals.reserve(n*circlePoints2D.size());
-    vorticities.reserve(n*circlePoints2D.size());
-    lineCurvatures.reserve(n*circlePoints2D.size());
-    lineLengths.reserve(n*circlePoints2D.size());
+    importanceCriteriaVertex.resize(numImportanceCriteria);
+    for (int i = 0; i < numImportanceCriteria; i++) {
+        importanceCriteriaVertex.at(i).reserve(n);
+    }
     indices.reserve((n-1)*circlePoints2D.size()*6);
 
     // List of all line nodes (points with data)
@@ -232,7 +232,6 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     for (int i = 0; i < n; i++) {
         // Normal of line, e.g.
         glm::vec3 tangent;
-        float curvatureAngle = 0.0f;
 
         if (i == 0) {
             // First node
@@ -255,15 +254,6 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         }
         tangent = glm::normalize(tangent);
 
-        // Compute curvature, i.e. angle between neighboring line segment tangents.
-        // Fallback for first and last line point: Assume zero curvature.
-        if (i != 0 && i != n-1) {
-            // glm::dot(tangent, tubeNodes.back().tangent)
-            glm::vec3 lastTangent = tubeNodes.back().tangent;
-            float cosAngle = glm::clamp(glm::dot(tangent, lastTangent), 0.0f, 1.0f);
-            curvatureAngle = glm::acos(cosAngle) / sgl::PI;
-        }
-
         TubeNode node;
         node.center = pathLineCenters.at(i);
         node.tangent = tangent;
@@ -271,9 +261,9 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
         node.circleIndices.reserve(circlePoints2D.size());
         for (int j = 0; j < circlePoints2D.size(); j++) {
             node.circleIndices.push_back(j + numVertexPts*circlePoints2D.size());
-            vorticities.push_back(pathLineVorticities.at(i));
-            lineCurvatures.push_back(curvatureAngle);
-            lineLengths.push_back(lineSegmentLength);
+            for (int k = 0; k < numImportanceCriteria; k++) {
+                importanceCriteriaVertex.at(k).push_back(importanceCriteriaLine.at(k).at(i));
+            }
         }
         tubeNodes.push_back(node);
         numVertexPts++;
@@ -302,9 +292,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     if (numVertexPts <= 1) {
         vertices.clear();
         normals.clear();
-        vorticities.clear();
-        lineCurvatures.clear();
-        lineLengths.clear();
+        importanceCriteriaVertex.clear();
     }
 }
 
@@ -374,6 +362,7 @@ void createNormals(const std::vector<glm::vec3> &vertices,
 
 
 void convertObjTrajectoryDataToBinaryTriangleMesh(
+        TrajectoryType trajectoryType,
         const std::string &objFilename,
         const std::string &binaryFilename)
 {
@@ -385,6 +374,12 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
         return;
     }
 
+    if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+        initializeCircleData(5, TUBE_RADIUS);
+    } else {
+        initializeCircleData(3, TUBE_RADIUS);
+    }
+
     BinaryMesh binaryMesh;
     binaryMesh.submeshes.push_back(BinarySubMesh());
     BinarySubMesh &submesh = binaryMesh.submeshes.front();
@@ -392,9 +387,7 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
 
     std::vector<glm::vec3> globalVertexPositions;
     std::vector<glm::vec3> globalNormals;
-    std::vector<float> globalVorticities;
-    std::vector<float> globalLineCurvatures;
-    std::vector<float> globalLineLengths;
+    std::vector<std::vector<float>> globalImportanceCriteria;
     std::vector<uint32_t> globalIndices;
 
     std::vector<glm::vec3> globalLineVertices;
@@ -442,26 +435,33 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
                 pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
             }
 
+            // Compute importance criteria
+            std::vector<std::vector<float>> importanceCriteriaLine;
+            computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaLine);
+
             // Create tube render data
             std::vector<glm::vec3> localVertices;
-            std::vector<float> localVorticites;
-            std::vector<float> localLineCurvatures;
-            std::vector<float> localLineLengths;
+            std::vector<std::vector<float>> importanceCriteriaVertex;
             std::vector<glm::vec3> localNormals;
             std::vector<uint32_t> localIndices;
-            createTubeRenderData(pathLineCenters, pathLineVorticities, localVertices, localNormals,
-                    localVorticites, localLineCurvatures, localLineLengths, localIndices);
-            //createNormals(localVertices, localIndices, localNormals);
+            createTubeRenderData(pathLineCenters, importanceCriteriaLine, localVertices, localNormals,
+                                 importanceCriteriaVertex, localIndices);
 
             // Local -> global
             for (size_t i = 0; i < localIndices.size(); i++) {
                 globalIndices.push_back(localIndices.at(i) + globalVertexPositions.size());
             }
             globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
-            globalVorticities.insert(globalVorticities.end(), localVorticites.begin(), localVorticites.end());
-            globalLineCurvatures.insert(globalLineCurvatures.end(), localLineCurvatures.begin(), localLineCurvatures.end());
-            globalLineLengths.insert(globalLineLengths.end(), localLineLengths.begin(), localLineLengths.end());
             globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
+            if (globalImportanceCriteria.empty()) {
+                globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaVertex.begin(),
+                        importanceCriteriaVertex.end());
+            } else {
+                for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
+                    globalImportanceCriteria.at(i).insert(globalImportanceCriteria.at(i).end(),
+                            importanceCriteriaVertex.at(i).begin(), importanceCriteriaVertex.at(i).end());
+                }
+            }
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
@@ -489,37 +489,20 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
     memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), globalNormals.size() * sizeof(glm::vec3));
     submesh.attributes.push_back(lineNormalsAttribute);
 
-    BinaryMeshAttribute vorticitiesAttribute;
-    vorticitiesAttribute.name = "vertexVorticity";
-    vorticitiesAttribute.attributeFormat = ATTRIB_FLOAT;
-    vorticitiesAttribute.numComponents = 1;
-    vorticitiesAttribute.data.resize(globalVorticities.size() * sizeof(float));
-    memcpy(&vorticitiesAttribute.data.front(), &globalVorticities.front(), globalVorticities.size() * sizeof(float));
-    submesh.attributes.push_back(vorticitiesAttribute);
 
-    BinaryMeshAttribute curvatureAttribute;
-    curvatureAttribute.name = "vertexLineCurvature";
-    curvatureAttribute.attributeFormat = ATTRIB_FLOAT;
-    curvatureAttribute.numComponents = 1;
-    curvatureAttribute.data.resize(globalLineCurvatures.size() * sizeof(float));
-    memcpy(&curvatureAttribute.data.front(), &globalLineCurvatures.front(), globalLineCurvatures.size() * sizeof(float));
-    submesh.attributes.push_back(curvatureAttribute);
+    std::vector<std::vector<uint16_t>> globalImportanceCriteriaUnorm;
+    packUnorm16ArrayOfArrays(globalImportanceCriteria, globalImportanceCriteriaUnorm);
 
-    BinaryMeshAttribute lineLengthAttribute;
-    lineLengthAttribute.name = "vertexLineLength";
-    lineLengthAttribute.attributeFormat = ATTRIB_FLOAT;
-    lineLengthAttribute.numComponents = 1;
-    lineLengthAttribute.data.resize(globalLineLengths.size() * sizeof(float));
-    memcpy(&lineLengthAttribute.data.front(), &globalLineLengths.front(), globalLineLengths.size() * sizeof(float));
-    submesh.attributes.push_back(lineLengthAttribute);
-
-    // Now add min/max uniform values.
-    /*BinaryMeshUniform minLineLengthUniform;
-    minLineLengthUniform.name = "minLineLength";
-    minLineLengthUniform.attributeFormat = ATTRIB_FLOAT;
-    minLineLengthUniform.numComponents = 1;
-    minLineLengthUniform.data.push_back(minLineLength);
-    submesh.uniforms.push_back(minLineLengthUniform);*/
+    for (size_t i = 0; i < globalImportanceCriteriaUnorm.size(); i++) {
+        std::vector<uint16_t> &currentAttr = globalImportanceCriteriaUnorm.at(i);
+        BinaryMeshAttribute vertexAttribute;
+        vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
+        vertexAttribute.attributeFormat = ATTRIB_UNSIGNED_SHORT;
+        vertexAttribute.numComponents = 1;
+        vertexAttribute.data.resize(currentAttr.size() * sizeof(uint16_t));
+        memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(uint16_t));
+        submesh.attributes.push_back(vertexAttribute);
+    }
 
 
     file.close();
@@ -552,21 +535,25 @@ void computeLineNormal(const glm::vec3 &tangent, glm::vec3 &normal, const glm::v
  * @param indices: The (output) indices specifying how tube triangles are built from the circle vertices.
  */
 void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
-                                std::vector<float> &pathLineVorticities,
+                                std::vector<std::vector<float>> &importanceCriteriaIn,
                                 std::vector<glm::vec3> &vertices,
-                                std::vector<float> &vorticities,
+                                std::vector<std::vector<float>> &importanceCriteriaOut,
                                 std::vector<glm::vec3> &tangents,
                                 std::vector<glm::vec3> &normals,
                                 std::vector<uint32_t> &indices)
 {
     int n = (int)pathLineCenters.size();
+    int numImportanceCriteria = (int)importanceCriteriaIn.size();
     if (n < 2) {
         sgl::Logfile::get()->writeError("Error in createTube: n < 2");
         return;
     }
 
     vertices.reserve(n);
-    vorticities.reserve(n);
+    importanceCriteriaOut.resize(numImportanceCriteria);
+    for (int i = 0; i < numImportanceCriteria; i++) {
+        importanceCriteriaOut.at(i).reserve(n);
+    }
     tangents.reserve(n);
     normals.reserve(n);
     indices.reserve(n);
@@ -598,7 +585,9 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
         lastNormal = normal;
 
         vertices.push_back(pathLineCenters.at(i));
-        vorticities.push_back(pathLineVorticities.at(i));
+        for (int j = 0; j < numImportanceCriteria; j++) {
+            importanceCriteriaOut.at(j).push_back(importanceCriteriaIn.at(j).at(i));
+        }
         tangents.push_back(tangent);
         normals.push_back(normal);
     }
@@ -610,7 +599,9 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
     }
 }
 
+
 void convertObjTrajectoryDataToBinaryLineMesh(
+        TrajectoryType trajectoryType,
         const std::string &objFilename,
         const std::string &binaryFilename)
 {
@@ -622,6 +613,12 @@ void convertObjTrajectoryDataToBinaryLineMesh(
         return;
     }
 
+    if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+        initializeCircleData(5, TUBE_RADIUS);
+    } else {
+        initializeCircleData(3, TUBE_RADIUS);
+    }
+
     BinaryMesh binaryMesh;
     binaryMesh.submeshes.push_back(BinarySubMesh());
     BinarySubMesh &submesh = binaryMesh.submeshes.front();
@@ -630,7 +627,7 @@ void convertObjTrajectoryDataToBinaryLineMesh(
     std::vector<glm::vec3> globalVertexPositions;
     std::vector<glm::vec3> globalNormals;
     std::vector<glm::vec3> globalTangents;
-    std::vector<float> globalVorticities;
+    std::vector<std::vector<float>> globalImportanceCriteria;
     std::vector<uint32_t> globalIndices;
 
     std::vector<glm::vec3> globalLineVertices;
@@ -678,23 +675,35 @@ void convertObjTrajectoryDataToBinaryLineMesh(
                 pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
             }
 
+            // Compute importance criteria
+            std::vector<std::vector<float>> importanceCriteriaUnormIn;
+            computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaUnormIn);
+
             // Create tube render data
             std::vector<glm::vec3> localVertices;
-            std::vector<float> localVorticites;
             std::vector<glm::vec3> localTangents;
             std::vector<glm::vec3> localNormals;
             std::vector<uint32_t> localIndices;
-            createTangentAndNormalData(pathLineCenters, pathLineVorticities, localVertices, localVorticites,
-                                       localTangents, localNormals, localIndices);
+            std::vector<std::vector<float>> importanceCriteriaUnormOut;
+            createTangentAndNormalData(pathLineCenters, importanceCriteriaUnormIn, localVertices,
+                    importanceCriteriaUnormOut, localTangents, localNormals, localIndices);
 
             // Local -> global
             for (size_t i = 0; i < localIndices.size(); i++) {
                 globalIndices.push_back(localIndices.at(i) + globalVertexPositions.size());
             }
             globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
-            globalVorticities.insert(globalVorticities.end(), localVorticites.begin(), localVorticites.end());
             globalTangents.insert(globalTangents.end(), localTangents.begin(), localTangents.end());
             globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
+            if (globalImportanceCriteria.empty()) {
+                globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaUnormOut.begin(),
+                        importanceCriteriaUnormOut.end());
+            } else {
+                for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
+                    globalImportanceCriteria.at(i).insert(globalImportanceCriteria.at(i).end(),
+                            importanceCriteriaUnormOut.at(i).begin(), importanceCriteriaUnormOut.at(i).end());
+                }
+            }
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
@@ -730,13 +739,20 @@ void convertObjTrajectoryDataToBinaryLineMesh(
     memcpy(&lineTangentAttribute.data.front(), &globalTangents.front(), globalTangents.size() * sizeof(glm::vec3));
     submesh.attributes.push_back(lineTangentAttribute);
 
-    BinaryMeshAttribute vorticitiesAttribute;
-    vorticitiesAttribute.name = "vertexVorticity";
-    vorticitiesAttribute.attributeFormat = ATTRIB_FLOAT;
-    vorticitiesAttribute.numComponents = 1;
-    vorticitiesAttribute.data.resize(globalVorticities.size() * sizeof(float));
-    memcpy(&vorticitiesAttribute.data.front(), &globalVorticities.front(), globalVorticities.size() * sizeof(float));
-    submesh.attributes.push_back(vorticitiesAttribute);
+
+    std::vector<std::vector<uint16_t>> globalImportanceCriteriaUnorm;
+    packUnorm16ArrayOfArrays(globalImportanceCriteria, globalImportanceCriteriaUnorm);
+
+    for (size_t i = 0; i < globalImportanceCriteriaUnorm.size(); i++) {
+        std::vector<uint16_t> &currentAttr = globalImportanceCriteriaUnorm.at(i);
+        BinaryMeshAttribute vertexAttribute;
+        vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
+        vertexAttribute.attributeFormat = ATTRIB_UNSIGNED_SHORT;
+        vertexAttribute.numComponents = 1;
+        vertexAttribute.data.resize(currentAttr.size() * sizeof(uint16_t));
+        memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(uint16_t));
+        submesh.attributes.push_back(vertexAttribute);
+    }
 
     file.close();
 

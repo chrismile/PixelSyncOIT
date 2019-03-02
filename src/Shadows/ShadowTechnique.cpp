@@ -27,9 +27,9 @@ void ShadowTechnique::setLightDirection(const glm::vec3 &lightDirection, const s
     this->lightDirection = lightDirection;
 }
 
-void  ShadowTechnique::newModelLoaded(const std::string &filename)
+void ShadowTechnique::newModelLoaded(const std::string &filename, bool modelContainsTrajectories)
 {
-    if (boost::starts_with(filename, "Data/Trajectories")) {
+    if (modelContainsTrajectories) {
         sgl::ShaderManager->addPreprocessorDefine("MODEL_WITH_VORTICITY", "");
     } else {
         sgl::ShaderManager->removePreprocessorDefine("MODEL_WITH_VORTICITY");

@@ -489,8 +489,8 @@ void VoxelCurveDiscretizer::compressLine(const glm::ivec3 &voxelIndex, const Lin
     int faceIndex2 = computeFaceIndex(line.v2, voxelIndex);
     quantizeLine(glm::vec3(voxelIndex), line, lineQuantized, faceIndex1, faceIndex2);
 
-    uint8_t attr1Transferred = static_cast<int>(opacityMapping(lineQuantized.a1, maxVorticity)*255.99f);
-    uint8_t attr2Transferred = static_cast<int>(opacityMapping(lineQuantized.a2, maxVorticity)*255.99f);
+    uint8_t attr1Unorm = std::round(lineQuantized.a1*255.0f);
+    uint8_t attr2Unorm = std::round(lineQuantized.a2*255.0f);
 
     int c = round(2*intlog2(quantizationResolution.x));
     lineCompressed.linePosition = lineQuantized.faceIndex1;
@@ -499,8 +499,8 @@ void VoxelCurveDiscretizer::compressLine(const glm::ivec3 &voxelIndex, const Lin
     lineCompressed.linePosition |= lineQuantized.facePositionQuantized2 << (6 + c);
     lineCompressed.attributes = 0;
     lineCompressed.attributes |= (lineQuantized.lineID & 31u) << 11;
-    lineCompressed.attributes |= attr1Transferred << 16;
-    lineCompressed.attributes |= attr2Transferred << 24;
+    lineCompressed.attributes |= attr1Unorm << 16;
+    lineCompressed.attributes |= attr2Unorm << 24;
 }
 
 void VoxelCurveDiscretizer::quantizePoint(const glm::vec3 &v, glm::ivec2 &qv, int faceIndex)

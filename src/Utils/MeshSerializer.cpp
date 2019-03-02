@@ -21,6 +21,7 @@
 #include <Graphics/Shader/ShaderAttributes.hpp>
 #include <Graphics/Renderer.hpp>
 
+#include "ImportanceCriteria.hpp"
 #include "MeshSerializer.hpp"
 
 using namespace std;
@@ -170,7 +171,7 @@ void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass)
 void MeshRenderer::setNewShader(sgl::ShaderProgramPtr newShader)
 {
     for (size_t i = 0; i < shaderAttributes.size(); i++) {
-        shaderAttributes.at(i) = shaderAttributes.at(i)->copy(newShader);
+        shaderAttributes.at(i) = shaderAttributes.at(i)->copy(newShader, false);
     }
 }
 
@@ -299,7 +300,7 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
     AABB3 totalBoundingBox(glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX), glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 
     // Importance criterion attributes are bound to location 3 and onwards in vertex shader
-    int importanceCriterionLocationCounter = 3;
+    //int importanceCriterionLocationCounter = 3;
 
     // Iterate over all submeshes and create rendering data
     for (size_t i = 0; i < mesh.submeshes.size(); i++) {
@@ -337,18 +338,16 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 importanceCriterionAttribute.name = meshAttribute.name;
 
                 // Copy values to mesh renderer data structure
-                float *attributeValues = (float*)&meshAttribute.data.front();
-                size_t numAttributeValues = meshAttribute.data.size() / sizeof(float);
-                importanceCriterionAttribute.attributes.resize(numAttributeValues);
-                memcpy(&importanceCriterionAttribute.attributes.front(), &meshAttribute.data.front(),
-                        meshAttribute.data.size());
+                uint16_t *attributeValuesUnorm = (uint16_t*)&meshAttribute.data.front();
+                size_t numAttributeValues = meshAttribute.data.size() / sizeof(uint16_t);
+                unpackUnorm16Array(attributeValuesUnorm, numAttributeValues, importanceCriterionAttribute.attributes);
 
                 // Compute minimum and maximum value
                 float minValue = FLT_MAX, maxValue = 0.0f;
                 #pragma omp parallel for reduction(min:minValue) reduction(max:maxValue)
                 for (size_t k = 0; k < numAttributeValues; k++) {
-                    minValue = std::min(minValue, attributeValues[k]);
-                    maxValue = std::max(maxValue, attributeValues[k]);
+                    minValue = std::min(minValue, importanceCriterionAttribute.attributes[k]);
+                    maxValue = std::max(maxValue, importanceCriterionAttribute.attributes[k]);
                 }
                 importanceCriterionAttribute.minAttribute = minValue;
                 importanceCriterionAttribute.maxAttribute = maxValue;
@@ -360,9 +359,10 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                     meshAttribute.data.size(), (void*)&meshAttribute.data.front(), VERTEX_BUFFER);
             if (meshAttribute.numComponents == 1) {
                 // Importance criterion attributes are bound to location 3 and onwards in vertex shader
-                renderData->addGeometryBuffer(attributeBuffer, importanceCriterionLocationCounter,
-                        meshAttribute.attributeFormat, meshAttribute.numComponents);
-                importanceCriterionLocationCounter += 1;
+                /*renderData->addGeometryBuffer(attributeBuffer, importanceCriterionLocationCounter,
+                        meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true); */
+                renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
+                        meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true);
             } else {
                 bool isNormalizedColor = (meshAttribute.name == "vertexColor");
                 renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),

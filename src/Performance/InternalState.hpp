@@ -8,6 +8,7 @@
 #include <string>
 #include <map>
 #include <Utils/Convert.hpp>
+#include "../Shadows/ShadowTechnique.hpp"
 
 const int NUM_OIT_MODES = 10;
 const char *const OIT_MODE_NAMES[] = {
@@ -42,13 +43,13 @@ const char *const MODEL_FILENAMES[] = {
         "Data/Hair/wStraight.hair",
         "Data/Hair/wWavy.hair",
         "Data/WCB/EUR_LL025/20121015_00_lagranto_ensemble_forecast__START_20121019_18.nc",
-        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121019_18.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
         "Data/ConvectionRolls/turbulence80000.obj",
         "Data/ConvectionRolls/turbulence20000.obj",
 };
 const char *const MODEL_DISPLAYNAMES[] = {
-        "Single Streamline", "Streamlines (Lines)", "Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon",
-       "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy",
+        "Single Streamline", "Aneurism (Lines)", "Aneurism Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon",
+        "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy",
         "Warm Conveyor Belt", "Warm Conveyor Belt (low-res)", "Convection Rolls", "Convection Rolls (low-res)"
 };
 
@@ -65,13 +66,6 @@ enum ReflectionModelType {
 const char *const REFLECTION_MODEL_DISPLAY_NAMES[] = {
         "Pseudo Phong Lighting", "Combined Shadow Map and AO",
         "Local Shadow Map Occlusion", "Ambient Occlusion Factor"
-};
-
-enum ImportanceCriterionType {
-        IMPORTANCE_CRITERION_VORTICITY = 0, IMPORTANCE_CRITERION_LINE_CURVATURE, IMPORTANCE_CRITERION_LINE_LENGTH
-};
-const char *const IMPORTANCE_CRITERION_DISPLAYNAMES[] = {
-        "Vorticity", "Line Curvature", "Line Length"
 };
 
 
@@ -124,7 +118,9 @@ struct InternalState
         return this->name == rhs.name && this->modelName == rhs.modelName && this->oitAlgorithm == rhs.oitAlgorithm
                && this->oitAlgorithmSettings.getMap() == rhs.oitAlgorithmSettings.getMap()
                && this->tilingWidth == rhs.tilingWidth && this->tilingHeight == rhs.tilingHeight
-               && this->aoTechnique == rhs.aoTechnique && this->useStencilBuffer == rhs.useStencilBuffer
+               && this->aoTechniqueName == rhs.aoTechniqueName && this->shadowTechniqueName == rhs.shadowTechniqueName
+               && this->importanceCriterionIndex == importanceCriterionIndex
+               && this->useStencilBuffer == rhs.useStencilBuffer
                && this->testNoInvocationInterlock == rhs.testNoInvocationInterlock
                && this->testNoAtomicOperations == rhs.testNoAtomicOperations
                && this->testShuffleGeometry == rhs.testShuffleGeometry;
@@ -139,7 +135,9 @@ struct InternalState
     int tilingWidth = 2;
     int tilingHeight = 8;
     bool useMortonCodeForTiling = false;
-    AOTechniqueName aoTechnique = AO_TECHNIQUE_NONE;
+    AOTechniqueName aoTechniqueName = AO_TECHNIQUE_NONE;
+    ShadowMappingTechniqueName shadowTechniqueName = NO_SHADOW_MAPPING;
+    int importanceCriterionIndex = 0;
     bool useStencilBuffer = true;
     bool testNoInvocationInterlock = false; // Test without pixel sync
     bool testNoAtomicOperations = false; // Test without atomic operations

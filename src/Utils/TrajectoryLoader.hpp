@@ -11,6 +11,8 @@
 
 #include <glm/glm.hpp>
 
+#include "ImportanceCriteria.hpp"
+
 /**
  * Creates normals for the specified indexed vertex set.
  * NOTE: If a vertex is indexed by more than one triangle, then the average normal is stored per vertex.
@@ -50,10 +52,12 @@ void createTubeRenderData<uint32_t>(const std::vector<glm::vec3> &pathLineCenter
 void initializeCircleData(int numSegments, float radius);
 
 void convertObjTrajectoryDataToBinaryTriangleMesh(
+        TrajectoryType trajectoryType,
         const std::string &objFilename,
         const std::string &binaryFilename);
 
 void convertObjTrajectoryDataToBinaryLineMesh(
+        TrajectoryType trajectoryType,
         const std::string &objFilename,
         const std::string &binaryFilename);
 

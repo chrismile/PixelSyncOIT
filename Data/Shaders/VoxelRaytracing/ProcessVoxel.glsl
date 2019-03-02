@@ -60,8 +60,8 @@ void insertHitSorted(in RayHit insertHit, inout int numHits, inout RayHit hits[M
 void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ivec3 voxelIndex,
         inout RayHit hits[MAX_NUM_HITS], inout int numHits, inout uint blendedLineIDs, inout uint newBlendedLineIDs)
 {
-    vec3 centerVoxelPosMin = vec3(voxelIndex);
-    vec3 centerVoxelPosMax = vec3(voxelIndex) + vec3(1);
+    vec3 centerVoxelPosMin = vec3(centerVoxelIndex);
+    vec3 centerVoxelPosMax = vec3(centerVoxelIndex) + vec3(1);
     //uint currVoxelNumLines = 0;
     //LineSegment currVoxelLines[MAX_NUM_LINES_PER_VOXEL];
     //loadLinesInVoxel(voxelIndex, currVoxelNumLines, currVoxelLines);
@@ -72,7 +72,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
     LineSegment currVoxelLine;
 
     for (int lineIndex = 0; lineIndex < currVoxelNumLines; lineIndex++) {
-        loadLineInVoxel(centerVoxelPosMin, lineListOffset, lineIndex, currVoxelLine);
+        loadLineInVoxel(vec3(voxelIndex), lineListOffset, lineIndex, currVoxelLine);
 
         uint lineID = currVoxelLine.lineID;
         uint lineBit = 1u << lineID;
@@ -284,8 +284,13 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVo
                     blendedLineIDs, newBlendedLineIDs);
         }
     }*/
-    // TODO
-    /*for (int z = -1; z <= 1; z++) {
+
+    #ifdef VOXEL_RAY_CASTING_FAST
+    // Faster, but with holes in line tubes
+    processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits, blendedLineIDs, newBlendedLineIDs);
+    #else
+    // Much slower, but uses neighbor search for closing holes in tubes protuding into neighboring voxels
+    for (int z = -1; z <= 1; z++) {
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
                 ivec3 processedVoxelIndex = voxelIndex + ivec3(x,y,z);
@@ -297,13 +302,14 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVo
             }
         }
     }
-    if (all(greaterThanEqual(nextVoxelIndex, ivec3(0)))
+    #endif
+
+
+    /*if (all(greaterThanEqual(nextVoxelIndex, ivec3(0)))
             && all(lessThan(nextVoxelIndex, gridResolution))) {
         processVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex, hits, numHits,
                 blendedLineIDs, newBlendedLineIDs);
     }*/
-    processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits,
-            blendedLineIDs, newBlendedLineIDs);
     //blendedLineIDs = newBlendedLineIDs;
     //blendedLineIDs |= newBlendedLineIDs;
 
