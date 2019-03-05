@@ -4,11 +4,7 @@
  *  Created on: 18.05.2018
  *      Author: christoph
  */
-#if __MINGW32__
-#define __MSVCRT_VERSION__ 0x0601
-#endif
 
-#include <windows.h>
 #include <fstream>
 #include <algorithm>
 #include <random>
