@@ -1,0 +1,16 @@
+<TransferFunction>
+    <OpacityPoints>
+        <OpacityPoint position="0" opacity="0"/>
+        <OpacityPoint position="0.15955056250095367" opacity="0.016778528690338135"/>
+        <OpacityPoint position="0.70304977893829346" opacity="0.016778528690338135"/>
+        <OpacityPoint position="0.9052969217300415" opacity="0.046979844570159912"/>
+        <OpacityPoint position="0.94060993194580078" opacity="0.68120801448822021"/>
+        <OpacityPoint position="1" opacity="0.89932882785797119"/>
+    </OpacityPoints>
+    <ColorPoints>
+        <ColorPoint position="0" r="255" g="255" b="191"/>
+        <ColorPoint position="0.62118780612945557" r="96" g="249" b="251"/>
+        <ColorPoint position="0.95666134357452393" r="171" g="147" b="0"/>
+        <ColorPoint position="1" r="255" g="0" b="0"/>
+    </ColorPoints>
+</TransferFunction>

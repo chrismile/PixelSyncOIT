@@ -73,5 +73,5 @@ cmake-build-*/
 *.nc
 *.hair
 
-Data/TransferFunctions/*
 Data/WCB/*.txt
+imgui.ini

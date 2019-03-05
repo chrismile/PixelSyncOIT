@@ -1,0 +1,14 @@
+<TransferFunction>
+    <OpacityPoints>
+        <OpacityPoint position="0" opacity="1"/>
+        <OpacityPoint position="1" opacity="1"/>
+    </OpacityPoints>
+    <ColorPoints>
+        <ColorPoint position="0" r="224" g="143" b="162"/>
+        <ColorPoint position="0.2" r="175" g="147" b="197"/>
+        <ColorPoint position="0.4" r="76" g="183" b="206"/>
+        <ColorPoint position="0.6" r="92" g="192" b="146"/>
+        <ColorPoint position="0.8" r="176" g="165" b="104"/>
+        <ColorPoint position="1" r="224" g="145" b="155"/>
+    </ColorPoints>
+</TransferFunction>
