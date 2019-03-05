@@ -4,7 +4,11 @@
  *  Created on: 18.05.2018
  *      Author: christoph
  */
+#if __MINGW32__
+#define __MSVCRT_VERSION__ 0x0601
+#endif
 
+#include <windows.h>
 #include <fstream>
 #include <algorithm>
 #include <random>
@@ -30,11 +34,19 @@ using namespace sgl;
 const uint32_t MESH_FORMAT_VERSION = 4u;
 
 void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
+#ifndef __MINGW32__
     std::ofstream file(filename.c_str(), std::ofstream::binary);
     if (!file.is_open()) {
         Logfile::get()->writeError(std::string() + "Error in writeMesh3D: File \"" + filename + "\" not found.");
         return;
     }
+ #else
+    FILE *fileptr = fopen(filename.c_str(), "wb");
+    if (fileptr == NULL) {
+        Logfile::get()->writeError(std::string() + "Error in writeMesh3D: File \"" + filename + "\" not found.");
+        return;
+    }
+ #endif
 
     sgl::BinaryWriteStream stream;
     stream.write((uint32_t)MESH_FORMAT_VERSION);
@@ -64,11 +76,17 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
         }
     }
 
+#ifndef __MINGW32__
     file.write((const char*)stream.getBuffer(), stream.getSize());
     file.close();
+#else
+    fwrite((const void*)stream.getBuffer(), stream.getSize(), 1, fileptr);
+    fclose(fileptr);
+#endif
 }
 
 void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
+#ifndef __MINGW32__
     std::ifstream file(filename.c_str(), std::ifstream::binary);
     if (!file.is_open()) {
         Logfile::get()->writeError(std::string() + "Error in readMesh3D: File \"" + filename + "\" not found.");
@@ -80,6 +98,26 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
     file.seekg(0);
     char *buffer = new char[size];
     file.read(buffer, size);
+    file.close();
+#else
+    /*
+     * Using MinGW-w64, the code above doesn't work, as streamsize == ptrdiff_t == __PTRDIFF_TYPE__ == long int
+     * is only 32-bits long, and thus is is faulty for large files > 2GiB.
+     */
+    FILE *fileptr = fopen(filename.c_str(), "rb");
+    if (fileptr == NULL) {
+        Logfile::get()->writeError(std::string() + "Error in readMesh3D: File \"" + filename + "\" not found.");
+        return;
+    }
+    fseeko64(fileptr, 0L, SEEK_END);
+    size_t size = ftello64 (fileptr);
+    fseeko64(fileptr, 0L, SEEK_SET);
+    char *buffer = new char[size];
+    fseek(fileptr, 0L, SEEK_SET);
+    uint64_t readSize = fread(buffer, 1, size, fileptr);
+    assert(size == readSize);
+    fclose(fileptr);
+#endif
 
     sgl::BinaryReadStream stream(buffer, size);
     uint32_t version;
@@ -134,7 +172,6 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
     }
 
     //delete[] buffer; // BinaryReadStream does deallocation
-    file.close();
 }
 
 

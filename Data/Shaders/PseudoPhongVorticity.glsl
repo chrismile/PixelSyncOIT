@@ -2,8 +2,7 @@
 
 #version 430 core
 
-#define CONCAT_VERTEX_ATTRIBUTE_NAME(n) vertexAttribute##n
-#define vertexAttribute CONCAT_VERTEX_ATTRIBUTE_NAME(IMPORTANCE_CRITERION_INDEX)
+#include "VertexAttributeNames.glsl"
 
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
@@ -30,8 +29,7 @@ void main()
 
 #version 430 core
 
-#define CONCAT_VERTEX_ATTRIBUTE_NAME(n) vertexAttribute##n
-#define vertexAttribute CONCAT_VERTEX_ATTRIBUTE_NAME(IMPORTANCE_CRITERION_INDEX)
+#include "VertexAttributeNames.glsl"
 
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexLineNormal;
