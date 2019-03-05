@@ -282,10 +282,10 @@ void convertHairDataToBinaryTriangleMesh(
     if (hairData.hasColorArray) {
         BinaryMeshAttribute colorsAttribute;
         colorsAttribute.name = "vertexColor";
-        colorsAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_INT;
-        colorsAttribute.numComponents = 1;
+        colorsAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_BYTE;
+        colorsAttribute.numComponents = 4;
         colorsAttribute.data.resize(globalColors.size() * sizeof(uint32_t));
-        memcpy(&colorsAttribute.data.front(), &globalColors.front(), globalColors.size() * sizeof(float));
+        memcpy(&colorsAttribute.data.front(), &globalColors.front(), globalColors.size() * sizeof(uint32_t));
         submesh.attributes.push_back(colorsAttribute);
     }
 

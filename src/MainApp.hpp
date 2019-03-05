@@ -147,7 +147,7 @@ private:
     ImportanceCriterionTypeWCB importanceCriterionTypeWCB
             = IMPORTANCE_CRITERION_WCB_TOTAL_PRESSURE_DIFFERENCE;
     ImportanceCriterionTypeConvectionRolls importanceCriterionTypeConvectionRolls
-            = IMPORTANCE_CRITERION_CONVECTION_ROLLS_LINE_CURVATURE;
+            = IMPORTANCE_CRITERION_CONVECTION_ROLLS_VORTICITY;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     bool usesGeometryShader = false;
@@ -179,7 +179,7 @@ private:
     //float rotationRadius = 1.0f;
 
     float outputTime = 0.0f;
-    bool testOutputPos = false;
+    bool testOutputPos = true;
     bool testCameraFlight = false;
     bool recording = false;
     VideoWriter *videoWriter;

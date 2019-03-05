@@ -366,6 +366,32 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 }
 
 
+void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
+{
+    getTestModesDepthPeeling(states, state);
+    getTestModesNoOIT(states, state);
+    getTestModesMLAB(states, state);
+    getTestModesMBOIT(states, state);
+    getTestModesHT(states, state);
+    getTestModesKBuffer(states, state);
+    getTestModesLinkedList(states, state);
+    getTestModesMLABBuckets(states, state);
+    getTestModesVoxelRaytracing(states, state);
+}
+
+std::vector<InternalState> getTestModesPaper()
+{
+    std::vector<InternalState> states;
+    std::vector<std::string> modelNames = {"Aneurism Streamlines"}; // , "Convection Rolls", "Warm Conveyor Belt"
+    InternalState state;
+
+    for (size_t i = 0; i < modelNames.size(); i++) {
+        state.modelName = modelNames.at(i);
+        getTestModesPaperForMesh(states, state);
+    }
+
+    return states;
+}
 
 std::vector<InternalState> getAllTestModes()
 {
@@ -373,7 +399,7 @@ std::vector<InternalState> getAllTestModes()
     InternalState state;
     //state.modelName = "Monkey";
     //state.modelName = "Streamlines";
-    state.modelName = "Streamlines (Triangles)";
+    state.modelName = "Aneurism Streamlines";
 
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
@@ -420,7 +446,7 @@ std::vector<InternalState> getAllTestModes()
     getTestModesOrderedSync(states, stateOrderedSync);
 
     // Quality test: Shuffle geometry randomly
-    if (state.modelName == "Streamlines") {
+    if (state.modelName == "Aneurism (Lines)") {
         InternalState stateShuffleGeometry = state;
         stateShuffleGeometry.testShuffleGeometry = true;
         getTestModesShuffleGeometry(states, stateShuffleGeometry, 1);

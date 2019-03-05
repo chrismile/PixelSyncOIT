@@ -90,7 +90,11 @@ void main()
     vec3 diffuseShading = diffuseColor * clamp(dot(normal, lightDirection)/2.0+0.75
             * occlusionFactor * shadowFactor, 0.0, 1.0);
     vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
-    vec4 color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a); // TODO opacity
+    #ifdef COLOR_ARRAY
+    vec4 color = vec4(ambientShading + diffuseShading + specularShading, fragmentColor.a);
+    #else
+    vec4 color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
+    #endif
 
     #if REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     color.rgb = vec3(occlusionFactor * shadowFactor);

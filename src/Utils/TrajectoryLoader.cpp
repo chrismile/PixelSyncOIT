@@ -439,6 +439,13 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
             std::vector<std::vector<float>> importanceCriteriaLine;
             computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaLine);
 
+            // Line filtering for WCB trajectories
+            if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+                if (importanceCriteriaLine.at(3).size() > 0 && importanceCriteriaLine.at(3).at(0) < 500.0f) {
+                    continue;
+                }
+            }
+
             // Create tube render data
             std::vector<glm::vec3> localVertices;
             std::vector<std::vector<float>> importanceCriteriaVertex;
@@ -676,17 +683,24 @@ void convertObjTrajectoryDataToBinaryLineMesh(
             }
 
             // Compute importance criteria
-            std::vector<std::vector<float>> importanceCriteriaUnormIn;
-            computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaUnormIn);
+            std::vector<std::vector<float>> importanceCriteriaIn;
+            computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaIn);
+
+            // Line filtering for WCB trajectories
+            if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+                if (importanceCriteriaIn.at(3).size() > 0 && importanceCriteriaIn.at(3).at(0) < 500.0f) {
+                    continue;
+                }
+            }
 
             // Create tube render data
             std::vector<glm::vec3> localVertices;
             std::vector<glm::vec3> localTangents;
             std::vector<glm::vec3> localNormals;
             std::vector<uint32_t> localIndices;
-            std::vector<std::vector<float>> importanceCriteriaUnormOut;
-            createTangentAndNormalData(pathLineCenters, importanceCriteriaUnormIn, localVertices,
-                    importanceCriteriaUnormOut, localTangents, localNormals, localIndices);
+            std::vector<std::vector<float>> importanceCriteriaOut;
+            createTangentAndNormalData(pathLineCenters, importanceCriteriaIn, localVertices,
+                    importanceCriteriaOut, localTangents, localNormals, localIndices);
 
             // Local -> global
             for (size_t i = 0; i < localIndices.size(); i++) {
@@ -696,12 +710,12 @@ void convertObjTrajectoryDataToBinaryLineMesh(
             globalTangents.insert(globalTangents.end(), localTangents.begin(), localTangents.end());
             globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
             if (globalImportanceCriteria.empty()) {
-                globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaUnormOut.begin(),
-                        importanceCriteriaUnormOut.end());
+                globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaOut.begin(),
+                        importanceCriteriaOut.end());
             } else {
                 for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
                     globalImportanceCriteria.at(i).insert(globalImportanceCriteria.at(i).end(),
-                            importanceCriteriaUnormOut.at(i).begin(), importanceCriteriaUnormOut.at(i).end());
+                            importanceCriteriaOut.at(i).begin(), importanceCriteriaOut.at(i).end());
                 }
             }
         } else if (boost::starts_with(command, "#") || command == "") {

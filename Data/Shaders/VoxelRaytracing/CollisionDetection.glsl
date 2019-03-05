@@ -140,7 +140,7 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
 
 
 /**
- * Implementation of ray-sphere intersection (idea from "Advanced Rendering" lecture by Denis Zorin,
+ * Implementation of ray-tube intersection (idea from "Advanced Rendering" lecture by Denis Zorin,
  * NYU Media Research Lab). For more details see: https://mrl.nyu.edu/~dzorin/rend05/lecture2.pdf
  */
 bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3 tubeEnd, float tubeRadius,
@@ -165,7 +165,7 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         intersectionPosition = rayOrigin + t0 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0) {
-            // Outside of finite cylinder
+            // Inside of finite cylinder
             return true;
         }
     }
@@ -175,7 +175,7 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         intersectionPosition = rayOrigin + t1 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0) {
-            // Outside of finite cylinder
+            // Inside of finite cylinder
             //return true; // TODO
         }
     }
@@ -184,7 +184,7 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
 }
 
 /**
- * Implementation of ray-sphere intersection (idea from "Advanced Rendering" lecture by Denis Zorin,
+ * Implementation of ray-tube intersection (idea from "Advanced Rendering" lecture by Denis Zorin,
  * NYU Media Research Lab). For more details see: https://mrl.nyu.edu/~dzorin/rend05/lecture2.pdf
  */
 bool rayTubeInfIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3 tubeEnd, float tubeRadius,

@@ -132,7 +132,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
 
     if (perfMeasurementMode) {
         sgl::FileUtils::get()->ensureDirectoryExists("images");
-        measurer = new AutoPerfMeasurer(getAllTestModes(), "performance.csv",
+        measurer = new AutoPerfMeasurer(getTestModesPaper(), "performance.csv",
                                         [this](const InternalState &newState) { this->setNewState(newState); });
         measurer->resolutionChanged(sceneFramebuffer);
         continuousRendering = true; // Always use continuous rendering in performance measurement mode
@@ -311,13 +311,21 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/single_streamline")) {
                 camera->setPosition(glm::vec3(0.72f, 0.215f, 0.2f));
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-                //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
-                //camera->setPosition(glm::vec3(0.6f, 0.0f, 8.8f));
-                camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
-                camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
+                // ControlPoint(1, 1.1286, 0.639969, 0.0575997, -2.98384, -0.411015),
+                camera->setPosition(glm::vec3(1.1286f, 0.639969f, 0.0575997f));
+                camera->setYaw(-2.98384);
+                camera->setPitch(-0.411015);
+            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
+                // ControlPoint(0, 1.13824, 0.369338, 0.937429, -2.58216, -0.0342094),
+                camera->setPosition(glm::vec3(0.468071f, 0.324327f, 0.50661f));
+            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+                // ControlPoint(0, 1.13824, 0.369338, 0.937429, -2.58216, -0.0342094),
+                camera->setPosition(glm::vec3(1.13824f, 0.369338f, 0.937429f));
+                camera->setYaw(-2.58216f);
+                camera->setPitch(-0.0342094f);
+                //camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
@@ -509,6 +517,11 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     if (shallReloadShader) {
         ShaderManager->invalidateShaderCache();
         updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+    }
+
+    // 2.2. If trajectory model: Load new transfer function if necessary
+    if (modelContainsTrajectories && !newState.transferFunctionName.empty()) {
+        transferFunctionWindow.loadFunctionFromFile(newState.transferFunctionName);
     }
 
     // 3.1. Load right model file
@@ -1147,7 +1160,7 @@ void PixelSyncApp::update(float dt)
 
         reRender = true;
     }
-    if (testOutputPos && Keyboard->keyPressed(SDLK_p)) {
+    if (testOutputPos && Keyboard->keyPressed(SDLK_c)) {
         // ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),
         std::cout << "ControlPoint(" << outputTime << ", " << camera->getPosition().x << ", " << camera->getPosition().y
                 << ", " << camera->getPosition().z << ", " << camera->getYaw() << ", " << camera->getPitch()

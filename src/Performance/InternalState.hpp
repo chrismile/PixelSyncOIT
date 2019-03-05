@@ -42,15 +42,24 @@ const char *const MODEL_FILENAMES[] = {
         "Data/Hair/wCurly.hair",
         "Data/Hair/wStraight.hair",
         "Data/Hair/wWavy.hair",
-        "Data/WCB/EUR_LL025/20121015_00_lagranto_ensemble_forecast__START_20121019_18.nc",
-        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
         "Data/ConvectionRolls/turbulence80000.obj",
         "Data/ConvectionRolls/turbulence20000.obj",
+        "Data/WCB/20121015_00_lagranto_ensemble_forecast__START_20121019_18.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_12.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_18.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121018_00.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121018_06.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121018_12.nc",
+        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121018_18.nc",
+        "Data/WCB/EUR_LL10/20121015_12_lagranto_ensemble_forecast__START_20121018_06.nc",
 };
 const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline", "Aneurism (Lines)", "Aneurism Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon",
         "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy",
-        "Warm Conveyor Belt", "Warm Conveyor Belt (low-res)", "Convection Rolls", "Convection Rolls (low-res)"
+        "Convection Rolls 80000", "Convection Rolls 20000", "Warm Conveyor Belt #1", "Warm Conveyor Belt #2",
+        "Warm Conveyor Belt #3", "Warm Conveyor Belt #4", "Warm Conveyor Belt #5", "Warm Conveyor Belt #6",
+        "Warm Conveyor Belt #7", "Warm Conveyor Belt #8", "Warm Conveyor Belt #9",
 };
 
 enum AOTechniqueName {
@@ -119,6 +128,7 @@ struct InternalState
                && this->oitAlgorithmSettings.getMap() == rhs.oitAlgorithmSettings.getMap()
                && this->tilingWidth == rhs.tilingWidth && this->tilingHeight == rhs.tilingHeight
                && this->aoTechniqueName == rhs.aoTechniqueName && this->shadowTechniqueName == rhs.shadowTechniqueName
+               && this->transferFunctionName == transferFunctionName
                && this->importanceCriterionIndex == importanceCriterionIndex
                && this->useStencilBuffer == rhs.useStencilBuffer
                && this->testNoInvocationInterlock == rhs.testNoInvocationInterlock
@@ -137,6 +147,7 @@ struct InternalState
     bool useMortonCodeForTiling = false;
     AOTechniqueName aoTechniqueName = AO_TECHNIQUE_NONE;
     ShadowMappingTechniqueName shadowTechniqueName = NO_SHADOW_MAPPING;
+    std::string transferFunctionName;
     int importanceCriterionIndex = 0;
     bool useStencilBuffer = true;
     bool testNoInvocationInterlock = false; // Test without pixel sync
@@ -145,6 +156,7 @@ struct InternalState
     bool testPixelSyncOrdered = false;
 };
 
+std::vector<InternalState> getTestModesPaper();
 std::vector<InternalState> getAllTestModes();
 
 #endif //PIXELSYNCOIT_INTERNALSTATE_HPP

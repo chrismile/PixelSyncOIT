@@ -226,7 +226,7 @@ void TransferFunctionWindow::renderFileDialog()
     if (ImGui::ListBox("##availablefiles", &selectedFileIndex, [this](void *data, int idx, const char **out_text) -> bool {
         *out_text = availableFiles.at(idx).c_str();
         return true;
-    }, NULL, availableFiles.size(), 3)) {
+    }, NULL, availableFiles.size(), 4)) {
         saveFileString = availableFiles.at(selectedFileIndex);
     } ImVec2 cursorPosEnd = ImGui::GetCursorPos(); ImGui::SameLine();
 

@@ -80,7 +80,7 @@ std::vector<float> computeCurvature(std::vector<glm::vec3> &vertexPositions)
     std::vector<float> curvatures;
     curvatures.reserve(n);
 
-    glm::vec3 tangent, lastTangent;
+    glm::vec3 tangent, lastTangent = glm::vec3(1.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < n; i++) {
         float curvatureAngle = 0.0f;
@@ -94,6 +94,11 @@ std::vector<float> computeCurvature(std::vector<glm::vec3> &vertexPositions)
         } else {
             // Node with two neighbors
             tangent = vertexPositions.at(i+1) - vertexPositions.at(i);
+        }
+        if (glm::length(tangent) < 0.0001f) {
+            // In case the two vertices are almost identical, just skip this path line segment
+            curvatures.push_back(0.0f);
+            continue;
         }
 
         tangent = glm::normalize(tangent);
@@ -134,7 +139,7 @@ std::vector<float> computeSegmentAttributeDifference(
             segmentAttributeDifference = vertexAttributes.at(i+1) - vertexAttributes.at(i);
         }
 
-        segmentAttributeDifferences.push_back(segmentAttributeDifference);
+        segmentAttributeDifferences.push_back(std::abs(segmentAttributeDifference));
     }
 
     return segmentAttributeDifferences;
@@ -185,6 +190,11 @@ std::vector<float> computeAngleOfAscent(std::vector<glm::vec3> &vertexPositions)
         } else {
             // Node with two neighbors
             tangent = vertexPositions.at(i+1) - vertexPositions.at(i);
+        }
+        if (glm::length(tangent) < 0.0001f) {
+            // In case the two vertices are almost identical, just skip this path line segment
+            angleOfAscentArray.push_back(0.0f);
+            continue;
         }
 
         tangent = glm::normalize(tangent);
