@@ -14,14 +14,8 @@ ControlPoint::ControlPoint(float time, float tx, float ty, float tz, float yaw, 
 {
     this->time = time;
     this->position = glm::vec3(tx, ty, tz);
-    //this->orientation = glm::quat(glm::vec3(1.0f, 0.0f, 0.0f), pitch) * glm::quat(glm::vec3(0.0f, 1.0f, 0.0f), yaw);//glm::quat(glm::vec3(pitch, yaw, 0.0f));
-    //this->orientation = glm::quat(glm::vec3(pitch, 0.0f, 0.0f)) * glm::quat(glm::vec3(0.0f, yaw, 0.0f));
-    //this->orientation = glm::quat(glm::vec3(0.0f, yaw, 0.0f)) * glm::quat(glm::vec3(pitch, 0.0f, 0.0f));
 
-
-
-
-    glm::vec3 cameraFront, cameraRight, cameraUp;
+    /*glm::vec3 cameraFront, cameraRight, cameraUp;
     glm::vec3 globalUp(0.0f, 1.0f, 0.0f);
     cameraFront.x = cos(yaw) * cos(pitch);
     cameraFront.y = sin(pitch);
@@ -31,16 +25,8 @@ ControlPoint::ControlPoint(float time, float tx, float ty, float tz, float yaw, 
     cameraRight = glm::normalize(glm::cross(cameraFront, globalUp));
     cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
 
-    //this->orientation = glm::conjugate(glm::toQuat(glm::lookAt(glm::vec3(0.0f), cameraFront, cameraUp)));
-    this->orientation = glm::toQuat(glm::lookAt(glm::vec3(0.0f), cameraFront, cameraUp));
+    this->orientation = glm::toQuat(glm::lookAt(glm::vec3(0.0f), cameraFront, cameraUp));*/
 
-
-
-
-    //this->orientation = glm::quat(glm::vec3(pitch, 0.0f, 0.0f)) * glm::quat(glm::vec3(0.0f, yaw + sgl::PI / 2.0f, 0.0f));
-
-
-    //this->orientation = glm::conjugate(glm::toQuat(glm::lookAt(glm::vec3(0.0f), cameraFront, cameraUp) * sgl::matrixTranslation(-position)));
     this->orientation = glm::angleAxis(-pitch, glm::vec3(1, 0, 0)) * glm::angleAxis(yaw + sgl::PI / 2.0f, glm::vec3(0, 1, 0));
 }
 
