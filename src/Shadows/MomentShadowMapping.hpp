@@ -9,6 +9,9 @@
 #include "ShadowTechnique.hpp"
 #include "../OIT/OIT_MBOIT_Utils.hpp"
 
+// For high-quality test video w/o public interface to shadow technique.
+extern void setHighResMomentShadowMapping();
+
 class MomentShadowMapping : public ShadowTechnique
 {
 public:

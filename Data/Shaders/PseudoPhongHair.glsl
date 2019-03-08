@@ -86,9 +86,9 @@ void main()
     normal = normalize(fragmentNormal);
 
     // Pseudo Phong shading
-    vec3 ambientShading = ambientColor * 0.1 * occlusionFactor * shadowFactor;
-    vec3 diffuseShading = diffuseColor * clamp(dot(normal, lightDirection)/2.0+0.75
-            * occlusionFactor * shadowFactor, 0.0, 1.0);
+    vec3 ambientShading = ambientColor * 0.00001 * occlusionFactor * shadowFactor;
+    float diffuseFactor = 0.5 * dot(normal, lightDirection) + 0.5;
+    vec3 diffuseShading = diffuseColor * clamp(diffuseFactor, 0.0, 1.0) * occlusionFactor * shadowFactor;
     vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
     #ifdef COLOR_ARRAY
     vec4 color = vec4(ambientShading + diffuseShading + specularShading, fragmentColor.a);

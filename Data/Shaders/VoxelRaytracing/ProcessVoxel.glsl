@@ -152,13 +152,13 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
 
             float occlusionFactor = 1.0;//texture(densityTexture, vec3(0.0)).x;
             #ifdef HAIR_RENDERING
-            vec4 diffuseColorVorticity = hairStrandColor;
+            vec4 diffuseColor = hairStrandColor;
             #else
-            vec4 diffuseColorVorticity = transferFunction(intersectionAttribute);
+            vec4 diffuseColor = transferFunction(intersectionAttribute);
             #endif
-            vec3 diffuseShadingVorticity = diffuseColorVorticity.rgb * clamp(dot(intersectionNormal,
-                    lightDirection)/2.0 + 0.75 * occlusionFactor, 0.0, 1.0);
-            hit.color = vec4(diffuseShadingVorticity, diffuseColorVorticity.a); // * globalColor.a
+            float diffuseFactor = 0.5 * dot(intersectionNormal, lightDirection) + 0.5;
+            vec3 diffuseShading = diffuseColor.rgb * clamp(diffuseFactor, 0.0, 1.0) * occlusionFactor;
+            hit.color = vec4(diffuseShading, diffuseColor.a); // * globalColor.a
             hit.lineID = lineID;
             if (hit.color.a >= 1.0/255.0) {
                 insertHitSorted(hit, numHits, hits);

@@ -29,7 +29,6 @@ enum RenderModeOIT {
     RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
 };
 
-const int NUM_MODELS = 16; // 8 datasets + 8 hair
 const char *const MODEL_FILENAMES[] = {
         "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines",
         "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04", "Data/Models/Monkey", "Data/Models/Box",
@@ -54,10 +53,11 @@ const char *const MODEL_FILENAMES[] = {
         "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121018_18.nc",
         "Data/WCB/EUR_LL10/20121015_12_lagranto_ensemble_forecast__START_20121018_06.nc",
 };
+const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)));
 const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline", "Aneurism (Lines)", "Aneurism Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon",
         "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy",
-        "Convection Rolls 80000", "Convection Rolls 20000", "Warm Conveyor Belt #1", "Warm Conveyor Belt #2",
+        "Turbulence", "Convection Rolls", "Warm Conveyor Belt #1", "Warm Conveyor Belt #2",
         "Warm Conveyor Belt #3", "Warm Conveyor Belt #4", "Warm Conveyor Belt #5", "Warm Conveyor Belt #6",
         "Warm Conveyor Belt #7", "Warm Conveyor Belt #8", "Warm Conveyor Belt #9",
 };
@@ -92,6 +92,14 @@ public:
         auto it = settings.find(key);
         if (it != settings.end()) {
             toset = it->second;
+            return true;
+        }
+        return false;
+    }
+    bool getValueOpt(const char *key, bool &toset) const {
+        auto it = settings.find(key);
+        if (it != settings.end()) {
+            toset = (strcmp(key, "true") == 0) || (strcmp(key, "1") == 0);
             return true;
         }
         return false;

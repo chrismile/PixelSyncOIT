@@ -75,13 +75,13 @@ protected:
 private:
     void renderGUI(); // Renders GUI
     void renderSceneSettingsGUI();
+    void updateColorSpaceMode();
 
     // Lighting & rendering
     boost::shared_ptr<Camera> camera;
     float fovy;
     ShaderProgramPtr transparencyShader;
-    ShaderProgramPtr plainShader;
-    ShaderProgramPtr whiteSolidShader;
+    ShaderProgramPtr gammaCorrectionShader;
 
     // Screen space ambient occlusion
     SSAOHelper *ssaoHelper = NULL;
@@ -91,7 +91,7 @@ private:
 
     // Current rendering/shading/lighting model
     ReflectionModelType reflectionModelType = PSEUDO_PHONG_LIGHTING;
-    float aoFactor = 0.8f;
+    float aoFactor = 0.5f;
     float shadowFactor = 0.5f;
 
     // Shadow rendering
@@ -122,17 +122,19 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 2;
+    int usedModelIndex = 16; // 2: Aneurism, 11: Ponytail, 16: Turbulence
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
     bool cullBackface = true;
     bool transparencyMapping = true;
+    bool useLinearRGB = true;
     float lineRadius = 0.001f;
     std::vector<float> fpsArray;
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
     bool uiOnScreenshot = false;
+    bool printNow = false;
     float MOVE_SPEED = 0.2f;
     float ROT_SPEED = 1.0f;
     float MOUSE_ROT_SPEED = 0.05f;
@@ -141,6 +143,7 @@ private:
 
     // Trajectory rendering
     bool modelContainsTrajectories;
+    std::string transferFunctionName;
     TrajectoryType trajectoryType;
     ImportanceCriterionTypeAneurism importanceCriterionTypeAneurism
             = IMPORTANCE_CRITERION_ANEURISM_VORTICITY;
@@ -166,13 +169,15 @@ private:
     bool perfMeasurementMode = false;
     InternalState lastState;
     bool firstState = true;
+    bool usesNewState = true;
+    int frameNum = 0;
 #ifdef PROFILING_MODE
     sgl::TimerGL timer;
 #endif
 
     // Save video stream to file
     const int FRAME_RATE = 60;
-    const float FULL_CIRCLE_TIME = 26.0f;
+    uint64_t recordingTimeStampStart;
     float recordingTime = 0.0f;
 
     //glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
@@ -181,6 +186,8 @@ private:
     float outputTime = 0.0f;
     bool testOutputPos = true;
     bool testCameraFlight = false;
+    bool realTimeCameraFlight = false;
+    bool recordingUseGlobalIlumination = false;
     bool recording = false;
     VideoWriter *videoWriter;
 

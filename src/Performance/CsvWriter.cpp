@@ -26,7 +26,7 @@ bool CsvWriter::open(const std::string &filename)
 {
     file.open(filename.c_str());
 
-    if (file.is_open()) {
+    if (!file.is_open()) {
         sgl::Logfile::get()->write(std::string() + "Error in CsvWriter::open: Couldn't open file called \""
                 + filename + "\".");
         return false;

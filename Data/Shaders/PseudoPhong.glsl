@@ -83,8 +83,8 @@ void main()
 
     if (bandedColorShading == 0) {
         vec3 ambientShading = ambientColor * 0.1 * occlusionFactor * shadowFactor;
-        vec3 diffuseShading = diffuseColor * clamp(dot(fragmentNormal, lightDirection)/2.0+0.75
-                * occlusionFactor * shadowFactor, 0.0, 1.0);
+        float diffuseFactor = 0.5 * dot(fragmentNormal, lightDirection) + 0.5;
+        vec3 diffuseShading = diffuseColor * clamp(diffuseFactor, 0.0, 1.0) * occlusionFactor * shadowFactor;
         vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
         color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
     }

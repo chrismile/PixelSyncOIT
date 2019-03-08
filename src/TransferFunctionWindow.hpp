@@ -15,10 +15,27 @@
 #include <Graphics/Texture/Texture.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
-struct ColorPoint
+enum ColorSpace {
+    COLOR_SPACE_SRGB, COLOR_SPACE_LINEAR_RGB
+};
+const char *const COLOR_SPACE_NAMES[] {
+    "sRGB", "Linear RGB"
+};
+
+/**
+ * A color point stores sRGB color values.
+ */
+struct ColorPoint_sRGB
 {
-    ColorPoint(const sgl::Color &color, float position) : color(color), position(position) {}
+    ColorPoint_sRGB(const sgl::Color &color, float position) : color(color), position(position) {}
     sgl::Color color;
+    float position;
+};
+
+struct ColorPoint_LinearRGB
+{
+    ColorPoint_LinearRGB(const glm::vec3 &color, float position) : color(color), position(position) {}
+    glm::vec3 color;
     float position;
 };
 
@@ -50,12 +67,12 @@ public:
     void setClearColor(const sgl::Color &clearColor);
     inline bool &getShowTransferFunctionWindow() { return showTransferFunctionWindow; }
     void computeHistogram(const std::vector<float> &attributes, float minAttr, float maxAttr);
+    void setUseLinearRGB(bool useLinearRGB);
 
     // For querying transfer function in application
     float getOpacityAtAttribute(float attribute); // attribute: Between 0 and 1
 
     // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
-    std::vector<sgl::Color> getTransferFunctionMap();
     sgl::TexturePtr &getTransferFunctionMapTexture();
 
 private:
@@ -69,6 +86,10 @@ private:
     void dragPoint();
     bool selectNearestOpacityPoint(int &currentSelectionIndex, const glm::vec2 &mousePosWidget);
     bool selectNearestColorPoint(int &currentSelectionIndex, const glm::vec2 &mousePosWidget);
+
+    // sRGB and linear RGB conversion
+    glm::vec3 sRGBToLinearRGB(const glm::vec3 &color_LinearRGB);
+    glm::vec3 linearRGBTosRGB(const glm::vec3 &color_sRGB);
 
     // Drag-and-drop data
     SelectedPointType selectedPointType = SELECTED_POINT_TYPE_NONE;
@@ -84,6 +105,7 @@ private:
     float opacitySelection = 1.0f;
     ImVec4 colorSelection = ImColor(255, 255, 255, 255);
     sgl::Color clearColor;
+    ColorSpace interpolationColorSpace;
 
     std::string saveDirectory = "Data/TransferFunctions/";
     std::string saveFileString = "WhiteRed.xml";
@@ -91,12 +113,17 @@ private:
     int selectedFileIndex = -1;
     std::vector<float> histogram;
     void rebuildTransferFunctionMap();
-    std::vector<sgl::Color> transferFunctionMap;
+    void rebuildTransferFunctionMap_sRGB();
+    void rebuildTransferFunctionMap_LinearRGB();
+    std::vector<sgl::Color> transferFunctionMap_sRGB;
+    std::vector<sgl::Color> transferFunctionMap_linearRGB;
     sgl::TexturePtr tfMapTexture;
     sgl::TextureSettings tfMapTextureSettings;
 
     std::vector<OpacityPoint> opacityPoints;
-    std::vector<ColorPoint> colorPoints;
+    std::vector<ColorPoint_sRGB> colorPoints;
+    std::vector<ColorPoint_LinearRGB> colorPoints_LinearRGB;
+    bool useLinearRGB = true;
 };
 
 extern TransferFunctionWindow *g_TransferFunctionWindowHandle;

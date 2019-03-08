@@ -35,7 +35,7 @@ layout (std430, binding = 1) coherent buffer MinDepthBuffer
 #include "TiledAddress.glsl"
 
 #define REQUIRE_INVOCATION_INTERLOCK
-#define OPACITY_THRESHOLD 0.1
+#define OPACITY_THRESHOLD 0.3
 
 void gatherFragment(vec4 color)
 {

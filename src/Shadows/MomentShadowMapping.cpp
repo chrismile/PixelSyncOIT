@@ -24,6 +24,12 @@ static MBOITPixelFormat pixelFormat = MBOIT_PIXEL_FORMAT_FLOAT_32;
 static bool USE_R_RG_RGBA_FOR_MBOIT6 = true;
 static float overestimationBeta = 0.0;
 
+void setHighResMomentShadowMapping()
+{
+    usePowerMoments = false;
+    numMoments = 8;
+}
+
 MomentShadowMapping::MomentShadowMapping()
 {
     loadShaders();

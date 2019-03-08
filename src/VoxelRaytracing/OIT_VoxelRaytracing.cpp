@@ -205,7 +205,9 @@ void OIT_VoxelRaytracing::setUniformData()
     }
 
     //renderShader->setShaderStorageBuffer(0, "LineSegmentBuffer", NULL);
+#if VOXEL_RAYTRACING_COMPUTE_SHADER
     renderShader->setUniformImageTexture(0, renderImage, GL_RGBA8, GL_WRITE_ONLY);
+#endif
     renderShader->setUniform("viewportSize", glm::ivec2(width, height));
 
     sgl::ShaderManager->bindShaderStorageBuffer(0, data.voxelLineListOffsets);
@@ -264,8 +266,15 @@ void OIT_VoxelRaytracing::renderToScreen()
     //sgl::ShaderManager->getMaxComputeWorkGroupCount();
     glm::ivec2 numWorkGroups = getNumWorkGroups(glm::ivec2(width, height), glm::ivec2(8, 4)); // last vector: local work group size
     renderShader->dispatchCompute(numWorkGroups.x, numWorkGroups.y);
-#else
-    sgl::Renderer->render(blitRenderData);
-#endif
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+#else
+    sgl::Renderer->setProjectionMatrix(sgl::matrixIdentity());
+    sgl::Renderer->setViewMatrix(sgl::matrixIdentity());
+    sgl::Renderer->setModelMatrix(sgl::matrixIdentity());
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_DEPTH_TEST);
+    sgl::Renderer->render(blitRenderData);
+    glEnable(GL_DEPTH_TEST);
+#endif
 }

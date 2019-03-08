@@ -221,8 +221,8 @@ void main()
     normal = normalize(fragmentNormal);
 
     #if REFLECTION_MODEL == 0 // PSEUDO_PHONG_LIGHTING
-    vec3 colorShading = colorAttribute.rgb * clamp(dot(normal, lightDirection)/2.0
-            + 0.75 * occlusionFactor * shadowFactor, 0.0, 1.0);
+    float diffuseFactor = 0.5 * dot(normal, lightDirection) + 0.5;
+    vec3 colorShading = colorAttribute.rgb * clamp(diffuseFactor, 0.0, 1.0) * occlusionFactor * shadowFactor;
     #elif REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     vec3 colorShading = vec3(occlusionFactor * shadowFactor);
     #elif REFLECTION_MODEL == 2 // LOCAL_SHADOW_MAP_OCCLUSION

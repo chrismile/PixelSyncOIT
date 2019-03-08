@@ -94,14 +94,14 @@ void getTestModesKBuffer(std::vector<InternalState> &states, InternalState state
 #define IM_ARRAYSIZE(_ARR) ((int)(sizeof(_ARR)/sizeof(*_ARR)))
 #endif
 
-void getTestModesLinkedList(std::vector<InternalState> &states, InternalState state)
+void getTestModesLinkedListAll(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
 
     // sortingModeStrings
     for (int expectedDepthComplexity = 64; expectedDepthComplexity <= 64; expectedDepthComplexity *= 2) {
         for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
-            for (int maxNumFragmentsSorting = 256; maxNumFragmentsSorting <= 512; maxNumFragmentsSorting *= 2) {
+            for (int maxNumFragmentsSorting = 256; maxNumFragmentsSorting <= 256; maxNumFragmentsSorting *= 2) {
                 std::string sortingMode = sortingModeStrings[sortingModeIdx];
                 state.name = std::string() + "Linked List " + sortingMode + + " "
                              + sgl::toString(maxNumFragmentsSorting) + " Layers, "
@@ -114,6 +114,31 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
                 states.push_back(state);
             }
         }
+    }
+}
+
+void getTestModesLinkedList(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
+
+    int maxNumFragmentsSorting = 256;
+    int expectedDepthComplexity = 64;
+    if (state.modelName == "Turbulence") {
+        // Highest depth complexity measured for this dataset
+        expectedDepthComplexity = 104;
+    }
+
+    for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
+        std::string sortingMode = sortingModeStrings[sortingModeIdx];
+        state.name = std::string() + "Linked List " + sortingMode + + " "
+                     + sgl::toString(maxNumFragmentsSorting) + " Layers, "
+                     + sgl::toString(expectedDepthComplexity) + " Nodes per Pixel";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "sortingMode", sortingMode },
+                { "maxNumFragmentsSorting", sgl::toString(maxNumFragmentsSorting) },
+                { "expectedDepthComplexity", sgl::toString(expectedDepthComplexity) },
+        });
+        states.push_back(state);
     }
 }
 
@@ -324,7 +349,7 @@ void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, Intern
     states.push_back(state);
 }
 
-void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState state)
+void getTestModesMLABBucketsAll(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
@@ -350,16 +375,39 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 }
 
 
+void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
+
+    for (int nodesPerBucket = 2; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+        state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "numBuckets", sgl::toString(1) },
+                { "nodesPerBucket", sgl::toString(nodesPerBucket) },
+                { "bucketMode", sgl::toString(4) },
+        });
+        states.push_back(state);
+    }
+}
+
+
 void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_VOXEL_RAYTRACING_LINES;
-    state.modelName = "Streamlines";
 
     for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
-        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64)";
+        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "gridResolution", sgl::toString(gridResolution) },
                 { "quantizationResolution", sgl::toString(64) },
+                { "useNeighborSearch", "true" },
+        });
+        states.push_back(state);
+        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "gridResolution", sgl::toString(gridResolution) },
+                { "quantizationResolution", sgl::toString(64) },
+                { "useNeighborSearch", "false" },
         });
         states.push_back(state);
     }
@@ -370,24 +418,29 @@ void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState 
 {
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
-    getTestModesMLAB(states, state);
-    getTestModesMBOIT(states, state);
-    getTestModesHT(states, state);
-    getTestModesKBuffer(states, state);
-    getTestModesLinkedList(states, state);
+    //getTestModesMLAB(states, state);
+    //getTestModesMBOIT(states, state);
+    //getTestModesLinkedList(states, state);
     getTestModesMLABBuckets(states, state);
-    getTestModesVoxelRaytracing(states, state);
+    //getTestModesVoxelRaytracing(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
-    std::vector<std::string> modelNames = {"Aneurism Streamlines"}; // , "Convection Rolls", "Warm Conveyor Belt"
+    std::vector<std::string> modelNames = {"Aneurism Streamlines", "Ponytail"}; // , "Turbulence"
     InternalState state;
 
     for (size_t i = 0; i < modelNames.size(); i++) {
         state.modelName = modelNames.at(i);
         getTestModesPaperForMesh(states, state);
+    }
+
+    // Append model name to state name if more than one model is loaded
+    if (modelNames.size() > 1) {
+        for (InternalState &state : states) {
+            state.name = state.modelName + " " + state.name;
+        }
     }
 
     return states;

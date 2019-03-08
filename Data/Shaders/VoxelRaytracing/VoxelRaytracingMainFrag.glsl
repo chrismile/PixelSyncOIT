@@ -16,10 +16,6 @@ void main()
 
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 
-// Output of rasterizer
-layout(rgba8, binding = 0) writeonly uniform image2D imageOutput;
-
-
 // Size of the rendering viewport (/window)
 uniform ivec2 viewportSize;
 
@@ -79,5 +75,5 @@ void main()
         fragColor = vec4(fragColor.rgb / fragColor.a, fragColor.a);
     }
 
-    imageStore(imageOutput, fragCoord, fragColor);
+    gl_FragColor = fragColor;
 }

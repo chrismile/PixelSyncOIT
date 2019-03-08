@@ -33,6 +33,7 @@
 #include <Graphics/Shader/ShaderManager.hpp>
 #include <Graphics/Texture/TextureManager.hpp>
 #include <Graphics/Texture/Bitmap.hpp>
+#include <Graphics/OpenGL/SystemGL.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "Utils/MeshSerializer.hpp"
@@ -58,23 +59,27 @@ void openglErrorCallback()
     std::cerr << "Application callback" << std::endl;
 }
 
-PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter(NULL),
-                               cameraPath({/*ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),
-                                           ControlPoint(4.0f, 0.8f, 0.325f, 1.005f, -sgl::PI / 4.0f, 0.0f),*/
-
-                                           ControlPoint(0, 0.3, 0.325, 1.005, -1.5708, 0),
-                                           ControlPoint(3, 0.172219, 0.325, 1.21505, -1.15908, 0.0009368),
-                                           ControlPoint(6, -0.229615, 0.350154, 1.00435, -0.425731, 0.116693),
-                                           ControlPoint(9, -0.09407, 0.353779, 0.331819, 0.563857, 0.0243558),
-                                           ControlPoint(12, 0.295731, 0.366529, -0.136542, 1.01983, -0.20646),
-                                           ControlPoint(15, 1.13902, 0.444444, -0.136205, 2.46893, -0.320944),
-                                           ControlPoint(18, 1.02484, 0.444444, 0.598137, 3.89793, -0.296935),
-                                           ControlPoint(21, 0.850409, 0.470433, 0.976859, 4.02133, -0.127355),
-                                           ControlPoint(24, 0.390787, 0.429582, 1.0748, 4.42395, -0.259301),
-                                           ControlPoint(26, 0.3, 0.325, 1.005, -1.5708, 0)})
+PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter(NULL)
 {
-    plainShader = ShaderManager->getShaderProgram({"Mesh.Vertex.Plain", "Mesh.Fragment.Plain"});
-    whiteSolidShader = ShaderManager->getShaderProgram({"WhiteSolid.Vertex", "WhiteSolid.Fragment"});
+    // https://www.khronos.org/registry/OpenGL/extensions/NVX/NVX_gpu_memory_info.txt
+    GLint freeMemKilobytes = 0;
+    if (perfMeasurementMode && sgl::SystemGL::get()->isGLExtensionAvailable("GL_NVX_gpu_memory_info")) {
+        glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
+    }
+
+    cameraPath.fromControlPoints({
+        ControlPoint(0, 0.3, 0.325, 1.005, -1.5708, 0),
+        ControlPoint(3, 0.172219, 0.325, 1.21505, -1.15908, 0.0009368),
+        ControlPoint(6, -0.229615, 0.350154, 1.00435, -0.425731, 0.116693),
+        ControlPoint(9, -0.09407, 0.353779, 0.331819, 0.563857, 0.0243558),
+        ControlPoint(12, 0.295731, 0.366529, -0.136542, 1.01983, -0.20646),
+        ControlPoint(15, 1.13902, 0.444444, -0.136205, 2.46893, -0.320944),
+        ControlPoint(18, 1.02484, 0.444444, 0.598137, 3.89793, -0.296935),
+        ControlPoint(21, 0.850409, 0.470433, 0.976859, 4.02133, -0.127355),
+        ControlPoint(24, 0.390787, 0.429582, 1.0748, 4.42395, -0.259301),
+        ControlPoint(26, 0.3, 0.325, 1.005, -1.5708, 0)});
+
+    gammaCorrectionShader = ShaderManager->getShaderProgram({"GammaCorrection.Vertex", "GammaCorrection.Fragment"});
 
     EventManager::get()->addListener(RESOLUTION_CHANGED_EVENT,
             [this](EventPtr event){ this->resolutionChanged(event); });
@@ -82,7 +87,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     camera->setNearClipDistance(0.01f);
     camera->setFarClipDistance(100.0f);
     camera->setOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-    fovy = atanf(1.0f / 2.0f) * 2.0f;
+    fovy = atanf(1.0f / 2.0f) * 2.0f; // 90.0f / 180.0f * sgl::PI;//
     camera->setFOVy(fovy);
     //camera->setPosition(glm::vec3(0.5f, 0.5f, 20.0f));
     camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
@@ -97,6 +102,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     }
     clearColorSelection = ImColor(clearColor.getColorRGBA());
     transferFunctionWindow.setClearColor(clearColor);
+    transferFunctionWindow.setUseLinearRGB(useLinearRGB);
     setNewTilingMode(2, 8);
 
     bool useVsync = AppSettings::get()->getSettings().getBoolValue("window-vSync");
@@ -129,16 +135,30 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     setRenderMode(mode, true);
     loadModel(MODEL_FILENAMES[usedModelIndex]);
 
+    if ((testCameraFlight || recording) && recordingUseGlobalIlumination) {
+        currentShadowTechnique = MOMENT_SHADOW_MAPPING;
+        currentAOTechnique = AO_TECHNIQUE_VOXEL_AO;
+        setHighResMomentShadowMapping();
+        updateShadowMode();
+        updateAOMode();
+        ShaderManager->invalidateShaderCache();
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+    }
 
     if (perfMeasurementMode) {
         sgl::FileUtils::get()->ensureDirectoryExists("images");
-        measurer = new AutoPerfMeasurer(getTestModesPaper(), "performance.csv",
+        measurer = new AutoPerfMeasurer(getTestModesPaper(), "performance.csv", "performance_profile.csv",
                                         [this](const InternalState &newState) { this->setNewState(newState); });
+        measurer->setInitialFreeMemKilobytes(freeMemKilobytes);
         measurer->resolutionChanged(sceneFramebuffer);
         continuousRendering = true; // Always use continuous rendering in performance measurement mode
     } else {
         measurer = NULL;
     }
+
+    recordingTimeStampStart = Timer->getTicksMicroseconds();
+    usesNewState = true;
+    frameNum = 0;
 }
 
 
@@ -152,9 +172,9 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
     // Buffers for off-screen rendering
     sceneFramebuffer = Renderer->createFBO();
     TextureSettings textureSettings;
-    textureSettings.internalFormat = GL_RGBA8; // For i965 driver to accept image load/store
+    textureSettings.internalFormat = GL_RGBA16; // GL_RGBA8 For i965 driver to accept image load/store
     textureSettings.pixelType = GL_UNSIGNED_BYTE;
-    textureSettings.pixelFormat = GL_RGBA;
+    textureSettings.pixelFormat = GL_RGB;
     sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     sceneFramebuffer->bindTexture(sceneTexture);
     sceneDepthRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
@@ -173,8 +193,38 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
     reRender = true;
 }
 
+void PixelSyncApp::updateColorSpaceMode()
+{
+    Window *window = AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
+    glViewport(0, 0, width, height);
+
+    // Buffers for off-screen rendering
+    sceneFramebuffer = Renderer->createFBO();
+    TextureSettings textureSettings;
+    if (useLinearRGB) {
+        textureSettings.internalFormat = GL_RGBA16;
+    } else {
+        textureSettings.internalFormat = GL_RGBA8; // GL_RGBA8 For i965 driver to accept image load/store (legacy)
+    }
+    textureSettings.pixelType = GL_UNSIGNED_BYTE;
+    textureSettings.pixelFormat = GL_RGB;
+    sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
+    sceneFramebuffer->bindTexture(sceneTexture);
+    sceneDepthRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
+    sceneFramebuffer->bindRenderbuffer(sceneDepthRBO, DEPTH_STENCIL_ATTACHMENT);
+
+    transferFunctionWindow.setUseLinearRGB(useLinearRGB);
+}
+
 void PixelSyncApp::saveScreenshot(const std::string &filename)
 {
+    if (!printNow && !uiOnScreenshot) {
+        // Don't print at time sgl wants, as in this case we would need to include the GUI
+        return;
+    }
+
     if (uiOnScreenshot) {
         AppLogic::saveScreenshot(filename);
     } else {
@@ -182,11 +232,9 @@ void PixelSyncApp::saveScreenshot(const std::string &filename)
         int width = window->getWidth();
         int height = window->getHeight();
 
-        Renderer->bindFBO(sceneFramebuffer);
         BitmapPtr bitmap(new Bitmap(width, height, 32));
         glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, bitmap->getPixels());
         bitmap->savePNG(filename.c_str(), true);
-        Renderer->unbindFBO();
     }
 }
 
@@ -199,6 +247,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (oitRenderer->isTestingMode()) {
         return;
+    }
+
+    if (!perfMeasurementMode && boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence.xml");
     }
 
     modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
@@ -348,6 +400,19 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     updateAOMode();
     shadowTechnique->newModelLoaded(modelFilenamePure, modelContainsTrajectories);
     shadowTechnique->setLightDirection(lightDirection, boundingBox);
+
+    if (testCameraFlight) {
+        std::string cameraPathFilename = "Data/CameraPaths/"
+                + sgl::FileUtils::get()->getPathAsList(modelFilenamePure).back() + ".binpath";
+        if (sgl::FileUtils::get()->exists(cameraPathFilename)) {
+            std::cout << cameraPathFilename << std::endl;
+            cameraPath.fromBinaryFile(cameraPathFilename);
+        } else {
+            cameraPath.fromCirclePath(boundingBox, modelFilenamePure);
+            cameraPath.saveToBinaryFile(cameraPathFilename);
+        }
+    }
+
     reRender = true;
 }
 
@@ -501,18 +566,19 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     // 2.1. Handle global state changes like ambient occlusion, shadowing, tiling mode
     setNewTilingMode(newState.tilingWidth, newState.tilingHeight, newState.useMortonCodeForTiling);
     bool shallReloadShader = false;
-    if (currentAOTechnique != newState.aoTechniqueName || currentShadowTechnique != newState.shadowTechniqueName) {
-        shallReloadShader = true;
-        ShaderManager->invalidateShaderCache();
-        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
-    }
     if (currentAOTechnique != newState.aoTechniqueName) {
         currentAOTechnique = newState.aoTechniqueName;
         updateAOMode();
     }
     if (currentShadowTechnique != newState.shadowTechniqueName) {
+        shallReloadShader = true;
         currentShadowTechnique = newState.shadowTechniqueName;
         updateShadowMode();
+    }
+    if (currentAOTechnique != newState.aoTechniqueName || currentShadowTechnique != newState.shadowTechniqueName) {
+        shallReloadShader = true;
+        ShaderManager->invalidateShaderCache();
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
     }
     if (shallReloadShader) {
         ShaderManager->invalidateShaderCache();
@@ -520,26 +586,31 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     }
 
     // 2.2. If trajectory model: Load new transfer function if necessary
-    if (modelContainsTrajectories && !newState.transferFunctionName.empty()) {
-        transferFunctionWindow.loadFunctionFromFile(newState.transferFunctionName);
+    if (!newState.transferFunctionName.empty() && this->transferFunctionName != newState.transferFunctionName) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/" + newState.transferFunctionName);
+        this->transferFunctionName = newState.transferFunctionName;
     }
 
     // 3.1. Load right model file
     std::string modelFilename = "";
+    int newModelIndex = -1;
     for (int i = 0; i < NUM_MODELS; i++) {
         if (MODEL_DISPLAYNAMES[i] == newState.modelName) {
             modelFilename = MODEL_FILENAMES[i];
-            usedModelIndex = i;
+            newModelIndex = i;
         }
     }
 
     if (modelFilename.length() < 1) {
         Logfile::get()->writeError(std::string() + "Error in PixelSyncApp::setNewState: Invalid model name \""
-                                   + "\".");
+                + newState.modelName + + "\".");
         exit(1);
     }
-    shuffleGeometry = newState.testShuffleGeometry;
-    loadModel(modelFilename);
+    if (newModelIndex != usedModelIndex || shuffleGeometry != newState.testShuffleGeometry) {
+        shuffleGeometry = newState.testShuffleGeometry;
+        loadModel(modelFilename);
+    }
+    usedModelIndex = newModelIndex;
 
     // 3.2. If trajectory model: Set correct importance criterion
     if (modelContainsTrajectories && importanceCriterionIndex != newState.importanceCriterionIndex) {
@@ -567,8 +638,12 @@ void PixelSyncApp::setNewState(const InternalState &newState)
         oitRenderer->setNewState(newState);
     }
 
+    recordingTime = 0.0f;
+    recordingTimeStampStart = Timer->getTicksMicroseconds();
     lastState = newState;
     firstState = false;
+    usesNewState = true;
+    frameNum = 0;
 }
 
 void PixelSyncApp::updateAOMode()
@@ -667,21 +742,41 @@ void PixelSyncApp::render()
         Renderer->unbindFBO();
     }
 
+
+    glDisable(GL_FRAMEBUFFER_SRGB);
+
     // Render to screen
     Renderer->setProjectionMatrix(matrixIdentity());
     Renderer->setViewMatrix(matrixIdentity());
     Renderer->setModelMatrix(matrixIdentity());
-    Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
-    sgl::RendererGL *rgl = (sgl::RendererGL*)Renderer;
+    if (useLinearRGB) {
+        Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)), gammaCorrectionShader);
+    } else {
+        Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
+    }
 
-    renderGUI();
+    if (perfMeasurementMode && frameNum == 0) {
+        if (frameNum == 0) {
+            // Make screenshot of first frame
+            measurer->makeScreenshot();
+        }
+        frameNum++;
+    }
+
+    if (!uiOnScreenshot && screenshot) {
+        printNow = true;
+        makeScreenshot();
+        printNow = false;
+    }
 
     // Video recording enabled?
     if (recording) {
-        Renderer->bindFBO(sceneFramebuffer);
+        //Renderer->unbindFBO();
         videoWriter->pushWindowFrame();
-        Renderer->unbindFBO();
+        //Renderer->bindFBO(sceneFramebuffer);
     }
+
+    renderGUI();
 }
 
 
@@ -710,9 +805,10 @@ void PixelSyncApp::renderOIT()
         oitRenderer->renderToScreen();
 #else
         if (perfMeasurementMode) {
-            measurer->startMeasure();
+            measurer->startMeasure(recordingTime);
         }
 
+        Renderer->bindFBO(sceneFramebuffer);
         oitRenderer->renderToScreen();
 
         if (perfMeasurementMode) {
@@ -762,7 +858,7 @@ void PixelSyncApp::renderOIT()
     timer.end();
 #else
     if (perfMeasurementMode) {
-        measurer->startMeasure();
+        measurer->startMeasure(recordingTime);
     }
 
     oitRenderer->gatherBegin();
@@ -907,7 +1003,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
     // FPS
     //ImGui::PlotLines("Frame Times", &fpsArray.front(), fpsArray.size(), fpsArrayOffset);
 
-    if (ImGui::Checkbox("Cull back face", &cullBackface)) {
+    if (ImGui::Checkbox("Cull Back Face", &cullBackface)) {
         if (cullBackface) {
             glEnable(GL_CULL_FACE);
         } else {
@@ -924,6 +1020,11 @@ void PixelSyncApp::renderSceneSettingsGUI()
             reRender = true;
         }
         ImGui::Checkbox("Show Transfer Function Window", &transferFunctionWindow.getShowTransferFunctionWindow());
+
+        if (ImGui::Checkbox("Use Linear RGB", &useLinearRGB)) {
+            updateColorSpaceMode();
+            reRender = true;
+        }
 
         if (usesGeometryShader && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
@@ -1140,26 +1241,40 @@ void PixelSyncApp::update(float dt)
     fpsArrayOffset = (fpsArrayOffset + 1) % fpsArray.size();
     fpsArray[fpsArrayOffset] = 1.0f/dt;
 
-    if (perfMeasurementMode && !measurer->update(dt)) {
+    if (perfMeasurementMode && !measurer->update(recordingTime)) {
         // All modes were tested -> quit
         quit();
     }
 
     if (recording || testCameraFlight) {
-        // Already recorded full cycle?
-        if (recordingTime > FULL_CIRCLE_TIME) {
-            quit();
-        }
-
-        // Otherwise, update camera position
-        float updateRate = 1.0f/FRAME_RATE;
-        recordingTime += updateRate;
-
-        cameraPath.update(updateRate);
+        cameraPath.update(recordingTime);
         camera->overwriteViewMatrix(cameraPath.getViewMatrix());
 
         reRender = true;
     }
+
+    if (perfMeasurementMode || recording || testCameraFlight) {
+        // Already recorded full cycle?
+        if (recording && recordingTime > cameraPath.getEndTime()) {
+            quit();
+        }
+
+        // Otherwise, update camera position
+        if (realTimeCameraFlight || perfMeasurementMode) {
+            uint64_t currentTimeStamp = Timer->getTicksMicroseconds();
+            uint64_t timeElapsedMicroSec = currentTimeStamp - recordingTimeStampStart;
+            recordingTime = timeElapsedMicroSec * 1e-6;
+            if (usesNewState) {
+                // A new state was just set. Don't recompute, as this would result in time of ca. 1-2ns
+                usesNewState = false;
+                recordingTime = 0.0f;
+            }
+        } else {
+            float updateRate = 1.0f/FRAME_RATE;
+            recordingTime += updateRate;
+        }
+    }
+
     if (testOutputPos && Keyboard->keyPressed(SDLK_c)) {
         // ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),
         std::cout << "ControlPoint(" << outputTime << ", " << camera->getPosition().x << ", " << camera->getPosition().y

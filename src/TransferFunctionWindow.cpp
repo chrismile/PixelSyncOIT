@@ -3,7 +3,9 @@
 //
 
 #include <cstdlib>
+#include <cmath>
 #include <GL/glew.h>
+#include <glm/glm.hpp>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <ImGui/imgui.h>
@@ -26,12 +28,14 @@ TransferFunctionWindow *g_TransferFunctionWindowHandle = NULL;
 
 TransferFunctionWindow::TransferFunctionWindow()
 {
-    colorPoints = { ColorPoint(sgl::Color(255, 255, 255), 0.0f), ColorPoint(sgl::Color(255, 0, 0), 1.0f) };
+    colorPoints = { ColorPoint_sRGB(sgl::Color(255, 255, 255), 0.0f), ColorPoint_sRGB(sgl::Color(255, 0, 0), 1.0f) };
     /*colorPoints = { ColorPoint(sgl::Color(255, 255, 255), 0.0f),
                     ColorPoint(sgl::Color(255, 255, 0), 0.5f),
                     ColorPoint(sgl::Color(255, 0, 0), 1.0f)};*/
+    interpolationColorSpace = COLOR_SPACE_LINEAR_RGB;
     opacityPoints = { OpacityPoint(0.0f, 0.0f), OpacityPoint(1.0f, 1.0f) };
-    transferFunctionMap.resize(256);
+    transferFunctionMap_sRGB.resize(256);
+    transferFunctionMap_linearRGB.resize(256);
     tfMapTextureSettings.type = sgl::TEXTURE_1D;
     tfMapTexture = sgl::TextureManager->createEmptyTexture(256, tfMapTextureSettings);
     updateAvailableFiles();
@@ -55,6 +59,8 @@ bool TransferFunctionWindow::saveFunctionToFile(const std::string &filename)
 
     XMLPrinter printer(file);
     printer.OpenElement("TransferFunction");
+    printer.PushAttribute("colorspace", "sRGB"); // Currently only sRGB supported for points
+    printer.PushAttribute("interpolation_colorspace", COLOR_SPACE_NAMES[interpolationColorSpace]);
 
     printer.OpenElement("OpacityPoints");
     // Traverse all opacity points
@@ -98,6 +104,16 @@ bool TransferFunctionWindow::loadFunctionFromFile(const std::string &filename)
         return false;
     }
 
+    interpolationColorSpace = COLOR_SPACE_SRGB; // Standard
+    const char *interpolationColorSpaceName = tfNode->Attribute("colorspace_interpolation");
+    if (interpolationColorSpaceName != NULL) {
+        for (int i = 0; i < 2; i++) {
+            if (strcmp(interpolationColorSpaceName, COLOR_SPACE_NAMES[interpolationColorSpace]) == 0) {
+                interpolationColorSpace = (ColorSpace)i;
+            }
+        }
+    }
+
     colorPoints.clear();
     opacityPoints.clear();
 
@@ -122,7 +138,7 @@ bool TransferFunctionWindow::loadFunctionFromFile(const std::string &filename)
             int green = sgl::clamp(childElement->IntAttribute("g"), 0, 255);
             int blue = sgl::clamp(childElement->IntAttribute("b"), 0, 255);
             sgl::Color color(red, green, blue);
-            colorPoints.push_back(ColorPoint(color, position));
+            colorPoints.push_back(ColorPoint_sRGB(color, position));
         }
     }
 
@@ -176,7 +192,8 @@ void TransferFunctionWindow::computeHistogram(const std::vector<float> &attribut
 float TransferFunctionWindow::getOpacityAtAttribute(float attribute)
 {
     int idx = glm::clamp((int)std::round(attribute*255), 0, 255);
-    return transferFunctionMap[idx].getFloatA();
+    // Alpha always linear, doesn't matter which map we take
+    return transferFunctionMap_sRGB[idx].getFloatA();
 }
 
 
@@ -205,6 +222,12 @@ bool TransferFunctionWindow::renderGUI()
                 rebuildTransferFunctionMap();
                 reRender = true;
             }
+        }
+
+        if (ImGui::Combo("Color Space", (int*)&interpolationColorSpace,
+                COLOR_SPACE_NAMES, IM_ARRAYSIZE(COLOR_SPACE_NAMES))) {
+            rebuildTransferFunctionMap();
+            reRender = true;
         }
 
         renderFileDialog();
@@ -317,7 +340,7 @@ void TransferFunctionWindow::renderColorBar()
     ImVec2 startPos = ImGui::GetCursorScreenPos();
     ImVec2 pos = ImVec2(startPos.x + 1, startPos.y + 1);
     for (int i = 0; i < 256; i++) {
-        sgl::Color color = transferFunctionMap[i];
+        sgl::Color color = transferFunctionMap_sRGB[i];
         ImU32 colorImgui = ImColor(color.getR(), color.getG(), color.getB());
         drawList->AddLine(ImVec2(pos.x, pos.y), ImVec2(pos.x, pos.y + barHeight), colorImgui, 2.0f * regionWidth / 255.0f);
         pos.x += regionWidth / 255.0f;
@@ -346,10 +369,10 @@ void TransferFunctionWindow::renderColorBar()
 
 
 // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
-std::vector<sgl::Color> TransferFunctionWindow::getTransferFunctionMap()
+/*std::vector<sgl::Color> TransferFunctionWindow::getTransferFunctionMap()
 {
     return transferFunctionMap;
-}
+}*/
 
 sgl::TexturePtr &TransferFunctionWindow::getTransferFunctionMapTexture()
 {
@@ -359,10 +382,82 @@ sgl::TexturePtr &TransferFunctionWindow::getTransferFunctionMapTexture()
 // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
 void TransferFunctionWindow::rebuildTransferFunctionMap()
 {
+    // Create linear RGB color points
+    colorPoints_LinearRGB.clear();
+    for (ColorPoint_sRGB &colorPoint : colorPoints) {
+        glm::vec3 linearRGBColor = sRGBToLinearRGB(colorPoint.color.getFloatColorRGB());
+        colorPoints_LinearRGB.push_back(ColorPoint_LinearRGB(linearRGBColor, colorPoint.position));
+    }
+
+    if (interpolationColorSpace == COLOR_SPACE_LINEAR_RGB) {
+        rebuildTransferFunctionMap_LinearRGB();
+    } else {
+        rebuildTransferFunctionMap_sRGB();
+    }
+
+    if (useLinearRGB) {
+        tfMapTexture->uploadPixelData(256, &transferFunctionMap_linearRGB.front());
+    } else {
+        tfMapTexture->uploadPixelData(256, &transferFunctionMap_sRGB.front());
+    }
+}
+
+// For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
+void TransferFunctionWindow::rebuildTransferFunctionMap_LinearRGB()
+{
     int colorPointsIdx = 0;
     int opacityPointsIdx = 0;
     for (int i = 0; i < 256; i++) {
-        sgl::Color colorAtIdx;
+        glm::vec3 linearRGBColorAtIdx;
+        float opacityAtIdx;
+        float currentPosition = static_cast<float>(i) / 255.0f;
+
+        // colorPoints.at(colorPointsIdx) should be to the right of/equal to currentPosition
+        while (colorPoints_LinearRGB.at(colorPointsIdx).position < currentPosition) {
+            colorPointsIdx++;
+        }
+        while (opacityPoints.at(opacityPointsIdx).position < currentPosition) {
+            opacityPointsIdx++;
+        }
+
+        // Now compute the color...
+        if (colorPoints_LinearRGB.at(colorPointsIdx).position == currentPosition) {
+            linearRGBColorAtIdx = colorPoints_LinearRGB.at(colorPointsIdx).color;
+        } else {
+            glm::vec3 color0 = colorPoints_LinearRGB.at(colorPointsIdx-1).color;
+            glm::vec3 color1 = colorPoints_LinearRGB.at(colorPointsIdx).color;
+            float pos0 = colorPoints_LinearRGB.at(colorPointsIdx-1).position;
+            float pos1 = colorPoints_LinearRGB.at(colorPointsIdx).position;
+            float factor = 1.0 - (pos1 - currentPosition) / (pos1 - pos0);
+            linearRGBColorAtIdx = glm::mix(color0, color1, factor);
+        }
+
+        // ... and the opacity.
+        if (opacityPoints.at(opacityPointsIdx).position == currentPosition) {
+            opacityAtIdx = opacityPoints.at(opacityPointsIdx).opacity;
+        } else {
+            float opacity0 = opacityPoints.at(opacityPointsIdx-1).opacity;
+            float opacity1 = opacityPoints.at(opacityPointsIdx).opacity;
+            float pos0 = opacityPoints.at(opacityPointsIdx-1).position;
+            float pos1 = opacityPoints.at(opacityPointsIdx).position;
+            float factor = 1.0 - (pos1 - currentPosition) / (pos1 - pos0);
+            opacityAtIdx = sgl::interpolateLinear(opacity0, opacity1, factor);
+        }
+        //colorAtIdx = sgl::Color(255, 255, 255);
+
+        transferFunctionMap_linearRGB.at(i) = sgl::Color(glm::vec4(linearRGBColorAtIdx, opacityAtIdx));
+        transferFunctionMap_sRGB.at(i) = sgl::Color(glm::vec4(linearRGBTosRGB(linearRGBColorAtIdx), opacityAtIdx));
+    }
+}
+
+// For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
+void TransferFunctionWindow::rebuildTransferFunctionMap_sRGB()
+{
+    int colorPointsIdx = 0;
+    int opacityPointsIdx = 0;
+    for (int i = 0; i < 256; i++) {
+        glm::vec3 sRGBColorAtIdx;
+        float opacityAtIdx;
         float currentPosition = static_cast<float>(i) / 255.0f;
 
         // colorPoints.at(colorPointsIdx) should be to the right of/equal to currentPosition
@@ -375,39 +470,62 @@ void TransferFunctionWindow::rebuildTransferFunctionMap()
 
         // Now compute the color...
         if (colorPoints.at(colorPointsIdx).position == currentPosition) {
-            colorAtIdx = colorPoints.at(colorPointsIdx).color;
+            sRGBColorAtIdx = colorPoints.at(colorPointsIdx).color.getFloatColorRGB();
         } else {
-            sgl::Color color0 = colorPoints.at(colorPointsIdx-1).color;
-            sgl::Color color1 = colorPoints.at(colorPointsIdx).color;
+            glm::vec3 color0 = colorPoints.at(colorPointsIdx-1).color.getFloatColorRGB();
+            glm::vec3 color1 = colorPoints.at(colorPointsIdx).color.getFloatColorRGB();
             float pos0 = colorPoints.at(colorPointsIdx-1).position;
             float pos1 = colorPoints.at(colorPointsIdx).position;
             float factor = 1.0 - (pos1 - currentPosition) / (pos1 - pos0);
-            colorAtIdx = sgl::colorLerp(color0, color1, factor);
+            sRGBColorAtIdx = glm::mix(color0, color1, factor);
         }
 
         // ... and the opacity.
         if (opacityPoints.at(opacityPointsIdx).position == currentPosition) {
-            colorAtIdx.setFloatA(opacityPoints.at(opacityPointsIdx).opacity);
+            opacityAtIdx = opacityPoints.at(opacityPointsIdx).opacity;
         } else {
             float opacity0 = opacityPoints.at(opacityPointsIdx-1).opacity;
             float opacity1 = opacityPoints.at(opacityPointsIdx).opacity;
             float pos0 = opacityPoints.at(opacityPointsIdx-1).position;
             float pos1 = opacityPoints.at(opacityPointsIdx).position;
             float factor = 1.0 - (pos1 - currentPosition) / (pos1 - pos0);
-            colorAtIdx.setFloatA(sgl::interpolateLinear(opacity0, opacity1, factor));
+            opacityAtIdx = sgl::interpolateLinear(opacity0, opacity1, factor);
         }
         //colorAtIdx = sgl::Color(255, 255, 255);
 
-        transferFunctionMap.at(i) = colorAtIdx;
+        transferFunctionMap_linearRGB.at(i) = sgl::Color(glm::vec4(sRGBToLinearRGB(sRGBColorAtIdx), opacityAtIdx));
+        transferFunctionMap_sRGB.at(i) = sgl::Color(glm::vec4(sRGBColorAtIdx, opacityAtIdx));
     }
-
-    tfMapTexture->uploadPixelData(256, &transferFunctionMap.front());
 }
 
 
 void TransferFunctionWindow::update(float dt)
 {
     dragPoint();
+}
+
+glm::vec3 TransferFunctionWindow::sRGBToLinearRGB(const glm::vec3 &color_LinearRGB)
+{
+    //float factor = 2.2f;
+    //return glm::pow(color_LinearRGB, glm::vec3(factor));
+    // See https://en.wikipedia.org/wiki/SRGB
+    return glm::mix(glm::pow((color_LinearRGB + 0.055f) / 1.055f, glm::vec3(2.4f)),
+            color_LinearRGB / 12.92f, glm::lessThanEqual(color_LinearRGB, glm::vec3(0.04045f)));
+}
+
+glm::vec3 TransferFunctionWindow::linearRGBTosRGB(const glm::vec3 &color_sRGB)
+{
+    //float factor = 1.0f / 2.2f;
+    //return glm::pow(color_sRGB, glm::vec3(factor));
+    // See https://en.wikipedia.org/wiki/SRGB
+    return glm::mix(1.055f * glm::pow(color_sRGB, glm::vec3(1.0f / 2.4f)) - 0.055f,
+            color_sRGB * 12.92f, glm::lessThanEqual(color_sRGB, glm::vec3(0.0031308f)));
+}
+
+void TransferFunctionWindow::setUseLinearRGB(bool useLinearRGB)
+{
+    this->useLinearRGB = useLinearRGB;
+    rebuildTransferFunctionMap();
 }
 
 void TransferFunctionWindow::onOpacityGraphClick()
@@ -477,6 +595,7 @@ void TransferFunctionWindow::onColorBarClick()
                    && currentSelectionIndex != colorPoints.size()-1) {
             // A.2 Middle clicked? Delete point
             colorPoints.erase(colorPoints.begin() + currentSelectionIndex);
+            colorPoints_LinearRGB.erase(colorPoints_LinearRGB.begin() + currentSelectionIndex);
             selectedPointType = SELECTED_POINT_TYPE_NONE;
             reRender = true;
         }
@@ -494,12 +613,28 @@ void TransferFunctionWindow::onColorBarClick()
 
             // Add new color point
             float newPosition = normalizedPosition;
-            sgl::Color newColor = sgl::colorLerp(
-                    colorPoints.at(insertPosition-1).color,
-                    colorPoints.at(insertPosition).color,
-                    1.0 - (colorPoints.at(insertPosition).position - newPosition)
-                          / (colorPoints.at(insertPosition).position - colorPoints.at(insertPosition-1).position));
-            colorPoints.insert(colorPoints.begin() + insertPosition, ColorPoint(newColor, newPosition));
+            if (interpolationColorSpace == COLOR_SPACE_LINEAR_RGB) {
+                // Linear RGB interplation
+                glm::vec3 newColor_linearRGB = glm::mix(
+                        colorPoints_LinearRGB.at(insertPosition-1).color,
+                        colorPoints_LinearRGB.at(insertPosition).color,
+                        1.0 - (colorPoints_LinearRGB.at(insertPosition).position - newPosition)
+                              / (colorPoints_LinearRGB.at(insertPosition).position
+                                 - colorPoints_LinearRGB.at(insertPosition-1).position));
+                sgl::Color newColorsRGB(linearRGBTosRGB(newColor_linearRGB));
+                colorPoints_LinearRGB.insert(colorPoints_LinearRGB.begin()
+                                             + insertPosition, ColorPoint_LinearRGB(newColor_linearRGB, newPosition));
+                colorPoints.insert(colorPoints.begin() + insertPosition, ColorPoint_sRGB(newColorsRGB, newPosition));
+            } else {
+                // sRGB interpolation
+                sgl::Color newColor = sgl::colorLerp(
+                        colorPoints.at(insertPosition-1).color,
+                        colorPoints.at(insertPosition).color,
+                        1.0 - (colorPoints.at(insertPosition).position - newPosition)
+                              / (colorPoints.at(insertPosition).position - colorPoints.at(insertPosition-1).position));
+                colorPoints.insert(colorPoints.begin() + insertPosition, ColorPoint_sRGB(newColor, newPosition));
+                // colorPoints_LinearRGB computed in @ref rebuildTransferFunctionMap
+            }
             currentSelectionIndex = insertPosition;
             colorSelection = ImColor(colorPoints.at(currentSelectionIndex).color.getColorRGB());
             selectedPointType = SELECTED_POINT_TYPE_COLOR;
@@ -550,19 +685,6 @@ void TransferFunctionWindow::dragPoint()
     if (selectedPointType == SELECTED_POINT_TYPE_COLOR) {
         float normalizedPosition = mousePosWidget.x / opacityGraphBox.getWidth();
         normalizedPosition = glm::clamp(normalizedPosition, 0.0f, 1.0f);
-        // Sort if necessary
-        /*while (normalizedPosition < colorPoints.at(currentSelectionIndex-1).position) {
-            ColorPoint tmp = colorPoints.at(currentSelectionIndex-1);
-            colorPoints.at(currentSelectionIndex-1) = colorPoints.at(currentSelectionIndex);
-            colorPoints.at(currentSelectionIndex) = tmp;
-            currentSelectionIndex -= 1;
-        }
-        while (normalizedPosition > colorPoints.at(currentSelectionIndex+1).position) {
-            ColorPoint tmp = colorPoints.at(currentSelectionIndex+1);
-            colorPoints.at(currentSelectionIndex+1) = colorPoints.at(currentSelectionIndex);
-            colorPoints.at(currentSelectionIndex) = tmp;
-            currentSelectionIndex += 1;
-        }*/
         // Clip to neighbors!
         if (currentSelectionIndex != 0
                 && normalizedPosition < colorPoints.at(currentSelectionIndex-1).position) {

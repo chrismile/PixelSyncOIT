@@ -16,15 +16,21 @@
 
 class AutoPerfMeasurer {
 public:
-    AutoPerfMeasurer(std::vector<InternalState> _states, const std::string &_csvFilename,
-            std::function<void(const InternalState&)> _newStateCallback);
+    AutoPerfMeasurer(std::vector<InternalState> _states,
+                     const std::string &_csvFilename, const std::string &_perfProfileFilename,
+                     std::function<void(const InternalState&)> _newStateCallback);
     ~AutoPerfMeasurer();
 
     // To be called by the application
-    void startMeasure();
+    void setInitialFreeMemKilobytes(int initialFreeMemKilobytes);
+    void startMeasure(float timeStamp);
     void endMeasure();
+
     /// Returns false if all modes were tested and the app should terminate.
-    bool update(float dt);
+    bool update(float currentTime);
+
+    /// Called for first frame
+    void makeScreenshot();
 
     void resolutionChanged(sgl::FramebufferObjectPtr _sceneFramebuffer);
 
@@ -37,15 +43,21 @@ private:
     /// Make screenshot of scene rendering framebuffer
     void saveScreenshot(const std::string &filename);
 
+    /// Returns amount of used video memory size in gigabytes
+    float getUsedVideoMemorySizeGB();
+
+
+
     std::vector<InternalState> states;
     size_t currentStateIndex;
     InternalState currentState;
     std::function<void(const InternalState&)> newStateCallback; // Application callback
 
     sgl::TimerGL timerGL;
+    int initialFreeMemKilobytes;
 
     CsvWriter file;
-    std::string csvFilename;
+    CsvWriter perfTimeProfileFile;
 
     // For making screenshots and computing reference metrics
     sgl::FramebufferObjectPtr sceneFramebuffer;

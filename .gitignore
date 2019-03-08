@@ -74,4 +74,5 @@ cmake-build-*/
 *.hair
 
 Data/WCB/*.txt
+Data/CameraPaths/*
 imgui.ini
