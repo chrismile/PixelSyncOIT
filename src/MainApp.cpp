@@ -67,6 +67,10 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
     }
 
+    if (recording) {
+        testCameraFlight = true;
+    }
+
     cameraPath.fromControlPoints({
         ControlPoint(0, 0.3, 0.325, 1.005, -1.5708, 0),
         ControlPoint(3, 0.172219, 0.325, 1.21505, -1.15908, 0.0009368),
@@ -159,6 +163,14 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     recordingTimeStampStart = Timer->getTicksMicroseconds();
     usesNewState = true;
     frameNum = 0;
+    recordingTime = 0.0f;
+
+    // For Depth Peeling: Use less time steps
+    if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
+        FRAME_TIME = 1.0f;
+    } else {
+        FRAME_TIME = 0.1f;
+    }
 }
 
 
@@ -256,6 +268,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
             || boost::starts_with(modelFilenamePure, "Data/WCB")
             || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls");
+    modelContainsHair = boost::starts_with(modelFilenamePure, "Data/Hair");
     if (modelContainsTrajectories) {
         if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             trajectoryType = TRAJECTORY_TYPE_ANEURISM;
@@ -335,6 +348,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         float maxVorticity = 0.0f;
         voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
+        // Hair stores own line thickness
+        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            lineRadius = voxelRaytracer->getLineRadius();
+        }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         transparentObject = MeshRenderer();
     }
@@ -389,10 +406,6 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             const float scalingFactor = 0.2f;
             scaling = matrixScaling(glm::vec3(scalingFactor));
         }
-        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
-            //transparencyShader->setUniform("bandedColorShading", 0);
-            scaling = matrixScaling(glm::vec3(HAIR_MODEL_SCALING_FACTOR));
-        }
     }
 
 
@@ -405,7 +418,6 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         std::string cameraPathFilename = "Data/CameraPaths/"
                 + sgl::FileUtils::get()->getPathAsList(modelFilenamePure).back() + ".binpath";
         if (sgl::FileUtils::get()->exists(cameraPathFilename)) {
-            std::cout << cameraPathFilename << std::endl;
             cameraPath.fromBinaryFile(cameraPathFilename);
         } else {
             cameraPath.fromCirclePath(boundingBox, modelFilenamePure);
@@ -506,6 +518,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         float maxVorticity = 0.0f;
         voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
+        // Hair stores own line thickness
+        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            lineRadius = voxelRaytracer->getLineRadius();
+        }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
     }
     if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
@@ -639,6 +655,7 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     }
 
     recordingTime = 0.0f;
+    recordingTimeLast = 0.0f;
     recordingTimeStampStart = Timer->getTicksMicroseconds();
     lastState = newState;
     firstState = false;
@@ -805,7 +822,7 @@ void PixelSyncApp::renderOIT()
         oitRenderer->renderToScreen();
 #else
         if (perfMeasurementMode) {
-            measurer->startMeasure(recordingTime);
+            measurer->startMeasure(recordingTimeLast);
         }
 
         Renderer->bindFBO(sceneFramebuffer);
@@ -858,7 +875,7 @@ void PixelSyncApp::renderOIT()
     timer.end();
 #else
     if (perfMeasurementMode) {
-        measurer->startMeasure(recordingTime);
+        measurer->startMeasure(recordingTimeLast);
     }
 
     oitRenderer->gatherBegin();
@@ -1014,7 +1031,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
     ImGui::Checkbox("Continuous Rendering", &continuousRendering);
     ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);
 
-    if (shaderMode == SHADER_MODE_VORTICITY) {
+    if (shaderMode == SHADER_MODE_VORTICITY || modelContainsHair) {
         ImGui::SameLine();
         if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
             reRender = true;
@@ -1026,13 +1043,16 @@ void PixelSyncApp::renderSceneSettingsGUI()
             reRender = true;
         }
 
-        if (usesGeometryShader && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
+        if ((usesGeometryShader || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
+            && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-                static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLineRadius(lineRadius);
+                static_cast<OIT_VoxelRaytracing *>(oitRenderer.get())->setLineRadius(lineRadius);
             }
             reRender = true;
         }
+    }
 
+    if (shaderMode == SHADER_MODE_VORTICITY) {
         // Switch importance criterion
         if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
                 && ((trajectoryType == TRAJECTORY_TYPE_ANEURISM
@@ -1131,6 +1151,9 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             //      transferFunctionWindow.getTransferFunctionMapUBO());
             //std::cout << "Max Vorticity: " << *maxVorticity << std::endl;
             //transparencyShader->setUniform("cameraPosition", -camera->getPosition());
+        }
+        if (transparencyShader->hasUniform("cameraPosition")) {
+            transparencyShader->setUniform("cameraPosition", camera->getPosition());
         }
 
         if (shaderMode != SHADER_MODE_VORTICITY) {
@@ -1241,6 +1264,7 @@ void PixelSyncApp::update(float dt)
     fpsArrayOffset = (fpsArrayOffset + 1) % fpsArray.size();
     fpsArray[fpsArrayOffset] = 1.0f/dt;
 
+    recordingTimeLast = recordingTime;
     if (perfMeasurementMode && !measurer->update(recordingTime)) {
         // All modes were tested -> quit
         quit();
@@ -1260,7 +1284,7 @@ void PixelSyncApp::update(float dt)
         }
 
         // Otherwise, update camera position
-        if (realTimeCameraFlight || perfMeasurementMode) {
+        if (realTimeCameraFlight) {
             uint64_t currentTimeStamp = Timer->getTicksMicroseconds();
             uint64_t timeElapsedMicroSec = currentTimeStamp - recordingTimeStampStart;
             recordingTime = timeElapsedMicroSec * 1e-6;
@@ -1270,10 +1294,10 @@ void PixelSyncApp::update(float dt)
                 recordingTime = 0.0f;
             }
         } else {
-            float updateRate = 1.0f/FRAME_RATE;
-            recordingTime += updateRate;
+            recordingTime += FRAME_TIME;
         }
     }
+    //recordingTime = 0.0f;
 
     if (testOutputPos && Keyboard->keyPressed(SDLK_c)) {
         // ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),

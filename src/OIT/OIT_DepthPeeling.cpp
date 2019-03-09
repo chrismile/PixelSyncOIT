@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
@@ -154,6 +156,12 @@ void OIT_DepthPeeling::renderScene()
 
     Renderer->bindFBO(accumulatorFBO);
     Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT, Color(0, 0, 0, 0));
+
+    int SWAP_INTERVAL = 500;
+    // Sorry Intel, your drivers are currently too slow :)
+    if (!boost::contains(boost::to_lower_copy(sgl::SystemGL::get()->getVendorString()), "intel")) {
+        SWAP_INTERVAL = 200;
+    }
 
     for (int i = 0; i < maxDepthComplexity; i++) {
         // 1. Peel one layer of the scene

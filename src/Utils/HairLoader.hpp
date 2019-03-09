@@ -46,4 +46,6 @@ void convertHairDataToBinaryTriangleMesh(
         const std::string &hairFilename,
         const std::string &binaryFilename);
 
+void downscaleHairData(HairData &hairData, float scalingFactor);
+
 #endif //PIXELSYNCOIT_HAIRLOADER_HPP

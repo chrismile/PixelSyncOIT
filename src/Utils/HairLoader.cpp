@@ -208,6 +208,16 @@ void loadHairFile(const std::string &hairFilename, HairData &hairData) {
     }
 }
 
+void downscaleHairData(HairData &hairData, float scalingFactor)
+{
+    hairData.defaultThickness *= scalingFactor;
+    for (HairStrand &hairStrand : hairData.strands) {
+        for (glm::vec3 &pt : hairStrand.points) {
+            pt *= scalingFactor;
+        }
+    }
+}
+
 void convertHairDataToBinaryTriangleMesh(
         const std::string &hairFilename,
         const std::string &binaryFilename)
@@ -215,6 +225,7 @@ void convertHairDataToBinaryTriangleMesh(
     // First, load the hair data from the specified file
     HairData hairData;
     loadHairFile(hairFilename, hairData);
+    downscaleHairData(hairData, HAIR_MODEL_SCALING_FACTOR);
 
     BinaryMesh binaryMesh;
     binaryMesh.submeshes.push_back(BinarySubMesh());

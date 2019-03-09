@@ -20,6 +20,7 @@ public:
     void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
             sgl::RenderbufferObjectPtr &sceneDepthRBO);
     void setLineRadius(float lineRadius);
+    float getLineRadius();
     void setClearColor(const sgl::Color &clearColor);
     void setLightDirection(const glm::vec3 &lightDirection);
     void setTransferFunctionTexture(const sgl::TexturePtr &texture);

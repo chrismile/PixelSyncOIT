@@ -99,7 +99,7 @@ public:
     bool getValueOpt(const char *key, bool &toset) const {
         auto it = settings.find(key);
         if (it != settings.end()) {
-            toset = (strcmp(key, "true") == 0) || (strcmp(key, "1") == 0);
+            toset = (it->second == "true") || (it->second == "1");
             return true;
         }
         return false;

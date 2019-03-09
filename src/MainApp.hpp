@@ -122,7 +122,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 16; // 2: Aneurism, 11: Ponytail, 16: Turbulence
+    int usedModelIndex = 11; // 2: Aneurism, 11: Ponytail, 16: Turbulence
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -143,6 +143,7 @@ private:
 
     // Trajectory rendering
     bool modelContainsTrajectories;
+    bool modelContainsHair;
     std::string transferFunctionName;
     TrajectoryType trajectoryType;
     ImportanceCriterionTypeAneurism importanceCriterionTypeAneurism
@@ -177,11 +178,10 @@ private:
 
     // Save video stream to file
     const int FRAME_RATE = 60;
+    float FRAME_TIME = 1.0f / FRAME_RATE;
     uint64_t recordingTimeStampStart;
     float recordingTime = 0.0f;
-
-    //glm::vec3 cameraLookAtCenter = glm::vec3(0.1f, 0.4f, 0.6f);
-    //float rotationRadius = 1.0f;
+    float recordingTimeLast = 0.0f;
 
     float outputTime = 0.0f;
     bool testOutputPos = true;

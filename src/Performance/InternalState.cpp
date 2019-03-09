@@ -422,7 +422,7 @@ void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState 
     //getTestModesMBOIT(states, state);
     //getTestModesLinkedList(states, state);
     getTestModesMLABBuckets(states, state);
-    //getTestModesVoxelRaytracing(states, state);
+    getTestModesVoxelRaytracing(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()

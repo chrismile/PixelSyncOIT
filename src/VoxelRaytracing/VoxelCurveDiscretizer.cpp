@@ -246,6 +246,7 @@ void VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, f
 {
     HairData hairData;
     loadHairFile(filename, hairData);
+    downscaleHairData(hairData, HAIR_MODEL_SCALING_FACTOR);
 
     // Assume default thickness, opacity and color for now to simplify the implementation
     lineRadius = hairData.defaultThickness;
@@ -270,7 +271,7 @@ void VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, f
         }
 
         for (glm::vec3 point : strand.points) {
-            glm::vec3 scaledPoint = HAIR_MODEL_SCALING_FACTOR * point;
+            glm::vec3 scaledPoint = point;
             currentCurve.points.push_back(scaledPoint);
             currentCurve.attributes.push_back(0.0f); // Just push something, no attributes needed for hair strands
             linesBoundingBox.combine(scaledPoint);

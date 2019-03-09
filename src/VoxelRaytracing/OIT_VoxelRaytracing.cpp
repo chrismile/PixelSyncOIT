@@ -30,6 +30,11 @@ void OIT_VoxelRaytracing::setLineRadius(float lineRadius)
     this->lineRadius = lineRadius;
 }
 
+float OIT_VoxelRaytracing::getLineRadius()
+{
+    return this->lineRadius;
+}
+
 void OIT_VoxelRaytracing::setClearColor(const sgl::Color &clearColor)
 {
     this->clearColor = clearColor;
