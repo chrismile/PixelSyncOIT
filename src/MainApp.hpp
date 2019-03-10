@@ -122,7 +122,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 11; // 2: Aneurism, 11: Ponytail, 16: Turbulence
+    int usedModelIndex = 2; // 2: Aneurism, 11: Ponytail, 16: Turbulence
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -185,7 +185,7 @@ private:
 
     float outputTime = 0.0f;
     bool testOutputPos = true;
-    bool testCameraFlight = false;
+    bool testCameraFlight = true;
     bool realTimeCameraFlight = false;
     bool recordingUseGlobalIlumination = false;
     bool recording = false;

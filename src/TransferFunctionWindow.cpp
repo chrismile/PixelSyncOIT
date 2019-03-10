@@ -24,6 +24,8 @@
 
 using namespace tinyxml2;
 
+const size_t TRANSFER_FUNCTION_TEXTURE_SIZE = 256;
+
 TransferFunctionWindow *g_TransferFunctionWindowHandle = NULL;
 
 TransferFunctionWindow::TransferFunctionWindow()
@@ -34,10 +36,11 @@ TransferFunctionWindow::TransferFunctionWindow()
                     ColorPoint(sgl::Color(255, 0, 0), 1.0f)};*/
     interpolationColorSpace = COLOR_SPACE_LINEAR_RGB;
     opacityPoints = { OpacityPoint(0.0f, 0.0f), OpacityPoint(1.0f, 1.0f) };
-    transferFunctionMap_sRGB.resize(256);
-    transferFunctionMap_linearRGB.resize(256);
+    transferFunctionMap_sRGB.resize(TRANSFER_FUNCTION_TEXTURE_SIZE);
+    transferFunctionMap_linearRGB.resize(TRANSFER_FUNCTION_TEXTURE_SIZE);
     tfMapTextureSettings.type = sgl::TEXTURE_1D;
-    tfMapTexture = sgl::TextureManager->createEmptyTexture(256, tfMapTextureSettings);
+    tfMapTextureSettings.internalFormat = GL_RGBA16;
+    tfMapTexture = sgl::TextureManager->createEmptyTexture(TRANSFER_FUNCTION_TEXTURE_SIZE, tfMapTextureSettings);
     updateAvailableFiles();
     rebuildTransferFunctionMap();
 
@@ -191,7 +194,8 @@ void TransferFunctionWindow::computeHistogram(const std::vector<float> &attribut
 
 float TransferFunctionWindow::getOpacityAtAttribute(float attribute)
 {
-    int idx = glm::clamp((int)std::round(attribute*255), 0, 255);
+    int idx = glm::clamp((int)std::round(attribute*int(TRANSFER_FUNCTION_TEXTURE_SIZE-1)),
+            0, (int)(TRANSFER_FUNCTION_TEXTURE_SIZE-1));
     // Alpha always linear, doesn't matter which map we take
     return transferFunctionMap_sRGB[idx].getFloatA();
 }
@@ -339,7 +343,7 @@ void TransferFunctionWindow::renderColorBar()
     // Draw bar
     ImVec2 startPos = ImGui::GetCursorScreenPos();
     ImVec2 pos = ImVec2(startPos.x + 1, startPos.y + 1);
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < TRANSFER_FUNCTION_TEXTURE_SIZE; i++) {
         sgl::Color color = transferFunctionMap_sRGB[i];
         ImU32 colorImgui = ImColor(color.getR(), color.getG(), color.getB());
         drawList->AddLine(ImVec2(pos.x, pos.y), ImVec2(pos.x, pos.y + barHeight), colorImgui, 2.0f * regionWidth / 255.0f);
@@ -396,9 +400,9 @@ void TransferFunctionWindow::rebuildTransferFunctionMap()
     }
 
     if (useLinearRGB) {
-        tfMapTexture->uploadPixelData(256, &transferFunctionMap_linearRGB.front());
+        tfMapTexture->uploadPixelData(TRANSFER_FUNCTION_TEXTURE_SIZE, &transferFunctionMap_linearRGB.front());
     } else {
-        tfMapTexture->uploadPixelData(256, &transferFunctionMap_sRGB.front());
+        tfMapTexture->uploadPixelData(TRANSFER_FUNCTION_TEXTURE_SIZE, &transferFunctionMap_sRGB.front());
     }
 }
 
@@ -407,10 +411,10 @@ void TransferFunctionWindow::rebuildTransferFunctionMap_LinearRGB()
 {
     int colorPointsIdx = 0;
     int opacityPointsIdx = 0;
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < TRANSFER_FUNCTION_TEXTURE_SIZE; i++) {
         glm::vec3 linearRGBColorAtIdx;
         float opacityAtIdx;
-        float currentPosition = static_cast<float>(i) / 255.0f;
+        float currentPosition = static_cast<float>(i) / float(TRANSFER_FUNCTION_TEXTURE_SIZE-1);
 
         // colorPoints.at(colorPointsIdx) should be to the right of/equal to currentPosition
         while (colorPoints_LinearRGB.at(colorPointsIdx).position < currentPosition) {
@@ -455,10 +459,10 @@ void TransferFunctionWindow::rebuildTransferFunctionMap_sRGB()
 {
     int colorPointsIdx = 0;
     int opacityPointsIdx = 0;
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < TRANSFER_FUNCTION_TEXTURE_SIZE; i++) {
         glm::vec3 sRGBColorAtIdx;
         float opacityAtIdx;
-        float currentPosition = static_cast<float>(i) / 255.0f;
+        float currentPosition = static_cast<float>(i) / float(TRANSFER_FUNCTION_TEXTURE_SIZE-1);
 
         // colorPoints.at(colorPointsIdx) should be to the right of/equal to currentPosition
         while (colorPoints.at(colorPointsIdx).position < currentPosition) {

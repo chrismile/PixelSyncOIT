@@ -1297,7 +1297,7 @@ void PixelSyncApp::update(float dt)
             recordingTime += FRAME_TIME;
         }
     }
-    //recordingTime = 0.0f;
+    recordingTime = 0.0f;
 
     if (testOutputPos && Keyboard->keyPressed(SDLK_c)) {
         // ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),

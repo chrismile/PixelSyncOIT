@@ -79,11 +79,7 @@ void main()
     vec3 diffuseColor = fragmentColor.rgb; // TODO opacity
 #endif
 
-    vec3 normal = fragmentNormal;
-    if (length(normal) < 0.5) {
-        normal = vec3(1.0, 0.0, 0.0);
-    }
-    normal = normalize(fragmentNormal);
+    vec3 normal = normalize(fragmentNormal);
 
     // Pseudo Phong shading
     vec3 ambientShading = ambientColor * 0.00001 * occlusionFactor * shadowFactor;
@@ -102,6 +98,8 @@ void main()
     color.rgb = vec3(shadowFactor);
     #elif REFLECTION_MODEL == 3 // AMBIENT_OCCLUSION_FACTOR
     color.rgb = vec3(occlusionFactor);
+    #elif REFLECTION_MODEL == 4 // NO_LIGHTING
+    color.rgb = diffuseColor;
     #endif
 
 

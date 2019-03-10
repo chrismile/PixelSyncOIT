@@ -70,11 +70,12 @@ const char *const AO_TECHNIQUE_DISPLAYNAMES[] = {
 };
 
 enum ReflectionModelType {
-    PSEUDO_PHONG_LIGHTING = 0, COMBINED_SHADOW_MAP_AND_AO, LOCAL_SHADOW_MAP_OCCLUSION, AMBIENT_OCCLUSION_FACTOR
+        PSEUDO_PHONG_LIGHTING = 0, COMBINED_SHADOW_MAP_AND_AO, LOCAL_SHADOW_MAP_OCCLUSION, AMBIENT_OCCLUSION_FACTOR,
+        NO_LIGHTING
 };
 const char *const REFLECTION_MODEL_DISPLAY_NAMES[] = {
-        "Pseudo Phong Lighting", "Combined Shadow Map and AO",
-        "Local Shadow Map Occlusion", "Ambient Occlusion Factor"
+        "Pseudo Phong Lighting", "Combined Shadow Map and AO", "Local Shadow Map Occlusion", "Ambient Occlusion Factor",
+        "No Lighting"
 };
 
 

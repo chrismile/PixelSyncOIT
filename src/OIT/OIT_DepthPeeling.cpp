@@ -185,7 +185,7 @@ void OIT_DepthPeeling::renderScene()
         Renderer->blitTexture(colorRenderTextures[i%2], AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
 
         // NVIDIA OpenGL Linux driver assumes the application has hung if we don't swap buffers every now and then
-        if (i % 100 == 0 && i > 0) {
+        if (i % SWAP_INTERVAL == 0 && i > 0) {
             sgl::AppSettings::get()->getMainWindow()->flip();
         }
     }

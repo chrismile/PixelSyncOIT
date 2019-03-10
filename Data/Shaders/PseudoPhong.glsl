@@ -73,17 +73,18 @@ void main()
 #endif
 
     // Pseudo Phong shading
+    vec3 normal = normalize(fragmentNormal);
     vec4 bandColor = fragmentColor;
     float stripWidth = 2.0;
     if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
         bandColor = vec4(1.0,1.0,1.0,1.0);
     }
-    vec4 color = vec4(bandColor.rgb * (dot(normalize(fragmentNormal), lightDirection)/4.0+0.75
+    vec4 color = vec4(bandColor.rgb * (dot(normal, lightDirection)/4.0+0.75
             * occlusionFactor * shadowFactor), fragmentColor.a);
 
     if (bandedColorShading == 0) {
         vec3 ambientShading = ambientColor * 0.1 * occlusionFactor * shadowFactor;
-        float diffuseFactor = 0.5 * dot(fragmentNormal, lightDirection) + 0.5;
+        float diffuseFactor = 0.5 * dot(normal, lightDirection) + 0.5;
         vec3 diffuseShading = diffuseColor * clamp(diffuseFactor, 0.0, 1.0) * occlusionFactor * shadowFactor;
         vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
         color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
@@ -95,6 +96,8 @@ void main()
     color.rgb = vec3(shadowFactor);
     #elif REFLECTION_MODEL == 3 // AMBIENT_OCCLUSION_FACTOR
     color.rgb = vec3(occlusionFactor);
+    #elif REFLECTION_MODEL == 4 // NO_LIGHTING
+    color.rgb = diffuseColor;
     #endif
 
 
