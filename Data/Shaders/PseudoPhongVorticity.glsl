@@ -6,7 +6,7 @@
 
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
-layout(location = 3) in float vertexAttribute;
+layout(location = 3) in float VERTEX_ATTRIBUTE;
 
 out vec3 fragmentNormal;
 out vec3 fragmentPositonWorld;
@@ -20,7 +20,7 @@ void main()
     fragmentNormal = vertexNormal;
     fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
     screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
-    fragmentAttribute = vertexAttribute;
+    fragmentAttribute = VERTEX_ATTRIBUTE;
     gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
@@ -34,7 +34,7 @@ void main()
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexLineNormal;
 layout(location = 2) in vec3 vertexLineTangent;
-layout(location = 3) in float vertexAttribute;
+layout(location = 3) in float VERTEX_ATTRIBUTE;
 
 out VertexData
 {
@@ -49,7 +49,7 @@ void main()
     linePosition = vertexPosition;
     lineNormal = vertexLineNormal;
     lineTangent = vertexLineTangent;
-    lineAttribute = vertexAttribute;
+    lineAttribute = VERTEX_ATTRIBUTE;
 }
 
 

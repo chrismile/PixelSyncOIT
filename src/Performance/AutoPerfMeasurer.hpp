@@ -17,7 +17,7 @@
 class AutoPerfMeasurer {
 public:
     AutoPerfMeasurer(std::vector<InternalState> _states,
-                     const std::string &_csvFilename, const std::string &_perfProfileFilename,
+                     const std::string &_csvFilename, const std::string &_depthComplexityFilename,
                      std::function<void(const InternalState&)> _newStateCallback);
     ~AutoPerfMeasurer();
 
@@ -33,6 +33,13 @@ public:
     void makeScreenshot();
 
     void resolutionChanged(sgl::FramebufferObjectPtr _sceneFramebuffer);
+
+    // Called by OIT_DepthComplexity
+    void pushDepthComplexityFrame(uint64_t minComplexity, uint64_t maxComplexity, float avgUsed, float avgAll,
+            uint64_t totalNumFragments);
+
+    // Called by OIT algorithms
+    void setCurrentAlgorithmBufferSizeBytes(size_t numBytes);
 
 private:
     /// Write out the performance data of "currentState" to "file".
@@ -57,7 +64,9 @@ private:
     int initialFreeMemKilobytes;
 
     CsvWriter file;
-    CsvWriter perfTimeProfileFile;
+    CsvWriter depthComplexityFile;
+    size_t depthComplexityFrameNumber = 0;
+    size_t currentAlgorithmsBufferSizeBytes = 0;
 
     // For making screenshots and computing reference metrics
     sgl::FramebufferObjectPtr sceneFramebuffer;

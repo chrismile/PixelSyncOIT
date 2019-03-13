@@ -8,6 +8,7 @@
 #include <Utils/File/Logfile.hpp>
 #include <Utils/Convert.hpp>
 #include <Utils/Events/Stream/Stream.hpp>
+#include <Math/Geometry/MatrixUtil.hpp>
 
 #include "MeshSerializer.hpp"
 #include "TrajectoryLoader.hpp"
@@ -91,6 +92,7 @@ void loadHairFile(const std::string &hairFilename, HairData &hairData) {
     // ---------- Starting from here: Read actual hair data ----------
 
     // First: Read number of segments per strand and reserve data for point, thickness and color arrays (if necessary)
+    hairData.filename = hairFilename;
     hairData.strands.resize(numStrands);
     if (hasSegmentsArray) {
         std::vector<uint16_t> segmentsArray;
@@ -214,6 +216,22 @@ void downscaleHairData(HairData &hairData, float scalingFactor)
     for (HairStrand &hairStrand : hairData.strands) {
         for (glm::vec3 &pt : hairStrand.points) {
             pt *= scalingFactor;
+        }
+    }
+
+    // For some hair data files: Swap y-axis and z-axis
+    if (!boost::starts_with(hairData.filename, "Data/Hair/ponytail")
+            && !boost::starts_with(hairData.filename, "Data/Hair/bear")) {
+        glm::mat4 hairRotationMatrix = sgl::matrixRowMajor(
+                1.0f, 0.0f, 0.0f, 0.0f,
+                0.0f, 0.0f, 1.0f, 0.0f,
+                0.0f, 1.0f, 0.0f, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f
+        );
+        for (HairStrand &hairStrand : hairData.strands) {
+            for (glm::vec3 &pt : hairStrand.points) {
+                pt = sgl::transformPoint(hairRotationMatrix, pt);
+            }
         }
     }
 }

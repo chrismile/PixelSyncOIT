@@ -40,6 +40,7 @@
 #include "Utils/OBJLoader.hpp"
 #include "Utils/TrajectoryLoader.hpp"
 #include "Utils/HairLoader.hpp"
+#include "OIT/BufferSizeWatch.hpp"
 #include "OIT/OIT_Dummy.hpp"
 #include "OIT/OIT_KBuffer.hpp"
 #include "OIT/OIT_LinkedList.hpp"
@@ -67,7 +68,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
     }
 
-    if (recording) {
+    if (recording || perfMeasurementMode) {
         testCameraFlight = true;
     }
 
@@ -97,16 +98,11 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
 
     bandingColor = Color(165, 220, 84, 120);
-    if (perfMeasurementMode) {
-        // Transparent background in measurement mode! This way, reference metrics can compare opacity values.
-        //clearColor = Color(0, 0, 0, 0);
-        clearColor = Color(255, 255, 255, 255);
-    } else {
-        clearColor = Color(255, 255, 255, 255);
-    }
+    clearColor = Color(255, 255, 255, 255);
     clearColorSelection = ImColor(clearColor.getColorRGBA());
     transferFunctionWindow.setClearColor(clearColor);
     transferFunctionWindow.setUseLinearRGB(useLinearRGB);
+
     setNewTilingMode(2, 8);
 
     bool useVsync = AppSettings::get()->getSettings().getBoolValue("window-vSync");
@@ -151,7 +147,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
 
     if (perfMeasurementMode) {
         sgl::FileUtils::get()->ensureDirectoryExists("images");
-        measurer = new AutoPerfMeasurer(getTestModesPaper(), "performance.csv", "performance_profile.csv",
+        measurer = new AutoPerfMeasurer(getTestModesPaper(), "performance.csv", "depth_complexity.csv",
                                         [this](const InternalState &newState) { this->setNewState(newState); });
         measurer->setInitialFreeMemKilobytes(freeMemKilobytes);
         measurer->resolutionChanged(sceneFramebuffer);
@@ -164,13 +160,6 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     usesNewState = true;
     frameNum = 0;
     recordingTime = 0.0f;
-
-    // For Depth Peeling: Use less time steps
-    if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
-        FRAME_TIME = 1.0f;
-    } else {
-        FRAME_TIME = 0.1f;
-    }
 }
 
 
@@ -261,7 +250,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    if (!perfMeasurementMode && boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
+    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence.xml");
     }
 
@@ -532,6 +521,28 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         voxelRaytracer->setTransferFunctionTexture(transferFunctionWindow.getTransferFunctionMapTexture());
     }
 
+
+    clearColorSelection = ImColor(255, 255, 255, 255);
+    if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+        OIT_DepthComplexity *depthComplexityOIT = (OIT_DepthComplexity*)oitRenderer.get();
+        if (recording) {
+            depthComplexityOIT->setRecordingMode(true);
+        }
+        if (perfMeasurementMode) {
+            depthComplexityOIT->setPerfMeasurer(measurer);
+        }
+
+        clearColorSelection = ImColor(0, 0, 0, 255);
+    }
+    clearColor = colorFromFloat(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z,
+                                clearColorSelection.w);
+    if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+        static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
+    }
+    transferFunctionWindow.setClearColor(clearColor);
+
+
+
     resolutionChanged(EventPtr());
     oldMode = mode;
 }
@@ -562,6 +573,16 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
 
 void PixelSyncApp::setNewState(const InternalState &newState)
 {
+    // 0. Change the resolution?
+    Window *window = AppSettings::get()->getMainWindow();
+    int currentWindowWidth = window->getWidth();
+    int currentWindowHeight = window->getHeight();
+    glm::ivec2 newResolution = newState.windowResolution;
+    if (newResolution.x > 0 && newResolution.x > 0 && currentWindowWidth != newResolution.x
+            && currentWindowHeight != newResolution.y) {
+        window->setWindowSize(newResolution.x, newResolution.y);
+    }
+
     // 1. Test whether fragment shader invocation interlock (Pixel Sync) or atomic operations shall be disabled
     if (newState.testNoInvocationInterlock) {
         ShaderManager->addPreprocessorDefine("TEST_NO_INVOCATION_INTERLOCK", "");
@@ -661,6 +682,15 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     firstState = false;
     usesNewState = true;
     frameNum = 0;
+
+
+    // For Depth Peeling: Use less time steps
+    if (mode == RENDER_MODE_OIT_DEPTH_PEELING
+            && boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+        FRAME_TIME = 10.0f;
+    } else {
+        FRAME_TIME = 0.1f;
+    }
 }
 
 void PixelSyncApp::updateAOMode()
@@ -1297,7 +1327,7 @@ void PixelSyncApp::update(float dt)
             recordingTime += FRAME_TIME;
         }
     }
-    recordingTime = 0.0f;
+    //recordingTime = 0.0f;
 
     if (testOutputPos && Keyboard->keyPressed(SDLK_c)) {
         // ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),

@@ -26,6 +26,7 @@ struct HairStrand {
 };
 
 struct HairData {
+    std::string filename;
     std::vector<HairStrand> strands;
 
     // Only used if arrays in strands empty

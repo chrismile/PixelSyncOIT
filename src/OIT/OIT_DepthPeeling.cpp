@@ -19,6 +19,7 @@
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "OIT_DepthPeeling.hpp"
+#include "BufferSizeWatch.hpp"
 
 using namespace sgl;
 
@@ -80,6 +81,11 @@ void OIT_DepthPeeling::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebu
     size_t numFragmentsBufferSizeBytes = sizeof(uint32_t) * width * height;
     numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
+    size_t bufferSizeColorAccumulators = 2 * sizeof(float) * 4 * width * height;
+    size_t bufferSizeDepthTextures = 2 * sizeof(float) * width * height;
+    setCurrentAlgorithmBufferSizeBytes(numFragmentsBufferSizeBytes + bufferSizeColorAccumulators
+            + bufferSizeDepthTextures);
 }
 
 void OIT_DepthPeeling::setUniformData()

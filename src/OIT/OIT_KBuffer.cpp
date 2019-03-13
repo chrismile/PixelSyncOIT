@@ -18,6 +18,7 @@
 
 #include "TilingMode.hpp"
 #include "OIT_KBuffer.hpp"
+#include "BufferSizeWatch.hpp"
 
 using namespace sgl;
 
@@ -83,6 +84,8 @@ void OIT_KBuffer::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer,
     size_t numFragmentsBufferSizeBytes = sizeof(int32_t) * width * height;
     numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
+    setCurrentAlgorithmBufferSizeBytes(bufferSizeBytes + numFragmentsBufferSizeBytes);
 }
 
 

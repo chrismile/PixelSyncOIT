@@ -10,6 +10,8 @@
 
 #include "OIT_Renderer.hpp"
 
+class AutoPerfMeasurer;
+
 /**
  * An order independent transparency renderer using pixel sync.
  *
@@ -40,6 +42,11 @@ public:
     virtual void renderGUI();
     bool needsReRender();
 
+    // For changing performance measurement modes
+    void setNewState(const InternalState &newState);
+    inline void setRecordingMode(bool _recording) { recordingMode = _recording; }
+    inline void setPerfMeasurer(AutoPerfMeasurer *_measurer) { measurer = _measurer; performanceMeasureMode = true; }
+
 private:
     void clear();
     void setUniformData();
@@ -49,6 +56,9 @@ private:
     sgl::GeometryBufferPtr numFragmentsBuffer;
     uint32_t numFragmentsMaxColor; // = max(16, max. depth complexity of scene)
     bool firstFrame = true;
+    bool performanceMeasureMode = false;
+    bool recordingMode = false;
+    AutoPerfMeasurer *measurer;
 
     // User interface
     int totalNumFragments = 0;

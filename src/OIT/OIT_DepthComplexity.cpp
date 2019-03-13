@@ -18,12 +18,11 @@
 #include <Utils/Timer.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
 
+#include "../Performance/AutoPerfMeasurer.hpp"
 #include "OIT_DepthComplexity.hpp"
+#include "BufferSizeWatch.hpp"
 
 using namespace sgl;
-
-// Number of transparent pixels we can store per node
-const int nodesPerPixel = 8;
 
 // Use stencil buffer to mask unused pixels
 const bool useStencilBuffer = true;
@@ -39,7 +38,7 @@ void OIT_DepthComplexity::create()
         Logfile::get()->writeError("Error in OIT_KBuffer::create: GL_ARB_fragment_shader_interlock unsupported.");
         exit(1);
     }
-    numFragmentsMaxColor = 16;
+    numFragmentsMaxColor = 256;
 
     ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "\"DepthComplexityGather.glsl\"");
     gatherShader = ShaderManager->getShaderProgram(gatherShaderIDs);
@@ -78,6 +77,8 @@ void OIT_DepthComplexity::resolutionChanged(sgl::FramebufferObjectPtr &sceneFram
     size_t numFragmentsBufferSizeBytes = sizeof(uint32_t) * width * height;
     numFragmentsBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     numFragmentsBuffer = Renderer->createGeometryBuffer(numFragmentsBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
+    setCurrentAlgorithmBufferSizeBytes(numFragmentsBufferSizeBytes);
 }
 
 void OIT_DepthComplexity::setUniformData()
@@ -130,6 +131,11 @@ void OIT_DepthComplexity::gatherBegin()
 void OIT_DepthComplexity::gatherEnd()
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    if (performanceMeasureMode || recordingMode) {
+        firstFrame = false;
+        computeStatistics();
+    }
 }
 
 void OIT_DepthComplexity::renderToScreen()
@@ -185,11 +191,16 @@ void OIT_DepthComplexity::renderGUI()
         Color newColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, 1.0f);
         resolveShader->setUniform("color", newColor);
         intensity = 0.01+2*colorSelection.w;
-        numFragmentsMaxColor = std::max(maxComplexity/2, 4)/intensity;
+        numFragmentsMaxColor = std::max(maxComplexity, 4)/intensity;
         //reRender = true;
     }
 }
 
+
+void OIT_DepthComplexity::setNewState(const InternalState &newState)
+{
+    performanceMeasureMode = true;
+}
 
 bool OIT_DepthComplexity::needsReRender()
 {
@@ -215,16 +226,18 @@ void OIT_DepthComplexity::computeStatistics()
     uint32_t *data = (uint32_t*)numFragmentsBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
 
     // Local reduction variables necessary for older OpenMP implementations
-    int totalNumFragments = 0;
-    int usedLocations = 0;
-    int maxComplexity = 0;
-    #pragma omp parallel for reduction(+:totalNumFragments,usedLocations) reduction(max:maxComplexity) schedule(static)
+    uint64_t totalNumFragments = 0;
+    uint64_t usedLocations = 0;
+    uint64_t maxComplexity = 0;
+    uint64_t minComplexity = 0;
+    #pragma omp parallel for reduction(+:totalNumFragments,usedLocations) reduction(max:maxComplexity) reduction(min:minComplexity) schedule(static)
     for (int i = 0; i < bufferSize; i++) {
         totalNumFragments += data[i];
         if (data[i] > 0) {
             usedLocations++;
         }
-        maxComplexity = std::max(maxComplexity, (int)data[i]);
+        maxComplexity = std::max(maxComplexity, (uint64_t)data[i]);
+        minComplexity = std::min(maxComplexity, (uint64_t)data[i]);
     }
     this->totalNumFragments = totalNumFragments;
     this->usedLocations = usedLocations;
@@ -232,12 +245,18 @@ void OIT_DepthComplexity::computeStatistics()
 
     numFragmentsBuffer->unmapBuffer();
 
-    //if ((uint32_t)maxComplexity != numFragmentsMaxColor) {
-    numFragmentsMaxColor = std::max(maxComplexity/2, 4)/intensity;
-    // }
+    if (!(performanceMeasureMode || recordingMode) || firstFrame) {
+        firstFrame = false;
+        numFragmentsMaxColor = std::max(maxComplexity, 4ul)/intensity;
+    }
+
+    if (performanceMeasureMode) {
+        measurer->pushDepthComplexityFrame(minComplexity, maxComplexity,
+                (float)totalNumFragments / usedLocations, (float)totalNumFragments / bufferSize, totalNumFragments);
+    }
 
     if (totalNumFragments == 0) usedLocations = 1; // Avoid dividing by zero in code below
-    std::cout << "Depth complexity: avg used: " << ((float) totalNumFragments / usedLocations)
-              << ", avg all: " << ((float) totalNumFragments / bufferSize) << ", max: " << maxComplexity
+    std::cout << "Depth complexity: avg used: " << ((float)totalNumFragments / usedLocations)
+              << ", avg all: " << ((float)totalNumFragments / bufferSize) << ", max: " << maxComplexity
               << ", #fragments: " << totalNumFragments << std::endl;
 }

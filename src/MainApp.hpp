@@ -101,7 +101,7 @@ private:
 
     // Mode
     // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
-    RenderModeOIT mode = RENDER_MODE_OIT_MLAB_BUCKET; // RENDER_MODE_OIT_MLAB
+    RenderModeOIT mode = RENDER_MODE_OIT_DEPTH_COMPLEXITY; // RENDER_MODE_OIT_MLAB RENDER_MODE_OIT_MLAB_BUCKET
     RenderModeOIT oldMode = mode;
     ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
     std::string modelFilenamePure;
@@ -167,7 +167,7 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = false;
+    bool perfMeasurementMode = true;
     InternalState lastState;
     bool firstState = true;
     bool usesNewState = true;
@@ -185,7 +185,7 @@ private:
 
     float outputTime = 0.0f;
     bool testOutputPos = true;
-    bool testCameraFlight = true;
+    bool testCameraFlight = false;
     bool realTimeCameraFlight = false;
     bool recordingUseGlobalIlumination = false;
     bool recording = false;

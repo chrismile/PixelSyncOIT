@@ -20,6 +20,7 @@
 
 #include "TilingMode.hpp"
 #include "OIT_MBOIT.hpp"
+#include "BufferSizeWatch.hpp"
 
 using namespace sgl;
 
@@ -184,6 +185,8 @@ void OIT_MBOIT::updateMomentMode()
         bExtra = TextureManager->createTexture(emptyData, width, height, depthBExtra, textureSettingsBExtra);
     }
 
+    size_t baseSizeBytes = MBOIT_PIXEL_FORMAT_FLOAT_32 ? 4 : 2;
+    setCurrentAlgorithmBufferSizeBytes(baseSizeBytes * numMoments * width * height);
     free(emptyData);
 
 

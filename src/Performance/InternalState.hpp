@@ -139,6 +139,7 @@ struct InternalState
                && this->aoTechniqueName == rhs.aoTechniqueName && this->shadowTechniqueName == rhs.shadowTechniqueName
                && this->transferFunctionName == transferFunctionName
                && this->importanceCriterionIndex == importanceCriterionIndex
+               && this->windowResolution == windowResolution
                && this->useStencilBuffer == rhs.useStencilBuffer
                && this->testNoInvocationInterlock == rhs.testNoInvocationInterlock
                && this->testNoAtomicOperations == rhs.testNoAtomicOperations
@@ -158,6 +159,7 @@ struct InternalState
     ShadowMappingTechniqueName shadowTechniqueName = NO_SHADOW_MAPPING;
     std::string transferFunctionName;
     int importanceCriterionIndex = 0;
+    glm::ivec2 windowResolution = glm::ivec2(0, 0);
     bool useStencilBuffer = true;
     bool testNoInvocationInterlock = false; // Test without pixel sync
     bool testNoAtomicOperations = false; // Test without atomic operations

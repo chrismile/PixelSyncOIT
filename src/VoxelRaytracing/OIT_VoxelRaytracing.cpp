@@ -15,6 +15,7 @@
 #include "../Performance/InternalState.hpp"
 #include "VoxelCurveDiscretizer.hpp"
 #include "OIT_VoxelRaytracing.hpp"
+#include "../OIT/BufferSizeWatch.hpp"
 
 //#define VOXEL_RAYTRACING_COMPUTE_SHADER
 
@@ -144,6 +145,19 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
         }
     }
     compressedToGPUData(compressedData, data);
+    setCurrentAlgorithmBufferSizeBytes(sizeof(compressedData)
+        + compressedData.attributes.size()
+        + compressedData.voxelLineListOffsets.size()
+        + compressedData.numLinesInVoxel.size()
+        + compressedData.voxelDensityLODs.size()
+        + compressedData.voxelAOLODs.size()
+        + compressedData.octreeLODs.size()
+#ifdef PACK_LINES
+        + compressedData.lineSegments.size() * sizeof(LineSegmentCompressed)
+#else
+        + compressedData.lineSegments.size() * sizeof(LineSegment)
+#endif
+    );
 
     // Create shader program
     sgl::ShaderManager->invalidateShaderCache();
@@ -155,6 +169,13 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(data.quantizationResolution.x));
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION_LOG2",
             sgl::toString(sgl::intlog2(data.quantizationResolution.x)));
+    if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence80000")) {
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 4);
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
+    } else {
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 4);
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
+    }
     if (isHairDataset) {
         sgl::ShaderManager->addPreprocessorDefine("HAIR_RENDERING", "");
     } else {

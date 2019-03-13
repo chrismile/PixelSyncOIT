@@ -13,16 +13,20 @@
 
 #include "ReferenceMetric.hpp"
 #include "AutoPerfMeasurer.hpp"
+#include "../OIT/BufferSizeWatch.hpp"
 
 AutoPerfMeasurer::AutoPerfMeasurer(std::vector<InternalState> _states,
-        const std::string &_csvFilename, const std::string &_perfProfileFilename,
+        const std::string &_csvFilename, const std::string &_depthComplexityFilename,
         std::function<void(const InternalState&)> _newStateCallback)
-       : states(_states), currentStateIndex(0), newStateCallback(_newStateCallback), file(_csvFilename)//,
-         //perfTimeProfileFile(_csvFilename)
+       : states(_states), currentStateIndex(0), newStateCallback(_newStateCallback), file(_csvFilename),
+         depthComplexityFile(_depthComplexityFilename)
 {
     // Write header
-    file.writeRow({"Name", "Average Time (ms)", "Image Filename", "Memory (GB)", "SSIM", "RMSE", "PSNR",
-                   "Time Stamp,Frame Time"});
+    file.writeRow({"Name", "Average Time (ms)", "Image Filename", "Memory (GB)", "Buffer Size (GB)",
+                   "SSIM", "RMSE", "PSNR", "Time Stamp (s), Frame Time (ns)"});
+    depthComplexityFile.writeRow({"Current State", "Frame Number", "Min Depth Complexity", "Max Depth Complexity",
+                                  "Avg Depth Complexity Used", "Avg Depth Complexity All", "Total Number of Fragments"});
+    setPerformanceMeasurer(this);
 
     // Set initial state
     setNextState(true);
@@ -41,7 +45,7 @@ const float TIME_PER_MODE = 10.0f; // in seconds
 bool AutoPerfMeasurer::update(float currentTime)
 {
     nextModeCounter = currentTime;
-    if (nextModeCounter > TIME_PER_MODE) {
+    if (nextModeCounter >= TIME_PER_MODE) {
         nextModeCounter = 0.0f;
         if (currentStateIndex == states.size()-1) {
             return false; // Terminate program
@@ -76,6 +80,7 @@ void AutoPerfMeasurer::writeCurrentModeData()
 
     // Write current memory consumption in gigabytes
     file.writeCell(sgl::toString(getUsedVideoMemorySizeGB()));
+    file.writeCell(sgl::toString(currentAlgorithmsBufferSizeBytes*1e-9f));
 
     // Save normalized difference map
     std::string differenceMapFilename = std::string() + "images/" + currentState.name + " Difference" + ".png";
@@ -95,8 +100,7 @@ void AutoPerfMeasurer::writeCurrentModeData()
     for (auto &perfPair : performanceProfile) {
         float timeStamp = perfPair.first;
         uint64_t frameTimeNS = perfPair.second;
-        float frameTimeMS = frameTimeNS*1e-6;
-        file.writeCell(sgl::toString(timeStamp) + "," + sgl::toString(frameTimeMS));
+        file.writeCell(sgl::toString(timeStamp) + ", " + sgl::toString(frameTimeNS));
     }
 
     file.newRow();
@@ -119,6 +123,8 @@ void AutoPerfMeasurer::setNextState(bool first)
         currentStateIndex++;
     }
 
+    depthComplexityFrameNumber = 0;
+    currentAlgorithmsBufferSizeBytes = 0;
     currentState = states.at(currentStateIndex);
     sgl::Logfile::get()->writeInfo(std::string() + "New state: " + currentState.name);
     newStateCallback(currentState);
@@ -138,6 +144,25 @@ void AutoPerfMeasurer::endMeasure()
 void AutoPerfMeasurer::resolutionChanged(sgl::FramebufferObjectPtr _sceneFramebuffer)
 {
     sceneFramebuffer = _sceneFramebuffer;
+}
+
+void AutoPerfMeasurer::pushDepthComplexityFrame(uint64_t minComplexity, uint64_t maxComplexity,
+        float avgUsed, float avgAll, uint64_t totalNumFragments)
+{
+    depthComplexityFile.writeCell(currentState.name);
+    depthComplexityFile.writeCell(sgl::toString((int)depthComplexityFrameNumber));
+    depthComplexityFile.writeCell(sgl::toString((int)minComplexity));
+    depthComplexityFile.writeCell(sgl::toString((int)maxComplexity));
+    depthComplexityFile.writeCell(sgl::toString(avgUsed));
+    depthComplexityFile.writeCell(sgl::toString(avgAll));
+    depthComplexityFile.writeCell(sgl::toString((int)totalNumFragments));
+    depthComplexityFile.newRow();
+    depthComplexityFrameNumber++;
+}
+
+void AutoPerfMeasurer::setCurrentAlgorithmBufferSizeBytes(size_t numBytes)
+{
+    currentAlgorithmsBufferSizeBytes = numBytes;
 }
 
 void AutoPerfMeasurer::saveScreenshot(const std::string &filename)

@@ -6,6 +6,7 @@
 #include <Graphics/Shader/ShaderManager.hpp>
 
 #include "OIT_Dummy.hpp"
+#include "BufferSizeWatch.hpp"
 
 OIT_Dummy::OIT_Dummy()
 {
@@ -23,4 +24,5 @@ void OIT_Dummy::create()
     sgl::ShaderManager->addPreprocessorDefine("OIT_GATHER_HEADER", "GatherDummy.glsl");
     gatherShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
     glDisable(GL_STENCIL_TEST);
+    setCurrentAlgorithmBufferSizeBytes(0);
 }

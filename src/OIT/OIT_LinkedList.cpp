@@ -17,6 +17,7 @@
 #include <ImGui/ImGuiWrapper.hpp>
 
 #include "OIT_LinkedList.hpp"
+#include "BufferSizeWatch.hpp"
 
 using namespace sgl;
 
@@ -85,6 +86,8 @@ void OIT_LinkedList::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     } else {
         atomicCounterBuffer = Renderer->createGeometryBuffer(sizeof(uint32_t), NULL, ATOMIC_COUNTER_BUFFER);
     }
+
+    setCurrentAlgorithmBufferSizeBytes(fragmentBufferSizeBytes + startOffsetBufferSizeBytes + sizeof(uint32_t));
 }
 
 void OIT_LinkedList::setUniformData()

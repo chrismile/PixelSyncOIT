@@ -379,7 +379,7 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
-    for (int nodesPerBucket = 2; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+    for (int nodesPerBucket = 2; nodesPerBucket <= 32; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
@@ -413,33 +413,46 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
     }
 }
 
+void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_OIT_DEPTH_COMPLEXITY;
+    state.name = std::string() + "Depth Complexity";
+    states.push_back(state);
+}
+
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
     getTestModesDepthPeeling(states, state);
     getTestModesNoOIT(states, state);
-    //getTestModesMLAB(states, state);
-    //getTestModesMBOIT(states, state);
-    //getTestModesLinkedList(states, state);
+    getTestModesMLAB(states, state);
+    getTestModesMBOIT(states, state);
+    getTestModesLinkedList(states, state);
     getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
+    getTestModesDepthComplexity(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
-    std::vector<std::string> modelNames = {"Aneurism Streamlines", "Ponytail"}; // , "Turbulence"
+    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720), glm::ivec2(1920, 1080) };
+    std::vector<std::string> modelNames = { "Aneurism Streamlines", "Ponytail", "Turbulence" };
     InternalState state;
 
-    for (size_t i = 0; i < modelNames.size(); i++) {
-        state.modelName = modelNames.at(i);
-        getTestModesPaperForMesh(states, state);
+    for (size_t i = 0; i < windowResolutions.size(); i++) {
+        state.windowResolution = windowResolutions.at(i);
+        for (size_t j = 0; j < modelNames.size(); j++) {
+            state.modelName = modelNames.at(j);
+            getTestModesPaperForMesh(states, state);
+        }
     }
 
     // Append model name to state name if more than one model is loaded
-    if (modelNames.size() > 1) {
+    if (modelNames.size() > 1 || windowResolutions.size() > 1) {
         for (InternalState &state : states) {
-            state.name = state.modelName + " " + state.name;
+            state.name = sgl::toString(state.windowResolution.x) + "x" + sgl::toString(state.windowResolution.y)
+                    + " " + state.modelName + " " + state.name;
         }
     }
 

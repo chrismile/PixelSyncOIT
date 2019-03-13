@@ -15,6 +15,7 @@
 
 #include "TilingMode.hpp"
 #include "OIT_HT.hpp"
+#include "BufferSizeWatch.hpp"
 
 using namespace sgl;
 
@@ -87,6 +88,8 @@ void OIT_HT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl:
     }
     fragmentTails = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentTails = Renderer->createGeometryBuffer(fragmentTailsSizeBytes, NULL, SHADER_STORAGE_BUFFER);
+
+    setCurrentAlgorithmBufferSizeBytes(bufferSizeBytes + fragmentTailsSizeBytes);
 
     // Buffer has to be cleared again
     clearBitSet = true;

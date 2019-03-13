@@ -6,8 +6,6 @@ float distanceSqr(vec3 v1, vec3 v2)
     return squareVec(v1 - v2);
 }
 
-
-#define MAX_NUM_HITS 4
 struct RayHit {
     vec4 color;
     float distance;
@@ -19,20 +17,6 @@ void insertHitSorted(in RayHit insertHit, inout int numHits, inout RayHit hits[M
     bool inserted = false;
     uint lineID = insertHit.lineID;
     int i;
-    /*for (i = 0; i < numHits; i++) {
-        if (insertHit.distance < hits[i].distance) {
-            inserted = true;
-            RayHit temp = insertHit;
-            insertHit = hits[i];
-            hits[i] = temp;
-        }
-        if (!inserted && hits[i].lineID == lineID) {
-            return;
-        }
-        if (inserted && insertHit.lineID == lineID) {
-            return;
-        }
-    }*/
     for (i = 0; i < numHits; i++) {
         if (insertHit.distance < hits[i].distance) {
             inserted = true;
@@ -179,7 +163,7 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVo
     for (int i = 0; i < MAX_NUM_HITS; i++) {
         hits[i].color = vec4(0.0);
         hits[i].distance = 0.0;
-        hits[i].lineID = 0;
+        hits[i].lineID = -1;
     }
     int numHits = 0;
 
@@ -290,7 +274,7 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVo
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits, blendedLineIDs, newBlendedLineIDs);
     #else
     // Much slower, but uses neighbor search for closing holes in tubes protuding into neighboring voxels
-    for (int z = -1; z <= 1; z++) {
+    /*for (int z = -1; z <= 1; z++) {
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
                 ivec3 processedVoxelIndex = voxelIndex + ivec3(x,y,z);
@@ -301,6 +285,38 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVo
                 }
             }
         }
+    }*/
+
+    float distance = length(rayOrigin - vec3(voxelIndex));
+    if (distance < GRID_RESOLUTION/3.0) {
+        // Close voxels
+        for (int z = -1; z <= 1; z++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int x = -1; x <= 1; x++) {
+                    ivec3 processedVoxelIndex = voxelIndex + ivec3(x,y,z);
+                    if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
+                            && all(lessThan(processedVoxelIndex, gridResolution))) {
+                        processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
+                                blendedLineIDs, newBlendedLineIDs);
+                    }
+                }
+            }
+        }
+    } else if (distance < GRID_RESOLUTION / 2.0) {
+        // Far voxels
+        const ivec3 offsetTable[7] = { ivec3(0,0,0), ivec3(-1,0,0), ivec3(1,0,0), ivec3(0,-1,0),
+                ivec3(0,1,0), ivec3(0,0,-1), ivec3(0,0,1) };
+        for (int i = 0; i <= 7; i++) {
+            ivec3 processedVoxelIndex = voxelIndex + offsetTable[i];
+            if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
+                    && all(lessThan(processedVoxelIndex, gridResolution))) {
+                processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
+                        blendedLineIDs, newBlendedLineIDs);
+            }
+        }
+    } else {
+        // Very far voxels
+        processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits, blendedLineIDs, newBlendedLineIDs);
     }
     #endif
 
@@ -310,8 +326,8 @@ vec4 nextVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 voxelIndex, ivec3 nextVo
         processVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex, hits, numHits,
                 blendedLineIDs, newBlendedLineIDs);
     }*/
-    //blendedLineIDs = newBlendedLineIDs;
-    //blendedLineIDs |= newBlendedLineIDs;
+    blendedLineIDs = newBlendedLineIDs;
+    blendedLineIDs |= newBlendedLineIDs;
 
     vec4 color = vec4(0.0);
     for (int i = 0; i < MAX_NUM_HITS; i++) {

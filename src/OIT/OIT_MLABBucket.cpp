@@ -17,6 +17,7 @@
 
 #include "TilingMode.hpp"
 #include "OIT_MLABBucket.hpp"
+#include "BufferSizeWatch.hpp"
 
 using namespace sgl;
 
@@ -95,6 +96,8 @@ void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     textureSettingsB0.pixelFormat = pixelFormatB0;
     textureSettingsB0.internalFormat = internalFormatB0;
     b0 = TextureManager->createTexture(emptyData, width, height, depthB0, textureSettingsB0);*/
+
+    setCurrentAlgorithmBufferSizeBytes(bufferSizeBytes + minDepthBufferSizeBytes);
 
 
     boundingBoxesTextureSettings = TextureSettings();
