@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cassert>
 #include <fstream>
+#include <iostream>
 
 #include <GL/glew.h>
 #include <glm/glm.hpp>
