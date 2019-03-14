@@ -250,6 +250,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
+    if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+    }
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence.xml");
     }
