@@ -1407,10 +1407,10 @@ void PixelSyncApp::update(float dt)
 
     // Zoom in/out
     if (Mouse->getScrollWheel() > 0.1 || Mouse->getScrollWheel() < -0.1) {
-        fovy -= Mouse->getScrollWheel()*dt*2.0f;
-        fovy = glm::clamp(fovy, glm::radians(1.0f), glm::radians(150.0f));
-        camera->setFOVy(fovy);
+        float moveAmount = Mouse->getScrollWheel()*dt*2.0;
+        camera->translate(transformPoint(invRotationMatrix, glm::vec3(0.0f, 0.0f, -moveAmount*MOVE_SPEED)));
         reRender = true;
+
     }
 
 
