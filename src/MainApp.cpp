@@ -409,12 +409,12 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     if (testCameraFlight) {
         std::string cameraPathFilename = "Data/CameraPaths/"
                 + sgl::FileUtils::get()->getPathAsList(modelFilenamePure).back() + ".binpath";
-        if (sgl::FileUtils::get()->exists(cameraPathFilename)) {
-            cameraPath.fromBinaryFile(cameraPathFilename);
-        } else {
-            cameraPath.fromCirclePath(boundingBox, modelFilenamePure);
-            cameraPath.saveToBinaryFile(cameraPathFilename);
-        }
+        //if (sgl::FileUtils::get()->exists(cameraPathFilename)) {
+        //    cameraPath.fromBinaryFile(cameraPathFilename);
+        //} else {
+        cameraPath.fromCirclePath(boundingBox, modelFilenamePure);
+        cameraPath.saveToBinaryFile(cameraPathFilename);
+        //}
     }
 
     reRender = true;
