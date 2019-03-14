@@ -61,10 +61,10 @@ private:
     AutoPerfMeasurer *measurer;
 
     // User interface
-    int totalNumFragments = 0;
-    int usedLocations = 1;
-    int maxComplexity = 0;
-    int bufferSize = 1;
+    uint64_t totalNumFragments = 0;
+    uint64_t usedLocations = 1;
+    uint64_t maxComplexity = 0;
+    uint64_t bufferSize = 1;
 
     // Blit data (ignores model-view-projection matrix and uses normalized device coordinates)
     sgl::ShaderAttributesPtr blitRenderData;

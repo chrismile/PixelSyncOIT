@@ -44,7 +44,7 @@ private:
     void clear();
     void setUniformData();
     void computeDepthComplexity();
-    int maxDepthComplexity = 1;
+    uint64_t maxDepthComplexity = 1;
 
     // Render data of depth peeling
     sgl::FramebufferObjectPtr depthPeelingFBOs[2];

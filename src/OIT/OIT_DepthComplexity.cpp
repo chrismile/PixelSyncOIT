@@ -183,7 +183,7 @@ void OIT_DepthComplexity::renderGUI()
 
     std::string totalNumFragmentsString = numberToCommaString(totalNumFragments);
     ImGui::Text("Depth complexity: #fragments: %s", totalNumFragmentsString.c_str());
-    ImGui::Text("avg used: %.2f, avg all: %.2f, max: %d", ((float) totalNumFragments / usedLocations),
+    ImGui::Text("avg used: %.2f, avg all: %.2f, max: %lu", ((float) totalNumFragments / usedLocations),
                 ((float) totalNumFragments / bufferSize), maxComplexity);
 
     static ImVec4 colorSelection = ImColor(0, 255, 255, 127);
@@ -191,7 +191,7 @@ void OIT_DepthComplexity::renderGUI()
         Color newColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, 1.0f);
         resolveShader->setUniform("color", newColor);
         intensity = 0.01+2*colorSelection.w;
-        numFragmentsMaxColor = std::max(maxComplexity, 4)/intensity;
+        numFragmentsMaxColor = std::max(maxComplexity, 4ul)/intensity;
         //reRender = true;
     }
 }

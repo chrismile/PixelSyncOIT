@@ -137,6 +137,12 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
     tubeNodes.reserve(n);
     int numVertexPts = 0;
 
+    // Turbulence dataset: Remove fixed point whirls
+    glm::vec3 diffFirstLast = pathLineCenters.front() - pathLineCenters.back();
+    if (glm::length(diffFirstLast) < 0.02f) {
+        return;
+    }
+
     // First, create a list of tube nodes
     glm::vec3 lastNormal = glm::vec3(1.0f, 0.0f, 0.0f);
     for (int i = 0; i < n; i++) {
@@ -153,7 +159,7 @@ void createTubeRenderData(const std::vector<glm::vec3> &pathLineCenters,
             //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
 
-        if (glm::length(tangent) < 0.0001f) {
+        if (glm::length(tangent) < 0.01f) {
             // In case the two vertices are almost identical, just skip this path line segment
             continue;
         }

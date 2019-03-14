@@ -42,6 +42,7 @@ const char *const MODEL_FILENAMES[] = {
         "Data/Hair/wStraight.hair",
         "Data/Hair/wWavy.hair",
         "Data/ConvectionRolls/turbulence80000.obj",
+        "Data/ConvectionRolls/turbulence80000.obj",
         "Data/ConvectionRolls/turbulence20000.obj",
         "Data/WCB/20121015_00_lagranto_ensemble_forecast__START_20121019_18.nc",
         "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
@@ -57,7 +58,7 @@ const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)))
 const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline", "Aneurism (Lines)", "Aneurism Streamlines", "Ship", "Monkey", "Box", "Plane", "Dragon",
         "Bear", "Blonde", "Dark", "Ponytail", "Straight", "wCurly", "wStraight", "wWavy",
-        "Turbulence", "Convection Rolls", "Warm Conveyor Belt #1", "Warm Conveyor Belt #2",
+        "Turbulence", "Turbulence (Lines)", "Convection Rolls", "Warm Conveyor Belt #1", "Warm Conveyor Belt #2",
         "Warm Conveyor Belt #3", "Warm Conveyor Belt #4", "Warm Conveyor Belt #5", "Warm Conveyor Belt #6",
         "Warm Conveyor Belt #7", "Warm Conveyor Belt #8", "Warm Conveyor Belt #9",
 };
