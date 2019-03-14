@@ -597,10 +597,10 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     } else {
         ShaderManager->removePreprocessorDefine("TEST_NO_ATOMIC_OPERATIONS");
     }
-    if (newState.testPixelSyncOrdered) {
-        ShaderManager->addPreprocessorDefine("PIXEL_SYNC_ORDERED", "");
+    if (newState.testPixelSyncUnordered) {
+        ShaderManager->addPreprocessorDefine("PIXEL_SYNC_UNORDERED", "");
     } else {
-        ShaderManager->removePreprocessorDefine("PIXEL_SYNC_ORDERED");
+        ShaderManager->removePreprocessorDefine("PIXEL_SYNC_UNORDERED");
     }
 
     // 2.1. Handle global state changes like ambient occlusion, shadowing, tiling mode

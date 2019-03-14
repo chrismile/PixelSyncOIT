@@ -190,11 +190,11 @@ void getTestModesNoSync(std::vector<InternalState> &states, InternalState state)
 
 
 // Test: Pixel sync using
-void getTestModesOrderedSync(std::vector<InternalState> &states, InternalState state)
+void getTestModesUnorderedSync(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
     for (int numLayers = 1; numLayers <= 32; numLayers *= 2) {
-        state.name = std::string() + "MLAB " + sgl::toString(numLayers) + " Layers (Ordered)";
+        state.name = std::string() + "MLAB " + sgl::toString(numLayers) + " Layers (Unordered)";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numLayers", sgl::toString(numLayers) },
         });
@@ -203,7 +203,7 @@ void getTestModesOrderedSync(std::vector<InternalState> &states, InternalState s
 
 
     state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
-    state.name = std::string() + "MBOIT " + sgl::toString(4) + " Power Moments Float (Ordered)";
+    state.name = std::string() + "MBOIT " + sgl::toString(4) + " Power Moments Float (Unordered)";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
             { "usePowerMoments", "true" },
             { "numMoments", sgl::toString(4) },
@@ -294,6 +294,7 @@ void getTestModesShuffleGeometry(std::vector<InternalState> &states, InternalSta
 // Performance test: Pixel sync vs. atomic operations
 void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, InternalState state)
 {
+    state.testPixelSyncUnordered = true;
     state.oitAlgorithm = RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE;
     state.name = std::string() + "Pixel Sync Performance Test Compute (Unordered)";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
@@ -301,10 +302,10 @@ void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, Intern
             { "testType", "compute" },
     });
     states.push_back(state);
-    state.testPixelSyncOrdered = true;
+    state.testPixelSyncUnordered = false;
     state.name = std::string() + "Pixel Sync Performance Test Compute (Ordered)";
     states.push_back(state);
-    state.testPixelSyncOrdered = false;
+    state.testPixelSyncUnordered = true;
 
 
     state.name = std::string() + "Atomic Operations Performance Test Compute";
@@ -322,17 +323,17 @@ void getTestModesPixelSyncVsAtomicOps(std::vector<InternalState> &states, Intern
     states.push_back(state);
 
 
-    state.testPixelSyncOrdered = true;
+    state.testPixelSyncUnordered = true;
     state.name = std::string() + "Pixel Sync Performance Test Sum (Unordered)";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
             { "testMode", "usePixelSync" },
             { "testType", "sum" },
     });
     states.push_back(state);
-    state.testPixelSyncOrdered = true;
+    state.testPixelSyncUnordered = false;
     state.name = std::string() + "Pixel Sync Performance Test Sum (Ordered)";
     states.push_back(state);
-    state.testPixelSyncOrdered = false;
+    state.testPixelSyncUnordered = true;
 
     state.name = std::string() + "Atomic Operations Performance Test Sum";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
@@ -506,10 +507,10 @@ std::vector<InternalState> getAllTestModes()
     stateNoSync.testNoAtomicOperations = true;
     getTestModesNoSync(states, stateNoSync);
 
-    // Performance test: Ordered pixel sync
-    InternalState stateOrderedSync = state;
-    stateOrderedSync.testPixelSyncOrdered = true;
-    getTestModesOrderedSync(states, stateOrderedSync);
+    // Performance test: Unordered pixel sync
+    InternalState stateUnorderedSync = state;
+    stateUnorderedSync.testPixelSyncUnordered = true;
+    getTestModesUnorderedSync(states, stateUnorderedSync);
 
     // Quality test: Shuffle geometry randomly
     if (state.modelName == "Aneurism (Lines)") {

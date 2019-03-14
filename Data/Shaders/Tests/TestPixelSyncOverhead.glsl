@@ -18,10 +18,10 @@ void main()
 // See https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_fragment_shader_interlock.txt
 #extension GL_ARB_fragment_shader_interlock : require
 
-#ifdef PIXEL_SYNC_ORDERED
-layout(pixel_interlock_ordered) in;
-#else
+#ifdef PIXEL_SYNC_UNORDERED
 layout(pixel_interlock_unordered) in;
+#else
+layout(pixel_interlock_ordered) in;
 #endif
 
 #else
