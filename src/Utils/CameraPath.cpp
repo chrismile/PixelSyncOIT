@@ -53,7 +53,7 @@ void CameraPath::fromCirclePath(const sgl::AABB3 &sceneBoundingBox, const std::s
     float standardZoom = 1.0f;
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
         pulseFactor = 4.0f;
-        standardZoom = 3.0f;
+        standardZoom = 2.0f;
     }
 
     for (size_t i = 0; i <= NUM_CIRCLE_POINTS; i++) {
