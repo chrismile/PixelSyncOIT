@@ -59,7 +59,7 @@ void CameraPath::fromCirclePath(const sgl::AABB3 &sceneBoundingBox, const std::s
     for (size_t i = 0; i <= NUM_CIRCLE_POINTS; i++) {
         float time = float(i)/NUM_CIRCLE_POINTS*10.0f;
         float angle = float(i)/NUM_CIRCLE_POINTS*sgl::TWO_PI + startAngle;
-        float pulseRadius = (cos(2.0f*angle)-1.0f)/(8.0f*pulseFactor)+standardZoom;
+        float pulseRadius = (cos(2.0f*angle)-1.0f)/(8.0f/pulseFactor)+standardZoom;
         glm::vec3 cameraPos = glm::vec3(cos(angle)*pulseRadius, 0.0f, sin(angle)*pulseRadius)
                 * glm::length(sceneBoundingBox.getExtent()) + sceneBoundingBox.getCenter() + centerOffset;
         controlPoints.push_back(ControlPoint(time, cameraPos.x, cameraPos.y, cameraPos.z, sgl::PI + angle, 0.0f));
