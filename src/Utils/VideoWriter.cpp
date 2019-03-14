@@ -7,6 +7,7 @@
 
 #include <cerrno>
 #include <cstring>
+#include <iostream>
 #include <GL/glew.h>
 
 #include <Graphics/Window.hpp>
