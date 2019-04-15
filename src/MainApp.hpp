@@ -101,7 +101,7 @@ private:
 
     // Mode
     // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
-    RenderModeOIT mode = RENDER_MODE_OIT_MLAB_BUCKET; // RENDER_MODE_OIT_MLAB RENDER_MODE_OIT_MLAB_BUCKET
+    RenderModeOIT mode = RENDER_MODE_OIT_MLAB_BUCKET; // RENDER_MODE_OIT_MLAB RENDER_MODE_OIT_MLAB_BUCKET RENDER_MODE_VOXEL_RAYTRACING_LINES
     RenderModeOIT oldMode = mode;
     ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
     std::string modelFilenamePure;
@@ -122,7 +122,7 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 2; // 2: Aneurism, 11: Ponytail, 16: Turbulence
+    int usedModelIndex = 2; // 2: Aneurism, 11: Ponytail, 16: Turbulence, 18: Convection Rolls
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
