@@ -349,7 +349,7 @@ void convertObjMeshToBinary(
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
-            Logfile::get()->writeError(string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+//            Logfile::get()->writeError(string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
         }
     }
 

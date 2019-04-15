@@ -243,27 +243,42 @@ void computeTrajectoryAttributes(
     if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
         // 0. Vorticity/Attribute
         importanceCriteria.push_back(vertexAttributes);
+//        // 1. Curvature
+//        importanceCriteria.push_back(computeCurvature(vertexPositions));
+    } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+        // 0. Pressure mapped to [0, 1]
+        importanceCriteria.push_back(vertexAttributes);
         // 1. Curvature
         importanceCriteria.push_back(computeCurvature(vertexPositions));
-    } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
-        // 0. Curvature
-        importanceCriteria.push_back(computeCurvature(vertexPositions));
-        // 1. Segment length
-        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
-        // 2. Trajectory pressure/attribute difference per segment
-        importanceCriteria.push_back(computeSegmentAttributeDifference(vertexPositions, vertexAttributes));
-        // 3. Total trajectory pressure/attribute difference
-        importanceCriteria.push_back(computeTotalAttributeDifference(vertexPositions, vertexAttributes));
-        // 4. Angle of ascent
-        importanceCriteria.push_back(computeAngleOfAscent(vertexPositions));
-        // 5. Height difference per segment
-        importanceCriteria.push_back(computeSegmentHeightDifference(vertexPositions));
+//        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
+//        // 2. Trajectory pressure/attribute difference per segment
+//        importanceCriteria.push_back(computeSegmentAttributeDifference(vertexPositions, vertexAttributes));
+//        // 3. Total trajectory pressure/attribute difference
+//        importanceCriteria.push_back(computeTotalAttributeDifference(vertexPositions, vertexAttributes));
+//        // 4. Angle of ascent
+//        importanceCriteria.push_back(computeAngleOfAscent(vertexPositions));
+//        // 5. Height difference per segment
+//        importanceCriteria.push_back(computeSegmentHeightDifference(vertexPositions));
     } else if (trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS) {
         // 0. Vorticity/Attribute
         importanceCriteria.push_back(vertexAttributes);
         // 1. Curvature
-        importanceCriteria.push_back(computeCurvature(vertexPositions));
-        // 2. Segment length
-        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
+//        importanceCriteria.push_back(computeCurvature(vertexPositions));
+//        // 2. Segment length
+//        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
+    } else if (trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW) {
+        // 0. Vorticity/Attribute
+        importanceCriteria.push_back(vertexAttributes);
+        // 1. Curvature
+//        importanceCriteria.push_back(computeCurvature(vertexPositions));
+//        // 2. Segment length
+//        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
+    } else if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
+        // 0. Vorticity/Attribute
+        importanceCriteria.push_back(vertexAttributes);
+//
+//        importanceCriteria.push_back(computeCurvature(vertexPositions));
+//
+//        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
     }
 }

@@ -204,16 +204,20 @@ void gatherFragment(vec4 color)
     float depth = logDepthWarp(-screenSpacePosition.z);
     frag.depth = depth;
 
-    //frag.premulColor = packUnorm4x8(vec4(vec3(depth), 0.0));
-    //frag.premulColor = packUnorm4x8(vec4(vec3(minDepth[pixelIndex]), 0.0));
-    if (depth < minDepth[pixelIndex]) {
-        // Merge new fragment with first one
-        multiLayerAlphaBlendingMergeFront(frag, nodeArray);
+    MinDepthNode depthInfo = depthBuffer[pixelIndex];
+
+    if (depth <= depthInfo.minOpaqueDepth) {
+        if (depth < depthInfo.minDepth) {
+            // Merge new fragment with first one
+            multiLayerAlphaBlendingMergeFront(frag, nodeArray);
+        } else {
+            // Insert normally (with offset of one)
+            multiLayerAlphaBlendingOffset(frag, nodeArray);
+        }
+        storeFragmentNodes(pixelIndex, fragPos2D, nodeArray);
     } else {
-        // Insert normally (with offset of one)
-        multiLayerAlphaBlendingOffset(frag, nodeArray);
+        discard;
     }
-    storeFragmentNodes(pixelIndex, fragPos2D, nodeArray);
 #endif
 
 

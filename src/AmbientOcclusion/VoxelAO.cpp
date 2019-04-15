@@ -2,9 +2,11 @@
 // Created by christoph on 09.02.19.
 //
 
+#include <chrono>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include <Utils/File/FileUtils.hpp>
+#include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
 
 #include "../VoxelRaytracing/VoxelData.hpp"
@@ -22,10 +24,25 @@ void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename)
 
     // Can be either hair dataset or trajectory dataset
     bool isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
+    bool isRings = boost::starts_with(modelFilenamePure, "Data/Rings");
+    bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls");
+    bool isAneurysm = boost::starts_with(modelFilenamePure, "Data/Trajectories");
+
+    auto start = std::chrono::system_clock::now();
+
+    uint16_t voxelRes = 128;
+    if (isRings) {
+        voxelRes = 32;
+    }
+    if (isAneurysm)
+    {
+        voxelRes = 128;
+    }
 
     VoxelGridDataCompressed compressedData;
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
-        VoxelCurveDiscretizer discretizer(glm::ivec3(128), glm::ivec3(64));
+        VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes), glm::ivec3(64));
+
         if (isHairDataset) {
             std::string modelFilenameHair = modelFilenamePure + ".hair";
             float lineRadius;
@@ -38,6 +55,13 @@ void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename)
             discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity);
         }
         compressedData = discretizer.compressData();
+
+        auto end = std::chrono::system_clock::now();
+        auto elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        sgl::Logfile::get()->writeInfo(std::string() + "Computational time to create voxel density for AO: "
+                                       + std::to_string(elapsed.count()));
+
         saveToFile(modelFilenameVoxelGrid, compressedData);
     } else {
         loadFromFile(modelFilenameVoxelGrid, compressedData);

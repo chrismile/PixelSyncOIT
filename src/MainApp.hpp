@@ -41,6 +41,17 @@ enum ShaderMode {
     SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_VORTICITY, SHADER_MODE_AMBIENT_OCCLUSION
 };
 
+struct CameraSetting
+{
+public:
+    CameraSetting() {}
+    CameraSetting(float time, float tx, float ty, float tz, float yaw_, float pitch_);
+
+    glm::vec3 position;
+    float pitch;
+    float yaw;
+};
+
 class PixelSyncApp : public AppLogic
 {
 public:
@@ -62,12 +73,18 @@ protected:
     };
     void updateShaderMode(ShaderModeUpdate modeUpdate);
     void loadModel(const std::string &filename, bool resetCamera = true);
+    void loadCameraPositionFromFile(const std::string& filename);
 
     // For changing performance measurement modes
     void setNewState(const InternalState &newState);
 
     // Override screenshot function to exclude GUI (if wanted by the user)
     void saveScreenshot(const std::string &filename);
+    void saveScreenshotOnKey(const std::string &filename);
+
+    void saveCameraPosition();
+    void saveCameraPositionToFile(const std::string &filename);
+
 
 
     sgl::ShaderProgramPtr setUniformValues();
@@ -100,8 +117,8 @@ private:
     void updateShadowMode();
 
     // Mode
-    // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE
-    RenderModeOIT mode = RENDER_MODE_OIT_MLAB_BUCKET; // RENDER_MODE_OIT_MLAB RENDER_MODE_OIT_MLAB_BUCKET RENDER_MODE_VOXEL_RAYTRACING_LINES
+    // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE RENDER_MODE_OIT_MLAB_BUCKET
+    RenderModeOIT mode = RENDER_MODE_OIT_LINKED_LIST; // RENDER_MODE_OIT_MLAB RENDER_MODE_OIT_MLAB_BUCKET RENDER_MODE_OIT_LINKED_LIST
     RenderModeOIT oldMode = mode;
     ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
     std::string modelFilenamePure;
@@ -122,7 +139,8 @@ private:
 
     // User interface
     bool showSettingsWindow = true;
-    int usedModelIndex = 2; // 2: Aneurism, 11: Ponytail, 16: Turbulence, 18: Convection Rolls
+    int usedModelIndex = 0;
+    std::string startupModelName = "Aneurysm";
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -149,7 +167,7 @@ private:
     ImportanceCriterionTypeAneurism importanceCriterionTypeAneurism
             = IMPORTANCE_CRITERION_ANEURISM_VORTICITY;
     ImportanceCriterionTypeWCB importanceCriterionTypeWCB
-            = IMPORTANCE_CRITERION_WCB_TOTAL_PRESSURE_DIFFERENCE;
+            = IMPORTANCE_CRITERION_WCB_CURVATURE;
     ImportanceCriterionTypeConvectionRolls importanceCriterionTypeConvectionRolls
             = IMPORTANCE_CRITERION_CONVECTION_ROLLS_VORTICITY;
     int importanceCriterionIndex = 0;
@@ -168,6 +186,7 @@ private:
     // Profiling events
     AutoPerfMeasurer *measurer;
     bool perfMeasurementMode = false;
+    bool timeCoherence = false;
     InternalState lastState;
     bool firstState = true;
     bool usesNewState = true;
@@ -184,7 +203,6 @@ private:
     float recordingTimeLast = 0.0f;
 
     float outputTime = 0.0f;
-    bool testOutputPos = true;
     bool testCameraFlight = false;
     bool realTimeCameraFlight = false;
     bool recordingUseGlobalIlumination = false;
@@ -192,6 +210,12 @@ private:
     VideoWriter *videoWriter;
 
     CameraPath cameraPath;
+
+    std::string saveDirectory = "Data/Cameras/";
+    std::string saveFilename = "Test";
+    std::string saveDirectoryScreenshots = "Data/Screenshots/";
+    std::string saveFilenameScreenshots = "Screenshot";
+    uint32_t numScreenshots = 0;
 };
 
 #endif /* LOGIC_MainApp_HPP_ */

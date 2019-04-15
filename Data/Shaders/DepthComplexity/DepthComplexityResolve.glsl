@@ -30,7 +30,7 @@ void main()
     uint y = uint(gl_FragCoord.y);
     uint numFragments = numFragmentsBuffer[addrGen(uvec2(x,y))];
 
-    float percentage = clamp(float(numFragments)/float(numFragmentsMaxColor), 0.0, 1.0)*color.a;
+    float percentage = clamp(float(numFragments)/float(min(numFragmentsMaxColor, 512)), 0.0, 1.0)*color.a;
     vec4 color = vec4(color.rgb, percentage);
 
     fragColor = color;

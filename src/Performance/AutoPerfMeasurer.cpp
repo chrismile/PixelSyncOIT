@@ -1,5 +1,5 @@
 //
-// Created by christoph on 27.09.18.
+// Created by Anonymous User on 27.09.18.
 //
 
 #include <GL/glew.h>
@@ -17,15 +17,17 @@
 
 AutoPerfMeasurer::AutoPerfMeasurer(std::vector<InternalState> _states,
         const std::string &_csvFilename, const std::string &_depthComplexityFilename,
-        std::function<void(const InternalState&)> _newStateCallback)
+        std::function<void(const InternalState&)> _newStateCallback, bool measureTimeCoherence)
        : states(_states), currentStateIndex(0), newStateCallback(_newStateCallback), file(_csvFilename),
-         depthComplexityFile(_depthComplexityFilename)
+         depthComplexityFile(_depthComplexityFilename), errorMetricFile("error_metrics.csv"), perfFile("performance_list.csv"), timeCoherence(measureTimeCoherence)
 {
     // Write header
     file.writeRow({"Name", "Average Time (ms)", "Image Filename", "Memory (GB)", "Buffer Size (GB)",
                    "SSIM", "RMSE", "PSNR", "Time Stamp (s), Frame Time (ns)"});
     depthComplexityFile.writeRow({"Current State", "Frame Number", "Min Depth Complexity", "Max Depth Complexity",
                                   "Avg Depth Complexity Used", "Avg Depth Complexity All", "Total Number of Fragments"});
+    errorMetricFile.writeRow({"Name", "Error measures"});
+    perfFile.writeRow({"Name", "Time per frame (ms)"});
     setPerformanceMeasurer(this);
 
     // Set initial state
@@ -35,13 +37,17 @@ AutoPerfMeasurer::AutoPerfMeasurer(std::vector<InternalState> _states,
 AutoPerfMeasurer::~AutoPerfMeasurer()
 {
     writeCurrentModeData();
+
     file.close();
+    depthComplexityFile.close();
+    errorMetricFile.close();
+    perfFile.close();
     //perfTimeProfileFile.close();
 }
 
 
 float nextModeCounter = 0.0f;
-const float TIME_PER_MODE = 10.0f; // in seconds
+const float TIME_PER_MODE = 32.5f; // in seconds
 bool AutoPerfMeasurer::update(float currentTime)
 {
     nextModeCounter = currentTime;
@@ -61,12 +67,19 @@ void AutoPerfMeasurer::makeScreenshot()
     saveScreenshot(filename);
 }
 
+void AutoPerfMeasurer::makeScreenshot(uint32_t frameNum)
+{
+    std::string filename = std::string() + "images/" + currentState.name + "_frame_" + std::to_string(frameNum) + ".png";
+    saveScreenshot(filename);
+}
+
 void AutoPerfMeasurer::writeCurrentModeData()
 {
     // Write row with performance metrics of this mode
     timerGL.stopMeasuring();
     double timeMS = timerGL.getTimeMS(currentState.name);
     file.writeCell(currentState.name);
+    perfFile.writeCell(currentState.name);
     file.writeCell(sgl::toString(timeMS));
 
     // Make screenshot of rendering result with current algorithm
@@ -76,6 +89,7 @@ void AutoPerfMeasurer::writeCurrentModeData()
     image->fromFile(filename.c_str());
     if (currentState.oitAlgorithm == RENDER_MODE_OIT_DEPTH_PEELING) {
         referenceImage = image;
+        stateNameDepthPeeling = currentState.name;
     }
 
     // Write current memory consumption in gigabytes
@@ -83,27 +97,41 @@ void AutoPerfMeasurer::writeCurrentModeData()
     file.writeCell(sgl::toString(currentAlgorithmsBufferSizeBytes*1e-9f));
 
     // Save normalized difference map
-    std::string differenceMapFilename = std::string() + "images/" + currentState.name + " Difference" + ".png";
-    sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(referenceImage, image);
-    differenceMap->savePNG(differenceMapFilename.c_str());
+    if (referenceImage != nullptr) {
+        std::string differenceMapFilename =
+                std::string() + "images/" + currentState.name + " Difference" +
+                ".png";
+        sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(
+                referenceImage, image);
+        differenceMap->savePNG(differenceMapFilename.c_str());
 
-    // If a reference image is saved: Compute reference metrics (SSIM, RMSE, PSNR)
-    if (referenceImage) {
-        double ssimMetric = ssim(referenceImage, image);
-        double rmseMetric = rmse(referenceImage, image);
-        double psnrMetric = psnr(referenceImage, image);
-        file.writeCell(sgl::toString(ssimMetric));
-        file.writeCell(sgl::toString(rmseMetric));
-        file.writeCell(sgl::toString(psnrMetric));
+        // If a reference image is saved: Compute reference metrics (SSIM, RMSE, PSNR)
+        if (referenceImage) {
+            double ssimMetric = ssim(referenceImage, image);
+            double rmseMetric = rmse(referenceImage, image);
+            double psnrMetric = psnr(referenceImage, image);
+            file.writeCell(sgl::toString(ssimMetric));
+            file.writeCell(sgl::toString(rmseMetric));
+            file.writeCell(sgl::toString(psnrMetric));
+        }
+    } else{
+        file.writeCell(sgl::toString(0));
+        file.writeCell(sgl::toString(0));
+        file.writeCell(sgl::toString(0));
     }
+
     auto performanceProfile = timerGL.getCurrentFrameTimeList();
     for (auto &perfPair : performanceProfile) {
         float timeStamp = perfPair.first;
         uint64_t frameTimeNS = perfPair.second;
-        file.writeCell(sgl::toString(timeStamp) + ", " + sgl::toString(frameTimeNS));
+        float frameTimeMS = float(frameTimeNS) / float(1.0E6);
+//        file.writeCell(sgl::toString(timeS    tamp) + ", " + sgl::toString(frameTimeNS));
+        file.writeCell(sgl::toString(frameTimeMS));
+        perfFile.writeCell(sgl::toString(frameTimeMS));
     }
 
     file.newRow();
+    perfFile.newRow();
 
     /*perfTimeProfileFile.writeCell(currentState.name);
     auto performanceProfile = timerGL.getCurrentFrameTimeList();
@@ -116,10 +144,80 @@ void AutoPerfMeasurer::writeCurrentModeData()
     perfTimeProfileFile.newRow();*/
 }
 
+void AutoPerfMeasurer::writeCurrentErrorMetricData()
+{
+    if (currentState.oitAlgorithm == RENDER_MODE_OIT_DEPTH_PEELING) {
+        stateNameDepthPeeling = currentState.name;
+        return;
+    }
+
+    std::vector<std::string> errorMetrics = { "RMSE", "PSNR", "SSIM" };
+    const uint32_t MAX_FRAMES = 64;
+
+    std::vector<double> rmseValues; rmseValues.reserve(MAX_FRAMES);
+    std::vector<double> psnrValues; psnrValues.reserve(MAX_FRAMES);
+    std::vector<double> ssimValues; ssimValues.reserve(MAX_FRAMES);
+
+    std::vector<std::vector<double>> errorMeasures;
+
+    for (uint32_t f = 1; f <= MAX_FRAMES; ++f)
+    {
+        // reference image
+        std::string filenameGT = std::string() + "images/" + stateNameDepthPeeling + "_frame_" + std::to_string(f) + ".png";
+        sgl::BitmapPtr refImage(new sgl::Bitmap());
+        refImage->fromFile(filenameGT.c_str());
+
+        // output image
+        std::string filename = std::string() + "images/" + currentState.name + "_frame_" + std::to_string(f) + ".png";
+        sgl::BitmapPtr outputImage(new sgl::Bitmap());
+        outputImage->fromFile(filename.c_str());
+
+        // Save normalized difference map
+        std::string differenceMapFilename = std::string() + "images/" + currentState.name + " Difference_frame_" + std::to_string(f) + ".png";
+        sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(refImage, outputImage);
+        differenceMap->savePNG(differenceMapFilename.c_str());
+
+//        if (f == 1)
+//        {
+//            errorMetricFile.writeCell(filenameGT);
+//            errorMetricFile.writeCell(filename);
+//        }
+
+        rmseValues.push_back(rmse(refImage, outputImage));
+        psnrValues.push_back(psnr(refImage, outputImage));
+        ssimValues.push_back(ssim(refImage, outputImage));
+//        errorMetricFile.writeCell(sgl::toString(metric));
+    }
+
+    errorMeasures.push_back(rmseValues);
+    errorMeasures.push_back(psnrValues);
+    errorMeasures.push_back(ssimValues);
+
+
+    for (uint32_t i = 0; i < errorMeasures.size(); ++i)
+    {
+        std::string metricName = errorMetrics[i];
+
+        errorMetricFile.writeCell(currentState.name + " (" + metricName + ")");
+
+        for (uint32_t f = 0; f < MAX_FRAMES; ++f)
+        {
+            errorMetricFile.writeCell(sgl::toString(errorMeasures[i][f]));
+        }
+
+        errorMetricFile.newRow();
+    }
+}
+
 void AutoPerfMeasurer::setNextState(bool first)
 {
     if (!first) {
-        writeCurrentModeData();
+        if (timeCoherence) {
+            writeCurrentErrorMetricData();
+        } else {
+            writeCurrentModeData();
+        }
+
         currentStateIndex++;
     }
 

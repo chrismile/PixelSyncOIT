@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 
 enum TrajectoryType {
-    TRAJECTORY_TYPE_ANEURISM = 0, TRAJECTORY_TYPE_WCB, TRAJECTORY_TYPE_CONVECTION_ROLLS
+    TRAJECTORY_TYPE_ANEURISM = 0, TRAJECTORY_TYPE_WCB, TRAJECTORY_TYPE_CONVECTION_ROLLS, TRAJECTORY_TYPE_RINGS, TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW
 };
 enum ImportanceCriterionTypeAneurism {
     IMPORTANCE_CRITERION_ANEURISM_VORTICITY = 0,
@@ -32,8 +32,9 @@ const char *const IMPORTANCE_CRITERION_ANEURISM_DISPLAYNAMES[] = {
         "Vorticity", "Line Curvature"
 };
 const char *const IMPORTANCE_CRITERION_WCB_DISPLAYNAMES[] = {
-        "Line Curvature", "Segment Length", "Segment Pressure Difference", "Total Pressure Difference",
-        "Angle of Ascent", "Height Difference per Segment"
+        "Pressure", "Line Curvature"
+//        "Line Curvature", "Segment Length", "Segment Pressure Difference", "Total Pressure Difference",
+//        "Angle of Ascent", "Height Difference per Segment"
 };
 const char *const IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES[] = {
         "Vorticity", "Line Curvature", "Segment Length"

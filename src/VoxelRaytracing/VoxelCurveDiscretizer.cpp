@@ -3,6 +3,8 @@
 //
 
 #include <fstream>
+#include <iostream>
+#include <chrono>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -171,6 +173,11 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
     maxVorticity = 0.0f;
     int lineCounter = 0;
     isHairDataset = false;
+    uint64_t numLineSegments = 0;
+    uint64_t numLines = 0;
+
+    bool isRings = boost::starts_with(filename, "Data/Rings");
+    bool isConvectionRolls = boost::starts_with(filename, "Data/ConvectionRolls/output");
 
     std::string lineString;
     while (getline(file, lineString)) {
@@ -186,14 +193,23 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
         if (command == "g") {
             // New path
             if (lineCounter % 1000 == 999) {
-                sgl::Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
+//                sgl::Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
             }
             lineCounter++;
         } else if (command == "v") {
+            glm::vec3 position;
+            if (isConvectionRolls) {
+                position = glm::vec3(sgl::fromString<float>(line.at(1)), sgl::fromString<float>(line.at(3)),
+                                     sgl::fromString<float>(line.at(2)));
+            } else
+            {
+                position = glm::vec3(sgl::fromString<float>(line.at(1)), sgl::fromString<float>(line.at(2)),
+                                     sgl::fromString<float>(line.at(3)));
+            }
+
             // Path line vertex position
-            currentCurve.points.push_back(glm::vec3(sgl::fromString<float>(line.at(1)),
-                    sgl::fromString<float>(line.at(2)), sgl::fromString<float>(line.at(3))));
-            linesBoundingBox.combine(currentCurve.points.back());
+            currentCurve.points.push_back(position);
+            linesBoundingBox.combine(position);
         } else if (command == "vt") {
             // Path line vertex attribute
             float attr = sgl::fromString<float>(line.at(1));
@@ -202,15 +218,91 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
             maxVorticity = std::max(maxVorticity, attr);
         } else if (command == "l") {
             // Indices of path line signal all points read of current curve
+            numLines++;
+            numLineSegments += currentCurve.points.size() - 1;
             curves.push_back(currentCurve);
             currentCurve = Curve();
             currentCurve.lineID = lineCounter;
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
-            sgl::Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+//            sgl::Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
         }
     }
+    std::cout << "Num Lines: " << numLines << std::endl;
+    std::cout << "Num LineSegments: " << numLineSegments << std::endl << std::flush;
+
+    // Normalize data for rings
+    float minValue = std::min(linesBoundingBox.getMinimum().x, std::min(linesBoundingBox.getMinimum().y, linesBoundingBox.getMinimum().z));
+    float maxValue = std::max(linesBoundingBox.getMaximum().x, std::max(linesBoundingBox.getMaximum().y, linesBoundingBox.getMaximum().z));
+
+//    sgl::AABB3 linesBoundingBoxNew = line
+
+    if (isConvectionRolls)
+    {
+        minValue = 0;
+        maxValue = 0.5;
+    }
+
+    glm::vec3 minVec(minValue, minValue, minValue);
+    glm::vec3 maxVec(maxValue, maxValue, maxValue);
+
+    float dimY = linesBoundingBox.getDimensions().y;
+
+    if (isRings || isConvectionRolls)
+    {
+        linesBoundingBox = sgl::AABB3();
+
+        for (auto& curve : curves)
+        {
+            for (auto &point : curve.points)
+            {
+                point = (point - minVec) / (maxVec - minVec);
+
+                if (isConvectionRolls)
+                {
+                    glm::vec3 dims = glm::vec3(1);
+                    dims.y = dimY;
+                    point -= dims;
+                }
+
+                linesBoundingBox.combine(point);
+//
+            }
+        }
+    }
+
+    if (isRings)
+    {
+        linesBoundingBox = sgl::AABB3();
+        linesBoundingBox.combine(glm::vec3(-2));
+        linesBoundingBox.combine(glm::vec3(2));
+    }
+
+    if (isConvectionRolls)
+    {
+        linesBoundingBox = sgl::AABB3();
+        linesBoundingBox.combine(glm::vec3(-1.5, -0.5, -1.5));
+        linesBoundingBox.combine(glm::vec3( 1.5, 0.5, 1.5));
+    }
+
+    std::cout << "Bounding box: " << linesBoundingBox.getMaximum().x << " " << linesBoundingBox.getMaximum().y << " " << linesBoundingBox.getMaximum().z << std::endl << std::flush;
+
+    // HACK
+    sgl::AABB3 linesBoundingBoxTemp = linesBoundingBox;
+
+    const float minZ = linesBoundingBox.getMinimum().z;
+    const float dimZ = linesBoundingBox.getDimensions().z;
+
+//    for (auto& curve : curves)
+//    {
+//        for (auto& point : curve.points)
+//        {
+//            point.z = (point.z - minZ) / (dimZ);
+//            linesBoundingBoxTemp.combine(point);
+//        }
+//    }
+
     _maxVorticity = maxVorticity;
     this->attributes = attributes;
 
@@ -220,6 +312,10 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
     // Move to origin and scale to range from (0, 0, 0) to (rx, ry, rz).
     linesToVoxel = sgl::matrixScaling(1.0f / linesBoundingBox.getDimensions() * glm::vec3(gridResolution))
             * sgl::matrixTranslation(-linesBoundingBox.getMinimum());
+
+    glm::mat4 linesToVoxelTemp = sgl::matrixScaling(1.0f / linesBoundingBoxTemp.getDimensions() * glm::vec3(gridResolution))
+                   * sgl::matrixTranslation(-linesBoundingBoxTemp.getMinimum());
+
     voxelToLines = glm::inverse(linesToVoxel);
 
     // Transform curves to voxel grid space

@@ -9,6 +9,7 @@ layout(location = 1) in vec3 vertexNormal;
 layout(location = 3) in float VERTEX_ATTRIBUTE;
 
 out vec3 fragmentNormal;
+out vec3 fragmentTangent;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
@@ -18,6 +19,9 @@ out float lineLength;
 void main()
 {
     fragmentNormal = vertexNormal;
+    vec3 binormal = cross(vec3(0,0,1), vertexNormal);
+    fragmentTangent = cross(binormal, fragmentNormal);
+
     fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
     screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
     fragmentAttribute = VERTEX_ATTRIBUTE;
@@ -72,6 +76,7 @@ in VertexData
 } v_in[];
 
 out vec3 fragmentNormal;
+out vec3 fragmentTangent;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
@@ -94,6 +99,8 @@ void main()
     vec3 normalNext = v_in[1].lineNormal;
     vec3 tangentNext = v_in[1].lineTangent;
     vec3 binormalNext = cross(tangentNext, normalNext);
+
+    vec3 tangent = normalize(nextPoint - currentPoint);
 
     mat3 tangentFrameMatrixCurrent = mat3(normalCurrent, binormalCurrent, tangentCurrent);
     mat3 tangentFrameMatrixNext = mat3(normalNext, binormalNext, tangentNext);
@@ -121,6 +128,7 @@ void main()
     for (int i = 0; i < NUM_SEGMENTS; i++) {
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[i], 1.0);
         fragmentNormal = vertexNormalsCurrent[i];
+        fragmentTangent = tangent;
         fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         fragmentAttribute = v_in[0].lineAttribute;
@@ -130,6 +138,7 @@ void main()
         fragmentNormal = vertexNormalsCurrent[(i+1)%NUM_SEGMENTS];
         fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
+        fragmentTangent = tangent;
         fragmentAttribute = v_in[0].lineAttribute;
         EmitVertex();
 
@@ -137,6 +146,7 @@ void main()
         fragmentNormal = vertexNormalsNext[i];
         fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
+        fragmentTangent = tangent;
         fragmentAttribute = v_in[1].lineAttribute;
         EmitVertex();
 
@@ -145,6 +155,7 @@ void main()
         fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         fragmentAttribute = v_in[1].lineAttribute;
+        fragmentTangent = tangent;
         EmitVertex();
 
         EndPrimitive();
@@ -163,6 +174,7 @@ in vec3 screenSpacePosition;
 #endif
 
 in vec3 fragmentNormal;
+in vec3 fragmentTangent;
 in vec3 fragmentPositonWorld;
 in float fragmentAttribute;
 in float lineCurvature;
@@ -177,6 +189,7 @@ out vec4 fragColor;
 #include "Shadows.glsl"
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
+uniform vec3 cameraPosition; // world space
 uniform float aoFactorGlobal = 1.0f;
 uniform float shadowFactorGlobal = 1.0f;
 
@@ -265,12 +278,41 @@ void main()
 #endif
 
     vec4 colorAttribute = transferFunction(fragmentAttribute);
-
     vec3 normal = normalize(fragmentNormal);
 
     #if REFLECTION_MODEL == 0 // PSEUDO_PHONG_LIGHTING
-    float diffuseFactor = 0.5 * dot(normal, lightDirection) + 0.5;
-    vec3 colorShading = colorAttribute.rgb * clamp(diffuseFactor, 0.0, 1.0) * occlusionFactor * shadowFactor;
+    const vec3 lightColor = vec3(1,1,1);
+    const vec3 ambientColor = colorAttribute.rgb;
+    const vec3 diffuseColor = colorAttribute.rgb;
+
+    const float kA = 0.2 * occlusionFactor * shadowFactor;
+    const vec3 Ia = kA * ambientColor;
+    const float kD = 0.7;
+    const float kS = 0.1;
+    const float s = 10;
+
+    const vec3 n = normalize(fragmentNormal);
+    const vec3 v = normalize(cameraPosition - fragmentPositonWorld);
+//    const vec3 l = normalize(lightDirection);
+    const vec3 l = normalize(v);
+    const vec3 h = normalize(v + l);
+
+    #ifdef CONVECTION_ROLLS
+    vec3 t = normalize(cross(vec3(0, 0, 1), n));
+    #else
+    vec3 t = normalize(cross(vec3(0, 0, 1), n));
+    #endif
+
+    vec3 Id = kD * clamp(abs(dot(n, l)), 0.0, 1.0) * diffuseColor;
+    vec3 Is = kS * pow(clamp(abs(dot(n, h)), 0.0, 1.0), s) * lightColor;
+
+    float haloParameter = 1;
+    float angle1 = abs( dot( v, n));
+    float angle2 = abs( dot( v, normalize(t))) * 0.7;
+    float halo = mix(1.0f,((angle1)+(angle2)) , haloParameter);
+
+    vec3 colorShading = Ia + Id + Is;
+    colorShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
     #elif REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     vec3 colorShading = vec3(occlusionFactor * shadowFactor);
     #elif REFLECTION_MODEL == 2 // LOCAL_SHADOW_MAP_OCCLUSION

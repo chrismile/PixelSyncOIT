@@ -72,22 +72,39 @@ void main()
     float shadowFactor = 1.0f;
 #endif
 
-    // Pseudo Phong shading
-    vec3 normal = normalize(fragmentNormal);
-    vec4 bandColor = fragmentColor;
-    float stripWidth = 2.0;
-    if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
-        bandColor = vec4(1.0,1.0,1.0,1.0);
-    }
-    vec4 color = vec4(bandColor.rgb * (dot(normal, lightDirection)/4.0+0.75
-            * occlusionFactor * shadowFactor), fragmentColor.a);
+    // Blinn-Phong Shading
+    const vec3 lightColor = vec3(1,1,1);
+    const vec3 ambientColor = lightColor;
+    const vec3 diffuseColor = fragmentColor.rgb;
+    vec3 phongColor = vec3(0);
 
-    if (bandedColorShading == 0) {
-        vec3 ambientShading = ambientColor * 0.1 * occlusionFactor * shadowFactor;
-        float diffuseFactor = 0.5 * dot(normal, lightDirection) + 0.5;
-        vec3 diffuseShading = diffuseColor * clamp(diffuseFactor, 0.0, 1.0) * occlusionFactor * shadowFactor;
-        vec3 specularShading = specularColor * specularExponent * 0.00001; // In order not to get an unused warning
-        color = vec4(ambientShading + diffuseShading + specularShading, opacity * fragmentColor.a);
+    const float kA = 0.1 * occlusionFactor * shadowFactor;
+    const vec3 Ia = kA * ambientColor;
+    const float kD = 0.7;
+    const float kS = 0.2;
+    const float s = 10;
+
+    const vec3 l = normalize(lightDirection);
+    const vec3 n = normalize(fragmentNormal);
+    const vec3 v = normalize(cameraPosition - fragmentPositonWorld);
+    const vec3 h = normalize(v + l);
+
+    vec3 Id = kD * clamp(abs(dot(n, l)), 0.0, 1.0) * diffuseColor;
+    vec3 Is = kS * pow(clamp(abs(dot(n, h)), 0.0, 1.0), s) * lightColor;
+
+    phongColor = Ia + Id + Is;
+
+    vec4 color = vec4(phongColor, fragmentColor.a);
+    color = vec4(1,0,0,1);
+
+    // Pseudo Phong shading
+    if (bandedColorShading == 1) {
+        vec4 bandColor = fragmentColor;
+        float stripWidth = 2.0;
+        if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
+            bandColor = vec4(1.0,1.0,1.0,1.0);
+        }
+        color = vec4(bandColor.rgb * (dot(n, l)/4.0+0.75 * occlusionFactor * shadowFactor), fragmentColor.a);
     }
 
     #if REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO

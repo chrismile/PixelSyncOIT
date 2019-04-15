@@ -18,7 +18,7 @@ class AutoPerfMeasurer {
 public:
     AutoPerfMeasurer(std::vector<InternalState> _states,
                      const std::string &_csvFilename, const std::string &_depthComplexityFilename,
-                     std::function<void(const InternalState&)> _newStateCallback);
+                     std::function<void(const InternalState&)> _newStateCallback,  bool measureTimeCoherence);
     ~AutoPerfMeasurer();
 
     // To be called by the application
@@ -31,6 +31,7 @@ public:
 
     /// Called for first frame
     void makeScreenshot();
+    void makeScreenshot(uint32_t frameNum);
 
     void resolutionChanged(sgl::FramebufferObjectPtr _sceneFramebuffer);
 
@@ -44,6 +45,8 @@ public:
 private:
     /// Write out the performance data of "currentState" to "file".
     void writeCurrentModeData();
+    /// Write out the error metrics of "currentState" to "file".
+    void writeCurrentErrorMetricData();
     /// Switch to the next state in "states".
     void setNextState(bool first = false);
 
@@ -62,15 +65,19 @@ private:
 
     sgl::TimerGL timerGL;
     int initialFreeMemKilobytes;
+    bool timeCoherence;
 
     CsvWriter file;
     CsvWriter depthComplexityFile;
+    CsvWriter errorMetricFile;
+    CsvWriter perfFile;
     size_t depthComplexityFrameNumber = 0;
     size_t currentAlgorithmsBufferSizeBytes = 0;
 
     // For making screenshots and computing reference metrics
     sgl::FramebufferObjectPtr sceneFramebuffer;
     sgl::BitmapPtr referenceImage; // Rendered using depth peeling
+    std::string stateNameDepthPeeling;
 };
 
 

@@ -3,11 +3,13 @@
 //
 
 #include <cmath>
+#include <chrono>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include <GL/glew.h>
 
 #include <Utils/File/FileUtils.hpp>
+#include <Utils/File/Logfile.hpp>
 #include <Graphics/Texture/TextureManager.hpp>
 #include <Graphics/Scene/Camera.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
@@ -121,10 +123,36 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
 
     // Can be either hair dataset or trajectory dataset
     isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
+    bool isRings = boost::starts_with(modelFilenamePure, "Data/Rings");
+    bool isAneurysm = boost::starts_with(modelFilenamePure, "Data/Trajectories");
+    bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output");
+
+    uint16_t voxelRes = 256;
+    uint16_t quantizationRes = 32;
+    if (isRings) {
+        voxelRes = 128;
+        quantizationRes = 16;
+    }
+    if (isAneurysm)
+    {
+        voxelRes = 128;
+//        quantizationRes = 16;
+    }
+    if (isConvectionRolls)
+    {
+        voxelRes = 256;
+        quantizationRes = 16;
+    }
+
+    auto start = std::chrono::system_clock::now();
+
+    float MBSize = 0;
+    float byteSize = 0;
 
     VoxelGridDataCompressed compressedData;
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
-        VoxelCurveDiscretizer discretizer(glm::ivec3(128), glm::ivec3(64));
+        VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes), glm::ivec3(quantizationRes, quantizationRes, quantizationRes));
+
         if (isHairDataset) {
             std::string modelFilenameHair = modelFilenamePure + ".hair";
             discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor);
@@ -133,6 +161,26 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
             discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity);
         }
         compressedData = discretizer.compressData();
+
+        byteSize =
+                compressedData.voxelLineListOffsets.size() * sizeof(uint32_t)
+                + compressedData.numLinesInVoxel.size() * sizeof(uint32_t)
+                + compressedData.voxelDensityLODs.size() * sizeof(float)
+                + compressedData.voxelAOLODs.size() * sizeof(float)
+                + compressedData.octreeLODs.size() * sizeof(uint32_t)
+                + compressedData.attributes.size() * sizeof(float)
+                + compressedData.lineSegments.size() * sizeof(uint32_t) * 2;
+
+        MBSize = byteSize / 1024. / 1024.0;
+
+        sgl::Logfile::get()->writeInfo(std::string() +  "Byte Size Voxel Structure: " + std::to_string(MBSize) + " MB");
+
+        auto end = std::chrono::system_clock::now();
+        auto elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        sgl::Logfile::get()->writeInfo(std::string() + "Computational time to create voxel grid: "
+                                       + std::to_string(elapsed.count()));
+
         saveToFile(modelFilenameVoxelGrid, compressedData);
     } else {
         loadFromFile(modelFilenameVoxelGrid, compressedData);
@@ -145,19 +193,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
         }
     }
     compressedToGPUData(compressedData, data);
-    setCurrentAlgorithmBufferSizeBytes(sizeof(compressedData)
-        + compressedData.attributes.size()
-        + compressedData.voxelLineListOffsets.size()
-        + compressedData.numLinesInVoxel.size()
-        + compressedData.voxelDensityLODs.size()
-        + compressedData.voxelAOLODs.size()
-        + compressedData.octreeLODs.size()
-#ifdef PACK_LINES
-        + compressedData.lineSegments.size() * sizeof(LineSegmentCompressed)
-#else
-        + compressedData.lineSegments.size() * sizeof(LineSegment)
-#endif
-    );
+    setCurrentAlgorithmBufferSizeBytes(byteSize);
 
     // Create shader program
     sgl::ShaderManager->invalidateShaderCache();
@@ -169,11 +205,21 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(data.quantizationResolution.x));
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION_LOG2",
             sgl::toString(sgl::intlog2(data.quantizationResolution.x)));
-    if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence80000")) {
-        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 4);
+    if (boost::starts_with(filename, "Data/WCB")) {
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 16);
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 128);
+    } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 64);
+    }
+    else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence80000")) {
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
+    } else if (boost::starts_with(filename, "Data/ConvectionRolls/output")) {
+            sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
+            sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
     } else {
-        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 4);
+        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
     }
     if (isHairDataset) {
@@ -181,6 +227,13 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     } else {
         sgl::ShaderManager->removePreprocessorDefine("HAIR_RENDERING");
     }
+
+    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+        sgl::ShaderManager->addPreprocessorDefine("CONVECTION_ROLLS", "");
+    } else {
+        sgl::ShaderManager->removePreprocessorDefine("CONVECTION_ROLLS");
+    }
+
 #ifdef VOXEL_RAYTRACING_COMPUTE_SHADER
     renderShader = sgl::ShaderManager->getShaderProgram({ "VoxelRaytracingMain.Compute" });
 #else
@@ -224,6 +277,10 @@ void OIT_VoxelRaytracing::setUniformData()
     renderShader->setUniform("clearColor", clearColor);
     if (renderShader->hasUniform("lightDirection")) {
         renderShader->setUniform("lightDirection", lightDirection);
+    }
+
+    if (renderShader->hasUniform("cameraPosition")) {
+        renderShader->setUniform("cameraPosition", camera->getPosition());
     }
 
     if (isHairDataset) {

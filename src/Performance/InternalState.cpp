@@ -4,6 +4,7 @@
 
 #include "../OIT/OIT_LinkedList.hpp"
 #include "InternalState.hpp"
+#include <boost/algorithm/string/predicate.hpp>
 
 void getTestModesNoOIT(std::vector<InternalState> &states, InternalState state)
 {
@@ -16,22 +17,22 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MBOIT;
 
-    for (int useTrigMoments = 0; useTrigMoments <= 1; useTrigMoments++) {
-        for (int unorm = 0; unorm <= 1; unorm++) {
-            for (int numMoments = 4; numMoments <= 8; numMoments += 2) {
-                state.name = std::string() + "MBOIT " + sgl::toString(numMoments)
-                             + (useTrigMoments ? " Trigonometric Moments " : " Power Moments ")
-                             + (unorm == 0 ? "Float" : "UNORM");
-                state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-                        { "usePowerMoments", (useTrigMoments ? "false" : "true") },
-                        { "numMoments", sgl::toString(numMoments) },
-                        { "pixelFormat", (unorm == 0 ? "Float" : "UNORM") },
-                });
-                states.push_back(state);
-            }
-        }
-    }
-
+//    for (int useTrigMoments = 0; useTrigMoments <= 1; useTrigMoments++) {
+//        for (int unorm = 0; unorm <= 1; unorm++) {
+//            for (int numMoments = 4; numMoments <= 8; numMoments += 2) {
+//                state.name = std::string() + "MBOIT " + sgl::toString(numMoments)
+//                             + (useTrigMoments ? " Trigonometric Moments " : " Power Moments ")
+//                             + (unorm == 0 ? "Float" : "UNORM");
+//                state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//                        { "usePowerMoments", (useTrigMoments ? "false" : "true") },
+//                        { "numMoments", sgl::toString(numMoments) },
+//                        { "pixelFormat", (unorm == 0 ? "Float" : "UNORM") },
+//                });
+//                states.push_back(state);
+//            }
+//        }
+//    }
+//
     state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.1";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
             { "overestimationBeta", "0.1" },
@@ -49,13 +50,31 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
             { "pixelFormat", "Float" },
     });
     states.push_back(state);
+
+    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.1";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "overestimationBeta", "0.1" },
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(8) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
+
+    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "overestimationBeta", "0.25" },
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(8) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
 }
 
 void getTestModesMLAB(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
 
-    for (int numLayers = 1; numLayers <= 32; numLayers *= 2) {
+    for (int numLayers = 4; numLayers <= 8; numLayers *= 2) {
         state.name = std::string() + "MLAB " + sgl::toString(numLayers) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numLayers", sgl::toString(numLayers) },
@@ -99,9 +118,9 @@ void getTestModesLinkedListAll(std::vector<InternalState> &states, InternalState
     state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
 
     // sortingModeStrings
-    for (int expectedDepthComplexity = 64; expectedDepthComplexity <= 64; expectedDepthComplexity *= 2) {
+    for (int expectedDepthComplexity = 256; expectedDepthComplexity <= 256; expectedDepthComplexity *= 2) {
         for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
-            for (int maxNumFragmentsSorting = 256; maxNumFragmentsSorting <= 256; maxNumFragmentsSorting *= 2) {
+            for (int maxNumFragmentsSorting = 1024; maxNumFragmentsSorting <= 1024; maxNumFragmentsSorting *= 2) {
                 std::string sortingMode = sortingModeStrings[sortingModeIdx];
                 state.name = std::string() + "Linked List " + sortingMode + + " "
                              + sgl::toString(maxNumFragmentsSorting) + " Layers, "
@@ -122,10 +141,21 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
     state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
 
     int maxNumFragmentsSorting = 256;
-    int expectedDepthComplexity = 64;
+    int expectedDepthComplexity = 128;
     if (state.modelName == "Turbulence") {
         // Highest depth complexity measured for this dataset
-        expectedDepthComplexity = 104;
+        maxNumFragmentsSorting = 1024;
+        expectedDepthComplexity = 500;
+    }
+    if (state.modelName == "Convection Rolls") {
+        // Highest depth complexity measured for this dataset
+        maxNumFragmentsSorting = 512;
+        expectedDepthComplexity = 256;
+    }
+
+    if (state.modelName == "Warm Conveyor Belts") {
+        // Highest depth complexity measured for this dataset
+        expectedDepthComplexity = 300;
     }
 
     for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
@@ -380,7 +410,7 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
-    for (int nodesPerBucket = 2; nodesPerBucket <= 32; nodesPerBucket *= 2) {
+    for (int nodesPerBucket = 4; nodesPerBucket <= 8; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
@@ -396,7 +426,14 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 {
     state.oitAlgorithm = RENDER_MODE_VOXEL_RAYTRACING_LINES;
 
-    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
+    //!TODO set resolution depending on file
+
+    int gridResolution = 128;
+
+    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 64; }
+    if (boost::starts_with(state.modelName, "Data/ConvectionRolls/output")) { gridResolution = 256; }
+
+//    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
         state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "gridResolution", sgl::toString(gridResolution) },
@@ -411,7 +448,7 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
                 { "useNeighborSearch", "false" },
         });
         states.push_back(state);
-    }
+//    }
 }
 
 void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalState state)
@@ -424,21 +461,25 @@ void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalSta
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesDepthPeeling(states, state);
-    getTestModesNoOIT(states, state);
+//    getTestModesDepthPeeling(states, state);
+//    getTestModesNoOIT(states, state);
     getTestModesMLAB(states, state);
     getTestModesMBOIT(states, state);
     getTestModesLinkedList(states, state);
     getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
-    getTestModesDepthComplexity(states, state);
+//    getTestModesDepthComplexity(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
-    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720), glm::ivec2(1920, 1080) };
-    std::vector<std::string> modelNames = { "Aneurism Streamlines", "Ponytail", "Turbulence", "Convection Rolls" };
+//    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720), glm::ivec2(1920, 1080), glm::ivec2(2560, 1440) };
+    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
+//    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
+//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
+//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
+    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {

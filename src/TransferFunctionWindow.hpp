@@ -65,6 +65,7 @@ public:
     void update(float dt);
 
     void setClearColor(const sgl::Color &clearColor);
+    void setShow(const bool showWindow) { showTransferFunctionWindow = showWindow; }
     inline bool &getShowTransferFunctionWindow() { return showTransferFunctionWindow; }
     void computeHistogram(const std::vector<float> &attributes, float minAttr, float maxAttr);
     void setUseLinearRGB(bool useLinearRGB);

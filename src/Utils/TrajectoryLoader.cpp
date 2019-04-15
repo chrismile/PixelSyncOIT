@@ -6,6 +6,7 @@
 #include <Utils/Convert.hpp>
 #include <Math/Math.hpp>
 
+#include <chrono>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 
@@ -380,8 +381,13 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
         return;
     }
 
-    if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
-        initializeCircleData(5, TUBE_RADIUS);
+    auto start = std::chrono::system_clock::now();
+
+    if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
+        initializeCircleData(3, 0.05);
+    }
+    else if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+        initializeCircleData(3, TUBE_RADIUS);
     } else {
         initializeCircleData(3, TUBE_RADIUS);
     }
@@ -396,8 +402,16 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
     std::vector<std::vector<float>> globalImportanceCriteria;
     std::vector<uint32_t> globalIndices;
 
+    bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
+    bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
+
+    sgl::AABB3 boundingBox;
+
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
+
+    uint32_t numLines = 0;
+    uint32_t numLineSegments = 0;
 
     std::string lineString;
     while (getline(file, lineString)) {
@@ -414,13 +428,25 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
             // New path
             static int ctr = 0;
             if (ctr >= 999) {
-                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
+//                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
             }
             ctr = (ctr + 1) % 1000;
         } else if (command == "v") {
             // Path line vertex position
-            globalLineVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
-                                                   fromString<float>(line.at(3))));
+            glm::vec3 position;
+            if (isConvectionRolls) {
+                position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(3)),
+                                                       fromString<float>(line.at(2)));
+            } else
+            {
+                position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+                                                       fromString<float>(line.at(3)));
+            }
+
+            globalLineVertices.push_back(position);
+            boundingBox.combine(position);
+
+
         } else if (command == "vt") {
             // Path line vertex attribute
             globalLineVertexAttributes.push_back(fromString<float>(line.at(1)));
@@ -430,6 +456,9 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
             for (size_t i = 1; i < line.size(); i++) {
                 currentLineIndices.push_back(atoi(line.at(i).c_str()) - 1);
             }
+
+            numLines++;
+            numLineSegments += currentLineIndices.size() - 1;
 
             // pathLineCenters: The path line points to create a tube from.
             std::vector<glm::vec3> pathLineCenters;
@@ -446,11 +475,11 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
             computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaLine);
 
             // Line filtering for WCB trajectories
-            if (trajectoryType == TRAJECTORY_TYPE_WCB) {
-                if (importanceCriteriaLine.at(3).size() > 0 && importanceCriteriaLine.at(3).at(0) < 500.0f) {
-                    continue;
-                }
-            }
+//            if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+//                if (importanceCriteriaLine.at(3).size() > 0 && importanceCriteriaLine.at(3).at(0) < 500.0f) {
+//                    continue;
+//                }
+//            }
 
             // Create tube render data
             std::vector<glm::vec3> localVertices;
@@ -478,7 +507,36 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
-            Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+//            Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+        }
+    }
+
+    // Normalize data for rings
+    float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
+    float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
+
+    if (isConvectionRolls)
+    {
+        minValue = 0;
+        maxValue = 0.5;
+    }
+
+    glm::vec3 minVec(minValue, minValue, minValue);
+    glm::vec3 maxVec(maxValue, maxValue, maxValue);
+
+    if (isRings || isConvectionRolls)
+    {
+        for (auto& vertex : globalVertexPositions)
+        {
+            vertex = (vertex - minVec) / (maxVec - minVec);
+
+            if (isConvectionRolls)
+            {
+                glm::vec3 dims = glm::vec3(1);
+                dims.y = boundingBox.getDimensions().y;
+                vertex -= dims;
+            }
+
         }
     }
 
@@ -519,12 +577,29 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
 
 
     file.close();
+    auto end = std::chrono::system_clock::now();
 
     Logfile::get()->writeInfo(std::string() + "Summary: "
                               + sgl::toString(globalVertexPositions.size()) + " vertices, "
                               + sgl::toString(globalIndices.size()) + " indices.");
     Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);
+
+    // compute size of renderable geometry;
+    float byteSize = positionAttribute.data.size() * sizeof(uint8_t) + lineNormalsAttribute.data.size() * sizeof(uint8_t)
+                                    + submesh.attributes[0].data.size() * sizeof(uint8_t) + submesh.indices.size() * sizeof(uint32_t);
+
+    float MBSize = byteSize / 1024. / 1024.;
+
+    Logfile::get()->writeInfo(std::string() +  "Byte Size Mesh Structure: " + std::to_string(MBSize) + " MB");
+    Logfile::get()->writeInfo(std::string() +  "Num Lines: " + std::to_string(numLines / 1000.) + " Tsd.") ;
+    Logfile::get()->writeInfo(std::string() +  "Num LineSegments: " + std::to_string(numLineSegments / 1.0E6) + " Mio");
+
+    auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    Logfile::get()->writeInfo(std::string() + "Computational time to create binmesh: "
+                              + std::to_string(elapsed.count()));
+
 }
 
 
@@ -626,8 +701,13 @@ void convertObjTrajectoryDataToBinaryLineMesh(
         return;
     }
 
-    if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
-        initializeCircleData(5, TUBE_RADIUS);
+    auto start = std::chrono::system_clock::now();
+
+    if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
+        initializeCircleData(3, 0.05);
+    }
+    else if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+        initializeCircleData(3, TUBE_RADIUS);
     } else {
         initializeCircleData(3, TUBE_RADIUS);
     }
@@ -646,6 +726,10 @@ void convertObjTrajectoryDataToBinaryLineMesh(
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
 
+    sgl::AABB3 boundingBox;
+    bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
+    bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
+
     std::string lineString;
     while (getline(file, lineString)) {
         while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
@@ -660,14 +744,24 @@ void convertObjTrajectoryDataToBinaryLineMesh(
         if (command == "g") {
             // New path
             static int ctr = 0;
-            if (ctr >= 999) {
-                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
-            }
+//            if (ctr >= 999) {
+//                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
+//            }
             ctr = (ctr + 1) % 1000;
         } else if (command == "v") {
             // Path line vertex position
-            globalLineVertices.push_back(glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
-                                                   fromString<float>(line.at(3))));
+            glm::vec3 position;
+            if (isConvectionRolls) {
+                position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(3)),
+                                     fromString<float>(line.at(2)));
+            } else
+            {
+                position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
+                                     fromString<float>(line.at(3)));
+            }
+
+            globalLineVertices.push_back(position);
+            boundingBox.combine(position);
         } else if (command == "vt") {
             // Path line vertex attribute
             globalLineVertexAttributes.push_back(fromString<float>(line.at(1)));
@@ -693,11 +787,11 @@ void convertObjTrajectoryDataToBinaryLineMesh(
             computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaIn);
 
             // Line filtering for WCB trajectories
-            if (trajectoryType == TRAJECTORY_TYPE_WCB) {
-                if (importanceCriteriaIn.at(3).size() > 0 && importanceCriteriaIn.at(3).at(0) < 500.0f) {
-                    continue;
-                }
-            }
+//            if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+//                if (importanceCriteriaIn.at(3).size() > 0 && importanceCriteriaIn.at(3).at(0) < 500.0f) {
+//                    continue;
+//                }
+//            }
 
             // Create tube render data
             std::vector<glm::vec3> localVertices;
@@ -727,7 +821,37 @@ void convertObjTrajectoryDataToBinaryLineMesh(
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
-            Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+//            Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+        }
+    }
+
+    // Normalize data for rings
+    float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
+    float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
+
+
+    if (isConvectionRolls)
+    {
+        minValue = 0;
+        maxValue = 0.5;
+    }
+
+    glm::vec3 minVec(minValue, minValue, minValue);
+    glm::vec3 maxVec(maxValue, maxValue, maxValue);
+
+    if (isRings || isConvectionRolls)
+    {
+        for (auto& vertex : globalVertexPositions)
+        {
+            vertex = (vertex - minVec) / (maxVec - minVec);
+
+            if (isConvectionRolls)
+            {
+                glm::vec3 dims = glm::vec3(1);
+                dims.y = boundingBox.getDimensions().y;
+                vertex -= dims;
+            }
+
         }
     }
 
@@ -776,10 +900,18 @@ void convertObjTrajectoryDataToBinaryLineMesh(
 
     file.close();
 
+    auto end = std::chrono::system_clock::now();
+
     Logfile::get()->writeInfo(std::string() + "Summary: "
                               + sgl::toString(globalVertexPositions.size()) + " vertices, "
                               + sgl::toString(globalIndices.size()) + " indices.");
     Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);
+
+
+    auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    Logfile::get()->writeInfo(std::string() + "Computational time to create binmesh: "
+                        + std::to_string(elapsed.count()));
 }
 

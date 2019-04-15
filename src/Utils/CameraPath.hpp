@@ -26,7 +26,7 @@ class CameraPath
 {
 public:
     CameraPath() {}
-    void fromCirclePath(const sgl::AABB3 &sceneBoundingBox, const std::string &modelFilenamePure);
+    void fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string &modelFilenamePure);
     void fromControlPoints(const std::vector<ControlPoint> &controlPoints);
     bool fromBinaryFile(const std::string &filename);
     bool saveToBinaryFile(const std::string &filename);

@@ -23,7 +23,7 @@ using namespace sgl;
 static bool useStencilBuffer = true;
 
 // Maximum number of layers
-static int maxNumNodes = 4;
+static int maxNumNodes = 8;
 
 
 OIT_MLAB::OIT_MLAB()

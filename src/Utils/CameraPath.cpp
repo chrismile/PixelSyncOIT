@@ -2,6 +2,7 @@
 // Created by christoph on 18.12.18.
 //
 
+#include <iostream>
 #include <fstream>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -15,6 +16,11 @@
 
 #include "CameraPath.hpp"
 #include "Math/Math.hpp"
+
+//#define ROTATION_AND_ZOOMING_MODE
+//#define ROTATION_MODE
+//#define ZOOMING_MODE
+#define VIDEO_MODE
 
 ControlPoint::ControlPoint(float time, float tx, float ty, float tz, float yaw, float pitch)
 {
@@ -32,11 +38,18 @@ ControlPoint::ControlPoint(float time, float tx, float ty, float tz, float yaw, 
     cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
 
     this->orientation = glm::toQuat(glm::lookAt(glm::vec3(0.0f), cameraFront, cameraUp));*/
+////    this->orientation = glm::toQuat(glm::lookAt(glm::vec3(0.0f), cameraFront, cameraUp));*/
+//    this->orientation = glm::quat(glm::vec3(pitch, yaw, 0));
+////    this->orientation = glm::toQuat(glm::orientate3(glm::vec3(yaw, pitch, 0)));
+//
+//    float yaw2 = glm::yaw(this->orientation);
+//    float pitch2 = glm::pitch(this->orientation);
+//    float test = 0;
 
     this->orientation = glm::angleAxis(-pitch, glm::vec3(1, 0, 0)) * glm::angleAxis(yaw + sgl::PI / 2.0f, glm::vec3(0, 1, 0));
 }
 
-void CameraPath::fromCirclePath(const sgl::AABB3 &sceneBoundingBox, const std::string &modelFilenamePure)
+void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string &modelFilenamePure)
 {
     const size_t NUM_CIRCLE_POINTS = 64;
     controlPoints.clear();
@@ -46,24 +59,195 @@ void CameraPath::fromCirclePath(const sgl::AABB3 &sceneBoundingBox, const std::s
         centerOffset.y += 0.1f;
     }
     float startAngle = 0.0f;
-    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
-        startAngle += 1.2f;
-    }
-    float pulseFactor = 1.0f;
     float standardZoom = 1.0f;
-    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
-        pulseFactor = 4.0f;
-        standardZoom = 2.0f;
+    float rotateFactor = 1.0f;
+    float yaw = 0;
+
+    bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output");
+    bool isRings = boost::starts_with(modelFilenamePure, "Data/Rings");
+    bool isHair = boost::starts_with(modelFilenamePure, "Data/Hair");
+
+    if (isConvectionRolls)
+    {
+        sceneBoundingBox = sgl::AABB3();
+        sceneBoundingBox.combine(glm::vec3(-1, -0.5, -1));
+        sceneBoundingBox.combine(glm::vec3( 1, 0.5, 1));
     }
 
+#ifdef VIDEO_MODE
+    float pulseFactor = 0.0f;
+
+    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
+        startAngle += 1.2f;
+        standardZoom = 1.15f;
+        centerOffset.x -= 0.1f;
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
+        standardZoom = 1.5f;
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence2000")) {
+        standardZoom = 2.0f;
+        startAngle += 1.58f;
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+        centerOffset.y -= 0.05f;
+        standardZoom = 1.3f;
+    }
+    else if (isConvectionRolls) {
+        standardZoom = 0.9f;
+        startAngle += 1.58f;
+        centerOffset.y += 0.5f;
+//        centerOffset.z -= 1.5;
+//        centerOffset.x += 0.3;
+        yaw = -0.62769;
+
+        // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
+        // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
+    }
+
+    else if (isRings)
+    {
+        standardZoom = 1.7;
+    }
+
+    else if (isHair)
+    {
+        standardZoom = 0.8;
+    }
+#endif
+
+#ifdef ROTATION_AND_ZOOMING_MODE
+    float pulseFactor = 2.0f;
+
+
+
+    // Zooming and pulsing
+    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
+        startAngle += 1.2f;
+        standardZoom = 1.5f;
+        pulseFactor = 4.f;
+        centerOffset.x -= 0.1f;
+    }
+    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
+        pulseFactor = 4.0f;
+        standardZoom = 1.8f;
+    }
+    if (isConvectionRolls) {
+        pulseFactor = 2.0f;
+        standardZoom = 1.0f;
+        startAngle += 1.58f;
+        centerOffset.y += 0.3f;
+//        centerOffset.z -= 1.5;
+//        centerOffset.x += 0.3;
+        yaw = -0.60769;
+
+        // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
+        // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
+    }
+
+
+//    if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+//        centerOffset.y -= 0.05f;
+//        pulseFactor = 2.0f;
+//        standardZoom = 1.3f;
+//    }
+#endif
+
+#ifdef ROTATION_MODE
+    float pulseFactor = 0.0f;
+
+    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
+        startAngle += 1.2f;
+        standardZoom = 1.1f;
+        centerOffset.x -= 0.1f;
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
+        standardZoom = 1.3f;
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence2000")) {
+        standardZoom = 2.0f;
+        startAngle += 1.58f;
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+        centerOffset.y -= 0.05f;
+        standardZoom = 1.3f;
+    }
+    else if (isConvectionRolls) {
+        standardZoom = 0.8f;
+        startAngle += 1.58f;
+        centerOffset.y += 0.4f;
+//        centerOffset.z -= 1.5;
+//        centerOffset.x += 0.3;
+        yaw = -0.60769;
+
+        // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
+        // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
+    }
+
+    else if (isRings)
+    {
+        standardZoom = 1.3;
+    }
+
+    else if (isHair)
+    {
+        standardZoom = 0.8;
+    }
+
+#endif
+
+#ifdef ZOOMING_MODE
+    float pulseFactor = 0.0f;
+    rotateFactor = 0.0f;
+
+    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
+        startAngle += 1.2f;
+        standardZoom = 0.6f;
+        centerOffset.x -= 0.1f;
+        pulseFactor = 2.5f;
+    }
+    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
+        standardZoom = 1.2f;
+        pulseFactor = 2.5f;
+    }
+    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence2000")) {
+        standardZoom = 1.0f;
+        startAngle += 1.58f;
+        pulseFactor = 2.5f;
+    }
+    if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+        centerOffset.y -= 0.05f;
+        standardZoom = 0.8f;
+        pulseFactor = 2.5f;
+    }
+
+    standardZoom += pulseFactor / 2.0f;
+
+#endif
+
+    std::ofstream testFile("Data/ControlPoints.txt");
+
     for (size_t i = 0; i <= NUM_CIRCLE_POINTS; i++) {
-        float time = float(i)/NUM_CIRCLE_POINTS*10.0f;
-        float angle = float(i)/NUM_CIRCLE_POINTS*sgl::TWO_PI + startAngle;
+        float time = float(i) * 0.5f;//float(i)/NUM_CIRCLE_POINTS;
+        float angleTrans = float(i)/NUM_CIRCLE_POINTS*sgl::TWO_PI*rotateFactor;
+
+        float angle = angleTrans + startAngle;
+//        float pulseRadius = (cos(2.0f*angle)-1.0f)/(8.0f/pulseFactor)+standardZoom;
+#ifdef ZOOMING_MODE
+        float pulseRadius = cos(float(i) / NUM_CIRCLE_POINTS * sgl::PI * 2) * pulseFactor / 2.0 + standardZoom;
+#else
         float pulseRadius = (cos(2.0f*angle)-1.0f)/(8.0f/pulseFactor)+standardZoom;
+#endif
+
+//                (pulseFactor * float(i)/ NUM_CIRCLE_POINTS) / 2.0f - pulseFactor + standardZoom;
         glm::vec3 cameraPos = glm::vec3(cos(angle)*pulseRadius, 0.0f, sin(angle)*pulseRadius)
                 * glm::length(sceneBoundingBox.getExtent()) + sceneBoundingBox.getCenter() + centerOffset;
-        controlPoints.push_back(ControlPoint(time, cameraPos.x, cameraPos.y, cameraPos.z, sgl::PI + angle, 0.0f));
+        controlPoints.push_back(ControlPoint(time, cameraPos.x, cameraPos.y, cameraPos.z, sgl::PI + angle, yaw));
+
+        testFile << "time: " << time << "(" << cameraPos.x << "," << cameraPos.y << "," << cameraPos.z << ")\n" << std::endl;
     }
+    testFile.close();
+
     update(0.0f);
 }
 

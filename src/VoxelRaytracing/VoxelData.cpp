@@ -52,7 +52,7 @@ void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data
     stream.writeArray(data.octreeLODs);
     stream.writeArray(data.lineSegments);
     std::cout << "Number of line segments written: " << data.lineSegments.size() << std::endl;
-    std::cout << "Buffer size (in bytes): " << stream.getSize() << std::endl;
+    std::cout << "Buffer size (in MB): " << (stream.getSize() / 1024. / 1024.) << std::endl;
 
     file.write((const char*)stream.getBuffer(), stream.getSize());
     file.close();

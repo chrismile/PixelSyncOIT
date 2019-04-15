@@ -7,6 +7,11 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <climits>
+#include <chrono>
+#include <ctime>
+#include <algorithm>
+#include <thread>
+
 #include <glm/gtx/color_space.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -35,6 +40,9 @@
 #include <Graphics/Texture/Bitmap.hpp>
 #include <Graphics/OpenGL/SystemGL.hpp>
 #include <ImGui/ImGuiWrapper.hpp>
+#include <ImGui/imgui_internal.h>
+#include <ImGui/imgui_custom.h>
+#include <ImGui/imgui_stdlib.h>
 
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
@@ -60,6 +68,13 @@ void openglErrorCallback()
     std::cerr << "Application callback" << std::endl;
 }
 
+CameraSetting::CameraSetting(float time, float tx, float ty, float tz, float yaw_, float pitch_)
+{
+    position = glm::vec3(tx, ty, tz);
+    yaw = yaw_;
+    pitch = pitch_;
+}
+
 PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter(NULL)
 {
     // https://www.khronos.org/registry/OpenGL/extensions/NVX/NVX_gpu_memory_info.txt
@@ -68,8 +83,17 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
     }
 
+    for (int i = 0; i < NUM_MODELS; i++) {
+        if (startupModelName == MODEL_DISPLAYNAMES[i]) {
+            usedModelIndex = i;
+            break;
+        }
+    }
+
     if (recording || perfMeasurementMode) {
         testCameraFlight = true;
+        showSettingsWindow = false;
+        transferFunctionWindow.setShow(false);
     }
 
     cameraPath.fromControlPoints({
@@ -133,6 +157,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     updateAOMode();
 
     setRenderMode(mode, true);
+    modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
     loadModel(MODEL_FILENAMES[usedModelIndex]);
 
     if ((testCameraFlight || recording) && recordingUseGlobalIlumination) {
@@ -145,10 +170,12 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
     }
 
+
+
     if (perfMeasurementMode) {
         sgl::FileUtils::get()->ensureDirectoryExists("images");
         measurer = new AutoPerfMeasurer(getTestModesPaper(), "performance.csv", "depth_complexity.csv",
-                                        [this](const InternalState &newState) { this->setNewState(newState); });
+                                        [this](const InternalState &newState) { this->setNewState(newState); }, timeCoherence);
         measurer->setInitialFreeMemKilobytes(freeMemKilobytes);
         measurer->resolutionChanged(sceneFramebuffer);
         continuousRendering = true; // Always use continuous rendering in performance measurement mode
@@ -181,8 +208,6 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
     sceneDepthRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
     sceneFramebuffer->bindRenderbuffer(sceneDepthRBO, DEPTH_STENCIL_ATTACHMENT);
 
-
-    camera->onResolutionChanged(event);
     camera->onResolutionChanged(event);
     oitRenderer->resolutionChanged(sceneFramebuffer, sceneTexture, sceneDepthRBO);
     if (currentAOTechnique == AO_TECHNIQUE_SSAO) {
@@ -239,6 +264,164 @@ void PixelSyncApp::saveScreenshot(const std::string &filename)
     }
 }
 
+void PixelSyncApp::saveScreenshotOnKey(const std::string &filename)
+{
+    if (uiOnScreenshot) {
+        AppLogic::saveScreenshot(filename);
+    } else {
+        Window *window = AppSettings::get()->getMainWindow();
+        int width = window->getWidth();
+        int height = window->getHeight();
+
+        BitmapPtr bitmap(new Bitmap(width, height, 32));
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, bitmap->getPixels());
+        bitmap->savePNG(filename.c_str(), true);
+    }
+}
+
+const uint32_t CAMERA_PATH_FORMAT_VERSION = 1u;
+
+void PixelSyncApp::saveCameraPosition()
+{
+    auto now = std::chrono::system_clock::now();
+    std::time_t end_time = std::chrono::system_clock::to_time_t(now);
+
+    std::string modelName = modelFilenamePure;
+    modelName.erase(std::remove(modelName.begin(), modelName.end(), ' '), modelName.end());
+
+    std::string filename = std::string() + modelName + "_" + std::to_string(end_time);
+
+    saveCameraPositionToFile(filename);
+}
+
+
+void PixelSyncApp::saveCameraPositionToFile(const std::string& filename)
+{
+    std::string fileBinPath = filename + ".binpath";
+    std::string fileCamera = filename + ".camera";
+
+    std::ofstream file(fileBinPath.c_str(), std::ofstream::binary);
+    std::ofstream fileC(fileCamera.c_str());
+
+    sgl::BinaryWriteStream stream;
+    stream.write((uint32_t)CAMERA_PATH_FORMAT_VERSION);
+    std::vector<CameraSetting> pointCamera;
+    std::vector<ControlPoint> pointPath;
+
+    auto cameraPos = camera->getPosition();
+    float pitch = camera->getPitch();
+    float yaw = camera->getYaw();
+
+
+    glm::quat orientation = camera->getOrientation();
+
+
+    pointCamera.emplace_back(CameraSetting(0, cameraPos.x, cameraPos.y, cameraPos.z, yaw, pitch));
+    pointPath.emplace_back(ControlPoint(0, cameraPos.x, cameraPos.y, cameraPos.z, yaw, pitch));
+
+
+    Logfile::get()->writeInfo(std::string() + "Saved camera position to file \"" + filename + "\".");
+
+    stream.writeArray(pointPath);
+    file.write((const char*)stream.getBuffer(), stream.getSize());
+    file.close();
+
+//    sgl::BinaryWriteStream streamC;
+//    streamC.writeArray(pointCamera);
+
+    fileC << cameraPos.x << " " << cameraPos.y << " " << cameraPos.z << " " << yaw << " " << pitch;
+    fileC.close();
+}
+
+
+void PixelSyncApp::loadCameraPositionFromFile(const std::string& filename)
+{
+    std::ifstream file(filename.c_str());
+    if (!file.is_open()) {
+        sgl::Logfile::get()->writeError(std::string() + "Error in CameraPath::fromBinaryFile: File \""
+                                        + filename + "\" not found.");
+        return;
+    }
+
+//    file.seekg(0, file.end);
+//    size_t size = file.tellg();
+//    file.seekg(0);
+//    char *buffer = new char[size];
+//    file.read(buffer, size);
+//    file.close();
+
+//    sgl::BinaryReadStream stream(buffer, size);
+//    uint32_t version;
+//    stream.read(version);
+//    if (version != CAMERA_PATH_FORMAT_VERSION) {
+//        sgl::Logfile::get()->writeError(std::string() + "Error in CameraPath::fromBinaryFile: "
+//                                        + "Invalid version in file \"" + filename + "\".");
+//
+//        return;
+//    }
+
+//    std::vector<CameraSetting> point;
+//    stream.readArray(point);
+
+//    CameraSetting p0 = point[0];
+
+//    glm::vec3 eulerAngles = glm::eulerAngles(p0.orientation);
+
+    float posX, posY, posZ, yaw, pitch;
+
+    file >> posX;
+    file >> posY;
+    file >> posZ;
+    file >> yaw;
+    file >> pitch;
+
+    float fovy = camera->getFOVy();
+    float aspect =  camera->getAspectRatio();
+    auto viewport = camera->getViewport();
+
+//    float yaw = yaw;
+//    float pitch = pitch;
+//
+//    auto cam = camera.get();
+
+//    rotation = glm::mat4(1.0f);
+//    scaling = glm::mat4(1.0f);
+//    boundingBox = transparentObject.boundingBox;
+//    boundingBox = boundingBox.transformed(rotation * scaling);
+
+    camera = boost::shared_ptr<Camera>(new Camera());
+    camera->setViewport(viewport);
+    camera->setFOVy(fovy);
+    camera->setNearClipDistance(0.01f);
+    camera->setFarClipDistance(100.0f);
+//    camera->setOrientation(p0.orientation);
+    camera->setYaw(yaw);
+    camera->setPitch(pitch);
+
+    //camera->setPosition(glm::vec3(0.5f, 0.5f, 20.0f));
+    camera->setPosition(glm::vec3(posX, posY, posZ));
+//
+    resolutionChanged(EventPtr());
+
+
+
+//    camera->setYaw(-eulerAngles.y);
+//    camera->setPitch(-eulerAngles.x);
+
+//    camera->setNearClipDistance(0.01f);
+//    camera->setFarClipDistance(100.0f);
+//    camera->setOrientation(-p0.orientation);
+//    fovy = atanf(1.0f / 2.0f) * 2.0f; // 90.0f / 180.0f * sgl::PI;//
+//    camera->setFOVy(fovy);
+//    camera->setPosition(p0.position);
+    //camera->setPosition(glm::vec3(0.5f, 0.5f, 20.0f));
+
+//    camera->overwriteViewMatrix(glm::toMat4(point[0].orientation) * sgl::matrixTranslation(-point[0].position));
+
+//    update(0.0f);
+}
+
+
 
 
 void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
@@ -250,22 +433,70 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+    if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransRings.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTFRings.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Rings_All.xml");
+    }
+
+    else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/streamlines_9213.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransAneurysm.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTF_Aneurysm.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Aneurysm_All.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTF_Exp2.xml");
+
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransTurb.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTFTurb.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence_All.xml");
+
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output2.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransCR.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceCR.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/CR_All.xml");
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
+    }
+    else
+    {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
     }
-    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence.xml");
+
+    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+        sgl::ShaderManager->addPreprocessorDefine("CONVECTION_ROLLS", "");
+    } else {
+        sgl::ShaderManager->removePreprocessorDefine("CONVECTION_ROLLS");
     }
 
     modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
+            || boost::starts_with(modelFilenamePure, "Data/Rings")
+            || boost::starts_with(modelFilenamePure, "Data/Turbulence")
             || boost::starts_with(modelFilenamePure, "Data/WCB")
             || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls");
     modelContainsHair = boost::starts_with(modelFilenamePure, "Data/Hair");
     if (modelContainsTrajectories) {
         if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             trajectoryType = TRAJECTORY_TYPE_ANEURISM;
-        } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+        } else if (boost::starts_with(modelFilenamePure, "Data/WCB"))
+        {
             trajectoryType = TRAJECTORY_TYPE_WCB;
+        } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+            trajectoryType = TRAJECTORY_TYPE_RINGS;
+        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+            trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
         } else {
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS;
         }
@@ -336,6 +567,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             }
         }
     } else {
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry);
+        boundingBox = transparentObject.boundingBox;
         std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         float maxVorticity = 0.0f;
@@ -346,6 +579,22 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         transparentObject = MeshRenderer();
+    }
+
+    if (recording || testCameraFlight)
+    {
+        if (boost::starts_with(modelFilenamePure, "Data/Rings"))
+        {
+            lineRadius = 0.00335;
+        }
+        else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
+        {
+            lineRadius = 0.001;
+        }
+        else
+        {
+            lineRadius = 0.001;
+        }
     }
 
     rotation = glm::mat4(1.0f);
@@ -390,6 +639,11 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
+            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+                //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
+                camera->setPosition(glm::vec3(0.0290112, 0.579268, 1.06786));
+                camera->setYaw(-1.56575f);
+                camera->setPitch(-0.643149f);
             } else {
                 camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
             }
@@ -516,7 +770,24 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
     }
+
     if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+
+        modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
+
+        if (boost::starts_with(modelFilenamePure, "Data/Rings"))
+        {
+            lineRadius = 0.0025;
+        }
+        else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
+        {
+            lineRadius = 0.001;
+        }
+        else
+        {
+            lineRadius = 0.001;
+        }
+
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         voxelRaytracer->setLineRadius(lineRadius);
         voxelRaytracer->setClearColor(clearColor);
@@ -687,12 +958,13 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     frameNum = 0;
 
 
-    // For Depth Peeling: Use less time steps
-    if (mode == RENDER_MODE_OIT_DEPTH_PEELING
-            && boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
-        FRAME_TIME = 10.0f;
-    } else {
-        FRAME_TIME = 0.1f;
+    FRAME_TIME = 0.5f;
+
+    if (perfMeasurementMode && !timeCoherence && mode == RENDER_MODE_OIT_DEPTH_PEELING) {
+        if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")
+            || boost::starts_with(modelFilenamePure, "Data/WCB")) {
+            FRAME_TIME = 17.0f;
+        }
     }
 }
 
@@ -805,11 +1077,15 @@ void PixelSyncApp::render()
         Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
     }
 
-    if (perfMeasurementMode && frameNum == 0) {
+    if (perfMeasurementMode) {// && frameNum == 0) {
         if (frameNum == 0) {
-            // Make screenshot of first frame
             measurer->makeScreenshot();
         }
+
+        if (timeCoherence) {
+            measurer->makeScreenshot(frameNum);
+        }
+
         frameNum++;
     }
 
@@ -1076,6 +1352,15 @@ void PixelSyncApp::renderSceneSettingsGUI()
             reRender = true;
         }
 
+//        if (boost::starts_with(modelFilenamePure, "Data/Rings"))
+//        {
+//            lineRadius = 0.0025;
+//        }
+//        if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
+//        {
+//            lineRadius = 0.0015;
+//        }
+
         if ((usesGeometryShader || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
             && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
@@ -1096,7 +1381,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
                 && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeWCB,
                                 IMPORTANCE_CRITERION_WCB_DISPLAYNAMES,
                                 IM_ARRAYSIZE(IMPORTANCE_CRITERION_WCB_DISPLAYNAMES)))
-                || (trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS
+                || ((trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS || trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW || trajectoryType == TRAJECTORY_TYPE_RINGS)
                 && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeConvectionRolls,
                                 IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES,
                                 IM_ARRAYSIZE(IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES))))) {
@@ -1161,6 +1446,31 @@ void PixelSyncApp::renderSceneSettingsGUI()
         loadModel(MODEL_FILENAMES[usedModelIndex], false);
         reRender = true;
     }
+
+//    ImVec2 cursorPosEnd = ImGui::GetCursorPos(); ImGui::SameLine();
+
+    ImGui::Separator();
+
+    std::string testText = "Test";
+    ImGui::InputText("##savecameralabel", &saveFilename);
+    if (ImGui::Button("Save camera")) {
+        saveCameraPositionToFile(saveDirectory + saveFilename);
+    }
+    ImGui::SameLine();
+
+    if (ImGui::Button("Load camera")) {
+        loadCameraPositionFromFile(saveDirectory + saveFilename + ".camera");
+        reRender = true;
+    }
+
+    ImGui::InputText("##savescreenshotlabel", &saveFilenameScreenshots);
+    if (ImGui::Button("Save screenshot")) {
+        saveScreenshotOnKey(saveDirectoryScreenshots + saveFilenameScreenshots + ".png");
+    }
+
+    ImGui::Separator();
+
+//    ImGui::SetCursorPos(cursorPosEnd);
 }
 
 sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
@@ -1288,6 +1598,8 @@ void PixelSyncApp::processSDLEvent(const SDL_Event &event)
 void PixelSyncApp::update(float dt)
 {
     AppLogic::update(dt);
+
+//    std::cout << dt << std::endl << std::flush;
     //dt = 1/60.0f;
 
     //std::cout << "dt: " << dt << std::endl;
@@ -1298,12 +1610,13 @@ void PixelSyncApp::update(float dt)
     fpsArray[fpsArrayOffset] = 1.0f/dt;
 
     recordingTimeLast = recordingTime;
+
     if (perfMeasurementMode && !measurer->update(recordingTime)) {
         // All modes were tested -> quit
         quit();
     }
 
-    if (recording || testCameraFlight) {
+    if (recording || testCameraFlight || perfMeasurementMode) {
         cameraPath.update(recordingTime);
         camera->overwriteViewMatrix(cameraPath.getViewMatrix());
 
@@ -1327,19 +1640,33 @@ void PixelSyncApp::update(float dt)
                 recordingTime = 0.0f;
             }
         } else {
-            recordingTime += FRAME_TIME;
+            if (perfMeasurementMode && timeCoherence) {
+                recordingTime += 0.5;
+            } else{
+                recordingTime += FRAME_TIME;
+            }
+
         }
     }
     //recordingTime = 0.0f;
 
-    if (testOutputPos && Keyboard->keyPressed(SDLK_c)) {
+    if (Keyboard->keyPressed(SDLK_c)) {
         // ControlPoint(0.0f, 0.3f, 0.325f, 1.005f, 0.0f, 0.0f),
         std::cout << "ControlPoint(" << outputTime << ", " << camera->getPosition().x << ", " << camera->getPosition().y
                 << ", " << camera->getPosition().z << ", " << camera->getYaw() << ", " << camera->getPitch()
                 << ")," << std::endl;
+
+        saveCameraPosition();
+
         outputTime += 1.0f;
     }
 
+    if (Keyboard->keyPressed(SDLK_l)) {
+
+        loadCameraPositionFromFile(saveDirectory + saveFilename + ".camera");
+
+        reRender = true;
+    }
 
 
     transferFunctionWindow.update(dt);
@@ -1372,6 +1699,22 @@ void PixelSyncApp::update(float dt)
     if (Keyboard->isKeyDown(SDLK_z)) {
         glm::quat rot = glm::quat(glm::vec3(0.0f, 0.0f, dt*ROT_SPEED));
         camera->rotate(rot);
+        reRender = true;
+    }
+
+    if (Keyboard->isKeyDown(SDLK_p))
+    {
+//        auto now = std::chrono::system_clock::now();
+//        std::time_t end_time = std::chrono::system_clock::to_time_t(now);
+
+        saveScreenshotOnKey(saveDirectoryScreenshots + saveFilenameScreenshots + "_" + std::to_string(numScreenshots++) + "_mode" + std::to_string(mode) + ".png");
+    }
+
+    if (Keyboard->isKeyDown(SDLK_u))
+    {
+        showSettingsWindow = !showSettingsWindow;
+        transferFunctionWindow.setShow(showSettingsWindow);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
         reRender = true;
     }
 

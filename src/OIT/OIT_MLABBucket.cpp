@@ -86,7 +86,7 @@ void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     fragmentNodes = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentNodes = Renderer->createGeometryBuffer(bufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
-    size_t minDepthBufferSizeBytes = sizeof(float) * width * height;
+    size_t minDepthBufferSizeBytes = sizeof(float) * 2 * width * height;
     minDepthBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     minDepthBuffer = Renderer->createGeometryBuffer(minDepthBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 

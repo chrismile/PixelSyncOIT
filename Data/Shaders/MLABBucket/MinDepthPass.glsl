@@ -27,9 +27,15 @@ float logDepthWarp(float z)
     //return (z - exp(logmin)) / (exp(logmax) - exp(logmin));
 }
 
+struct MinDepthNode
+{
+    float minDepth;
+    float minOpaqueDepth;
+};
+
 layout (std430, binding = 1) coherent buffer MinDepthBuffer
 {
-    float minDepth[];
+    MinDepthNode depthBuffer[];
 };
 
 #include "TiledAddress.glsl"
@@ -43,7 +49,20 @@ void gatherFragment(vec4 color)
     uint pixelIndex = addrGen(uvec2(fragPos2D));
 
     float depth = logDepthWarp(-screenSpacePosition.z);
-    if (color.a > OPACITY_THRESHOLD && depth < minDepth[pixelIndex]) {
-        minDepth[pixelIndex] = depth;
+
+    MinDepthNode depthInfo = depthBuffer[pixelIndex];
+
+    MinDepthNode newDepthInfo;
+    newDepthInfo.minDepth = depthInfo.minDepth;
+    newDepthInfo.minOpaqueDepth = depthInfo.minOpaqueDepth;
+
+    if (color.a > OPACITY_THRESHOLD && depth < depthInfo.minDepth) {
+        newDepthInfo.minDepth = depth;
+        depthBuffer[pixelIndex] = newDepthInfo;
+    }
+
+    if (color.a >= 0.99 && depth < depthInfo.minOpaqueDepth) {
+        newDepthInfo.minOpaqueDepth = depth;
+        depthBuffer[pixelIndex] = newDepthInfo;
     }
 }

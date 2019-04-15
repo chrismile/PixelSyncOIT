@@ -32,7 +32,8 @@ VideoWriter::VideoWriter(const char *filename, int framerate) : framebuf(NULL) {
 void VideoWriter::openFile(const char *filename, int framerate) {
     std::string command = std::string() + "ffmpeg -y -f rawvideo -s "
             + sgl::toString(frameW) + "x" + sgl::toString(frameH) + " -pix_fmt rgb24 -r " + sgl::toString(framerate)
-            + " -i - -vf vflip -an -b:v 100M \"" + filename + "\"";
+//            + " -i - -vf vflip -an -b:v 100M \"" + filename + "\"";
+            + " -i - -vf vflip -an -vcodec libx264 -crf 25 \"" + filename + "\"";
     std::cout << command << std::endl;
     avfile = popen(command.c_str(), "w");
     if (avfile == NULL) {
