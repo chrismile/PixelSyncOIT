@@ -108,8 +108,8 @@ private:
 
     // Current rendering/shading/lighting model
     ReflectionModelType reflectionModelType = PSEUDO_PHONG_LIGHTING;
-    float aoFactor = 0.5f;
-    float shadowFactor = 0.5f;
+    float aoFactor = 1.0f;
+    float shadowFactor = 1.0f;
 
     // Shadow rendering
     boost::shared_ptr<ShadowTechnique> shadowTechnique;
