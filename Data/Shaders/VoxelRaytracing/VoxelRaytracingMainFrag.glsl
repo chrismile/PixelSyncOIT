@@ -15,6 +15,7 @@ void main()
 #version 430
 
 layout(pixel_center_integer) in vec4 gl_FragCoord;
+out vec4 fragColorOut;
 
 // Size of the rendering viewport (/window)
 uniform ivec2 viewportSize;
@@ -75,5 +76,5 @@ void main()
         fragColor = vec4(fragColor.rgb / fragColor.a, fragColor.a);
     }
 
-    gl_FragColor = fragColor;
+    fragColorOut = fragColor;
 }
