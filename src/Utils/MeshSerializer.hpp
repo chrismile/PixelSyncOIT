@@ -119,17 +119,33 @@ struct ImportanceCriterionAttribute {
     float maxAttribute;
 };
 
+
+// For programmable vertex fetching/pulling
+struct SSBOEntry {
+    SSBOEntry(int bindingPoint, const std::string &attributeName, sgl::GeometryBufferPtr &attributeBuffer)
+        : bindingPoint(bindingPoint), attributeName(attributeName), attributeBuffer(attributeBuffer) {}
+    int bindingPoint;
+    std::string attributeName;
+    sgl::GeometryBufferPtr attributeBuffer;
+};
+
 class MeshRenderer
 {
 public:
-    void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass = false);
+    MeshRenderer() : useProgrammableFetch(false) {}
+    MeshRenderer(bool useProgrammableFetch) : useProgrammableFetch(useProgrammableFetch) {}
+
+    // attributeIndex: For programmable vertex fetching/pulling. We need to bind the correct line attribute SSBO!
+    void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass, int attributeIndex);
     void setNewShader(sgl::ShaderProgramPtr newShader);
     bool isLoaded() { return shaderAttributes.size() > 0; }
     bool hasAttributeWithName(const std::string &name) {
         return shaderAttributeNames.find(name) != shaderAttributeNames.end();
     }
 
+    bool useProgrammableFetch;
     std::vector<sgl::ShaderAttributesPtr> shaderAttributes;
+    std::vector<SSBOEntry> ssboEntries; // For programmable vertex fetching/pulling
     std::set<std::string> shaderAttributeNames;
     std::vector<ObjMaterial> materials;
     sgl::AABB3 boundingBox;
@@ -143,6 +159,7 @@ public:
  * @param shader: The shader to use for the mesh.
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
-MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData = false);
+MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData = false,
+        bool useProgrammableFetch = false);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */

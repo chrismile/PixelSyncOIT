@@ -511,6 +511,14 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     } else {
         usesGeometryShader = false;
     }
+    if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Fetch)")) {
+        modelFilenameOptimized += "_lines";
+        useProgrammableFetch = true;
+        sgl::ShaderManager->addPreprocessorDefine("USE_PROGRAMMABLE_FETCH", "");
+    } else {
+        useProgrammableFetch = false;
+        sgl::ShaderManager->removePreprocessorDefine("USE_PROGRAMMABLE_FETCH");
+    }
 
     std::string modelFilenameObj = modelFilenamePure + ".obj";
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
@@ -527,12 +535,17 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             convertHairDataToBinaryTriangleMesh(modelFilenameObj, modelFilenameOptimized);
         }
     }
+
     if (boost::starts_with(modelFilenamePure, "Data/Models")) {
         gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
     } else if (modelContainsTrajectories) {
         if (boost::ends_with(modelFilenameOptimized, "_lines")) {
-            gatherShaderIDs = {"PseudoPhongVorticity.Vertex", "PseudoPhongVorticity.Geometry",
-                               "PseudoPhongVorticity.Fragment"};
+            if (!useProgrammableFetch) {
+                gatherShaderIDs = {"PseudoPhongVorticity.Vertex", "PseudoPhongVorticity.Geometry",
+                                   "PseudoPhongVorticity.Fragment"};
+            } else {
+                gatherShaderIDs = {"PseudoPhongVorticity.FetchVertex", "PseudoPhongVorticity.Fragment"};
+            }
         } else {
             gatherShaderIDs = {"PseudoPhongVorticity.TriangleVertex", "PseudoPhongVorticity.Fragment"};
         }
@@ -543,7 +556,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry);
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry, useProgrammableFetch);
         if (shaderMode == SHADER_MODE_VORTICITY) {
             recomputeHistogramForMesh();
         }
@@ -567,7 +580,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             }
         }
     } else {
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry);
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry, useProgrammableFetch);
         boundingBox = transparentObject.boundingBox;
         std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -1361,7 +1374,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 //            lineRadius = 0.0015;
 //        }
 
-        if ((usesGeometryShader || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
+        if ((usesGeometryShader || useProgrammableFetch || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
             && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
                 static_cast<OIT_VoxelRaytracing *>(oitRenderer.get())->setLineRadius(lineRadius);
@@ -1585,7 +1598,7 @@ void PixelSyncApp::renderScene()
     Renderer->setModelMatrix(rotation * scaling);
 
     bool isGBufferPass = currentAOTechnique == AO_TECHNIQUE_SSAO && ssaoHelper->isPreRenderPass();
-    transparentObject.render(transparencyShader, isGBufferPass);
+    transparentObject.render(transparencyShader, isGBufferPass, importanceCriterionIndex);
 }
 
 

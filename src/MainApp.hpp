@@ -173,6 +173,7 @@ private:
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     bool usesGeometryShader = false;
+    bool useProgrammableFetch = false;
     void changeImportanceCriterionType();
     void recomputeHistogramForMesh();
 

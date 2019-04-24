@@ -13,8 +13,6 @@ out vec3 fragmentTangent;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
-out float lineCurvature;
-out float lineLength;
 
 void main()
 {
@@ -25,6 +23,71 @@ void main()
     fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
     screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
     fragmentAttribute = VERTEX_ATTRIBUTE;
+    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+}
+
+
+-- FetchVertex
+
+#version 430 core
+
+#include "VertexAttributeNames.glsl"
+
+//out vec3 fragmentNormal;
+out float fragmentNormalFloat;
+out vec3 normal0;
+out vec3 normal1;
+
+out vec3 fragmentTangent;
+out vec3 fragmentPositonWorld;
+out vec3 screenSpacePosition;
+out float fragmentAttribute;
+
+uniform float radius;
+uniform vec3 cameraPosition;
+
+struct LinePoint
+{
+    vec3 vertexPosition;
+    vec3 vertexTangent;
+    float vertexAttribute;
+};
+
+layout (std430, binding = 2) buffer VertexPositions
+{
+    vec4 vertexPositions[];
+};
+layout (std430, binding = 3) buffer VertexTangents
+{
+    vec4 vertexTangents[];
+};
+layout (std430, binding = 4) buffer VertexAttributes
+{
+    float vertexAttributes[];
+};
+
+void main()
+{
+    uint pointIndex = gl_VertexID/2;
+    vec3 linePoint = vertexPositions[pointIndex].xyz;
+
+    vec3 viewDirection = normalize(cameraPosition - linePoint);
+    vec3 offsetDirection = cross(viewDirection, vertexTangents[pointIndex].xyz);
+    vec3 vertexPosition;
+    if (gl_VertexID % 2 == 0) {
+        vertexPosition = linePoint - radius * offsetDirection;
+        fragmentNormalFloat = -1.0;
+    } else {
+        vertexPosition = linePoint + radius * offsetDirection;
+        fragmentNormalFloat = 1.0;
+    }
+    normal0 = viewDirection;
+    normal1 = offsetDirection;
+    //fragmentNormal = viewDirection; // TODO
+
+    fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentAttribute = vertexAttributes[pointIndex];
     gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
 
@@ -173,12 +236,16 @@ in vec3 screenSpacePosition;
 #include OIT_GATHER_HEADER
 #endif
 
+#ifdef USE_PROGRAMMABLE_FETCH
+in float fragmentNormalFloat;
+in vec3 normal0;
+in vec3 normal1;
+#else
 in vec3 fragmentNormal;
+#endif
 in vec3 fragmentTangent;
 in vec3 fragmentPositonWorld;
 in float fragmentAttribute;
-in float lineCurvature;
-in float lineLength;
 
 #ifdef DIRECT_BLIT_GATHER
 out vec4 fragColor;
@@ -187,6 +254,8 @@ out vec4 fragColor;
 
 #include "AmbientOcclusion.glsl"
 #include "Shadows.glsl"
+
+#define M_PI 3.14159265358979323846
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 uniform vec3 cameraPosition; // world space
@@ -278,6 +347,16 @@ void main()
 #endif
 
     vec4 colorAttribute = transferFunction(fragmentAttribute);
+    #ifdef USE_PROGRAMMABLE_FETCH
+    vec3 fragmentNormal;
+    float interpolationFactor = fragmentNormalFloat;
+    if (fragmentNormalFloat < 0.0) {
+        interpolationFactor = -interpolationFactor;
+    } else {
+    }
+    float angle = interpolationFactor * M_PI / 2.0;
+    fragmentNormal = cos(angle) * normal0 + sin(angle) * normal1;
+    #endif
     vec3 normal = normalize(fragmentNormal);
 
     #if REFLECTION_MODEL == 0 // PSEUDO_PHONG_LIGHTING

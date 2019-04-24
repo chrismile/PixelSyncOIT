@@ -174,8 +174,17 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
 
 
 
-void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass)
+void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass, int attributeIndex)
 {
+    if (useProgrammableFetch) {
+        for (SSBOEntry &ssboEntry : ssboEntries) {
+            if (ssboEntry.bindingPoint >= 0 && (!boost::starts_with(ssboEntry.attributeName, "vertexAttribute")
+                    || attributeIndex == sgl::fromString<int>(ssboEntry.attributeName.substr(15)))) {
+                sgl::ShaderManager->bindShaderStorageBuffer(ssboEntry.bindingPoint, ssboEntry.attributeBuffer);
+            }
+        }
+    }
+
     for (size_t i = 0; i < shaderAttributes.size(); i++) {
         //ShaderProgram *shader = shaderAttributes.at(i)->getShaderProgram();
         if (!boost::starts_with(passShader->getShaderList().front()->getFileID(), "PseudoPhongVorticity")
@@ -314,9 +323,10 @@ std::vector<uint32_t> shuffleIndicesTriangles(const std::vector<uint32_t> &indic
     return shuffledIndices;
 }
 
-MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData)
+MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData,
+        bool useProgrammableFetch)
 {
-    MeshRenderer meshRenderer;
+    MeshRenderer meshRenderer(useProgrammableFetch);
     BinaryMesh mesh;
     readMesh3D(filename, mesh);
 
@@ -339,8 +349,13 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
     for (size_t i = 0; i < mesh.submeshes.size(); i++) {
         BinarySubMesh &submesh = mesh.submeshes.at(i);
         ShaderAttributesPtr renderData = ShaderManager->createShaderAttributes(shader);
-        renderData->setVertexMode(submesh.vertexMode);
-        if (submesh.indices.size() > 0) {
+        if (!useProgrammableFetch) {
+            renderData->setVertexMode(submesh.vertexMode);
+        } else {
+            renderData->setVertexMode(VERTEX_MODE_TRIANGLES);
+        }
+
+        if (submesh.indices.size() > 0 && !useProgrammableFetch) {
             if (shuffleData && (submesh.vertexMode == VERTEX_MODE_LINES || submesh.vertexMode == VERTEX_MODE_TRIANGLES)) {
                 std::vector<uint32_t> shuffledIndices;
                 if (submesh.vertexMode == VERTEX_MODE_LINES) {
@@ -361,9 +376,30 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 renderData->setIndexGeometryBuffer(indexBuffer, ATTRIB_UNSIGNED_INT);
             }
         }
+        if (submesh.indices.size() > 0 && useProgrammableFetch) {
+            // Modify indices
+            std::vector<uint32_t> fetchIndices;
+            fetchIndices.reserve(submesh.indices.size()*3);
+            // Iterate over all line segments
+            for (size_t i = 0; i < submesh.indices.size(); i += 2) {
+                uint32_t base0 = submesh.indices.at(i)*2;
+                uint32_t base1 = submesh.indices.at(i+1)*2;
+                // 0,2,3,0,3,1
+                fetchIndices.push_back(base0);
+                fetchIndices.push_back(base1);
+                fetchIndices.push_back(base1+1);
+                fetchIndices.push_back(base0);
+                fetchIndices.push_back(base1+1);
+                fetchIndices.push_back(base0+1);
+            }
+            GeometryBufferPtr indexBuffer = Renderer->createGeometryBuffer(
+                    sizeof(uint32_t)*fetchIndices.size(), (void*)&fetchIndices.front(), INDEX_BUFFER);
+            renderData->setIndexGeometryBuffer(indexBuffer, ATTRIB_UNSIGNED_INT);
+        }
 
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
             BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
+            GeometryBufferPtr attributeBuffer;
 
             // Assume only one component means importance criterion like vorticity, line width, ...
             if (meshAttribute.numComponents == 1) {
@@ -386,22 +422,60 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 importanceCriterionAttribute.maxAttribute = maxValue;
 
                 meshRenderer.importanceCriterionAttributes.push_back(importanceCriterionAttribute);
+
+                // SSBOs can't directly perform process uint16_t -> float :(
+                if (useProgrammableFetch) {
+                    attributeBuffer = Renderer->createGeometryBuffer(
+                            numAttributeValues*sizeof(float), (void*)&importanceCriterionAttribute.attributes.front(),
+                            SHADER_STORAGE_BUFFER);
+                }
             }
 
-            GeometryBufferPtr attributeBuffer = Renderer->createGeometryBuffer(
-                    meshAttribute.data.size(), (void*)&meshAttribute.data.front(), VERTEX_BUFFER);
-            if (meshAttribute.numComponents == 1) {
-                // Importance criterion attributes are bound to location 3 and onwards in vertex shader
-                /*renderData->addGeometryBuffer(attributeBuffer, importanceCriterionLocationCounter,
-                        meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true); */
-                renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
-                        meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true);
-            } else {
-                bool isNormalizedColor = (meshAttribute.name == "vertexColor");
-                renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
-                        meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, isNormalizedColor);
+            BufferType bufferType = useProgrammableFetch ? SHADER_STORAGE_BUFFER : VERTEX_BUFFER;
+
+            if (!(meshAttribute.numComponents == 1 && useProgrammableFetch)
+                && !(meshAttribute.numComponents == 3 && useProgrammableFetch)) {
+                attributeBuffer = Renderer->createGeometryBuffer(
+                        meshAttribute.data.size(), (void*)&meshAttribute.data.front(), bufferType);
             }
-            meshRenderer.shaderAttributeNames.insert(meshAttribute.name);
+            if (meshAttribute.numComponents == 3 && useProgrammableFetch) {
+                // vec3 problematic in std430 struct
+                glm::vec3 *attributeValues = (glm::vec3*)&meshAttribute.data.front();
+                size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec3);
+                std::vector<glm::vec4> vec4AttributeValues;
+                vec4AttributeValues.reserve(numAttributeValues);
+                for (size_t i = 0; i < numAttributeValues; i++) {
+                    glm::vec3 vec3Value = attributeValues[i];
+                    vec4AttributeValues.push_back(glm::vec4(vec3Value.x, vec3Value.y, vec3Value.z, 1.0f));
+                }
+                attributeBuffer = Renderer->createGeometryBuffer(
+                        vec4AttributeValues.size()*sizeof(glm::vec4), (void*)&vec4AttributeValues.front(), bufferType);
+            }
+
+            if (!useProgrammableFetch) {
+                if (meshAttribute.numComponents == 1) {
+                    // Importance criterion attributes are bound to location 3 and onwards in vertex shader
+                    /*renderData->addGeometryBuffer(attributeBuffer, importanceCriterionLocationCounter,
+                            meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true); */
+                    renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
+                            meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true);
+                } else {
+                    bool isNormalizedColor = (meshAttribute.name == "vertexColor");
+                    renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
+                            meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, isNormalizedColor);
+                }
+                meshRenderer.shaderAttributeNames.insert(meshAttribute.name);
+            } else {
+                int bindingPoint = -1;
+                if (meshAttribute.name == "vertexPosition") {
+                    bindingPoint = 2;
+                } else if (meshAttribute.name == "vertexLineTangent") {
+                    bindingPoint = 3;
+                } else if (boost::starts_with(meshAttribute.name, "vertexAttribute")) {
+                    bindingPoint = 4;
+                }
+                meshRenderer.ssboEntries.push_back(SSBOEntry(bindingPoint, meshAttribute.name, attributeBuffer));
+            }
 
             if (meshAttribute.name == "vertexPosition") {
                 std::vector<glm::vec3> vertices;
