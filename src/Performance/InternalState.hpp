@@ -82,7 +82,7 @@ const char *const MODEL_DISPLAYNAMES[] = {
         "Convection Rolls (Lines)",
         "Turbulence",
         "Turbulence (Lines)",
-        "Convection Rolls",
+        "Convection Rolls Small",
         "Hair",
         "Single Streamline (Lines)",
         "Single Streamline (Fetch)",

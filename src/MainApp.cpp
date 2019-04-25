@@ -504,12 +504,20 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
 
     std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
+    // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
     if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Lines)")) {
-        // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
         modelFilenameOptimized += "_lines";
-        usesGeometryShader = true;
+        if (useBillboardLines) {
+            sgl::ShaderManager->addPreprocessorDefine("BILLBOARD_LINES", "");
+        }
+        useGeometryShader = true;
     } else {
-        usesGeometryShader = false;
+        // Remove billboard line define before switching to using no geometry shader
+        if (useGeometryShader && useBillboardLines) {
+            sgl::ShaderManager->removePreprocessorDefine("BILLBOARD_LINES");
+        }
+        useGeometryShader = false;
+
     }
     if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Fetch)")) {
         modelFilenameOptimized += "_lines";
@@ -1374,7 +1382,18 @@ void PixelSyncApp::renderSceneSettingsGUI()
 //            lineRadius = 0.0015;
 //        }
 
-        if ((usesGeometryShader || useProgrammableFetch || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
+        if (useGeometryShader) {
+            if (ImGui::Checkbox("Billboard Lines", &useBillboardLines)) {
+                if (useBillboardLines) {
+                    sgl::ShaderManager->addPreprocessorDefine("BILLBOARD_LINES", "");
+                } else {
+                    sgl::ShaderManager->removePreprocessorDefine("BILLBOARD_LINES");
+                }
+            }
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+            reRender = true;
+        }
+        if ((useGeometryShader || useProgrammableFetch || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
             && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
                 static_cast<OIT_VoxelRaytracing *>(oitRenderer.get())->setLineRadius(lineRadius);

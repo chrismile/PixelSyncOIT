@@ -145,6 +145,7 @@ private:
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
     bool cullBackface = true;
+    bool useBillboardLines = false;
     bool transparencyMapping = true;
     bool useLinearRGB = true;
     float lineRadius = 0.001f;
@@ -172,7 +173,7 @@ private:
             = IMPORTANCE_CRITERION_CONVECTION_ROLLS_VORTICITY;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
-    bool usesGeometryShader = false;
+    bool useGeometryShader = false;
     bool useProgrammableFetch = false;
     void changeImportanceCriterionType();
     void recomputeHistogramForMesh();

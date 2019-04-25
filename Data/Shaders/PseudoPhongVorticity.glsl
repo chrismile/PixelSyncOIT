@@ -10,7 +10,7 @@ layout(location = 3) in float VERTEX_ATTRIBUTE;
 
 out vec3 fragmentNormal;
 out vec3 fragmentTangent;
-out vec3 fragmentPositonWorld;
+out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
 
@@ -20,7 +20,7 @@ void main()
     vec3 binormal = cross(vec3(0,0,1), vertexNormal);
     fragmentTangent = cross(binormal, fragmentNormal);
 
-    fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentPositionWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
     screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
     fragmentAttribute = VERTEX_ATTRIBUTE;
     gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
@@ -39,7 +39,7 @@ out vec3 normal0;
 out vec3 normal1;
 
 out vec3 fragmentTangent;
-out vec3 fragmentPositonWorld;
+out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
 
@@ -69,7 +69,7 @@ layout (std430, binding = 4) buffer VertexAttributes
 void main()
 {
     uint pointIndex = gl_VertexID/2;
-    vec3 linePoint = vertexPositions[pointIndex].xyz;
+    vec3 linePoint = (mMatrix * vertexPositions[pointIndex]).xyz;
 
     vec3 viewDirection = normalize(cameraPosition - linePoint);
     vec3 offsetDirection = cross(viewDirection, vertexTangents[pointIndex].xyz);
@@ -83,12 +83,11 @@ void main()
     }
     normal0 = viewDirection;
     normal1 = offsetDirection;
-    //fragmentNormal = viewDirection; // TODO
 
-    fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentPositionWorld = vertexPosition;
+    screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
     fragmentAttribute = vertexAttributes[pointIndex];
-    gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
+    gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
 }
 
 
@@ -125,8 +124,13 @@ void main()
 #version 430 core
 
 layout(lines) in;
-layout(triangle_strip, max_vertices = 32) out;
 
+#ifdef BILLBOARD_LINES
+layout(triangle_strip, max_vertices = 4) out;
+uniform vec3 cameraPosition;
+#else
+layout(triangle_strip, max_vertices = 32) out;
+#endif
 
 uniform float radius = 0.001f;
 
@@ -138,9 +142,15 @@ in VertexData
     float lineAttribute;
 } v_in[];
 
+#ifdef BILLBOARD_LINES
+out float fragmentNormalFloat;
+out vec3 normal0;
+out vec3 normal1;
+#else
 out vec3 fragmentNormal;
 out vec3 fragmentTangent;
-out vec3 fragmentPositonWorld;
+#endif
+out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
 
@@ -148,9 +158,58 @@ out float fragmentAttribute;
 
 void main()
 {
-    vec3 currentPoint = v_in[0].linePosition.xyz;
-    vec3 nextPoint = v_in[1].linePosition.xyz;
+    vec3 currentPoint = (mMatrix * vec4(v_in[0].linePosition, 1.0)).xyz;
+    vec3 nextPoint = (mMatrix * vec4(v_in[1].linePosition, 1.0)).xyz;
 
+#ifdef BILLBOARD_LINES
+    vec3 viewDirectionCurrent = normalize(cameraPosition - currentPoint);
+    vec3 offsetDirectionCurrent = cross(viewDirectionCurrent, v_in[0].lineTangent);
+    vec3 viewDirectionNext = normalize(cameraPosition - nextPoint);
+    vec3 offsetDirectionNext = cross(viewDirectionNext, v_in[1].lineTangent);
+    vec3 vertexPosition;
+
+    vertexPosition = nextPoint - radius * offsetDirectionNext;
+    fragmentNormalFloat = -1.0;
+    normal0 = viewDirectionNext;
+    normal1 = offsetDirectionNext;
+    fragmentPositionWorld = vertexPosition;
+    screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentAttribute = v_in[1].lineAttribute;
+    gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
+    EmitVertex();
+
+    vertexPosition = nextPoint + radius * offsetDirectionNext;
+    fragmentNormalFloat = 1.0;
+    normal0 = viewDirectionNext;
+    normal1 = offsetDirectionNext;
+    fragmentPositionWorld = vertexPosition;
+    screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentAttribute = v_in[1].lineAttribute;
+    gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
+    EmitVertex();
+
+    vertexPosition = currentPoint - radius * offsetDirectionCurrent;
+    fragmentNormalFloat = -1.0;
+    normal0 = viewDirectionCurrent;
+    normal1 = offsetDirectionCurrent;
+    fragmentPositionWorld = vertexPosition;
+    screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentAttribute = v_in[0].lineAttribute;
+    gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
+    EmitVertex();
+
+    vertexPosition = currentPoint + radius * offsetDirectionCurrent;
+    fragmentNormalFloat = 1.0;
+    normal0 = viewDirectionCurrent;
+    normal1 = offsetDirectionCurrent;
+    fragmentPositionWorld = vertexPosition;
+    screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentAttribute = v_in[0].lineAttribute;
+    gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
+    EmitVertex();
+
+    EndPrimitive();
+#else
     vec3 circlePointsCurrent[NUM_SEGMENTS];
     vec3 circlePointsNext[NUM_SEGMENTS];
     vec3 vertexNormalsCurrent[NUM_SEGMENTS];
@@ -192,14 +251,14 @@ void main()
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[i], 1.0);
         fragmentNormal = vertexNormalsCurrent[i];
         fragmentTangent = tangent;
-        fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
+        fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         fragmentAttribute = v_in[0].lineAttribute;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0);
         fragmentNormal = vertexNormalsCurrent[(i+1)%NUM_SEGMENTS];
-        fragmentPositonWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
+        fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         fragmentTangent = tangent;
         fragmentAttribute = v_in[0].lineAttribute;
@@ -207,7 +266,7 @@ void main()
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
         fragmentNormal = vertexNormalsNext[i];
-        fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
+        fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         fragmentTangent = tangent;
         fragmentAttribute = v_in[1].lineAttribute;
@@ -215,7 +274,7 @@ void main()
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0);
         fragmentNormal = vertexNormalsNext[(i+1)%NUM_SEGMENTS];
-        fragmentPositonWorld = (mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
+        fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         fragmentAttribute = v_in[1].lineAttribute;
         fragmentTangent = tangent;
@@ -223,6 +282,7 @@ void main()
 
         EndPrimitive();
     }
+#endif
 }
 
 
@@ -236,7 +296,7 @@ in vec3 screenSpacePosition;
 #include OIT_GATHER_HEADER
 #endif
 
-#ifdef USE_PROGRAMMABLE_FETCH
+#if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
 in float fragmentNormalFloat;
 in vec3 normal0;
 in vec3 normal1;
@@ -244,7 +304,7 @@ in vec3 normal1;
 in vec3 fragmentNormal;
 #endif
 in vec3 fragmentTangent;
-in vec3 fragmentPositonWorld;
+in vec3 fragmentPositionWorld;
 in float fragmentAttribute;
 
 #ifdef DIRECT_BLIT_GATHER
@@ -337,8 +397,8 @@ vec3 to_rgb(vec3 v)
 void main()
 {
 #if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
-    float occlusionFactor = getAmbientOcclusionFactor(vec4(fragmentPositonWorld, 1.0));
-    float shadowFactor = getShadowFactor(vec4(fragmentPositonWorld, 1.0));
+    float occlusionFactor = getAmbientOcclusionFactor(vec4(fragmentPositionWorld, 1.0));
+    float shadowFactor = getShadowFactor(vec4(fragmentPositionWorld, 1.0));
     occlusionFactor = mix(1.0f, occlusionFactor, aoFactorGlobal);
     shadowFactor = mix(1.0f, shadowFactor, shadowFactorGlobal);
 #else
@@ -347,17 +407,18 @@ void main()
 #endif
 
     vec4 colorAttribute = transferFunction(fragmentAttribute);
-    #ifdef USE_PROGRAMMABLE_FETCH
+    #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
     vec3 fragmentNormal;
     float interpolationFactor = fragmentNormalFloat;
-    if (fragmentNormalFloat < 0.0) {
+    vec3 normalCos = normal0;
+    vec3 normalSin = normal1;
+    if (interpolationFactor < 0.0) {
+        normalSin = -normalSin;
         interpolationFactor = -interpolationFactor;
-    } else {
     }
     float angle = interpolationFactor * M_PI / 2.0;
-    fragmentNormal = cos(angle) * normal0 + sin(angle) * normal1;
+    fragmentNormal = cos(angle) * normalCos + sin(angle) * normalSin;
     #endif
-    vec3 normal = normalize(fragmentNormal);
 
     #if REFLECTION_MODEL == 0 // PSEUDO_PHONG_LIGHTING
     const vec3 lightColor = vec3(1,1,1);
@@ -371,7 +432,7 @@ void main()
     const float s = 10;
 
     const vec3 n = normalize(fragmentNormal);
-    const vec3 v = normalize(cameraPosition - fragmentPositonWorld);
+    const vec3 v = normalize(cameraPosition - fragmentPositionWorld);
 //    const vec3 l = normalize(lightDirection);
     const vec3 l = normalize(v);
     const vec3 h = normalize(v + l);
@@ -402,6 +463,8 @@ void main()
     vec3 colorShading = colorAttribute.rgb;
     #endif
     vec4 color = vec4(colorShading, colorAttribute.a);
+
+    //color.rgb = fragmentNormal;
 
     if (!transparencyMapping) {
         color.a = colorGlobal.a;

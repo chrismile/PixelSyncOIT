@@ -46,10 +46,11 @@ void initializeCircleData(int numSegments, float radius)
 /**
  * Returns a oriented and shifted copy of a 2D circle in 3D space.
  * The number
- * @param center: The center of the circle in 3D space.
- * @param normal: The normal orthogonal to the circle plane.
- * @param lastTangent: The tangent of the last circle.
- * @return The points on the oriented circle.
+ * @param vertices The list to append the circle points to.
+ * @param normals Normal array of the tube to append normals to.
+ * @param center The center of the circle in 3D space.
+ * @param normal The normal orthogonal to the circle plane.
+ * @param lastTangent The tangent of the last circle.
  */
 void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, std::vector<glm::vec3> &normals,
         const glm::vec3 &center, const glm::vec3 &normal, glm::vec3 &lastTangent)
