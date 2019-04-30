@@ -5,6 +5,7 @@
 //#define QUANTIZATION_RESOLUTION_LOG2 3
 //#define gridResolution ivec3(256, 256, 256)
 //#define TUBE_RADIUS 0.2
+
 #define PACK_LINES
 
 uniform float lineRadius = 0.2;

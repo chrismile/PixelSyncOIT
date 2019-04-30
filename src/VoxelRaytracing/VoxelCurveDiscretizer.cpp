@@ -527,6 +527,7 @@ void VoxelCurveDiscretizer::nextStreamline(const Curve &line)
     // Convert intersections to clipped line segments
     for (VoxelDiscretizer *voxel : usedVoxels) {
         if (voxel->currentCurveIntersections.size() < 2) {
+            voxel->currentCurveIntersections.clear();
             continue;
         }
         auto it1 = voxel->currentCurveIntersections.begin();

@@ -387,7 +387,7 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
     if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
         initializeCircleData(3, 0.05);
     }
-    else if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+    else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
         initializeCircleData(3, TUBE_RADIUS);
     } else {
         initializeCircleData(3, TUBE_RADIUS);
@@ -707,7 +707,7 @@ void convertObjTrajectoryDataToBinaryLineMesh(
     if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
         initializeCircleData(3, 0.05);
     }
-    else if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+    else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
         initializeCircleData(3, TUBE_RADIUS);
     } else {
         initializeCircleData(3, TUBE_RADIUS);

@@ -140,7 +140,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Aneurysm";
+    std::string startupModelName = "Single Streamline (Lines)";//"Aneurysm";
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -165,8 +165,8 @@ private:
     bool modelContainsHair;
     std::string transferFunctionName;
     TrajectoryType trajectoryType;
-    ImportanceCriterionTypeAneurism importanceCriterionTypeAneurism
-            = IMPORTANCE_CRITERION_ANEURISM_VORTICITY;
+    ImportanceCriterionTypeAneurysm importanceCriterionTypeAneurysm
+            = IMPORTANCE_CRITERION_ANEURYSM_VORTICITY;
     ImportanceCriterionTypeWCB importanceCriterionTypeWCB
             = IMPORTANCE_CRITERION_WCB_CURVATURE;
     ImportanceCriterionTypeConvectionRolls importanceCriterionTypeConvectionRolls

@@ -131,7 +131,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     uint16_t quantizationRes = 32;
     if (isRings) {
         voxelRes = 128;
-        quantizationRes = 16;
+        //quantizationRes = 16;
     }
     if (isAneurysm)
     {
@@ -141,7 +141,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     if (isConvectionRolls)
     {
         voxelRes = 256;
-        quantizationRes = 16;
+        //quantizationRes = 16;
     }
 
     auto start = std::chrono::system_clock::now();
@@ -169,7 +169,11 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
                 + compressedData.voxelAOLODs.size() * sizeof(float)
                 + compressedData.octreeLODs.size() * sizeof(uint32_t)
                 + compressedData.attributes.size() * sizeof(float)
+#ifdef PACK_LINES
                 + compressedData.lineSegments.size() * sizeof(uint32_t) * 2;
+#else
+                + compressedData.lineSegments.size() * sizeof(LineSegment);
+#endif
 
         MBSize = byteSize / 1024. / 1024.0;
 
@@ -359,5 +363,6 @@ void OIT_VoxelRaytracing::renderToScreen()
     glDisable(GL_DEPTH_TEST);
     sgl::Renderer->render(blitRenderData);
     glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
 #endif
 }

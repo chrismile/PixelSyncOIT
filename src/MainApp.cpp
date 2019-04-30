@@ -489,7 +489,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     modelContainsHair = boost::starts_with(modelFilenamePure, "Data/Hair");
     if (modelContainsTrajectories) {
         if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-            trajectoryType = TRAJECTORY_TYPE_ANEURISM;
+            trajectoryType = TRAJECTORY_TYPE_ANEURYSM;
         } else if (boost::starts_with(modelFilenamePure, "Data/WCB"))
         {
             trajectoryType = TRAJECTORY_TYPE_WCB;
@@ -641,6 +641,15 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 camera->setPosition(glm::vec3(0.15f, 0.8f, 2.4f));
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/single_streamline")) {
                 camera->setPosition(glm::vec3(0.72f, 0.215f, 0.2f));
+                // TODO
+                //ControlPoint(1, 0.723282, 0.22395, 0.079609, -4.74008, -0.35447),
+                camera->setPosition(glm::vec3(0.723282f, 0.22395f, 0.079609f));
+                camera->setYaw(-4.74008);
+                camera->setPitch(0.079609f);
+                //ControlPoint(0, 0.604353, 0.223011, 0.144089, -5.23073, 0.0232946),
+                camera->setPosition(glm::vec3(0.604353f, 0.223011f, 0.144089f));
+                camera->setYaw(-5.23073f);
+                camera->setPitch(0.0232946f);
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
@@ -665,6 +674,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 camera->setPosition(glm::vec3(0.0290112, 0.579268, 1.06786));
                 camera->setYaw(-1.56575f);
                 camera->setPitch(-0.643149f);
+            } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+                // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
+                camera->setPosition(glm::vec3(0.154441f, 0.0162448f, 0.483843f));
             } else {
                 camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
             }
@@ -697,8 +709,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
 void PixelSyncApp::changeImportanceCriterionType()
 {
-    if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
-        importanceCriterionIndex = (int)importanceCriterionTypeAneurism;
+    if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
+        importanceCriterionIndex = (int)importanceCriterionTypeAneurysm;
     } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
         importanceCriterionIndex = (int)importanceCriterionTypeWCB;
     } else {
@@ -946,8 +958,8 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 
     // 3.2. If trajectory model: Set correct importance criterion
     if (modelContainsTrajectories && importanceCriterionIndex != newState.importanceCriterionIndex) {
-        if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
-            importanceCriterionTypeAneurism = (ImportanceCriterionTypeAneurism)newState.importanceCriterionIndex;
+        if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
+            importanceCriterionTypeAneurysm = (ImportanceCriterionTypeAneurysm)newState.importanceCriterionIndex;
         } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
             importanceCriterionTypeWCB = (ImportanceCriterionTypeWCB)newState.importanceCriterionIndex;
         } else {
@@ -1389,9 +1401,9 @@ void PixelSyncApp::renderSceneSettingsGUI()
                 } else {
                     sgl::ShaderManager->removePreprocessorDefine("BILLBOARD_LINES");
                 }
+                updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+                reRender = true;
             }
-            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
-            reRender = true;
         }
         if ((useGeometryShader || useProgrammableFetch || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
             && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
@@ -1405,10 +1417,10 @@ void PixelSyncApp::renderSceneSettingsGUI()
     if (shaderMode == SHADER_MODE_VORTICITY) {
         // Switch importance criterion
         if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
-                && ((trajectoryType == TRAJECTORY_TYPE_ANEURISM
-                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeAneurism,
-                                IMPORTANCE_CRITERION_ANEURISM_DISPLAYNAMES,
-                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_ANEURISM_DISPLAYNAMES)))
+                && ((trajectoryType == TRAJECTORY_TYPE_ANEURYSM
+                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeAneurysm,
+                                IMPORTANCE_CRITERION_ANEURYSM_DISPLAYNAMES,
+                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_ANEURYSM_DISPLAYNAMES)))
                 || (trajectoryType == TRAJECTORY_TYPE_WCB
                 && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeWCB,
                                 IMPORTANCE_CRITERION_WCB_DISPLAYNAMES,

@@ -49,8 +49,9 @@ uniform vec3 cameraPosition;
 struct LinePoint
 {
     vec3 vertexPosition;
-    vec3 vertexTangent;
     float vertexAttribute;
+    vec3 vertexTangent;
+    float padding;
 };
 
 layout (std430, binding = 2) buffer VertexPositions
@@ -72,7 +73,7 @@ void main()
     vec3 linePoint = (mMatrix * vertexPositions[pointIndex]).xyz;
 
     vec3 viewDirection = normalize(cameraPosition - linePoint);
-    vec3 offsetDirection = cross(viewDirection, vertexTangents[pointIndex].xyz);
+    vec3 offsetDirection = normalize(cross(viewDirection, normalize(vertexTangents[pointIndex].xyz)));
     vec3 vertexPosition;
     if (gl_VertexID % 2 == 0) {
         vertexPosition = linePoint - radius * offsetDirection;
@@ -410,8 +411,8 @@ void main()
     #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
     vec3 fragmentNormal;
     float interpolationFactor = fragmentNormalFloat;
-    vec3 normalCos = normal0;
-    vec3 normalSin = normal1;
+    vec3 normalCos = normalize(normal0);
+    vec3 normalSin = normalize(normal1);
     if (interpolationFactor < 0.0) {
         normalSin = -normalSin;
         interpolationFactor = -interpolationFactor;

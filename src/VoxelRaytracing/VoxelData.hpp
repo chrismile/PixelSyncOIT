@@ -37,6 +37,9 @@ struct LineSegment
     glm::vec3 v2; // Vertex position
     float a2; // Vertex attribute
     unsigned int lineID;
+#ifndef PACK_LINES // std430 needs padding for GLSL
+    glm::vec3 padding;
+#endif
 };
 
 struct LineSegmentQuantized

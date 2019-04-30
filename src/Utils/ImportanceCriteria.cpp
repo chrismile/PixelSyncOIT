@@ -240,7 +240,7 @@ void computeTrajectoryAttributes(
         std::vector<float> &vertexAttributes,
         std::vector<std::vector<float>> &importanceCriteria)
 {
-    if (trajectoryType == TRAJECTORY_TYPE_ANEURISM) {
+    if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
         // 0. Vorticity/Attribute
         importanceCriteria.push_back(vertexAttributes);
 //        // 1. Curvature
