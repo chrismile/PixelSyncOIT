@@ -72,6 +72,8 @@ cmake-build-*/
 *.voxel
 *.nc
 *.hair
+*.binpath
+*.camera
 
 Data/WCB/*.txt
 Data/CameraPaths/*
