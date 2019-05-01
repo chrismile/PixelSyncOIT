@@ -46,7 +46,7 @@ out float fragmentAttribute;
 uniform float radius;
 uniform vec3 cameraPosition;
 
-struct LinePoint
+struct LinePointData
 {
     vec3 vertexPosition;
     float vertexAttribute;
@@ -54,7 +54,7 @@ struct LinePoint
     float padding;
 };
 
-layout (std430, binding = 2) buffer VertexPositions
+/*layout (std430, binding = 2) buffer VertexPositions
 {
     vec4 vertexPositions[];
 };
@@ -65,15 +65,20 @@ layout (std430, binding = 3) buffer VertexTangents
 layout (std430, binding = 4) buffer VertexAttributes
 {
     float vertexAttributes[];
+};*/
+layout (std430, binding = 2) buffer LinePoints
+{
+    LinePoint linePoints[];
 };
 
 void main()
 {
     uint pointIndex = gl_VertexID/2;
-    vec3 linePoint = (mMatrix * vertexPositions[pointIndex]).xyz;
+    LinePointData linePointData = linePoints[pointIndex];
+    vec3 linePoint = (mMatrix * vec4(linePointData.vertexPosition, 1.0)).xyz;
 
     vec3 viewDirection = normalize(cameraPosition - linePoint);
-    vec3 offsetDirection = normalize(cross(viewDirection, normalize(vertexTangents[pointIndex].xyz)));
+    vec3 offsetDirection = normalize(cross(viewDirection, normalize(linePointData.vertexTangent)));
     vec3 vertexPosition;
     if (gl_VertexID % 2 == 0) {
         vertexPosition = linePoint - radius * offsetDirection;
@@ -87,7 +92,7 @@ void main()
 
     fragmentPositionWorld = vertexPosition;
     screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
-    fragmentAttribute = vertexAttributes[pointIndex];
+    fragmentAttribute = linePointData.vertexAttribute;
     gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
 }
 

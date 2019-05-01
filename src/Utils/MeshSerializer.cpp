@@ -323,6 +323,14 @@ std::vector<uint32_t> shuffleIndicesTriangles(const std::vector<uint32_t> &indic
     return shuffledIndices;
 }
 
+struct LinePointData
+{
+    glm::vec3 vertexPosition;
+    float vertexAttribute;
+    glm::vec3 vertexTangent;
+    float padding;
+};
+
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData,
         bool useProgrammableFetch)
 {
