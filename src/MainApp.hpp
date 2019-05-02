@@ -175,6 +175,7 @@ private:
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     bool useGeometryShader = false;
     bool useProgrammableFetch = false;
+    bool programmableFetchUseAoS = true; // Array of structs
     void changeImportanceCriterionType();
     void recomputeHistogramForMesh();
 

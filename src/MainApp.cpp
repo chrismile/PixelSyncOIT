@@ -517,12 +517,16 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             sgl::ShaderManager->removePreprocessorDefine("BILLBOARD_LINES");
         }
         useGeometryShader = false;
-
     }
     if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Fetch)")) {
         modelFilenameOptimized += "_lines";
         useProgrammableFetch = true;
         sgl::ShaderManager->addPreprocessorDefine("USE_PROGRAMMABLE_FETCH", "");
+        if (programmableFetchUseAoS) {
+            sgl::ShaderManager->addPreprocessorDefine("PROGRAMMABLE_FETCH_ARRAY_OF_STRUCTS", "");
+        } else {
+            sgl::ShaderManager->removePreprocessorDefine("PROGRAMMABLE_FETCH_ARRAY_OF_STRUCTS");
+        }
     } else {
         useProgrammableFetch = false;
         sgl::ShaderManager->removePreprocessorDefine("USE_PROGRAMMABLE_FETCH");
@@ -564,7 +568,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry, useProgrammableFetch);
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
+                useProgrammableFetch, programmableFetchUseAoS);
         if (shaderMode == SHADER_MODE_VORTICITY) {
             recomputeHistogramForMesh();
         }
@@ -588,7 +593,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             }
         }
     } else {
-        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry, useProgrammableFetch);
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
+                useProgrammableFetch, programmableFetchUseAoS);
         boundingBox = transparentObject.boundingBox;
         std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -1402,6 +1408,19 @@ void PixelSyncApp::renderSceneSettingsGUI()
                     sgl::ShaderManager->removePreprocessorDefine("BILLBOARD_LINES");
                 }
                 updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+                reRender = true;
+            }
+        }
+        if (useProgrammableFetch) {
+            ImGui::SameLine();
+            if (ImGui::Checkbox("AoS", &programmableFetchUseAoS)) {
+                if (programmableFetchUseAoS) {
+                    sgl::ShaderManager->addPreprocessorDefine("PROGRAMMABLE_FETCH_ARRAY_OF_STRUCTS", "");
+                } else {
+                    sgl::ShaderManager->removePreprocessorDefine("PROGRAMMABLE_FETCH_ARRAY_OF_STRUCTS");
+                }
+                updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+                loadModel(MODEL_FILENAMES[usedModelIndex], false);
                 reRender = true;
             }
         }
