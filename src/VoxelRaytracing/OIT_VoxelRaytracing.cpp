@@ -324,16 +324,12 @@ inline int nextPowerOfTwo(int x) {
 
 // Utility functions for dispatching compute shaders
 
-inline int iceil(int x, int y) {
-    return (x - 1) / y + 1;
-}
-
 glm::ivec2 rangePadding2D(int w, int h, glm::ivec2 localSize) {
-    return glm::ivec2(iceil(w, localSize[0])*localSize[0], iceil(h, localSize[1])*localSize[1]);
+    return glm::ivec2(sgl::iceil(w, localSize[0])*localSize[0], sgl::iceil(h, localSize[1])*localSize[1]);
 }
 
-glm::ivec2 rangePadding1D(int w, int localSize) {
-    return glm::ivec2(iceil(w, localSize)*localSize);
+float rangePadding1D(int w, int localSize) {
+    return sgl::iceil(w, localSize)*localSize;
 }
 
 glm::ivec2 getNumWorkGroups(const glm::ivec2 &globalWorkSize, const glm::ivec2 &localWorkSize) {

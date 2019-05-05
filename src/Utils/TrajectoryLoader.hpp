@@ -56,6 +56,11 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
         const std::string &objFilename,
         const std::string &binaryFilename);
 
+void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
+        TrajectoryType trajectoryType,
+        const std::string &objFilename,
+        const std::string &binaryFilename);
+
 void convertObjTrajectoryDataToBinaryLineMesh(
         TrajectoryType trajectoryType,
         const std::string &objFilename,
