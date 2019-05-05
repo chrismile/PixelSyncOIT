@@ -119,7 +119,6 @@ struct ImportanceCriterionAttribute {
     float maxAttribute;
 };
 
-
 // For programmable vertex fetching/pulling
 struct SSBOEntry {
     SSBOEntry(int bindingPoint, const std::string &attributeName, sgl::GeometryBufferPtr &attributeBuffer)
@@ -160,6 +159,6 @@ public:
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData = false,
-        bool useProgrammableFetch = false);
+        bool useProgrammableFetch = false, bool programmableFetchUseAoS = true);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */

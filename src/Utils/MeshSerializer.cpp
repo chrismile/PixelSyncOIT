@@ -323,6 +323,7 @@ std::vector<uint32_t> shuffleIndicesTriangles(const std::vector<uint32_t> &indic
     return shuffledIndices;
 }
 
+
 struct LinePointData
 {
     glm::vec3 vertexPosition;
@@ -332,7 +333,7 @@ struct LinePointData
 };
 
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData,
-        bool useProgrammableFetch)
+        bool useProgrammableFetch, bool programmableFetchUseAoS)
 {
     MeshRenderer meshRenderer(useProgrammableFetch);
     BinaryMesh mesh;
@@ -352,6 +353,7 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 
     // Importance criterion attributes are bound to location 3 and onwards in vertex shader
     //int importanceCriterionLocationCounter = 3;
+
 
     // Iterate over all submeshes and create rendering data
     for (size_t i = 0; i < mesh.submeshes.size(); i++) {
@@ -405,6 +407,11 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
             renderData->setIndexGeometryBuffer(indexBuffer, ATTRIB_UNSIGNED_INT);
         }
 
+        // For programmableFetchUseAoS
+        std::vector<glm::vec3> vertexPositionData;
+        std::vector<std::vector<float>> vertexAttributeData;
+        std::vector<glm::vec3> vertexTangentData;
+
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
             BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
             GeometryBufferPtr attributeBuffer;
@@ -432,21 +439,31 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 meshRenderer.importanceCriterionAttributes.push_back(importanceCriterionAttribute);
 
                 // SSBOs can't directly perform process uint16_t -> float :(
-                if (useProgrammableFetch) {
+                if (useProgrammableFetch && !programmableFetchUseAoS) {
                     attributeBuffer = Renderer->createGeometryBuffer(
                             numAttributeValues*sizeof(float), (void*)&importanceCriterionAttribute.attributes.front(),
                             SHADER_STORAGE_BUFFER);
+                } else if (useProgrammableFetch) {
+                    int attributeIndex = sgl::fromString<int>(meshAttribute.name.substr(15));
+                    if (attributeIndex >= vertexAttributeData.size()) {
+                        vertexAttributeData.resize(attributeIndex+1);
+                    }
+                    vertexAttributeData.at(attributeIndex).resize(numAttributeValues);
+                    for (size_t k = 0; k < numAttributeValues; k++) {
+                        vertexAttributeData.at(attributeIndex).at(k) = importanceCriterionAttribute.attributes[k];
+                    }
                 }
             }
 
             BufferType bufferType = useProgrammableFetch ? SHADER_STORAGE_BUFFER : VERTEX_BUFFER;
 
-            if (!(meshAttribute.numComponents == 1 && useProgrammableFetch)
+            if (!(useProgrammableFetch && programmableFetchUseAoS)
+                && !(meshAttribute.numComponents == 1 && useProgrammableFetch)
                 && !(meshAttribute.numComponents == 3 && useProgrammableFetch)) {
                 attributeBuffer = Renderer->createGeometryBuffer(
                         meshAttribute.data.size(), (void*)&meshAttribute.data.front(), bufferType);
             }
-            if (meshAttribute.numComponents == 3 && useProgrammableFetch) {
+            if (meshAttribute.numComponents == 3 && (useProgrammableFetch && !programmableFetchUseAoS)) {
                 // vec3 problematic in std430 struct
                 glm::vec3 *attributeValues = (glm::vec3*)&meshAttribute.data.front();
                 size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec3);
@@ -474,15 +491,33 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 }
                 meshRenderer.shaderAttributeNames.insert(meshAttribute.name);
             } else {
-                int bindingPoint = -1;
-                if (meshAttribute.name == "vertexPosition") {
-                    bindingPoint = 2;
-                } else if (meshAttribute.name == "vertexLineTangent") {
-                    bindingPoint = 3;
-                } else if (boost::starts_with(meshAttribute.name, "vertexAttribute")) {
-                    bindingPoint = 4;
+                if (programmableFetchUseAoS) {
+                    if (meshAttribute.name == "vertexPosition") {
+                        glm::vec3 *attributeValues = (glm::vec3*)&meshAttribute.data.front();
+                        size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec3);
+                        vertexPositionData.reserve(numAttributeValues);
+                        for (size_t i = 0; i < numAttributeValues; i++) {
+                            vertexPositionData.push_back(attributeValues[i]);
+                        }
+                    } else if (meshAttribute.name == "vertexLineTangent") {
+                        glm::vec3 *attributeValues = (glm::vec3*)&meshAttribute.data.front();
+                        size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec3);
+                        vertexTangentData.reserve(numAttributeValues);
+                        for (size_t i = 0; i < numAttributeValues; i++) {
+                            vertexTangentData.push_back(attributeValues[i]);
+                        }
+                    }
+                } else {
+                    int bindingPoint = -1;
+                    if (meshAttribute.name == "vertexPosition") {
+                        bindingPoint = 2;
+                    } else if (meshAttribute.name == "vertexLineTangent") {
+                        bindingPoint = 3;
+                    } else if (boost::starts_with(meshAttribute.name, "vertexAttribute")) {
+                        bindingPoint = 4;
+                    }
+                    meshRenderer.ssboEntries.push_back(SSBOEntry(bindingPoint, meshAttribute.name, attributeBuffer));
                 }
-                meshRenderer.ssboEntries.push_back(SSBOEntry(bindingPoint, meshAttribute.name, attributeBuffer));
             }
 
             if (meshAttribute.name == "vertexPosition") {
@@ -490,6 +525,26 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 vertices.resize(meshAttribute.data.size() / sizeof(glm::vec3));
                 memcpy(&vertices.front(), &meshAttribute.data.front(), meshAttribute.data.size());
                 totalBoundingBox.combine(computeAABB(vertices));
+            }
+        }
+
+        if (useProgrammableFetch && programmableFetchUseAoS) {
+            for (size_t attributeIndex = 0; attributeIndex < vertexAttributeData.size(); attributeIndex++) {
+                std::vector<LinePointData> linePointData;
+                linePointData.resize(vertexPositionData.size());
+
+                for (size_t i = 0; i < vertexPositionData.size(); i++) {
+                    linePointData.at(i).vertexPosition = vertexPositionData.at(i);
+                    linePointData.at(i).vertexAttribute = vertexAttributeData.at(attributeIndex).at(i);
+                    linePointData.at(i).vertexTangent = vertexTangentData.at(i);
+                    linePointData.at(i).padding = 0.0f;
+                }
+
+                GeometryBufferPtr attributeBuffer = Renderer->createGeometryBuffer(
+                        linePointData.size()*sizeof(LinePointData), (void*)&linePointData.front(),
+                        SHADER_STORAGE_BUFFER);
+                meshRenderer.ssboEntries.push_back(SSBOEntry(2, "vertexAttribute" + sgl::toString(attributeIndex),
+                        attributeBuffer));
             }
         }
 

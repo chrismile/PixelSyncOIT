@@ -54,7 +54,13 @@ struct LinePointData
     float padding;
 };
 
-/*layout (std430, binding = 2) buffer VertexPositions
+#ifdef PROGRAMMABLE_FETCH_ARRAY_OF_STRUCTS
+layout (std430, binding = 2) buffer LinePoints
+{
+    LinePointData linePoints[];
+};
+#else
+layout (std430, binding = 2) buffer VertexPositions
 {
     vec4 vertexPositions[];
 };
@@ -65,16 +71,18 @@ layout (std430, binding = 3) buffer VertexTangents
 layout (std430, binding = 4) buffer VertexAttributes
 {
     float vertexAttributes[];
-};*/
-layout (std430, binding = 2) buffer LinePoints
-{
-    LinePoint linePoints[];
 };
+#endif
 
 void main()
 {
     uint pointIndex = gl_VertexID/2;
+    #ifdef PROGRAMMABLE_FETCH_ARRAY_OF_STRUCTS
     LinePointData linePointData = linePoints[pointIndex];
+    #else
+    LinePointData linePointData = {vertexPositions[pointIndex].xyz, vertexAttributes[pointIndex],
+            vertexTangents[pointIndex].xyz, 0.0};
+    #endif
     vec3 linePoint = (mMatrix * vec4(linePointData.vertexPosition, 1.0)).xyz;
 
     vec3 viewDirection = normalize(cameraPosition - linePoint);
