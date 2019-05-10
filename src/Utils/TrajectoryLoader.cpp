@@ -723,6 +723,18 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
 
 
 
+struct InputLinePoint {
+    glm::vec3 linePoint;
+    float lineAttribute;
+};
+struct OutputLinePoint {
+    glm::vec3 linePoint;
+    float lineAttribute;
+    glm::vec3 lineTangent;
+    uint valid; // 0 or 1
+    glm::vec3 lineNormal;
+    float padding2;
+};
 struct PathLinePoint {
     glm::vec3 linePointPosition;
     float linePointAttribute;
@@ -773,8 +785,6 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     submesh.vertexMode = VERTEX_MODE_TRIANGLES;
 
     // For shaders
-    std::vector<PathLinePoint> pathLinePoints;
-    std::vector<uint32_t> lineOffsets;
 
     bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
     bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
@@ -784,10 +794,31 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
 
-    uint32_t numLines = 0;
-    uint32_t numLinePoints = 0;
+    std::vector<uint32_t> lineOffsetsInput;
+    uint32_t numLinesInput = 0;
+    uint32_t numLinePointsInput = 0;
+
+    std::vector<uint32_t> lineOffsetsOutput;
+    uint32_t numLinesOutput = 0;
+    uint32_t numLinePointsOutput = 0;
+
+    /*std::vector<glm::vec3> pathLineCenters;
+    std::vector<std::vector<float>> importanceCriteriaIn;
+    std::vector<glm::vec3> localVertices;
+    std::vector<glm::vec3> localTangents;
+    std::vector<glm::vec3> localNormals;
+    std::vector<uint32_t> localIndices;
+    std::vector<std::vector<float>> importanceCriteriaOut;
+    importanceCriteriaIn.resize(1);
+    importanceCriteriaOut.resize(1);*/
+
+    std::vector<InputLinePoint> inputLinePoints;
+    std::vector<OutputLinePoint> outputLinePoints;
+    std::vector<PathLinePoint> pathLinePoints;
 
     std::string lineString;
+    auto startLoad = std::chrono::system_clock::now();
+    lineOffsetsInput.push_back(0);
     while (getline(file, lineString)) {
         while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
             // Remove '\r' of Windows line ending
@@ -811,8 +842,7 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
             if (isConvectionRolls) {
                 position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(3)),
                                      fromString<float>(line.at(2)));
-            } else
-            {
+            } else {
                 position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
                                      fromString<float>(line.at(3)));
             }
@@ -831,50 +861,106 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
                 currentLineIndices.push_back(atoi(line.at(i).c_str()) - 1);
             }
 
-            numLinePoints += currentLineIndices.size() - 1;
-
             // pathLineCenters: The path line points to create a tube from.
-            std::vector<glm::vec3> pathLineCenters;
-            std::vector<std::vector<float>> importanceCriteriaIn;
-            pathLineCenters.reserve(currentLineIndices.size());
-            importanceCriteriaIn.resize(1);
-            importanceCriteriaIn.at(0).reserve(currentLineIndices.size());
+            InputLinePoint inputLinePoint;
             for (size_t i = 0; i < currentLineIndices.size(); i++) {
-                pathLineCenters.push_back(globalLineVertices.at(currentLineIndices.at(i)));
-                importanceCriteriaIn.at(0).push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
+                inputLinePoint.linePoint = globalLineVertices.at(currentLineIndices.at(i));
+                inputLinePoint.lineAttribute = globalLineVertexAttributes.at(currentLineIndices.at(i));
+                inputLinePoints.push_back(inputLinePoint);
             }
 
-            // Create tube line path data
-            std::vector<glm::vec3> localVertices;
-            std::vector<glm::vec3> localTangents;
-            std::vector<glm::vec3> localNormals;
-            std::vector<uint32_t> localIndices;
-            std::vector<std::vector<float>> importanceCriteriaOut;
-            createTangentAndNormalData(pathLineCenters, importanceCriteriaIn, localVertices,
-                                       importanceCriteriaOut, localTangents, localNormals, localIndices);
-
-            if (localVertices.size() > 0) {
-                numLines++;
+            if (currentLineIndices.size() > 0) {
+                numLinePointsInput += currentLineIndices.size();
+                numLinesInput++;
+            } else {
+                continue;
             }
-            lineOffsets.push_back(pathLinePoints.size());
-
-            for (size_t i = 0; i < localVertices.size(); i++) {
-                PathLinePoint pathLinePoint;
-                pathLinePoint.linePointPosition = localVertices.at(i);
-                pathLinePoint.linePointAttribute = importanceCriteriaOut.at(0).at(i);
-                pathLinePoint.lineTangent = localTangents.at(i);
-                pathLinePoint.lineNormal = localNormals.at(i);
-                pathLinePoints.push_back(pathLinePoint);
-            }
+            lineOffsetsInput.push_back(numLinePointsInput);
         } else if (boost::starts_with(command, "#") || command == "") {
             // Ignore comments and empty lines
         } else {
-//            Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+            //Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
         }
     }
-    lineOffsets.push_back(pathLinePoints.size());
+    auto endLoad = std::chrono::system_clock::now();
+    auto elapsedLoad = std::chrono::duration_cast<std::chrono::milliseconds>(endLoad - startLoad);
+    Logfile::get()->writeInfo(std::string() + "Computational time to load: " + std::to_string(elapsedLoad.count()));
 
 
+
+    const unsigned int WORK_GROUP_SIZE_1D = 256;
+    sgl::ShaderManager->addPreprocessorDefine("WORK_GROUP_SIZE_1D", WORK_GROUP_SIZE_1D);
+    unsigned int numWorkGroups;
+    void *bufferMemory;
+
+    // PART 1: Create line normals & mask invalid line points
+    auto startNormals = std::chrono::system_clock::now();
+    sgl::GeometryBufferPtr lineOffsetBufferInput = sgl::Renderer->createGeometryBuffer(
+            (numLinesInput+1) * sizeof(uint32_t), &lineOffsetsInput.front(),
+            SHADER_STORAGE_BUFFER, BUFFER_STATIC);
+    sgl::GeometryBufferPtr inputLinePointBuffer = sgl::Renderer->createGeometryBuffer(
+            inputLinePoints.size() * sizeof(InputLinePoint), &inputLinePoints.front(),
+            SHADER_STORAGE_BUFFER, BUFFER_STATIC);
+    sgl::GeometryBufferPtr outputLinePointBuffer = sgl::Renderer->createGeometryBuffer(
+            inputLinePoints.size() * sizeof(OutputLinePoint),
+            SHADER_STORAGE_BUFFER, BUFFER_STATIC);
+
+    sgl::ShaderProgramPtr createLineNormalsShader = sgl::ShaderManager->getShaderProgram({"CreateLineNormals.Compute"});
+    sgl::ShaderManager->bindShaderStorageBuffer(2, lineOffsetBufferInput);
+    sgl::ShaderManager->bindShaderStorageBuffer(3, inputLinePointBuffer);
+    sgl::ShaderManager->bindShaderStorageBuffer(4, outputLinePointBuffer);
+    createLineNormalsShader->setUniform("numLines", numLinesInput);
+    numWorkGroups = iceil(numLinesInput, WORK_GROUP_SIZE_1D); // last vector: local work group size
+    createLineNormalsShader->dispatchCompute(numWorkGroups);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    bufferMemory = outputLinePointBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
+    outputLinePoints.resize(inputLinePoints.size());
+    memcpy(&outputLinePoints.front(), bufferMemory, outputLinePoints.size() * sizeof(OutputLinePoint));
+    outputLinePointBuffer->unmapBuffer();
+    auto endNormals = std::chrono::system_clock::now();
+    auto elapsedNormals = std::chrono::duration_cast<std::chrono::milliseconds>(endNormals - startNormals);
+    Logfile::get()->writeInfo(std::string() + "Computational time to create normals: "
+            + std::to_string(elapsedNormals.count()));
+
+
+    // PART 1.2: OutputLinePoint -> PathLinePoint (while removing invalid points)
+    auto startCompact = std::chrono::system_clock::now();
+    pathLinePoints.reserve(outputLinePoints.size());
+    lineOffsetsOutput.push_back(0);
+    for (size_t lineID = 0; lineID < numLinesInput; lineID++) {
+        size_t linePointsOffset = lineOffsetsInput.at(lineID);
+        size_t numLinePoints = lineOffsetsInput.at(lineID+1)-linePointsOffset;
+
+        size_t currentLineNumPointsOutput = 0;
+
+        for (size_t linePointID = 0; linePointID < numLinePoints; linePointID++) {
+            OutputLinePoint &outputLinePoint = outputLinePoints.at(linePointsOffset+linePointID);
+            if (outputLinePoint.valid == 1) {
+                PathLinePoint pathLinePoint;
+                pathLinePoint.linePointPosition = outputLinePoint.linePoint;
+                pathLinePoint.linePointAttribute = outputLinePoint.lineAttribute;
+                pathLinePoint.lineTangent = outputLinePoint.lineTangent;
+                pathLinePoint.lineNormal = outputLinePoint.lineNormal;
+                pathLinePoints.push_back(pathLinePoint);
+                currentLineNumPointsOutput++;
+                numLinePointsOutput++;
+            }
+        }
+
+        if (currentLineNumPointsOutput > 0) {
+            numLinesOutput++;
+            lineOffsetsOutput.push_back(numLinePointsOutput);
+        }
+    }
+    auto endCompact = std::chrono::system_clock::now();
+    auto elapsedCompact = std::chrono::duration_cast<std::chrono::milliseconds>(endCompact - startCompact);
+    Logfile::get()->writeInfo(std::string() + "Computational time to compact: "
+            + std::to_string(elapsedCompact.count()));
+
+
+    // PART 2: CreateTubePoints.Compute
+    auto startTube = std::chrono::system_clock::now();
     std::vector<TubeVertex> tubeVertices;
     tubeVertices.resize(NUM_CIRCLE_SEGMENTS * pathLinePoints.size());
 
@@ -885,18 +971,15 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
             NUM_CIRCLE_SEGMENTS * pathLinePoints.size() * sizeof(TubeVertex),
             SHADER_STORAGE_BUFFER, BUFFER_STATIC);
 
-    const unsigned int WORK_GROUP_SIZE_1D = 256;
-    sgl::ShaderManager->addPreprocessorDefine("WORK_GROUP_SIZE_1D", WORK_GROUP_SIZE_1D);
-
     sgl::ShaderProgramPtr createTubePointsShader = sgl::ShaderManager->getShaderProgram({"CreateTubePoints.Compute"});
     sgl::ShaderManager->bindShaderStorageBuffer(2, pathLinePointsBuffer);
     sgl::ShaderManager->bindShaderStorageBuffer(3, tubeVertexBuffer);
-    createTubePointsShader->setUniform("numLinePoints", numLinePoints);
-    unsigned int numWorkGroups = iceil(pathLinePoints.size(), WORK_GROUP_SIZE_1D);
+    createTubePointsShader->setUniform("numLinePoints", numLinePointsOutput);
+    numWorkGroups = iceil(pathLinePoints.size(), WORK_GROUP_SIZE_1D);
     createTubePointsShader->dispatchCompute(numWorkGroups);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-    void *bufferMemory = tubeVertexBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
+    bufferMemory = tubeVertexBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
     memcpy(&tubeVertices.front(), bufferMemory, NUM_CIRCLE_SEGMENTS * pathLinePoints.size() * sizeof(TubeVertex));
     tubeVertexBuffer->unmapBuffer();
 
@@ -912,40 +995,50 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
         globalNormals.push_back(tubeVertex.vertexNormal);
         globalImportanceCriteria.at(0).push_back(tubeVertex.vertexAttribute);
     }
+    auto endTube = std::chrono::system_clock::now();
+    auto elapsedTube = std::chrono::duration_cast<std::chrono::milliseconds>(endTube - startTube);
+    Logfile::get()->writeInfo(std::string() + "Computational time to create tube vertices: "
+                              + std::to_string(elapsedTube.count()));
 
 
 
 
-
+    // PART 3: CreateTubeIndices.Compute
+    auto startIndices = std::chrono::system_clock::now();
     std::vector<uint32_t> tubeIndices;
-    size_t numLineSegments = numLinePoints - numLines;
+    size_t numLineSegments = numLinePointsOutput - numLinesOutput;
     size_t numIndices = numLineSegments*NUM_CIRCLE_SEGMENTS*6;
     tubeIndices.resize(numIndices);
 
-    sgl::GeometryBufferPtr lineOffsetBuffer = sgl::Renderer->createGeometryBuffer(
-            (numLines+1) * sizeof(uint32_t), &lineOffsets.front(),
+    sgl::GeometryBufferPtr lineOffsetBufferOutput = sgl::Renderer->createGeometryBuffer(
+            (numLinesOutput+1) * sizeof(uint32_t), &lineOffsetsOutput.front(),
             SHADER_STORAGE_BUFFER, BUFFER_STATIC);
     sgl::GeometryBufferPtr tubeIndexBuffer = sgl::Renderer->createGeometryBuffer(
             numIndices * sizeof(uint32_t),
             SHADER_STORAGE_BUFFER, BUFFER_STATIC);
 
     sgl::ShaderProgramPtr createTubeIndicesShader = sgl::ShaderManager->getShaderProgram({"CreateTubeIndices.Compute"});
-    sgl::ShaderManager->bindShaderStorageBuffer(2, lineOffsetBuffer);
+    sgl::ShaderManager->bindShaderStorageBuffer(2, lineOffsetBufferOutput);
     sgl::ShaderManager->bindShaderStorageBuffer(3, tubeIndexBuffer);
-    createTubeIndicesShader->setUniform("numLines", numLines);
-    numWorkGroups = iceil(numLines, WORK_GROUP_SIZE_1D); // last vector: local work group size
+    createTubeIndicesShader->setUniform("numLines", numLinesOutput);
+    numWorkGroups = iceil(numLinesOutput, WORK_GROUP_SIZE_1D); // last vector: local work group size
     createTubeIndicesShader->dispatchCompute(numWorkGroups);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     bufferMemory = tubeIndexBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
     memcpy(&tubeIndices.front(), bufferMemory, numIndices * sizeof(uint32_t));
     tubeIndexBuffer->unmapBuffer();
+    auto endIndices = std::chrono::system_clock::now();
+    auto elapsedIndices = std::chrono::duration_cast<std::chrono::milliseconds>(endIndices - startIndices);
+    Logfile::get()->writeInfo(std::string() + "Computational time to create tube indices: "
+            + std::to_string(elapsedIndices.count()));
 
     sgl::ShaderManager->removePreprocessorDefine("WORK_GROUP_SIZE_1D");
 
 
 
     // Normalize data for rings
+    auto startPost = std::chrono::system_clock::now();
     float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
     float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
 
@@ -1008,6 +1101,9 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
         memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(uint16_t));
         submesh.attributes.push_back(vertexAttribute);
     }
+    auto endPost = std::chrono::system_clock::now();
+    auto elapsedPost = std::chrono::duration_cast<std::chrono::milliseconds>(endPost - startPost);
+    Logfile::get()->writeInfo(std::string() + "Computational time post-process: " + std::to_string(elapsedPost.count()));
 
 
     file.close();
@@ -1026,14 +1122,12 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     float MBSize = byteSize / 1024. / 1024.;
 
     Logfile::get()->writeInfo(std::string() +  "Byte Size Mesh Structure: " + std::to_string(MBSize) + " MB");
-    Logfile::get()->writeInfo(std::string() +  "Num Lines: " + std::to_string(numLines / 1000.) + " Tsd.") ;
-    Logfile::get()->writeInfo(std::string() +  "Num Line Points: " + std::to_string(numLinePoints / 1.0E6) + " Mio");
+    Logfile::get()->writeInfo(std::string() +  "Num Lines: " + std::to_string(numLinesOutput / 1000.) + " Tsd.") ;
+    Logfile::get()->writeInfo(std::string() +  "Num Line Points: " + std::to_string(numLinePointsOutput / 1.0E6) + " Mio");
 
-    auto elapsed =
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     Logfile::get()->writeInfo(std::string() + "Computational time to create binmesh: "
                               + std::to_string(elapsed.count()));
-
 }
 
 

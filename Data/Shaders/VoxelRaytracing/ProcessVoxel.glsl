@@ -105,7 +105,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
         vec3 tubeIntersection, sphereIntersection1, sphereIntersection2;
         bool hasTubeIntersection, hasSphereIntersection1 = false, hasSphereIntersection2 = false;
         hasTubeIntersection = rayTubeIntersection(rayOrigin, rayDirection, tubePoint1, tubePoint2, lineRadius,
-                tubeIntersection, centerVoxelPosMin, centerVoxelPosMax);
+                tubeIntersection, centerVoxelPosMin, centerVoxelPosMax, isClose);
         if (hasTubeIntersection) {
             // Tube
             vec3 v = tubePoint2 - tubePoint1;
@@ -348,9 +348,10 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     float currOpacity = 0;
     float currDensity = getVoxelDensity(vec3(voxelIndex), 0);
 
+
     #ifdef VOXEL_RAY_CASTING_FAST
     // Faster, but with holes in line tubes
-    processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, true, hits, numHits, blendedLineIDs, newBlendedLineIDs, currOpacity);
+    processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, false, hits, numHits, blendedLineIDs, newBlendedLineIDs, currOpacity);
     #else
     // Much slower, but uses neighbor search for closing holes in tubes protuding into neighboring voxels
     /*for (int z = -1; z <= 1; z++) {
@@ -376,8 +377,8 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     //    float opacityThreshold = 12. / 255.0;
     //    if (currOpacity >= opacityThreshold)
 
-    // TODO: Hat Michi versucht für Performance, aber hat merkwürdige Artefakte
-    if (currDensity <= 0.001) { return vec4(0); }
+    // TODO: Macht u.U. Probleme bei sehr kurzen und transparenten Linien
+    //if (currDensity <= 0.001) { return vec4(0); }
 
     bool isClose = distance <= 1.0 * GRID_RESOLUTION / 8.0;
 

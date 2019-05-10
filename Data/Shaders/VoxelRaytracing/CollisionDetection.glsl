@@ -147,9 +147,14 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
  * NYU Media Research Lab). For more details see: https://mrl.nyu.edu/~dzorin/rend05/lecture2.pdf
  */
 bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3 tubeEnd, float tubeRadius,
-        out vec3 intersectionPosition, in vec3 centerVoxelPosMin, in vec3 centerVoxelPosMax)
+        out vec3 intersectionPosition, in vec3 centerVoxelPosMin, in vec3 centerVoxelPosMax, bool isClose)
 {
     vec3 tubeDirection = normalize(tubeEnd - tubeStart);
+    if (!isClose) {
+        tubeStart = tubeStart - tubeDirection*0.01;
+        tubeEnd = tubeEnd + tubeDirection*0.01;
+    }
+
     vec3 deltaP = rayOrigin - tubeStart;
     float A = squareVec(rayDirection - dot(rayDirection, tubeDirection) * tubeDirection);
     float B = 2.0 * dot(rayDirection - dot(rayDirection, tubeDirection) * tubeDirection,
@@ -181,8 +186,9 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         intersectionPosition = rayOrigin + t1 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0
-                && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
-                && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))) {
+                //&& all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
+                //&& all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
+        ) {
             // Inside of finite cylinder
             return true; // TODO
         }
