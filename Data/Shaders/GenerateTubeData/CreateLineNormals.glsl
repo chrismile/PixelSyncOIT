@@ -57,6 +57,14 @@ void main() {
     vec3 lastNormal = vec3(1.0, 0.0, 0.0);
     for (int i = 0; i < numLinePoints; i++) {
         vec3 center = inputLinePoints[lineOffset + i].linePoint;
+
+        // Remove invalid line points (used in many scientific datasets to indicate invalid lines).
+        const float MAX_VAL = 1e10;
+        if (abs(center.x) > MAX_VAL || abs(center.y) > MAX_VAL || abs(center.z) > MAX_VAL) {
+            outputLinePoints[lineOffset + i].valid = 0;
+            continue;
+        }
+
         vec3 tangent;
         if (i == 0) {
             // First node
@@ -65,12 +73,12 @@ void main() {
             // Last node
             tangent = center - inputLinePoints[lineOffset + i-1].linePoint;
         } else {
-            // Node with two neighbors - use both tangents
+            // Node with two neighbors - use both tangents.
             tangent = inputLinePoints[lineOffset + i+1].linePoint - center;
             //tangent += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
         if (length(tangent) < 0.0001) {
-            // In case the two vertices are almost identical, just skip this path line segment
+            // In case the two vertices are almost identical, just skip this path line segment.
             outputLinePoints[lineOffset + i].valid = 0;
             continue;
         }

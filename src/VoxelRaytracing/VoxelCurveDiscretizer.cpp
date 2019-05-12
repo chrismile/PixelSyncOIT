@@ -159,14 +159,6 @@ VoxelCurveDiscretizer::~VoxelCurveDiscretizer()
 void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes,
         float &_maxVorticity)
 {
-    std::ifstream file(filename.c_str());
-
-    if (!file.is_open()) {
-        sgl::Logfile::get()->writeError(std::string() + "Error in VoxelCurveDiscretizer::createFromFile: File \""
-                                        + filename + "\" does not exist.");
-        return;
-    }
-
     linesBoundingBox = sgl::AABB3();
     std::vector<Curve> curves;
     Curve currentCurve;
@@ -179,58 +171,95 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
     bool isRings = boost::starts_with(filename, "Data/Rings");
     bool isConvectionRolls = boost::starts_with(filename, "Data/ConvectionRolls/output");
 
-    std::string lineString;
-    while (getline(file, lineString)) {
-        while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
-            // Remove '\r' of Windows line ending
-            lineString = lineString.substr(0, lineString.size() - 1);
-        }
-        std::vector<std::string> line;
-        boost::algorithm::split(line, lineString, boost::is_any_of("\t "), boost::token_compress_on);
 
-        std::string command = line.at(0);
 
-        if (command == "g") {
-            // New path
-            if (lineCounter % 1000 == 999) {
-//                sgl::Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
+
+
+
+    FILE *file = fopen(filename.c_str(), "r");
+    if (!file) {
+        sgl::Logfile::get()->writeError(std::string() + "Error in VoxelCurveDiscretizer::createFromTrajectoryDataset: "
+                "File \"" + filename + "\" does not exist.");
+        return;
+    }
+    fseek(file, 0, SEEK_END);
+    size_t length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *fileBuffer = new char[length];
+    fread(fileBuffer, 1, length, file);
+    fclose(file);
+    std::string lineBuffer;
+    std::string numberString;
+
+    for (size_t charPtr = 0; charPtr < length; charPtr++) {
+        while (charPtr < length) {
+            char currentChar = fileBuffer[charPtr];
+            if (currentChar == '\n' || currentChar == '\r') {
+                charPtr++;
+                break;
             }
-            lineCounter++;
-        } else if (command == "v") {
+            lineBuffer.push_back(currentChar);
+            charPtr++;
+        }
+
+        if (lineBuffer.size() == 0) {
+            continue;
+        }
+
+        char command = lineBuffer.at(0);
+        char command2 = ' ';
+        if (lineBuffer.size() > 1) {
+            command2 = lineBuffer.at(1);
+        }
+
+        if (command == 'g') {
+            // New path
+            /*static int ctr = 0;
+            if (ctr >= 999) {
+                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
+            }
+            ctr = (ctr + 1) % 1000;*/
+        } else if (command == 'v' && command2 == 't') {
+            // Path line vertex attribute
+            float attr = 0.0f;
+            sscanf(lineBuffer.c_str()+2, "%f", &attr);
+            currentCurve.attributes.push_back(attr);
+            attributes.push_back(attr);
+            maxVorticity = std::max(maxVorticity, attr);
+        } else if (command == 'v' && command2 == 'n') {
+            // Not supported so far
+        } else if (command == 'v') {
+            // Path line vertex position
             glm::vec3 position;
             if (isConvectionRolls) {
-                position = glm::vec3(sgl::fromString<float>(line.at(1)), sgl::fromString<float>(line.at(3)),
-                                     sgl::fromString<float>(line.at(2)));
-            } else
-            {
-                position = glm::vec3(sgl::fromString<float>(line.at(1)), sgl::fromString<float>(line.at(2)),
-                                     sgl::fromString<float>(line.at(3)));
+                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.z, &position.y);
+            } else {
+                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.y, &position.z);
             }
 
             // Path line vertex position
             currentCurve.points.push_back(position);
             linesBoundingBox.combine(position);
-        } else if (command == "vt") {
-            // Path line vertex attribute
-            float attr = sgl::fromString<float>(line.at(1));
-            currentCurve.attributes.push_back(attr);
-            attributes.push_back(attr);
-            maxVorticity = std::max(maxVorticity, attr);
-        } else if (command == "l") {
+        } else if (command == 'l') {
             // Indices of path line signal all points read of current curve
             numLines++;
             numLineSegments += currentCurve.points.size() - 1;
             curves.push_back(currentCurve);
             currentCurve = Curve();
             currentCurve.lineID = lineCounter;
-        } else if (boost::starts_with(command, "#") || command == "") {
-            // Ignore comments and empty lines
+        } else if (command = '#') {
+            // Ignore comments
         } else {
-//            sgl::Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
+            //Logfile::get()->writeError(std::string() + "Error in VoxelCurveDiscretizer::createFromTrajectoryDataset: "
+            //        "Unknown command \"" + command + "\".");
         }
+
+        lineBuffer.clear();
     }
+
     std::cout << "Num Lines: " << numLines << std::endl;
     std::cout << "Num LineSegments: " << numLineSegments << std::endl << std::flush;
+
 
     // Normalize data for rings
     float minValue = std::min(linesBoundingBox.getMinimum().x, std::min(linesBoundingBox.getMinimum().y, linesBoundingBox.getMinimum().z));
@@ -305,8 +334,6 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
 
     _maxVorticity = maxVorticity;
     this->attributes = attributes;
-
-    file.close();
 
 
     // Move to origin and scale to range from (0, 0, 0) to (rx, ry, rz).
@@ -506,6 +533,13 @@ void VoxelCurveDiscretizer::nextStreamline(const Curve &line)
         glm::vec3 v2 = line.points.at(i+1);
         float a1 = line.attributes.at(i);
         float a2 = line.attributes.at(i+1);
+
+        // Remove invalid line points (used in many scientific datasets to indicate invalid lines).
+        const float MAX_VAL = 1e10;
+        if (std::fabs(v1.x) > MAX_VAL || std::fabs(v1.y) > MAX_VAL || std::fabs(v1.z) > MAX_VAL
+                || std::fabs(v2.x) > MAX_VAL || std::fabs(v2.y) > MAX_VAL || std::fabs(v2.z) > MAX_VAL) {
+            continue;
+        }
 
         // Compute AABB of current segment
         sgl::AABB3 segmentAABB = sgl::AABB3();
