@@ -43,18 +43,26 @@ void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename)
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
         VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes), glm::ivec3(64));
 
+        int maxNumLinesPerVoxel = 32;
+        if (boost::starts_with(filename, "Data/WCB")) {
+            maxNumLinesPerVoxel = 128;
+        } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
+            maxNumLinesPerVoxel = 64;
+        }
+
         if (isHairDataset) {
             std::string modelFilenameHair = modelFilenamePure + ".hair";
             float lineRadius;
             glm::vec4 hairStrandColor;
-            discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor);
+            compressedData = discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor,
+                    maxNumLinesPerVoxel);
         } else {
             std::string modelFilenameObj = modelFilenamePure + ".obj";
             std::vector<float> attributes;
             float maxVorticity;
-            discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity);
+            compressedData = discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity,
+                    maxNumLinesPerVoxel);
         }
-        compressedData = discretizer.compressData();
 
         auto end = std::chrono::system_clock::now();
         auto elapsed =

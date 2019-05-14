@@ -149,18 +149,24 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     float MBSize = 0;
     float byteSize = 0;
 
+    int maxNumLinesPerVoxel = 32;
+    if (boost::starts_with(filename, "Data/WCB")) {
+        maxNumLinesPerVoxel = 128;
+    } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
+        maxNumLinesPerVoxel = 64;
+    }
+
     VoxelGridDataCompressed compressedData;
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
         VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes), glm::ivec3(quantizationRes, quantizationRes, quantizationRes));
 
         if (isHairDataset) {
             std::string modelFilenameHair = modelFilenamePure + ".hair";
-            discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor);
+            compressedData = discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor, maxNumLinesPerVoxel);
         } else {
             std::string modelFilenameObj = modelFilenamePure + ".obj";
-            discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity);
+            compressedData = discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity, maxNumLinesPerVoxel);
         }
-        compressedData = discretizer.compressData();
 
         byteSize =
                 compressedData.voxelLineListOffsets.size() * sizeof(uint32_t)
@@ -211,21 +217,17 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
             sgl::toString(sgl::intlog2(data.quantizationResolution.x)));
     if (boost::starts_with(filename, "Data/WCB")) {
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 16);
-        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 128);
     } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
-        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 64);
     }
     else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence80000")) {
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
-        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
     } else if (boost::starts_with(filename, "Data/ConvectionRolls/output")) {
             sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
-            sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
     } else {
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
-        sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", 32);
     }
+    sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", maxNumLinesPerVoxel);
     if (isHairDataset) {
         sgl::ShaderManager->addPreprocessorDefine("HAIR_RENDERING", "");
     } else {

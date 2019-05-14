@@ -52,9 +52,10 @@ public:
             const glm::ivec3 &gridResolution = glm::ivec3(256, 256, 256),
             const glm::ivec3 &quantizationResolution = glm::ivec3(8, 8, 8));
     ~VoxelCurveDiscretizer();
-    void createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
-    void createFromHairDataset(const std::string &filename, float &lineRadius, glm::vec4 &hairStrandColor);
-    VoxelGridDataCompressed compressData();
+    VoxelGridDataCompressed createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes,
+            float &maxVorticity, unsigned int maxNumLinesPerVoxel, bool useGPU = true);
+    VoxelGridDataCompressed createFromHairDataset(const std::string &filename, float &lineRadius,
+            glm::vec4 &hairStrandColor, unsigned int maxNumLinesPerVoxel, bool useGPU = true);
     glm::mat4 getWorldToVoxelGridMatrix() { return linesToVoxel; }
 
 private:
@@ -71,7 +72,11 @@ private:
     float hairThickness;
     float hairOpacity;
 
+    // On CPU
+    VoxelGridDataCompressed compressData();
     void nextStreamline(const Curve &line);
+    // On GPU
+    VoxelGridDataCompressed createVoxelGridGPU(std::vector<Curve> &curves, unsigned int maxNumLinesPerVoxel);
 
     // Compression
     void quantizeLine(const glm::vec3 &voxelPos, const LineSegment &line, LineSegmentQuantized &lineQuantized,

@@ -9,8 +9,16 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 
+#include <GL/glew.h>
+
 #include <Utils/Convert.hpp>
 #include <Utils/File/Logfile.hpp>
+#include <Math/Math.hpp>
+#include <Graphics/Renderer.hpp>
+#include <Graphics/Shader/ShaderManager.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
+#include <Graphics/OpenGL/GeometryBuffer.hpp>
+#include <Graphics/OpenGL/Texture.hpp>
 
 #include "Utils/HairLoader.hpp"
 #include "VoxelCurveDiscretizer.hpp"
@@ -156,8 +164,8 @@ VoxelCurveDiscretizer::~VoxelCurveDiscretizer()
     delete[] voxels;
 }
 
-void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes,
-        float &_maxVorticity)
+VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes,
+        float &_maxVorticity, unsigned int maxNumLinesPerVoxel, bool useGPU)
 {
     linesBoundingBox = sgl::AABB3();
     std::vector<Curve> curves;
@@ -180,7 +188,7 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
     if (!file) {
         sgl::Logfile::get()->writeError(std::string() + "Error in VoxelCurveDiscretizer::createFromTrajectoryDataset: "
                 "File \"" + filename + "\" does not exist.");
-        return;
+        return VoxelGridDataCompressed();
     }
     fseek(file, 0, SEEK_END);
     size_t length = ftell(file);
@@ -219,6 +227,7 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
                 Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
             }
             ctr = (ctr + 1) % 1000;*/
+            lineCounter++;
         } else if (command == 'v' && command2 == 't') {
             // Path line vertex attribute
             float attr = 0.0f;
@@ -352,20 +361,25 @@ void VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filen
         }
     }
 
-    // Insert lines into voxel representation
-    //int lineNum = 0;
-    for (const Curve &curve : curves) {
-        /*if (lineNum == 1000) {
-            break;
-        }*/
-        nextStreamline(curve);
-        //lineNum++;
+    if (!useGPU) {
+        // Insert lines into voxel representation
+        //int lineNum = 0;
+        for (const Curve &curve : curves) {
+            /*if (lineNum == 1000) {
+                break;
+            }*/
+            nextStreamline(curve);
+            //lineNum++;
+        }
+        return compressData();
+    } else {
+        return createVoxelGridGPU(curves, maxNumLinesPerVoxel);
     }
 }
 
 
-void VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, float &lineRadius,
-        glm::vec4 &hairStrandColor)
+VoxelGridDataCompressed VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, float &lineRadius,
+        glm::vec4 &hairStrandColor, unsigned int maxNumLinesPerVoxel, bool useGPU)
 {
     HairData hairData;
     loadHairFile(filename, hairData);
@@ -396,7 +410,7 @@ void VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, f
         for (glm::vec3 point : strand.points) {
             glm::vec3 scaledPoint = point;
             currentCurve.points.push_back(scaledPoint);
-            currentCurve.attributes.push_back(0.0f); // Just push something, no attributes needed for hair strands
+            currentCurve.attributes.push_back(this->hairOpacity);
             linesBoundingBox.combine(scaledPoint);
         }
 
@@ -417,8 +431,14 @@ void VoxelCurveDiscretizer::createFromHairDataset(const std::string &filename, f
         }
     }
 
-    for (const Curve &curve : curves) {
-        nextStreamline(curve);
+    if (!useGPU) {
+        // Insert lines into voxel representation
+        for (const Curve &curve : curves) {
+            nextStreamline(curve);
+        }
+        return compressData();
+    } else {
+        return createVoxelGridGPU(curves, maxNumLinesPerVoxel);
     }
 }
 
@@ -519,7 +539,6 @@ std::vector<VoxelDiscretizer*> VoxelCurveDiscretizer::getVoxelsInAABB(const sgl:
     }
     return voxelsInAABB;
 }
-
 
 void VoxelCurveDiscretizer::nextStreamline(const Curve &line)
 {
@@ -747,4 +766,175 @@ bool VoxelCurveDiscretizer::checkLinesEqual(const LineSegment &originalLine, con
     }
 
     return linesEqual;
+}
+
+
+struct LinePoint {
+    LinePoint(glm::vec3 linePoint, float lineAttribute) : linePoint(linePoint), lineAttribute(lineAttribute) {}
+    glm::vec3 linePoint;
+    float lineAttribute;
+};
+
+VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
+        std::vector<Curve> &curves, unsigned int maxNumLinesPerVoxel)
+{
+    glm::ivec3 numWorkGroupsVoxel = glm::ivec3(sgl::iceil(gridResolution.x, 64), sgl::iceil(gridResolution.y, 4),
+            gridResolution.z);
+    uint32_t gridSize1D = gridResolution.x *gridResolution.y *gridResolution.z;
+    uint32_t zeroData = 0u;
+    void *bufferMemory;
+
+    // PART 1: Create the LinePointBuffer, LineOffsetBuffer, NumSegmentsBuffer (empty) and LineSegmentsBuffer.
+    auto startBuffers = std::chrono::system_clock::now();
+    std::vector<LinePoint> linePoints;
+    std::vector<uint32_t> lineOffsets;
+    lineOffsets.push_back(0);
+    uint32_t offsetCounter = 0;
+    for (Curve &curve : curves) {
+        size_t curveNumPoints = curve.points.size();
+        for (size_t i = 0; i < curveNumPoints; i++) {
+            linePoints.push_back(LinePoint(curve.points.at(i), curve.attributes.at(i)));
+        }
+        offsetCounter += curveNumPoints;
+        lineOffsets.push_back(offsetCounter);
+    }
+    sgl::GeometryBufferPtr linePointBuffer = sgl::Renderer->createGeometryBuffer(
+            linePoints.size()+1 * sizeof(LinePoint), &linePoints.front(),
+            sgl::SHADER_STORAGE_BUFFER, sgl::BUFFER_STATIC);
+    sgl::GeometryBufferPtr lineOffsetBuffer = sgl::Renderer->createGeometryBuffer(
+            (curves.size()+1) * sizeof(uint32_t), &lineOffsets.front(),
+            sgl::SHADER_STORAGE_BUFFER, sgl::BUFFER_STATIC);
+    sgl::GeometryBufferPtr numSegmentsBuffer = sgl::Renderer->createGeometryBuffer(
+            gridSize1D * sizeof(uint32_t),
+            sgl::SHADER_STORAGE_BUFFER, sgl::BUFFER_STATIC);
+    GLuint bufferID = ((sgl::GeometryBufferGL*)numSegmentsBuffer.get())->getBuffer();
+    glClearNamedBufferData(bufferID, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, (const void*)&zeroData);
+    sgl::GeometryBufferPtr lineSegmentsBuffer = sgl::Renderer->createGeometryBuffer(
+            maxNumLinesPerVoxel * gridSize1D * sizeof(LineSegmentCompressed),
+            sgl::SHADER_STORAGE_BUFFER, sgl::BUFFER_STATIC);
+
+    auto endBuffers = std::chrono::system_clock::now();
+    auto elapsedBuffers = std::chrono::duration_cast<std::chrono::milliseconds>(endBuffers - startBuffers);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to create buffers: "
+                                   + std::to_string(elapsedBuffers.count()));
+
+
+    // PART 2: Discretize, quantize and voxelize the lines.
+    auto startVoxelize = std::chrono::system_clock::now();
+    unsigned int numWorkGroupsLines = sgl::iceil(curves.size(), 256);
+    sgl::ShaderProgramPtr discretizeLinesShader = sgl::ShaderManager->getShaderProgram({"DiscretizeLines.Compute"});
+    sgl::ShaderManager->bindShaderStorageBuffer(2, linePointBuffer);
+    sgl::ShaderManager->bindShaderStorageBuffer(3, lineOffsetBuffer);
+    sgl::ShaderManager->bindShaderStorageBuffer(4, numSegmentsBuffer);
+    sgl::ShaderManager->bindShaderStorageBuffer(5, lineSegmentsBuffer);
+    discretizeLinesShader->setUniform("numLines", (unsigned int)curves.size());
+    discretizeLinesShader->dispatchCompute(numWorkGroupsLines);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    // End of PART 2: Read the line segment buffer & number of line segments per voxel buffer back from the GPU.
+    std::vector<LineSegmentCompressed> compressedLineSegments;
+    bufferMemory = linePointBuffer->mapBuffer(sgl::BUFFER_MAP_READ_ONLY);
+    compressedLineSegments.resize(maxNumLinesPerVoxel * gridSize1D * sizeof(LineSegmentCompressed));
+    memcpy(&compressedLineSegments.front(), bufferMemory, compressedLineSegments.size() * sizeof(LineSegmentCompressed));
+    linePointBuffer->unmapBuffer();
+
+    std::vector<uint32_t> numSegmentsPerVoxel;
+    bufferMemory = numSegmentsBuffer->mapBuffer(sgl::BUFFER_MAP_READ_ONLY);
+    numSegmentsPerVoxel.resize(gridSize1D * sizeof(uint32_t));
+    memcpy(&numSegmentsPerVoxel.front(), bufferMemory, numSegmentsPerVoxel.size() * sizeof(uint32_t));
+    numSegmentsBuffer->unmapBuffer();
+
+    auto endVoxelize = std::chrono::system_clock::now();
+    auto elapsedVoxelize = std::chrono::duration_cast<std::chrono::milliseconds>(endVoxelize - startVoxelize);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to voxelize the lines: "
+                                   + std::to_string(elapsedVoxelize.count()));
+
+
+    // Part 3: Compute the densities
+    auto startDensity = std::chrono::system_clock::now();
+
+    sgl::TextureSettings densityTextureSettings = sgl::TextureSettings();
+    densityTextureSettings.type = sgl::TEXTURE_3D;
+    densityTextureSettings.pixelType = GL_FLOAT;
+    densityTextureSettings.pixelFormat = GL_RED;
+    densityTextureSettings.internalFormat = GL_R32F;
+    sgl::TexturePtr densityTexture = sgl::TextureManager->createEmptyTexture(
+            gridResolution.x, gridResolution.y, gridResolution.z, densityTextureSettings);
+    sgl::ShaderProgramPtr computeDensityShader = sgl::ShaderManager->getShaderProgram({"ComputeDensity.Compute"});
+    computeDensityShader->setUniformImageTexture(0, densityTexture, GL_R32F, GL_READ_WRITE, 0, true, 0);
+    computeDensityShader->dispatchCompute(numWorkGroupsVoxel.x, numWorkGroupsVoxel.y, numWorkGroupsVoxel.z);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    // End of PART 2: Read the line segment buffer & number of line segments per voxel buffer back from the GPU.
+    std::vector<float> voxelDensities;
+    voxelDensities.resize(gridSize1D);
+    sgl::TextureGL *densityTextureGL = (sgl::TextureGL*)densityTexture.get();
+    glGetTextureImage(densityTextureGL->getTexture(), 0, GL_RED, GL_FLOAT,
+            sizeof(float) * gridSize1D, (void*)&voxelDensities.front());
+
+    auto endDensity = std::chrono::system_clock::now();
+    auto elapsedDensity = std::chrono::duration_cast<std::chrono::milliseconds>(endDensity - startDensity);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to compute the densities: "
+                                   + std::to_string(elapsedVoxelize.count()));
+
+
+    // Part 4: Reduce the size of the buffer using a prefix sum (on the CPU for now).
+    auto startPrefixSum = std::chrono::system_clock::now();
+
+    uint32_t lineSegmentOffset = 0;
+    std::vector<uint32_t> lineSegmentOffsets;
+    std::vector<LineSegmentCompressed> reducedLineSegmentBuffer;
+    for (size_t i = 0; i < numSegmentsPerVoxel.size(); i++) {
+        lineSegmentOffsets.push_back(lineSegmentOffset);
+        size_t numSegmentsCurrentVoxel = numSegmentsPerVoxel.at(i);
+        for (size_t j = 0; j < numSegmentsCurrentVoxel; j++) {
+            reducedLineSegmentBuffer.push_back(compressedLineSegments.at(i*maxNumLinesPerVoxel+j));
+        }
+        lineSegmentOffset += numSegmentsCurrentVoxel;
+    }
+
+    auto endPrefixSum = std::chrono::system_clock::now();
+    auto elapsedPrefixSum = std::chrono::duration_cast<std::chrono::milliseconds>(endVoxelize - startVoxelize);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to reduce the buffers: "
+                                   + std::to_string(elapsedPrefixSum.count()));
+
+
+    // 5. Compute the ambient occlusion factors. For now, do this on CPU (TODO).
+    auto startAO = std::chrono::system_clock::now();
+
+    std::vector<float> voxelAOFactors;
+    voxelAOFactors.resize(gridSize1D);
+    generateVoxelAOFactorsFromDensity(voxelDensities, voxelAOFactors, gridResolution, isHairDataset);
+
+    auto endAO = std::chrono::system_clock::now();
+    auto elapsedAO = std::chrono::duration_cast<std::chrono::milliseconds>(endDensity - startDensity);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to compute the ambient occlusion factors: "
+                                   + std::to_string(elapsedAO.count()));
+
+
+    // Now, write the data to the struct.
+    VoxelGridDataCompressed dataCompressed;
+    dataCompressed.gridResolution = gridResolution;
+    dataCompressed.quantizationResolution = quantizationResolution;
+    dataCompressed.worldToVoxelGridMatrix = this->getWorldToVoxelGridMatrix();
+    dataCompressed.dataType = isHairDataset ? 1u : 0u;
+
+    if (isHairDataset) {
+        dataCompressed.hairStrandColor = hairStrandColor;
+        dataCompressed.hairThickness = hairThickness;
+    } else {
+        dataCompressed.attributes = attributes;
+        dataCompressed.maxVorticity = maxVorticity;
+    }
+
+    dataCompressed.voxelLineListOffsets = lineSegmentOffsets;
+    dataCompressed.numLinesInVoxel = numSegmentsPerVoxel;
+    dataCompressed.lineSegments = reducedLineSegmentBuffer;
+
+    dataCompressed.voxelDensityLODs = generateMipmapsForDensity(&voxelDensities.front(), gridResolution);
+    dataCompressed.voxelAOLODs = generateMipmapsForDensity(&voxelAOFactors.front(), gridResolution);
+    dataCompressed.octreeLODs = generateMipmapsForOctree(&numSegmentsPerVoxel.front(), gridResolution);
+    return dataCompressed;
+
 }

@@ -1069,7 +1069,7 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     createLineNormalsShader->setUniform("numLines", numLinesInput);
     numWorkGroups = iceil(numLinesInput, WORK_GROUP_SIZE_1D); // last vector: local work group size
     createLineNormalsShader->dispatchCompute(numWorkGroups);
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     bufferMemory = outputLinePointBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
     outputLinePoints.resize(inputLinePoints.size());
@@ -1134,7 +1134,7 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     createTubePointsShader->setUniform("numLinePoints", numLinePointsOutput);
     numWorkGroups = iceil(pathLinePoints.size(), WORK_GROUP_SIZE_1D);
     createTubePointsShader->dispatchCompute(numWorkGroups);
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     bufferMemory = tubeVertexBuffer->mapBuffer(BUFFER_MAP_READ_ONLY);
     memcpy(&tubeVertices.front(), bufferMemory, NUM_CIRCLE_SEGMENTS * pathLinePoints.size() * sizeof(TubeVertex));

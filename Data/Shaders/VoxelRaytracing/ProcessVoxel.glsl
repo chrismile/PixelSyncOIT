@@ -72,6 +72,10 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
         inout RayHit hits[MAX_NUM_HITS], inout int numHits, inout uint blendedLineIDs,
         inout uint newBlendedLineIDs, out float opacity)
 {
+    if (any(lessThan(voxelIndex, ivec3(0))) || any(greaterThanEqual(voxelIndex, gridResolution))) {
+        return;
+    }
+
     vec3 centerVoxelPosMin = vec3(centerVoxelIndex);
     vec3 centerVoxelPosMax = vec3(centerVoxelIndex) + vec3(1);
     //uint currVoxelNumLines = 0;
@@ -378,7 +382,7 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     //    if (currOpacity >= opacityThreshold)
 
     // TODO: Macht u.U. Probleme bei sehr kurzen und transparenten Linien
-    //if (currDensity <= 0.001) { return vec4(0); }
+    if (currDensity <= 0.001) { return vec4(0); }
 
     bool isClose = distance <= 1.0 * GRID_RESOLUTION / 8.0;
 
@@ -386,23 +390,53 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
             newBlendedLineIDs, currOpacity);
 
     //    if (currDensity >= 0) {
-    if (isClose) {
+    bool fastNeighborSearch = true;
+    if (isClose && !fastNeighborSearch) {
         for (int z = -1; z <= 1; z++) {
             for (int y = -1; y <= 1; y++) {
                 for (int x = -1; x <= 1; x++) {
                     if (x == 0 && y == 0 && z == 0) { continue; }
 
                     ivec3 processedVoxelIndex = voxelIndex + ivec3(x,y,z);
-                    if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
-                    && all(lessThan(processedVoxelIndex, gridResolution))) {
-                        processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, isClose, hits, numHits,
-                                blendedLineIDs, newBlendedLineIDs, currOpacity);
-                    }
+                    processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, isClose, hits, numHits,
+                            blendedLineIDs, newBlendedLineIDs, currOpacity);
                 }
             }
         }
     }
-        //    } else if (distance < GRID_RESOLUTION / 2.0) {
+    if (isClose && fastNeighborSearch) {
+        vec3 entrancePoint, exitPoint;
+        vec3 lower = vec3(voxelIndex);
+        rayBoxIntersection(rayOrigin, rayDirection, lower, lower+vec3(1.0), entrancePoint, exitPoint);
+        vec3 voxelEntry = fract(entrancePoint);
+
+        if (voxelEntry.x <= 0.2) {
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(-1, 0, 0), isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+        }
+        if (voxelEntry.x >= 0.8) {
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(1, 0, 0), isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+        }
+        if (voxelEntry.y <= 0.2) {
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, -1, 0), isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+        }
+        if (voxelEntry.y >= 0.8) {
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, 1, 0), isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+        }
+        if (voxelEntry.z <= 0.2) {
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, 0, -1), isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+        }
+        if (voxelEntry.z >= 0.8) {
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, 0, 1), isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+        }
+    }
+
+    //    } else if (distance < GRID_RESOLUTION / 2.0) {
         //        // Far voxels
         //        const ivec3 offsetTable[7] = { ivec3(0,0,0), ivec3(-1,0,0), ivec3(1,0,0), ivec3(0,-1,0),
         //                ivec3(0,1,0), ivec3(0,0,-1), ivec3(0,0,1) };
