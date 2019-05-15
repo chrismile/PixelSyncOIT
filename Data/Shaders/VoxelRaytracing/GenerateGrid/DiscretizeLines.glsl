@@ -2,7 +2,7 @@
 
 #version 430
 
-layout (local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 struct LineSegment
 {
@@ -52,7 +52,7 @@ layout (std430, binding = 3) buffer LineOffsetBuffer
     uint lineOffsets[];
 };
 
-layout (std430, binding = 4) buffer NumSegmentsBuffer
+layout (std430, binding = 4) coherent buffer NumSegmentsBuffer
 {
     uint numSegments[];
 };
@@ -133,7 +133,7 @@ int rayBoxIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 lower, vec3 upper
 
     //entrancePoint = rayOrigin + tNear * rayDirection;
     //exitPoint = rayOrigin + tFar * rayDirection;
-    return (tNear >= 0.0f && tNear <= 1.0f ? 1 : 0) + (tFar >= 0.0f && tNear <= 1.0f ? 1 : 0);
+    return (tNear >= 0.0f && tNear <= 1.0f ? 1 : 0) + (tFar >= 0.0f && tFar <= 1.0f ? 1 : 0);
 }
 
 void quantizePoint(vec3 v, out ivec2 qv, int faceIndex)
@@ -206,8 +206,8 @@ void compressLineSegment(ivec3 voxelIndex, LineSegment lineSegment, out LineSegm
     int faceIndex2 = computeFaceIndex(lineSegment.v2, voxelIndex);
     quantizeLineSegment(vec3(voxelIndex), lineSegment, lineQuantized, faceIndex1, faceIndex2);
 
-    uint attr1Unorm = int(round(lineQuantized.a1*255.0f));
-    uint attr2Unorm = int(round(lineQuantized.a2*255.0f));
+    uint attr1Unorm = uint(clamp(round(lineQuantized.a1*255.0), 0.0, 255.0));
+    uint attr2Unorm = uint(clamp(round(lineQuantized.a2*255.0), 0.0, 255.0));
 
     int c = 2*intlog2(quantizationResolution.x);
     lineSegmentCompressed.linePosition = lineQuantized.faceIndex1;
@@ -246,11 +246,11 @@ void addLineSegment(ivec3 voxelIndex, LineSegment lineSegment)
  * Returns the accumulated color using voxel raytracing.
  */
 void traverseVoxelGrid(uint lineID, vec3 startPoint, float startAttribute, vec3 endPoint, float endAttribute,
-        inout int currentVoxelNumIntersections, inout vec3 currentVoxelIntersection,
-        inout float currentVoxelIntersectionAttribute)
+        inout ivec3 currentVoxel, inout int currentVoxelNumIntersections, inout vec3 currentVoxelIntersection,
+        inout float currentVoxelIntersectionAttribute, inout bool noIntersectionForLineYet)
 {
-    uvec3 startVoxel = uvec3(startPoint);
-    uvec3 endVoxel = uvec3(endPoint);
+    ivec3 startVoxel = ivec3(startPoint);
+    ivec3 endVoxel = ivec3(endPoint);
 
     float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
     ivec3 voxelIndex;
@@ -300,7 +300,45 @@ void traverseVoxelGrid(uint lineID, vec3 startPoint, float startAttribute, vec3 
     LineSegment lineSegment;
     int numIntersectionsNew;
 
-    while (true) {
+    while (all(greaterThanEqual(voxelIndex, ivec3(0))) && all(lessThan(voxelIndex, gridResolution))) {
+        float tNear = -1e9, tFar = 1e9;
+        numIntersectionsNew = rayBoxIntersection(startPoint, rayDirection,
+                vec3(voxelIndex), vec3(voxelIndex) + vec3(1.0), tNear, tFar);
+        //bool intersectionNear = 0.0f <= tNear && tNear <= 1.0f;
+        //bool intersectionFar = 0.0f <= tFar && tFar <= 1.0f;
+
+        if (numIntersectionsNew > 0 && noIntersectionForLineYet) {
+            // Skip segment until first intersection
+            noIntersectionForLineYet = false;
+            continue;
+        }
+
+        if (numIntersectionsNew == 2 || (numIntersectionsNew == 1 && currentVoxelNumIntersections == 1
+                && currentVoxel == voxelIndex)) {
+            lineSegment.lineID = lineID;
+            if (numIntersectionsNew == 2) {
+                lineSegment.v1 = startPoint + tNear * (endPoint - startPoint);
+                lineSegment.a1 = startAttribute + tNear * (endAttribute - startAttribute);
+            } else {
+                lineSegment.v1 = currentVoxelIntersection;
+                lineSegment.a1 = currentVoxelIntersectionAttribute;
+            }
+            lineSegment.v2 = startPoint + tFar * (endPoint - startPoint);
+            lineSegment.a2 = startAttribute + tFar * (endAttribute - startAttribute);
+            addLineSegment(voxelIndex, lineSegment);
+            currentVoxelNumIntersections = 0;
+        } else if (numIntersectionsNew == 1) {
+            currentVoxel = voxelIndex;
+            currentVoxelIntersection = startPoint + tNear * (endPoint - startPoint);
+            currentVoxelIntersectionAttribute = startAttribute + tNear * (endAttribute - startAttribute);
+            currentVoxelNumIntersections = 1;
+        }
+
+        if (voxelIndex == endVoxel) {
+            // Break on last voxel
+            break;
+        }
+
         if (tMaxX < tMaxY) {
             if (tMaxX < tMaxZ) {
                 voxelIndex.x += stepX;
@@ -318,40 +356,6 @@ void traverseVoxelGrid(uint lineID, vec3 startPoint, float startAttribute, vec3 
                 tMaxZ += tDeltaZ;
             }
         }
-        if (any(lessThan(voxelIndex, ivec3(0))) || any(greaterThanEqual(voxelIndex, gridResolution)))
-            break;
-
-        if (voxelIndex == endVoxel) {
-            // Break on last voxel
-            break;
-        }
-        if (voxelIndex == startVoxel) {
-            // Skip first voxel
-            continue;
-        }
-
-        float tNear = -1e9, tFar = 1e9;
-        numIntersectionsNew = rayBoxIntersection(startPoint, rayDirection,
-                vec3(voxelIndex), vec3(voxelIndex) + vec3(1.0), tNear, tFar);
-
-        if (numIntersectionsNew == 2 || (numIntersectionsNew == 1 && currentVoxelNumIntersections == 1)) {
-            lineSegment.lineID = lineID;
-            if (numIntersectionsNew == 1) {
-                lineSegment.v1 = currentVoxelIntersection;
-                lineSegment.a1 = currentVoxelIntersectionAttribute;
-            } else {
-                lineSegment.v1 = startPoint + tNear * (endPoint - startPoint);
-                lineSegment.a1 = startAttribute + tNear * (endAttribute - startAttribute);
-            }
-            lineSegment.v2 = startPoint + tFar * (endPoint - startPoint);
-            lineSegment.a2 = startAttribute + tFar * (endAttribute - startAttribute);
-            addLineSegment(voxelIndex, lineSegment);
-            currentVoxelNumIntersections = 0;
-        } else if (numIntersectionsNew == 1) {
-            currentVoxelIntersection = startPoint + tNear * (endPoint - startPoint);
-            currentVoxelIntersectionAttribute = startAttribute + tNear * (endAttribute - startAttribute);
-            currentVoxelNumIntersections = 1;
-        }
     }
 }
 
@@ -364,11 +368,13 @@ void main() {
     uint lineOffset = lineOffsets[lineNumber];
     uint numLinePoints = lineOffsets[lineNumber + 1] - lineOffset;
 
+    ivec3 currentVoxel; // Voxel for which we save intersetions that do not yet form a full line segment
     int currentVoxelNumIntersections = 0;
     vec3 currentVoxelIntersection; // Carry-over-field across line segments
-    float currentVoxelIntersectionAttribute; // Carry-over-field across line segments
+    float currentVoxelIntersectionAttribute = 0.0; // Carry-over-field across line segments
     vec3 tangent;
 
+    bool noIntersectionForLineYet = true;
     for (int i = 0; i < numLinePoints-1; i++) {
         LinePoint p1 = linePoints[lineOffset + i];
         LinePoint p2 = linePoints[lineOffset + i + 1];
@@ -385,7 +391,7 @@ void main() {
             tangent = p2.linePoint - p1.linePoint;
         } else if (i == numLinePoints-1) {
             // Last node
-            tangent = center - linePoints[lineOffset + i - 1].linePoint;
+            tangent = p1.linePoint - linePoints[lineOffset + i - 1].linePoint;
         } else {
             // Node with two neighbors - use both tangents.
             tangent = p2.linePoint - p1.linePoint;
@@ -398,6 +404,7 @@ void main() {
 
         // DDA algorithm
         traverseVoxelGrid(lineNumber, p1.linePoint, p1.lineAttribute, p2.linePoint, p2.lineAttribute,
-                currentVoxelNumIntersections, currentVoxelIntersection, currentVoxelIntersectionAttribute);
+                currentVoxel, currentVoxelNumIntersections, currentVoxelIntersection, currentVoxelIntersectionAttribute,
+                noIntersectionForLineYet);
     }
 }

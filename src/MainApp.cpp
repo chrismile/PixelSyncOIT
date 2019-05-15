@@ -540,8 +540,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
                 convertObjTrajectoryDataToBinaryLineMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
             } else {
-                convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
-                //convertObjTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, modelFilenameObj, modelFilenameOptimized);
+                //convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
+                convertObjTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, modelFilenameObj, modelFilenameOptimized);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             modelFilenameObj = filename;

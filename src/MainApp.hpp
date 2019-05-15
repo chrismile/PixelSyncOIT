@@ -140,7 +140,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Single Streamline (Lines)";//"Aneurysm";
+    std::string startupModelName = "Aneurysm (Lines)";//"Aneurysm";
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);

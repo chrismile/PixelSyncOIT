@@ -30,6 +30,11 @@ layout (std430, binding = 5) buffer LineSegmentsBuffer
     LineSegmentCompressed lineSegments[];
 };
 
+uint getVoxelIndex1D(ivec3 voxelIndex)
+{
+    return voxelIndex.x + voxelIndex.y*gridResolution.x + voxelIndex.z*gridResolution.x*gridResolution.y;
+}
+
 vec3 getQuantizedPositionOffset(uint faceIndex, uint quantizedPos1D)
 {
     vec2 quantizedFacePosition = vec2(
@@ -51,9 +56,18 @@ vec3 getQuantizedPositionOffset(uint faceIndex, uint quantizedPos1D)
     return offset;
 }
 
+int intlog2(int x) {
+    int exponent = 0;
+    while (x > 1) {
+        x /= 2;
+        exponent++;
+    }
+    return exponent;
+}
+
 void decompressLine(vec3 voxelPosition, LineSegmentCompressed compressedLine, out LineSegment decompressedLine)
 {
-    const uint c = 2*log2(quantizationResolution.x);
+    const uint c = 2*intlog2(quantizationResolution.x);
     const uint bitmaskQuantizedPos = quantizationResolution.x*quantizationResolution.x-1;
     uint faceStartIndex = compressedLine.linePosition & 0x7u;
     uint faceEndIndex = (compressedLine.linePosition >> 3) & 0x7u;
