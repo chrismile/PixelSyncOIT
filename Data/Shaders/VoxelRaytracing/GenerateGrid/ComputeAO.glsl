@@ -7,7 +7,7 @@ layout (local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
 uniform sampler3D densityTexture;
 layout (binding = 0, r32f) uniform image3D aoImage;
 
-layout (binding = 0, std430) uniform GaussianFilerWeightBuffer
+layout (binding = 2, std430) uniform GaussianFilterWeightBuffer
 {
     float blurKernel[];
 };
@@ -34,8 +34,10 @@ void generateVoxelAOFactorsFromDensity(ivec3 voxelIndex, bool isHairDataset)
             }
         }
     }
-    imageStore(densityImage, voxelIndex, vec4(density));
+
+    imageStore(aoImage, voxelIndex, vec4(outputValue));
 }
+
 void main() {
     ivec3 voxelIndex = gl_GlobalInvocationID.xyz;
     if (any(greaterThanEqual(voxelIndex, gridResolution))) {

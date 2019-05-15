@@ -132,4 +132,9 @@ sgl::TexturePtr generateDensityTexture(const std::vector<float> &lods, glm::ivec
 void generateVoxelAOFactorsFromDensity(const std::vector<float> &voxelDensities, std::vector<float> &voxelAOFactors,
                                        glm::ivec3 size, bool isHairDataset);
 
+// Called automatically by generateVoxelAOFactorsFromDensity, but necessary for GPU implementation.
+void normalizeVoxelAOFactors(std::vector<float> &voxelAOFactors, glm::ivec3 size, bool isHairDataset);
+void generateGaussianBlurKernel(float *filterKernel, int filterSize, float sigma);
+void generateBoxBlurKernel(float *filterKernel, int filterSize);
+
 #endif //PIXELSYNCOIT_VOXELDATA_HPP

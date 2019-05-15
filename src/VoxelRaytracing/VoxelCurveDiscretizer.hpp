@@ -96,6 +96,6 @@ private:
     glm::mat4 linesToVoxel, voxelToLines;
 };
 
-
+std::string ivec3ToString(const glm::ivec3 &v);
 
 #endif //PIXELSYNCOIT_VOXELCURVEDISCRETIZER_HPP

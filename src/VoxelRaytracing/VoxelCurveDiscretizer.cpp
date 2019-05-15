@@ -775,6 +775,10 @@ struct LinePoint {
     float lineAttribute;
 };
 
+std::string ivec3ToString(const glm::ivec3 &v) {
+    return std::string() + "ivec3(" + sgl::toString(v.x) + ", " + sgl::toString(v.y) + ", " + sgl::toString(v.z) + ")";
+}
+
 VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
         std::vector<Curve> &curves, unsigned int maxNumLinesPerVoxel)
 {
@@ -783,6 +787,19 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     uint32_t gridSize1D = gridResolution.x *gridResolution.y *gridResolution.z;
     uint32_t zeroData = 0u;
     void *bufferMemory;
+
+
+    // Set preprocessor defines for the shaders.
+    sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_LINES_PER_VOXEL", maxNumLinesPerVoxel);
+    sgl::ShaderManager->addPreprocessorDefine("gridResolution", ivec3ToString(gridResolution));
+    sgl::ShaderManager->addPreprocessorDefine(
+            "GRID_RESOLUTION_LOG2", sgl::toString(sgl::intlog2(gridResolution.x)));
+    sgl::ShaderManager->addPreprocessorDefine("GRID_RESOLUTION", gridResolution.x);
+    sgl::ShaderManager->addPreprocessorDefine("quantizationResolution", ivec3ToString(quantizationResolution));
+    sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(quantizationResolution.x));
+    sgl::ShaderManager->addPreprocessorDefine(
+            "QUANTIZATION_RESOLUTION_LOG2", sgl::toString(sgl::intlog2(quantizationResolution.x)));
+
 
     // PART 1: Create the LinePointBuffer, LineOffsetBuffer, NumSegmentsBuffer (empty) and LineSegmentsBuffer.
     auto startBuffers = std::chrono::system_clock::now();
@@ -851,7 +868,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
                                    + std::to_string(elapsedVoxelize.count()));
 
 
-    // Part 3: Compute the densities
+    // PART 3: Compute the densities
     auto startDensity = std::chrono::system_clock::now();
 
     sgl::TextureSettings densityTextureSettings = sgl::TextureSettings();
@@ -866,7 +883,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     computeDensityShader->dispatchCompute(numWorkGroupsVoxel.x, numWorkGroupsVoxel.y, numWorkGroupsVoxel.z);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-    // End of PART 2: Read the line segment buffer & number of line segments per voxel buffer back from the GPU.
+    // End of PART 3: Read the density values back from the GPU.
     std::vector<float> voxelDensities;
     voxelDensities.resize(gridSize1D);
     sgl::TextureGL *densityTextureGL = (sgl::TextureGL*)densityTexture.get();
@@ -879,7 +896,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
                                    + std::to_string(elapsedVoxelize.count()));
 
 
-    // Part 4: Reduce the size of the buffer using a prefix sum (on the CPU for now).
+    // PART 4: Reduce the size of the buffer using a prefix sum (on the CPU for now).
     auto startPrefixSum = std::chrono::system_clock::now();
 
     uint32_t lineSegmentOffset = 0;
@@ -900,20 +917,59 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
                                    + std::to_string(elapsedPrefixSum.count()));
 
 
-    // 5. Compute the ambient occlusion factors. For now, do this on CPU (TODO).
-    auto startAO = std::chrono::system_clock::now();
+    // PART 5: Compute the ambient occlusion factors. For now, do this on CPU (legacy).
+    /*auto startAO_CPU = std::chrono::system_clock::now();
 
     std::vector<float> voxelAOFactors;
     voxelAOFactors.resize(gridSize1D);
     generateVoxelAOFactorsFromDensity(voxelDensities, voxelAOFactors, gridResolution, isHairDataset);
 
-    auto endAO = std::chrono::system_clock::now();
-    auto elapsedAO = std::chrono::duration_cast<std::chrono::milliseconds>(endDensity - startDensity);
-    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to compute the ambient occlusion factors: "
-                                   + std::to_string(elapsedAO.count()));
+    auto endAO_CPU = std::chrono::system_clock::now();
+    auto elapsedAO_CPU = std::chrono::duration_cast<std::chrono::milliseconds>(endAO_CPU - startAO_CPU);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to compute the ambient occlusion factors (CPU): "
+                                   + std::to_string(elapsedAO_CPU.count()));*/
 
 
-    // Now, write the data to the struct.
+    // PART 5: Compute the ambient occlusion factors on the GPU using the density texture.
+    auto startAO_GPU = std::chrono::system_clock::now();
+    const int FILTER_SIZE = 7;
+    const int FILTER_EXTENT = (FILTER_SIZE - 1) / 2;
+    const int FILTER_NUM_FIELDS = FILTER_SIZE*FILTER_SIZE*FILTER_SIZE;
+    float blurKernel[FILTER_NUM_FIELDS];
+    generateGaussianBlurKernel(blurKernel, FILTER_SIZE, FILTER_EXTENT);
+    sgl::GeometryBufferPtr gaussianKernelBuffer = sgl::Renderer->createGeometryBuffer(
+            FILTER_NUM_FIELDS * sizeof(float), &blurKernel,
+            sgl::UNIFORM_BUFFER, sgl::BUFFER_STATIC);
+
+    sgl::TextureSettings aoTextureSettings = sgl::TextureSettings();
+    aoTextureSettings.type = sgl::TEXTURE_3D;
+    aoTextureSettings.pixelType = GL_FLOAT;
+    aoTextureSettings.pixelFormat = GL_RED;
+    aoTextureSettings.internalFormat = GL_R32F;
+    sgl::TexturePtr aoTexture = sgl::TextureManager->createEmptyTexture(
+            gridResolution.x, gridResolution.y, gridResolution.z, aoTextureSettings);
+    sgl::ShaderProgramPtr computeAOShader = sgl::ShaderManager->getShaderProgram({"ComputeAO.Compute"});
+    computeAOShader->setUniformImageTexture(0, aoTexture, GL_R32F, GL_READ_WRITE, 0, true, 0);
+    computeAOShader->setUniform("densityTexture", densityTexture, 0);
+    computeAOShader->setUniformBuffer(2, "GaussianFilterWeightBuffer", gaussianKernelBuffer);
+    computeAOShader->dispatchCompute(numWorkGroupsVoxel.x, numWorkGroupsVoxel.y, numWorkGroupsVoxel.z);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    // End of PART 5: Read the AO factors back from the GPU.
+    std::vector<float> voxelAOFactors;
+    voxelAOFactors.resize(gridSize1D);
+    sgl::TextureGL *aoTextureGL = (sgl::TextureGL*)aoTexture.get();
+    glGetTextureImage(aoTextureGL->getTexture(), 0, GL_RED, GL_FLOAT,
+                      sizeof(float) * gridSize1D, (void*)&voxelAOFactors.front());
+    normalizeVoxelAOFactors(voxelAOFactors, gridResolution, isHairDataset);
+
+    auto endAO_GPU = std::chrono::system_clock::now();
+    auto elapsedAO_GPU = std::chrono::duration_cast<std::chrono::milliseconds>(endAO_GPU - startAO_GPU);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to compute the ambient occlusion factors (GPU): "
+                                   + std::to_string(elapsedAO_GPU.count()));
+
+
+    // FINAL STEP: Now, write the data to the struct.
     VoxelGridDataCompressed dataCompressed;
     dataCompressed.gridResolution = gridResolution;
     dataCompressed.quantizationResolution = quantizationResolution;
@@ -936,5 +992,4 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     dataCompressed.voxelAOLODs = generateMipmapsForDensity(&voxelAOFactors.front(), gridResolution);
     dataCompressed.octreeLODs = generateMipmapsForOctree(&numSegmentsPerVoxel.front(), gridResolution);
     return dataCompressed;
-
 }

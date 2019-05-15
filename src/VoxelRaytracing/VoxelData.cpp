@@ -394,6 +394,38 @@ void generateGaussianBlurKernel(float *filterKernel, int filterSize, float sigma
     }
 }
 
+// Divides all values by the maximum value.
+void normalizeVoxelAOFactors(std::vector<float> &voxelAOFactors, glm::ivec3 size, bool isHairDataset)
+{
+    // Find maximum and normalize the values
+    float maxAccumDensity = 0.0f;
+#pragma omp parallel for reduction(max:maxAccumDensity)
+    for (int gz = 0; gz < size.z; gz++) {
+        for (int gy = 0; gy < size.y; gy++) {
+            for (int gx = 0; gx < size.x; gx++) {
+                int readIdx = gz*size.y*size.x + gy*size.x + gx;
+                maxAccumDensity = std::max(maxAccumDensity, voxelAOFactors[readIdx]);
+            }
+        }
+    }
+    std::cout << "Maximum accumulated density: " << maxAccumDensity << std::endl;
+
+    // Now divide all the values by the maximum, and save 1 - density as occlusion factor.
+#pragma omp parallel for
+    for (int gz = 0; gz < size.z; gz++) {
+        for (int gy = 0; gy < size.y; gy++) {
+            for (int gx = 0; gx < size.x; gx++) {
+                int writeIdx = gz*size.y*size.x + gy*size.x + gx;
+                if (isHairDataset) {
+                    voxelAOFactors[writeIdx] = 1.0f - glm::clamp((voxelAOFactors[writeIdx] / maxAccumDensity) * 3.0f, 0.0f, 1.0f);
+                } else {
+                    voxelAOFactors[writeIdx] = 1.0f - glm::clamp((voxelAOFactors[writeIdx] / maxAccumDensity - 0.1f) * 2.0f, 0.0f, 1.0f);
+                }
+            }
+        }
+    }
+}
+
 void generateVoxelAOFactorsFromDensity(const std::vector<float> &voxelDensities, std::vector<float> &voxelAOFactors,
                                        glm::ivec3 size, bool isHairDataset)
 {
@@ -431,33 +463,7 @@ void generateVoxelAOFactorsFromDensity(const std::vector<float> &voxelDensities,
         }
     }
 
-    // Find maximum and normalize the values
-    float maxAccumDensity = 0.0f;
-    #pragma omp parallel for reduction(max:maxAccumDensity)
-    for (int gz = 0; gz < size.z; gz++) {
-        for (int gy = 0; gy < size.y; gy++) {
-            for (int gx = 0; gx < size.x; gx++) {
-                int readIdx = gz*size.y*size.x + gy*size.x + gx;
-                maxAccumDensity = std::max(maxAccumDensity, voxelAOFactors[readIdx]);
-            }
-        }
-    }
-    std::cout << "Maximum accumulated density: " << maxAccumDensity << std::endl;
-
-    // Now divide all the values by the maximum, and save 1 - density as occlusion factor.
-    #pragma omp parallel for
-    for (int gz = 0; gz < size.z; gz++) {
-        for (int gy = 0; gy < size.y; gy++) {
-            for (int gx = 0; gx < size.x; gx++) {
-                int writeIdx = gz*size.y*size.x + gy*size.x + gx;
-                if (isHairDataset) {
-                    voxelAOFactors[writeIdx] = 1.0f - glm::clamp((voxelAOFactors[writeIdx] / maxAccumDensity) * 3.0f, 0.0f, 1.0f);
-                } else {
-                    voxelAOFactors[writeIdx] = 1.0f - glm::clamp((voxelAOFactors[writeIdx] / maxAccumDensity - 0.1f) * 2.0f, 0.0f, 1.0f);
-                }
-            }
-        }
-    }
+    normalizeVoxelAOFactors(voxelAOFactors, size, isHairDataset);
 }
 
 

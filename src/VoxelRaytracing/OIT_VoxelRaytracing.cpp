@@ -95,10 +95,6 @@ void OIT_VoxelRaytracing::loadModel(int modelIndex, std::vector<float> &attribut
     fromFile(MODEL_FILENAMES[modelIndex], attributes, maxVorticity);
 }
 
-std::string ivec3ToString(const glm::ivec3 &v) {
-    return std::string() + "ivec3(" + sgl::toString(v.x) + ", " + sgl::toString(v.y) + ", " + sgl::toString(v.z) + ")";
-}
-
 void OIT_VoxelRaytracing::setNewState(const InternalState &newState)
 {
     //int gridResolution = newState.oitAlgorithmSettings.getIntValue("gridResolution");
