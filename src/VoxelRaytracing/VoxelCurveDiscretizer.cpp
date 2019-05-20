@@ -816,6 +816,7 @@ void VoxelCurveDiscretizer::recreateDensityAndAOFactors(VoxelGridDataCompressed 
 
     // PART 5: Compute the ambient occlusion factors on the GPU using the density texture.
     auto startAO_GPU = std::chrono::system_clock::now();
+    
     const int FILTER_SIZE = 7;
     const int FILTER_EXTENT = (FILTER_SIZE - 1) / 2;
     const int FILTER_NUM_FIELDS = FILTER_SIZE*FILTER_SIZE*FILTER_SIZE;
@@ -826,27 +827,18 @@ void VoxelCurveDiscretizer::recreateDensityAndAOFactors(VoxelGridDataCompressed 
             sgl::UNIFORM_BUFFER, sgl::BUFFER_STATIC);
 
     sgl::ShaderProgramPtr computeAOShader = sgl::ShaderManager->getShaderProgram({"ComputeAO.Compute"});
-    computeAOShader->setUniformImageTexture(0, dataGPU.aoTexture, GL_R32F, GL_READ_WRITE, 0, true, 0);
+    computeAOShader->setUniformImageTexture(0, dataGPU.densityTexture, GL_R32F, GL_READ_WRITE, 0, true, 0);
     computeAOShader->setUniform("densityTexture", dataGPU.densityTexture, 0);
-    computeAOShader->setUniformBuffer(2, "GaussianFilterWeightBuffer", gaussianKernelBuffer);
+    sgl::ShaderManager->bindShaderStorageBuffer(6, gaussianKernelBuffer);
     computeAOShader->dispatchCompute(numWorkGroupsVoxel.x, numWorkGroupsVoxel.y, numWorkGroupsVoxel.z);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-    // End of PART 5: Read the AO factors back from the GPU.
-    /*std::vector<float> voxelAOFactors;
-    voxelAOFactors.resize(gridSize1D);
-    sgl::TextureGL *aoTextureGL = (sgl::TextureGL*)aoTexture.get();
-    glGetTextureImage(aoTextureGL->getTexture(), 0, GL_RED, GL_FLOAT,
-                      sizeof(float) * gridSize1D, (void*)&voxelAOFactors.front());
-    normalizeVoxelAOFactors(voxelAOFactors, gridResolution, isHairDataset);*/
-
-    //dataCompressed.voxelDensityLODs = generateMipmapsForDensity(&voxelDensities.front(), gridResolution);
-    //dataCompressed.voxelAOLODs = generateMipmapsForDensity(&voxelAOFactors.front(), gridResolution);
 
     auto endAO_GPU = std::chrono::system_clock::now();
     auto elapsedAO_GPU = std::chrono::duration_cast<std::chrono::milliseconds>(endAO_GPU - startAO_GPU);
     sgl::Logfile::get()->writeInfo(std::string() + "Computational time to compute the ambient occlusion factors (GPU): "
                                    + std::to_string(elapsedAO_GPU.count()));
+
+    glUseProgram(0); // For ImGui to stop complaining when binding last_program...
 }
 
 VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
