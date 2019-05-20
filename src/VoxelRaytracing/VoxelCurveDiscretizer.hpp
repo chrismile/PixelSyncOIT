@@ -58,6 +58,10 @@ public:
             glm::vec4 &hairStrandColor, unsigned int maxNumLinesPerVoxel, bool useGPU = true);
     glm::mat4 getWorldToVoxelGridMatrix() { return linesToVoxel; }
 
+    // Recompute density and AO factor if the transfer function changed.
+    void recreateDensityAndAOFactors(VoxelGridDataCompressed &dataCompressed, VoxelGridDataGPU &dataGPU,
+            unsigned int maxNumLinesPerVoxel);
+
 private:
     bool isHairDataset = false;
     glm::ivec3 gridResolution, quantizationResolution;

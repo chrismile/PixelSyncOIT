@@ -75,6 +75,7 @@ public:
 
     // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
     sgl::TexturePtr &getTransferFunctionMapTexture();
+    bool getTransferFunctionMapRebuilt();
 
 private:
     void renderFileDialog();
@@ -125,6 +126,7 @@ private:
     std::vector<ColorPoint_sRGB> colorPoints;
     std::vector<ColorPoint_LinearRGB> colorPoints_LinearRGB;
     bool useLinearRGB = true;
+    bool transferFunctionMapRebuilt = true;
 };
 
 extern TransferFunctionWindow *g_TransferFunctionWindowHandle;

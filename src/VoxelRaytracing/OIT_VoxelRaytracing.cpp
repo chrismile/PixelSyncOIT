@@ -152,7 +152,6 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
         maxNumLinesPerVoxel = 64;
     }
 
-    VoxelGridDataCompressed compressedData;
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
         VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes), glm::ivec3(quantizationRes, quantizationRes, quantizationRes));
 
@@ -359,4 +358,10 @@ void OIT_VoxelRaytracing::renderToScreen()
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
 #endif
+}
+
+void OIT_VoxelRaytracing::onTransferFunctionMapRebuilt()
+{
+    VoxelCurveDiscretizer discretizer(compressedData.gridResolution, compressedData.quantizationResolution);
+    discretizer.recreateDensityAndAOFactors(compressedData, data, maxNumLinesPerVoxel);
 }

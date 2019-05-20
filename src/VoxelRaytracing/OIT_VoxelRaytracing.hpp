@@ -39,6 +39,9 @@ public:
     // For changing performance measurement modes
     void setNewState(const InternalState &newState);
 
+    // Recompute density and AO factor if the transfer function changed.
+    void onTransferFunctionMapRebuilt();
+
 private:
     void fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
     void reloadShader();
@@ -64,6 +67,8 @@ private:
 
     // Data compressed for GPU
     VoxelGridDataGPU data;
+    VoxelGridDataCompressed compressedData;
+    int maxNumLinesPerVoxel = 32;
 };
 
 #endif //PIXELSYNCOIT_OIT_VOXELRAYTRACING_HPP

@@ -383,6 +383,16 @@ sgl::TexturePtr &TransferFunctionWindow::getTransferFunctionMapTexture()
     return tfMapTexture;
 }
 
+bool TransferFunctionWindow::getTransferFunctionMapRebuilt()
+{
+    if (transferFunctionMapRebuilt) {
+        // Reset the flag
+        transferFunctionMapRebuilt = false;
+        return true;
+    }
+    return false;
+}
+
 // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
 void TransferFunctionWindow::rebuildTransferFunctionMap()
 {
@@ -404,6 +414,8 @@ void TransferFunctionWindow::rebuildTransferFunctionMap()
     } else {
         tfMapTexture->uploadPixelData(TRANSFER_FUNCTION_TEXTURE_SIZE, &transferFunctionMap_sRGB.front());
     }
+
+   transferFunctionMapRebuilt = true;
 }
 
 // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".

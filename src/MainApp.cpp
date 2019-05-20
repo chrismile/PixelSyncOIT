@@ -1311,6 +1311,11 @@ void PixelSyncApp::renderGUI()
 
     if (transferFunctionWindow.renderGUI()) {
         reRender = true;
+        if (transferFunctionWindow.getTransferFunctionMapRebuilt()) {
+            if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+                static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->onTransferFunctionMapRebuilt();
+            }
+        }
     }
 
     ImGuiWrapper::get()->renderEnd();
