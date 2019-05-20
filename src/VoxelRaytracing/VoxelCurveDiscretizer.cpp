@@ -722,7 +722,7 @@ glm::vec3 VoxelCurveDiscretizer::getQuantizedPositionOffset(uint32_t faceIndex, 
 void VoxelCurveDiscretizer::decompressLine(const glm::vec3 &voxelPosition, const LineSegmentCompressed &compressedLine,
         LineSegment &decompressedLine)
 {
-    const uint32_t c = 2*log2(quantizationResolution.x);
+    const uint32_t c = 2*intlog2(quantizationResolution.x);
     const uint32_t bitmaskQuantizedPos = quantizationResolution.x*quantizationResolution.x-1;
     uint32_t faceStartIndex = compressedLine.linePosition & 0x7u;
     uint32_t faceEndIndex = (compressedLine.linePosition >> 3) & 0x7u;
@@ -869,7 +869,11 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(quantizationResolution.x));
     sgl::ShaderManager->addPreprocessorDefine(
             "QUANTIZATION_RESOLUTION_LOG2", sgl::toString(sgl::intlog2(quantizationResolution.x)));
-
+    if (isHairDataset) {
+        sgl::ShaderManager->addPreprocessorDefine("HAIR_RENDERING", maxNumLinesPerVoxel);
+    } else {
+        sgl::ShaderManager->removePreprocessorDefine("HAIR_RENDERING");
+    }
 
     // PART 1: Create the LinePointBuffer, LineOffsetBuffer, NumSegmentsBuffer (empty) and LineSegmentsBuffer.
     auto startBuffers = std::chrono::system_clock::now();
@@ -886,7 +890,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
         lineOffsets.push_back(offsetCounter);
     }
     sgl::GeometryBufferPtr linePointBuffer = sgl::Renderer->createGeometryBuffer(
-            linePoints.size()+1 * sizeof(LinePoint), &linePoints.front(),
+            (linePoints.size()+1) * sizeof(LinePoint), &linePoints.front(),
             sgl::SHADER_STORAGE_BUFFER, sgl::BUFFER_STATIC);
     sgl::GeometryBufferPtr lineOffsetBuffer = sgl::Renderer->createGeometryBuffer(
             (curves.size()+1) * sizeof(uint32_t), &lineOffsets.front(),
@@ -902,7 +906,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
 
     auto endBuffers = std::chrono::system_clock::now();
     auto elapsedBuffers = std::chrono::duration_cast<std::chrono::milliseconds>(endBuffers - startBuffers);
-    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to create buffers: "
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to create the buffers: "
                                    + std::to_string(elapsedBuffers.count()));
 
 
@@ -921,14 +925,14 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
 
     // End of PART 2: Read the line segment buffer & number of line segments per voxel buffer back from the GPU.
     std::vector<LineSegmentCompressed> compressedLineSegments;
-    bufferMemory = linePointBuffer->mapBuffer(sgl::BUFFER_MAP_READ_ONLY);
-    compressedLineSegments.resize(maxNumLinesPerVoxel * gridSize1D * sizeof(LineSegmentCompressed));
+    bufferMemory = lineSegmentsBuffer->mapBuffer(sgl::BUFFER_MAP_READ_ONLY);
+    compressedLineSegments.resize(maxNumLinesPerVoxel * gridSize1D);
     memcpy(&compressedLineSegments.front(), bufferMemory, compressedLineSegments.size() * sizeof(LineSegmentCompressed));
-    linePointBuffer->unmapBuffer();
+    lineSegmentsBuffer->unmapBuffer();
 
     std::vector<uint32_t> numSegmentsPerVoxel;
     bufferMemory = numSegmentsBuffer->mapBuffer(sgl::BUFFER_MAP_READ_ONLY);
-    numSegmentsPerVoxel.resize(gridSize1D * sizeof(uint32_t));
+    numSegmentsPerVoxel.resize(gridSize1D);
     memcpy(&numSegmentsPerVoxel.front(), bufferMemory, numSegmentsPerVoxel.size() * sizeof(uint32_t));
     numSegmentsBuffer->unmapBuffer();
 
@@ -982,7 +986,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     }
 
     auto endPrefixSum = std::chrono::system_clock::now();
-    auto elapsedPrefixSum = std::chrono::duration_cast<std::chrono::milliseconds>(endVoxelize - startVoxelize);
+    auto elapsedPrefixSum = std::chrono::duration_cast<std::chrono::milliseconds>(endPrefixSum - startPrefixSum);
     sgl::Logfile::get()->writeInfo(std::string() + "Computational time to reduce the buffers: "
                                    + std::to_string(elapsedPrefixSum.count()));
 
@@ -1009,7 +1013,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     generateGaussianBlurKernel(blurKernel, FILTER_SIZE, FILTER_EXTENT);
     sgl::GeometryBufferPtr gaussianKernelBuffer = sgl::Renderer->createGeometryBuffer(
             FILTER_NUM_FIELDS * sizeof(float), &blurKernel,
-            sgl::UNIFORM_BUFFER, sgl::BUFFER_STATIC);
+            sgl::SHADER_STORAGE_BUFFER, sgl::BUFFER_STATIC);
 
     sgl::TextureSettings aoTextureSettings = sgl::TextureSettings();
     aoTextureSettings.type = sgl::TEXTURE_3D;
@@ -1021,7 +1025,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     sgl::ShaderProgramPtr computeAOShader = sgl::ShaderManager->getShaderProgram({"ComputeAO.Compute"});
     computeAOShader->setUniformImageTexture(0, aoTexture, GL_R32F, GL_READ_WRITE, 0, true, 0);
     computeAOShader->setUniform("densityTexture", densityTexture, 0);
-    computeAOShader->setUniformBuffer(2, "GaussianFilterWeightBuffer", gaussianKernelBuffer);
+    sgl::ShaderManager->bindShaderStorageBuffer(6, gaussianKernelBuffer);
     computeAOShader->dispatchCompute(numWorkGroupsVoxel.x, numWorkGroupsVoxel.y, numWorkGroupsVoxel.z);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -1038,6 +1042,8 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     sgl::Logfile::get()->writeInfo(std::string() + "Computational time to compute the ambient occlusion factors (GPU): "
                                    + std::to_string(elapsedAO_GPU.count()));
 
+
+    glUseProgram(0); // For ImGui to stop complaining when binding last_program...
 
     // FINAL STEP: Now, write the data to the struct.
     VoxelGridDataCompressed dataCompressed;
