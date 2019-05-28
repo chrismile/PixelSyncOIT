@@ -206,7 +206,7 @@ void gatherFragment(vec4 color)
 
     MinDepthNode depthInfo = depthBuffer[pixelIndex];
 
-    if (depth <= depthInfo.minOpaqueDepth) {
+    if (depth <= depthInfo.minOpaqueDepth + 0.0001) {
         if (depth < depthInfo.minDepth) {
             // Merge new fragment with first one
             multiLayerAlphaBlendingMergeFront(frag, nodeArray);
