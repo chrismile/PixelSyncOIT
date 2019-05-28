@@ -816,7 +816,7 @@ void VoxelCurveDiscretizer::recreateDensityAndAOFactors(VoxelGridDataCompressed 
 
     // PART 5: Compute the ambient occlusion factors on the GPU using the density texture.
     auto startAO_GPU = std::chrono::system_clock::now();
-    
+
     const int FILTER_SIZE = 7;
     const int FILTER_EXTENT = (FILTER_SIZE - 1) / 2;
     const int FILTER_NUM_FIELDS = FILTER_SIZE*FILTER_SIZE*FILTER_SIZE;

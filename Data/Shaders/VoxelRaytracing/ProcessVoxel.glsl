@@ -389,9 +389,11 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, isClose, hits, numHits, blendedLineIDs,
             newBlendedLineIDs, currOpacity);
 
+
     //    if (currDensity >= 0) {
-    bool fastNeighborSearch = true;
-    if (isClose && !fastNeighborSearch) {
+    //#define FAST_NEIGHBOR_SEARCH
+    #ifndef FAST_NEIGHBOR_SEARCH
+    if (isClose) {
         for (int z = -1; z <= 1; z++) {
             for (int y = -1; y <= 1; y++) {
                 for (int x = -1; x <= 1; x++) {
@@ -404,37 +406,36 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
             }
         }
     }
-    if (isClose && fastNeighborSearch) {
+    #else
+    if (isClose) {
         vec3 entrancePoint, exitPoint;
         vec3 lower = vec3(voxelIndex);
         rayBoxIntersection(rayOrigin, rayDirection, lower, lower+vec3(1.0), entrancePoint, exitPoint);
         vec3 voxelEntry = fract(entrancePoint);
 
+        ivec3 offset;
         if (voxelEntry.x <= 0.2) {
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(-1, 0, 0), isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+            offset = ivec3(-1, 0, 0);
         }
         if (voxelEntry.x >= 0.8) {
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(1, 0, 0), isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+            offset = ivec3(1, 0, 0);
         }
         if (voxelEntry.y <= 0.2) {
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, -1, 0), isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+            offset = ivec3(0, -1, 0);
         }
         if (voxelEntry.y >= 0.8) {
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, 1, 0), isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+            offset = ivec3(0, 1, 0);
         }
         if (voxelEntry.z <= 0.2) {
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, 0, -1), isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+            offset = ivec3(0, 0, -1);
         }
         if (voxelEntry.z >= 0.8) {
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + ivec3(0, 0, 1), isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
+            offset = ivec3(0, 0, 1);
         }
+        processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                blendedLineIDs, newBlendedLineIDs, currOpacity);
     }
+    #endif
 
     //    } else if (distance < GRID_RESOLUTION / 2.0) {
         //        // Far voxels
