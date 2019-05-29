@@ -215,6 +215,10 @@ void compressLineSegment(ivec3 voxelIndex, LineSegment lineSegment, out LineSegm
     lineSegmentCompressed.linePosition |= lineQuantized.facePositionQuantized1 << 6;
     lineSegmentCompressed.linePosition |= lineQuantized.facePositionQuantized2 << (6 + c);
     lineSegmentCompressed.attributes = 0;
+    if (c > 12) {
+        // Quantization resolution of 128 or 256
+        lineSegmentCompressed.attributes |= lineQuantized.facePositionQuantized2 >> (c - (6 + 2*c - 32));
+    }
     lineSegmentCompressed.attributes |= (lineQuantized.lineID & 31u) << 11;
     lineSegmentCompressed.attributes |= attr1Unorm << 16;
     lineSegmentCompressed.attributes |= attr2Unorm << 24;
@@ -368,9 +372,10 @@ void main() {
     uint lineOffset = lineOffsets[lineNumber];
     uint numLinePoints = lineOffsets[lineNumber + 1] - lineOffset;
 
-    ivec3 currentVoxel; // Voxel for which we save intersetions that do not yet form a full line segment
+    // Voxel for which we save intersetions that do not yet form a full line segment
+    ivec3 currentVoxel = ivec3(-1,-1,-1);
     int currentVoxelNumIntersections = 0;
-    vec3 currentVoxelIntersection; // Carry-over-field across line segments
+    vec3 currentVoxelIntersection = vec3(1e6, 1e6, 1e6); // Carry-over-field across line segments
     float currentVoxelIntersectionAttribute = 0.0; // Carry-over-field across line segments
     vec3 tangent;
 

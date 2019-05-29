@@ -124,7 +124,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output");
 
     uint16_t voxelRes = 256;
-    uint16_t quantizationRes = 32;
+    uint16_t quantizationRes = 256;
     if (isRings) {
         voxelRes = 128;
         //quantizationRes = 16;
