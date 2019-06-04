@@ -173,8 +173,10 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         intersectionPosition = rayOrigin + t0 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0
-                //&& all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
-                //&& all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
+        #ifdef FAST_NEIGHBOR_SEARCH
+                && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
+                && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
+        #endif
         ) {
             // Inside of finite cylinder
             return true;
@@ -186,8 +188,10 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         intersectionPosition = rayOrigin + t1 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0
-                //&& all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
-                //&& all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
+        #ifdef FAST_NEIGHBOR_SEARCH
+                && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
+                && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
+        #endif
         ) {
             // Inside of finite cylinder
             return true; // TODO

@@ -412,6 +412,7 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
         vec3 lower = vec3(voxelIndex);
         rayBoxIntersection(rayOrigin, rayDirection, lower, lower+vec3(1.0), entrancePoint, exitPoint);
         vec3 voxelEntry = fract(entrancePoint);
+        vec3 voxelExit = fract(exitPoint);
 
         ivec3 offset;
         if (voxelEntry.x <= 0.2) {
@@ -434,6 +435,29 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
         }
         processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
                 blendedLineIDs, newBlendedLineIDs, currOpacity);
+
+        #ifdef USE_VOXEL_EXIT_POINT
+        if (voxelExit.x <= 0.2) {
+            offset = ivec3(-1, 0, 0);
+        }
+        if (voxelExit.x >= 0.8) {
+            offset = ivec3(1, 0, 0);
+        }
+        if (voxelExit.y <= 0.2) {
+            offset = ivec3(0, -1, 0);
+        }
+        if (voxelExit.y >= 0.8) {
+            offset = ivec3(0, 1, 0);
+        }
+        if (voxelExit.z <= 0.2) {
+            offset = ivec3(0, 0, -1);
+        }
+        if (voxelExit.z >= 0.8) {
+            offset = ivec3(0, 0, 1);
+        }
+        processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                blendedLineIDs, newBlendedLineIDs, currOpacity);
+        #endif
     }
     #endif
 
