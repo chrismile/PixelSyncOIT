@@ -7,11 +7,12 @@
 
 #include <string>
 #include <Graphics/Shader/Shader.hpp>
+#include "Utils/ImportanceCriteria.hpp"
 
 class VoxelAOHelper
 {
 public:
-    void loadAOFactorsFromVoxelFile(const std::string &filename);
+    void loadAOFactorsFromVoxelFile(const std::string &filename, TrajectoryType trajectoryType);
     void setUniformValues(sgl::ShaderProgramPtr transparencyShader);
     inline sgl::TexturePtr getAOTexture() { return aoTexture; }
 

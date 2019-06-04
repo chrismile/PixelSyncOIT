@@ -14,7 +14,7 @@
 
 #include "VoxelAO.hpp"
 
-void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename)
+void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename, TrajectoryType trajectoryType)
 {
     // Check if voxel grid is already created
     // Pure filename without extension (to create compressed .voxel filename)
@@ -60,8 +60,8 @@ void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename)
             std::string modelFilenameObj = modelFilenamePure + ".obj";
             std::vector<float> attributes;
             float maxVorticity;
-            compressedData = discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity,
-                    maxNumLinesPerVoxel);
+            compressedData = discretizer.createFromTrajectoryDataset(modelFilenameObj, trajectoryType,
+                    attributes, maxVorticity, maxNumLinesPerVoxel);
         }
 
         auto end = std::chrono::system_clock::now();

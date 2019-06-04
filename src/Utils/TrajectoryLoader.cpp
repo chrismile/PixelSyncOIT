@@ -14,6 +14,7 @@
 #include <GL/glew.h>
 
 #include "MeshSerializer.hpp"
+#include "TrajectoryFile.hpp"
 #include "TrajectoryLoader.hpp"
 
 using namespace sgl;
@@ -441,183 +442,45 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
     std::vector<std::vector<float>> globalImportanceCriteria;
     std::vector<uint32_t> globalIndices;
 
-    bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
-    bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
-
-    sgl::AABB3 boundingBox;
-
-    std::vector<glm::vec3> globalLineVertices;
-    std::vector<float> globalLineVertexAttributes;
-
     uint32_t numLines = 0;
     uint32_t numLineSegments = 0;
 
 
-    FILE *file = fopen(objFilename.c_str(), "r");
-    if (!file) {
-        sgl::Logfile::get()->writeError(std::string() + "Error in convertObjTrajectoryDataToBinaryTriangleMesh: File \""
-                                        + objFilename + "\" does not exist.");
-        return;
-    }
-    fseek(file, 0, SEEK_END);
-    size_t length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *fileBuffer = new char[length];
-    fread(fileBuffer, 1, length, file);
-    fclose(file);
-    std::string lineBuffer;
-    std::string numberString;
+    Trajectories trajectories = loadTrajectoriesFromFile(objFilename, trajectoryType);
 
-    for (size_t charPtr = 0; charPtr < length; charPtr++) {
-        while (charPtr < length) {
-            char currentChar = fileBuffer[charPtr];
-            if (currentChar == '\n' || currentChar == '\r') {
-                charPtr++;
-                break;
+    for (size_t i = 0; i < trajectories.size(); i++) {
+        Trajectory &trajectory = trajectories.at(i);
+
+        numLines++;
+        numLineSegments += trajectory.positions.size() - 1;
+
+        // Create tube render data
+        std::vector<glm::vec3> localVertices;
+        std::vector<std::vector<float>> importanceCriteriaVertex;
+        std::vector<glm::vec3> localNormals;
+        std::vector<uint32_t> localIndices;
+        createTubeRenderData(trajectory.positions, trajectory.attributes, localVertices, localNormals,
+                             importanceCriteriaVertex, localIndices);
+
+        // Local -> global
+        if (localVertices.size() > 0) {
+            for (size_t i = 0; i < localIndices.size(); i++) {
+                globalIndices.push_back(localIndices.at(i) + globalVertexPositions.size());
             }
-            lineBuffer.push_back(currentChar);
-            charPtr++;
-        }
-
-        if (lineBuffer.size() == 0) {
-            continue;
-        }
-
-        char command = lineBuffer.at(0);
-        char command2 = ' ';
-        if (lineBuffer.size() > 1) {
-            command2 = lineBuffer.at(1);
-        }
-
-        if (command == 'g') {
-            // New path
-            /*static int ctr = 0;
-            if (ctr >= 999) {
-                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
-            }
-            ctr = (ctr + 1) % 1000;*/
-        } else if (command == 'v' && command2 == 't') {
-            // Path line vertex attribute
-            float attr = 0.0f;
-            sscanf(lineBuffer.c_str()+2, "%f", &attr);
-            globalLineVertexAttributes.push_back(attr);
-        } else if (command == 'v' && command2 == 'n') {
-            // Not supported so far
-        } else if (command == 'v') {
-            // Path line vertex position
-            glm::vec3 position;
-            if (isConvectionRolls) {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.z, &position.y);
+            globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
+            globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
+            if (globalImportanceCriteria.empty()) {
+                globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaVertex.begin(),
+                                                importanceCriteriaVertex.end());
             } else {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.y, &position.z);
-            }
-            globalLineVertices.push_back(position);
-            boundingBox.combine(position);
-        } else if (command == 'l') {
-            // Get indices of current path line
-            std::vector<uint32_t> currentLineIndices;
-            for (size_t linePtr = 2; linePtr < lineBuffer.size(); linePtr++) {
-                char currentChar = lineBuffer.at(linePtr);
-                bool isWhitespace = currentChar == ' ' || currentChar == '\t';
-                if (isWhitespace && numberString.size() != 0) {
-                    currentLineIndices.push_back(atoi(numberString.c_str()) - 1);
-                    numberString.clear();
-                } else if (!isWhitespace) {
-                    numberString.push_back(currentChar);
+                for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
+                    globalImportanceCriteria.at(i).insert(globalImportanceCriteria.at(i).end(),
+                                                          importanceCriteriaVertex.at(i).begin(), importanceCriteriaVertex.at(i).end());
                 }
             }
-            if (numberString.size() != 0) {
-                currentLineIndices.push_back(atoi(numberString.c_str()) - 1);
-                numberString.clear();
-            }
-
-            numLines++;
-            numLineSegments += currentLineIndices.size() - 1;
-
-            // pathLineCenters: The path line points to create a tube from.
-            std::vector<glm::vec3> pathLineCenters;
-            std::vector<float> pathLineVorticities;
-            pathLineCenters.reserve(currentLineIndices.size());
-            pathLineVorticities.reserve(currentLineIndices.size());
-            for (size_t i = 0; i < currentLineIndices.size(); i++) {
-                pathLineCenters.push_back(globalLineVertices.at(currentLineIndices.at(i)));
-                pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
-            }
-
-            // Compute importance criteria
-            std::vector<std::vector<float>> importanceCriteriaLine;
-            computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaLine);
-
-            // Line filtering for WCB trajectories
-            //if (trajectoryType == TRAJECTORY_TYPE_WCB) {
-            //  if (importanceCriteriaLine.at(3).size() > 0 && importanceCriteriaLine.at(3).at(0) < 500.0f) {
-            //      continue;
-            //  }
-            //}
-
-            // Create tube render data
-            std::vector<glm::vec3> localVertices;
-            std::vector<std::vector<float>> importanceCriteriaVertex;
-            std::vector<glm::vec3> localNormals;
-            std::vector<uint32_t> localIndices;
-            createTubeRenderData(pathLineCenters, importanceCriteriaLine, localVertices, localNormals,
-                                 importanceCriteriaVertex, localIndices);
-
-            // Local -> global
-            if (localVertices.size() > 0) {
-                for (size_t i = 0; i < localIndices.size(); i++) {
-                    globalIndices.push_back(localIndices.at(i) + globalVertexPositions.size());
-                }
-                globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
-                globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
-                if (globalImportanceCriteria.empty()) {
-                    globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaVertex.begin(),
-                            importanceCriteriaVertex.end());
-                } else {
-                    for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
-                        globalImportanceCriteria.at(i).insert(globalImportanceCriteria.at(i).end(),
-                                importanceCriteriaVertex.at(i).begin(), importanceCriteriaVertex.at(i).end());
-                    }
-                }
-            }
-        } else if (command = '#') {
-            // Ignore comments
-        } else {
-            //Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
-        }
-
-        lineBuffer.clear();
-    }
-
-
-    // Normalize data for rings
-    float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
-    float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
-
-    if (isConvectionRolls)
-    {
-        minValue = 0;
-        maxValue = 0.5;
-    }
-
-    glm::vec3 minVec(minValue, minValue, minValue);
-    glm::vec3 maxVec(maxValue, maxValue, maxValue);
-
-    if (isRings || isConvectionRolls)
-    {
-        for (auto& vertex : globalVertexPositions)
-        {
-            vertex = (vertex - minVec) / (maxVec - minVec);
-
-            if (isConvectionRolls)
-            {
-                glm::vec3 dims = glm::vec3(1);
-                dims.y = boundingBox.getDimensions().y;
-                vertex -= dims;
-            }
-
         }
     }
+
 
     submesh.material.diffuseColor = glm::vec3(165, 220, 84) / 255.0f;
     submesh.material.opacity = 120 / 255.0f;
@@ -828,16 +691,6 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     BinarySubMesh &submesh = binaryMesh.submeshes.front();
     submesh.vertexMode = VERTEX_MODE_TRIANGLES;
 
-    // For shaders
-
-    bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
-    bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
-
-    sgl::AABB3 boundingBox;
-
-    std::vector<glm::vec3> globalLineVertices;
-    std::vector<float> globalLineVertexAttributes;
-
     std::vector<uint32_t> lineOffsetsInput;
     uint32_t numLinesInput = 0;
     uint32_t numLinePointsInput = 0;
@@ -846,198 +699,33 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     uint32_t numLinesOutput = 0;
     uint32_t numLinePointsOutput = 0;
 
-    /*std::vector<glm::vec3> pathLineCenters;
-    std::vector<std::vector<float>> importanceCriteriaIn;
-    std::vector<glm::vec3> localVertices;
-    std::vector<glm::vec3> localTangents;
-    std::vector<glm::vec3> localNormals;
-    std::vector<uint32_t> localIndices;
-    std::vector<std::vector<float>> importanceCriteriaOut;
-    importanceCriteriaIn.resize(1);
-    importanceCriteriaOut.resize(1);*/
-
     std::vector<InputLinePoint> inputLinePoints;
     std::vector<OutputLinePoint> outputLinePoints;
     std::vector<PathLinePoint> pathLinePoints;
 
     auto startLoad = std::chrono::system_clock::now();
-#ifdef USE_IFSTREAM
-    std::ifstream file(objFilename.c_str());
-    if (!file.is_open()) {
-        sgl::Logfile::get()->writeError(std::string() + "Error in convertObjTrajectoryDataToBinaryTriangleMeshGPU: File \""
-                                        + objFilename + "\" does not exist.");
-        return;
-    }
-    std::string lineString;
+
+    Trajectories trajectories = loadTrajectoriesFromFile(objFilename, trajectoryType);
+
     lineOffsetsInput.push_back(0);
-    while (getline(file, lineString)) {
-        while (lineString.size() > 0 && (lineString[lineString.size()-1] == '\r' || lineString[lineString.size()-1] == ' ')) {
-            // Remove '\r' of Windows line ending
-            lineString = lineString.substr(0, lineString.size() - 1);
+    for (size_t i = 0; i < trajectories.size(); i++) {
+        Trajectory &trajectory = trajectories.at(i);
+
+        InputLinePoint inputLinePoint;
+        for (int j = 0; j < trajectory.positions.size(); j++) {
+            inputLinePoint.linePoint = trajectory.positions.at(j);
+            inputLinePoint.lineAttribute = trajectory.attributes.at(0).at(j);
+            inputLinePoints.push_back(inputLinePoint);
         }
-        std::vector<std::string> line;
-        boost::algorithm::split(line, lineString, boost::is_any_of("\t "), boost::token_compress_on);
 
-        std::string command = line.at(0);
-
-        if (command == "g") {
-            // New path
-            static int ctr = 0;
-            if (ctr >= 999) {
-//                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
-            }
-            ctr = (ctr + 1) % 1000;
-        } else if (command == "v") {
-            // Path line vertex position
-            glm::vec3 position;
-            if (isConvectionRolls) {
-                position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(3)),
-                                     fromString<float>(line.at(2)));
-            } else {
-                position = glm::vec3(fromString<float>(line.at(1)), fromString<float>(line.at(2)),
-                                     fromString<float>(line.at(3)));
-            }
-
-            globalLineVertices.push_back(position);
-            boundingBox.combine(position);
-
-
-        } else if (command == "vt") {
-            // Path line vertex attribute
-            globalLineVertexAttributes.push_back(fromString<float>(line.at(1)));
-        } else if (command == "l") {
-            // Get indices of current path line
-            std::vector<uint32_t> currentLineIndices;
-            for (size_t i = 1; i < line.size(); i++) {
-                currentLineIndices.push_back(atoi(line.at(i).c_str()) - 1);
-            }
-
-            // pathLineCenters: The path line points to create a tube from.
-            InputLinePoint inputLinePoint;
-            for (size_t i = 0; i < currentLineIndices.size(); i++) {
-                inputLinePoint.linePoint = globalLineVertices.at(currentLineIndices.at(i));
-                inputLinePoint.lineAttribute = globalLineVertexAttributes.at(currentLineIndices.at(i));
-                inputLinePoints.push_back(inputLinePoint);
-            }
-
-            if (currentLineIndices.size() > 0) {
-                numLinePointsInput += currentLineIndices.size();
-                numLinesInput++;
-            } else {
-                continue;
-            }
-            lineOffsetsInput.push_back(numLinePointsInput);
-        } else if (boost::starts_with(command, "#") || command == "") {
-            // Ignore comments and empty lines
+        if (trajectory.positions.size() > 0) {
+            numLinePointsInput += trajectory.positions.size();
+            numLinesInput++;
         } else {
-            //Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
-        }
-    }
-    file.close();
-#else
-    FILE *file = fopen(objFilename.c_str(), "r");
-    if (!file) {
-        sgl::Logfile::get()->writeError(std::string() + "Error in convertObjTrajectoryDataToBinaryTriangleMeshGPU: File \""
-                                        + objFilename + "\" does not exist.");
-        return;
-    }
-    fseek(file, 0, SEEK_END);
-    size_t length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *fileBuffer = new char[length];
-    fread(fileBuffer, 1, length, file);
-    fclose(file);
-    std::string lineBuffer;
-    std::string numberString;
-    lineOffsetsInput.push_back(0);
-
-    for (size_t charPtr = 0; charPtr < length; charPtr++) {
-        while (charPtr < length) {
-            char currentChar = fileBuffer[charPtr];
-            if (currentChar == '\n' || currentChar == '\r') {
-                charPtr++;
-                break;
-            }
-            lineBuffer.push_back(currentChar);
-            charPtr++;
-        }
-
-        if (lineBuffer.size() == 0) {
             continue;
         }
-
-        char command = lineBuffer.at(0);
-        char command2 = ' ';
-        if (lineBuffer.size() > 1) {
-            command2 = lineBuffer.at(1);
-        }
-
-        if (command == 'g') {
-            // New path
-            /*static int ctr = 0;
-            if (ctr >= 999) {
-                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
-            }
-            ctr = (ctr + 1) % 1000;*/
-        } else if (command == 'v' && command2 == 't') {
-            // Path line vertex attribute
-            float attr = 0.0f;
-            sscanf(lineBuffer.c_str()+2, "%f", &attr);
-            globalLineVertexAttributes.push_back(attr);
-        } else if (command == 'v' && command2 == 'n') {
-            // Not supported so far
-        } else if (command == 'v') {
-            // Path line vertex position
-            glm::vec3 position;
-            if (isConvectionRolls) {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.z, &position.y);
-            } else {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.y, &position.z);
-            }
-            globalLineVertices.push_back(position);
-            boundingBox.combine(position);
-        } else if (command == 'l') {
-            // Get indices of current path line
-            std::vector<uint32_t> currentLineIndices;
-            for (size_t linePtr = 2; linePtr < lineBuffer.size(); linePtr++) {
-                char currentChar = lineBuffer.at(linePtr);
-                bool isWhitespace = currentChar == ' ' || currentChar == '\t';
-                if (isWhitespace && numberString.size() != 0) {
-                    currentLineIndices.push_back(atoi(numberString.c_str()) - 1);
-                    numberString.clear();
-                } else if (!isWhitespace) {
-                    numberString.push_back(currentChar);
-                }
-            }
-            if (numberString.size() != 0) {
-                currentLineIndices.push_back(atoi(numberString.c_str()) - 1);
-                numberString.clear();
-            }
-
-            // pathLineCenters: The path line points to create a tube from.
-            InputLinePoint inputLinePoint;
-            for (size_t i = 0; i < currentLineIndices.size(); i++) {
-                inputLinePoint.linePoint = globalLineVertices.at(currentLineIndices.at(i));
-                inputLinePoint.lineAttribute = globalLineVertexAttributes.at(currentLineIndices.at(i));
-                inputLinePoints.push_back(inputLinePoint);
-            }
-
-            if (currentLineIndices.size() > 0) {
-                numLinePointsInput += currentLineIndices.size();
-                numLinesInput++;
-            } else {
-                continue;
-            }
-            lineOffsetsInput.push_back(numLinePointsInput);
-        } else if (command = '#') {
-            // Ignore comments
-        } else {
-            //Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
-        }
-
-        lineBuffer.clear();
+        lineOffsetsInput.push_back(numLinePointsInput);
     }
-#endif
 
     auto endLoad = std::chrono::system_clock::now();
     auto elapsedLoad = std::chrono::duration_cast<std::chrono::milliseconds>(endLoad - startLoad);
@@ -1196,33 +884,6 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
 
     // Normalize data for rings
     auto startPost = std::chrono::system_clock::now();
-    float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
-    float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
-
-    if (isConvectionRolls)
-    {
-        minValue = 0;
-        maxValue = 0.5;
-    }
-
-    glm::vec3 minVec(minValue, minValue, minValue);
-    glm::vec3 maxVec(maxValue, maxValue, maxValue);
-
-    if (isRings || isConvectionRolls)
-    {
-        for (auto& vertex : globalVertexPositions)
-        {
-            vertex = (vertex - minVec) / (maxVec - minVec);
-
-            if (isConvectionRolls)
-            {
-                glm::vec3 dims = glm::vec3(1);
-                dims.y = boundingBox.getDimensions().y;
-                vertex -= dims;
-            }
-
-        }
-    }
 
     submesh.material.diffuseColor = glm::vec3(165, 220, 84) / 255.0f;
     submesh.material.opacity = 120 / 255.0f;
@@ -1315,179 +976,42 @@ void convertObjTrajectoryDataToBinaryLineMesh(
     std::vector<std::vector<float>> globalImportanceCriteria;
     std::vector<uint32_t> globalIndices;
 
-    std::vector<glm::vec3> globalLineVertices;
-    std::vector<float> globalLineVertexAttributes;
 
-    sgl::AABB3 boundingBox;
-    bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
-    bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
+    Trajectories trajectories = loadTrajectoriesFromFile(objFilename, trajectoryType);
 
+    for (size_t i = 0; i < trajectories.size(); i++) {
+        Trajectory &trajectory = trajectories.at(i);
 
-    FILE *file = fopen(objFilename.c_str(), "r");
-    if (!file) {
-        sgl::Logfile::get()->writeError(std::string() + "Error in convertObjTrajectoryDataToBinaryLineMesh: File \""
-                                        + objFilename + "\" does not exist.");
-        return;
-    }
-    fseek(file, 0, SEEK_END);
-    size_t length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *fileBuffer = new char[length];
-    fread(fileBuffer, 1, length, file);
-    fclose(file);
-    std::string lineBuffer;
-    std::string numberString;
+        // Create tube render data
+        std::vector<glm::vec3> localVertices;
+        std::vector<glm::vec3> localTangents;
+        std::vector<glm::vec3> localNormals;
+        std::vector<uint32_t> localIndices;
+        std::vector<std::vector<float>> importanceCriteriaOut;
+        createTangentAndNormalData(trajectory.positions, trajectory.attributes, localVertices,
+                                   importanceCriteriaOut, localTangents, localNormals, localIndices);
 
-    for (size_t charPtr = 0; charPtr < length; charPtr++) {
-        while (charPtr < length) {
-            char currentChar = fileBuffer[charPtr];
-            if (currentChar == '\n' || currentChar == '\r') {
-                charPtr++;
-                break;
+        // Local -> global
+        if (localVertices.size() > 0) {
+            for (size_t i = 0; i < localIndices.size(); i++) {
+                globalIndices.push_back(localIndices.at(i) + globalVertexPositions.size());
             }
-            lineBuffer.push_back(currentChar);
-            charPtr++;
-        }
-
-        if (lineBuffer.size() == 0) {
-            continue;
-        }
-
-        char command = lineBuffer.at(0);
-        char command2 = ' ';
-        if (lineBuffer.size() > 1) {
-            command2 = lineBuffer.at(1);
-        }
-
-        if (command == 'g') {
-            // New path
-            /*static int ctr = 0;
-            if (ctr >= 999) {
-                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
-            }
-            ctr = (ctr + 1) % 1000;*/
-        } else if (command == 'v' && command2 == 't') {
-            // Path line vertex attribute
-            float attr = 0.0f;
-            sscanf(lineBuffer.c_str()+2, "%f", &attr);
-            globalLineVertexAttributes.push_back(attr);
-        } else if (command == 'v' && command2 == 'n') {
-            // Not supported so far
-        } else if (command == 'v') {
-            // Path line vertex position
-            glm::vec3 position;
-            if (isConvectionRolls) {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.z, &position.y);
+            globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
+            globalTangents.insert(globalTangents.end(), localTangents.begin(), localTangents.end());
+            globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
+            if (globalImportanceCriteria.empty()) {
+                globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaOut.begin(),
+                                                importanceCriteriaOut.end());
             } else {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.y, &position.z);
-            }
-            globalLineVertices.push_back(position);
-            boundingBox.combine(position);
-        } else if (command == 'l') {
-            // Get indices of current path line
-            std::vector<uint32_t> currentLineIndices;
-            for (size_t linePtr = 2; linePtr < lineBuffer.size(); linePtr++) {
-                char currentChar = lineBuffer.at(linePtr);
-                bool isWhitespace = currentChar == ' ' || currentChar == '\t';
-                if (isWhitespace && numberString.size() != 0) {
-                    currentLineIndices.push_back(atoi(numberString.c_str()) - 1);
-                    numberString.clear();
-                } else if (!isWhitespace) {
-                    numberString.push_back(currentChar);
+                for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
+                    globalImportanceCriteria.at(i).insert(globalImportanceCriteria.at(i).end(),
+                                                          importanceCriteriaOut.at(i).begin(),
+                                                          importanceCriteriaOut.at(i).end());
                 }
             }
-            if (numberString.size() != 0) {
-                currentLineIndices.push_back(atoi(numberString.c_str()) - 1);
-                numberString.clear();
-            }
-
-            // pathLineCenters: The path line points to create a tube from.
-            std::vector<glm::vec3> pathLineCenters;
-            std::vector<float> pathLineVorticities;
-            pathLineCenters.reserve(currentLineIndices.size());
-            pathLineVorticities.reserve(currentLineIndices.size());
-            for (size_t i = 0; i < currentLineIndices.size(); i++) {
-                pathLineCenters.push_back(globalLineVertices.at(currentLineIndices.at(i)));
-                pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
-            }
-
-            // Compute importance criteria
-            std::vector<std::vector<float>> importanceCriteriaIn;
-            computeTrajectoryAttributes(trajectoryType, pathLineCenters, pathLineVorticities, importanceCriteriaIn);
-
-            // Line filtering for WCB trajectories
-            //if (trajectoryType == TRAJECTORY_TYPE_WCB) {
-            //  if (importanceCriteriaIn.at(3).size() > 0 && importanceCriteriaIn.at(3).at(0) < 500.0f) {
-            //      continue;
-            //  }
-            //}
-
-            // Create tube render data
-            std::vector<glm::vec3> localVertices;
-            std::vector<glm::vec3> localTangents;
-            std::vector<glm::vec3> localNormals;
-            std::vector<uint32_t> localIndices;
-            std::vector<std::vector<float>> importanceCriteriaOut;
-            createTangentAndNormalData(pathLineCenters, importanceCriteriaIn, localVertices,
-                                       importanceCriteriaOut, localTangents, localNormals, localIndices);
-
-            // Local -> global
-            if (localVertices.size() > 0) {
-                for (size_t i = 0; i < localIndices.size(); i++) {
-                    globalIndices.push_back(localIndices.at(i) + globalVertexPositions.size());
-                }
-                globalVertexPositions.insert(globalVertexPositions.end(), localVertices.begin(), localVertices.end());
-                globalTangents.insert(globalTangents.end(), localTangents.begin(), localTangents.end());
-                globalNormals.insert(globalNormals.end(), localNormals.begin(), localNormals.end());
-                if (globalImportanceCriteria.empty()) {
-                    globalImportanceCriteria.insert(globalImportanceCriteria.end(), importanceCriteriaOut.begin(),
-                            importanceCriteriaOut.end());
-                } else {
-                    for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
-                        globalImportanceCriteria.at(i).insert(globalImportanceCriteria.at(i).end(),
-                                importanceCriteriaOut.at(i).begin(), importanceCriteriaOut.at(i).end());
-                    }
-                }
-            }
-        } else if (command = '#') {
-            // Ignore comments
-        } else {
-            //Logfile::get()->writeError(std::string() + "Error in parseObjMesh: Unknown command \"" + command + "\".");
-        }
-
-        lineBuffer.clear();
-    }
-
-
-    // Normalize data for rings
-    float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
-    float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
-
-
-    if (isConvectionRolls)
-    {
-        minValue = 0;
-        maxValue = 0.5;
-    }
-
-    glm::vec3 minVec(minValue, minValue, minValue);
-    glm::vec3 maxVec(maxValue, maxValue, maxValue);
-
-    if (isRings || isConvectionRolls)
-    {
-        for (auto& vertex : globalVertexPositions)
-        {
-            vertex = (vertex - minVec) / (maxVec - minVec);
-
-            if (isConvectionRolls)
-            {
-                glm::vec3 dims = glm::vec3(1);
-                dims.y = boundingBox.getDimensions().y;
-                vertex -= dims;
-            }
-
         }
     }
+
 
     submesh.material.diffuseColor = glm::vec3(165, 220, 84) / 255.0f;
     submesh.material.opacity = 120 / 255.0f;

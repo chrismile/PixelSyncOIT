@@ -600,7 +600,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         float maxVorticity = 0.0f;
-        voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
+        voxelRaytracer->loadModel(usedModelIndex, trajectoryType, lineAttributes, maxVorticity);
         // Hair stores own line thickness
         if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             lineRadius = voxelRaytracer->getLineRadius();
@@ -609,18 +609,12 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         transparentObject = MeshRenderer();
     }
 
-    if (recording || testCameraFlight)
-    {
-        if (boost::starts_with(modelFilenamePure, "Data/Rings"))
-        {
+    if (recording || testCameraFlight) {
+        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
             lineRadius = 0.00335;
-        }
-        else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
-        {
+        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             lineRadius = 0.001;
-        }
-        else
-        {
+        } else {
             lineRadius = 0.001;
         }
     }
@@ -803,7 +797,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         std::vector<float> lineAttributes;
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
         float maxVorticity = 0.0f;
-        voxelRaytracer->loadModel(usedModelIndex, lineAttributes, maxVorticity);
+        voxelRaytracer->loadModel(usedModelIndex, trajectoryType, lineAttributes, maxVorticity);
         // Hair stores own line thickness
         if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             lineRadius = voxelRaytracer->getLineRadius();
@@ -815,17 +809,14 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 
         modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
 
-        if (boost::starts_with(modelFilenamePure, "Data/Rings"))
-        {
-            lineRadius = 0.0025;
-        }
-        else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
-        {
-            lineRadius = 0.001;
-        }
-        else
-        {
-            lineRadius = 0.001;
+        if (recording || testCameraFlight) {
+            if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+                lineRadius = 0.00335;
+            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+                lineRadius = 0.001;
+            } else {
+                lineRadius = 0.001;
+            }
         }
 
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -1035,7 +1026,7 @@ void PixelSyncApp::updateAOMode()
         ShaderManager->removePreprocessorDefine("USE_SSAO");
         ShaderManager->addPreprocessorDefine("VOXEL_SSAO", "");
         voxelAOHelper = new VoxelAOHelper();
-        voxelAOHelper->loadAOFactorsFromVoxelFile(modelFilenamePure);
+        voxelAOHelper->loadAOFactorsFromVoxelFile(modelFilenamePure, trajectoryType);
     }
 }
 

@@ -16,7 +16,7 @@ public:
     virtual sgl::ShaderProgramPtr getGatherShader() { return renderShader; }
 
     void create();
-    void loadModel(int modelIndex, std::vector<float> &attributes, float &maxVorticity);
+    void loadModel(int modelIndex, TrajectoryType trajectoryType, std::vector<float> &attributes, float &maxVorticity);
     void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
             sgl::RenderbufferObjectPtr &sceneDepthRBO);
     void setLineRadius(float lineRadius);
@@ -43,7 +43,8 @@ public:
     void onTransferFunctionMapRebuilt();
 
 private:
-    void fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity);
+    void fromFile(const std::string &filename, TrajectoryType trajectoryType, std::vector<float> &attributes,
+            float &maxVorticity);
     void reloadShader();
     void setUniformData();
 

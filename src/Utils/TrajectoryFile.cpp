@@ -2,11 +2,13 @@
 // Created by christoph on 04.06.19.
 //
 
+#include <cstdio>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/AABB3.hpp>
-#include <cstdio>
+#include <Utils/Events/Stream/Stream.hpp>
+#include "NetCDFConverter.hpp"
 #include "TrajectoryFile.hpp"
 
 Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryType trajectoryType)
@@ -64,12 +66,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
     bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
     Trajectories trajectories;
-
-    std::vector<glm::vec3> globalVertexPositions;
-    std::vector<glm::vec3> globalNormals;
-    std::vector<glm::vec3> globalTangents;
-    std::vector<std::vector<float>> globalImportanceCriteria;
-    std::vector<uint32_t> globalIndices;
 
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
@@ -152,7 +148,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             }
 
             Trajectory trajectory;
-            trajectory.attributes.resize(1);
 
             std::vector<float> pathLineVorticities;
             trajectory.positions.reserve(currentLineIndices.size());
@@ -163,7 +158,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             }
 
             // Compute importance criteria
-            std::vector<std::vector<float>> importanceCriteriaIn;
             computeTrajectoryAttributes(
                     trajectoryType, trajectory.positions, pathLineVorticities, trajectory.attributes);
 
@@ -182,6 +176,68 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
         }
 
         lineBuffer.clear();
+    }
+
+    return trajectories;
+}
+
+Trajectories loadTrajectoriesFromNetCdf(const std::string &filename, TrajectoryType trajectoryType) {
+    Trajectories trajectories = loadNetCdfFile(filename);
+
+    for (Trajectory &trajectory : trajectories) {
+        // Compute importance criteria
+        std::vector<float> oldAttributes = trajectory.attributes.at(0);
+        trajectory.attributes.clear();
+        computeTrajectoryAttributes(
+                trajectoryType, trajectory.positions, oldAttributes, trajectory.attributes);
+    }
+
+    return trajectories;
+}
+
+Trajectories loadTrajectoriesFromBinLines(const std::string &filename, TrajectoryType trajectoryType) {
+    Trajectories trajectories;
+
+    std::ifstream file(filename.c_str(), std::ifstream::binary);
+    if (!file.is_open()) {
+        sgl::Logfile::get()->writeError(std::string() + "Error in loadTrajectoriesFromBinLines: File \""
+                + filename + "\" not found.");
+        return trajectories;
+    }
+
+    file.seekg(0, file.end);
+    size_t size = file.tellg();
+    file.seekg(0);
+    char *buffer = new char[size];
+    file.read(buffer, size);
+
+    // Read format version
+    sgl::BinaryReadStream stream(buffer, size);
+    const uint32_t LINE_FILE_FORMAT_VERSION = 1u;
+    uint32_t versionNumber;
+    stream.read(versionNumber);
+    if (versionNumber != LINE_FILE_FORMAT_VERSION) {
+        sgl::Logfile::get()->writeError(std::string()
+                + "Error in loadTrajectoriesFromBinLines: Invalid magic number in file \"" + filename + "\".");
+        return trajectories;
+    }
+
+
+
+    // Rest of header after format version
+    uint32_t numTrajectories, numAttributes;
+    stream.read(numTrajectories);
+    trajectories.resize(numTrajectories);
+
+    for (uint32_t trajectoryIndex = 0; trajectoryIndex < numTrajectories; trajectoryIndex++) {
+        Trajectory &currentTrajectory = trajectories.at(trajectoryIndex);
+        stream.readArray(currentTrajectory.positions);
+        stream.read(numAttributes);
+        currentTrajectory.attributes.resize(numAttributes);
+        for (uint32_t attributeIndex = 0; attributeIndex < numAttributes; attributeIndex++) {
+            std::vector<float> &currentAttribute = currentTrajectory.attributes.at(attributeIndex);
+            stream.readArray(currentTrajectory.positions);
+        }
     }
 
     return trajectories;

@@ -17,6 +17,7 @@
 #include <Math/Geometry/MatrixUtil.hpp>
 #include <Graphics/Color.hpp>
 
+#include "Utils/ImportanceCriteria.hpp"
 #include "VoxelData.hpp"
 
 struct AttributePoint
@@ -52,8 +53,8 @@ public:
             const glm::ivec3 &gridResolution = glm::ivec3(256, 256, 256),
             const glm::ivec3 &quantizationResolution = glm::ivec3(8, 8, 8));
     ~VoxelCurveDiscretizer();
-    VoxelGridDataCompressed createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes,
-            float &maxVorticity, unsigned int maxNumLinesPerVoxel, bool useGPU = true);
+    VoxelGridDataCompressed createFromTrajectoryDataset(const std::string &filename, TrajectoryType trajectoryType,
+            std::vector<float> &attributes, float &maxVorticity, unsigned int maxNumLinesPerVoxel, bool useGPU = true);
     VoxelGridDataCompressed createFromHairDataset(const std::string &filename, float &lineRadius,
             glm::vec4 &hairStrandColor, unsigned int maxNumLinesPerVoxel, bool useGPU = true);
     glm::mat4 getWorldToVoxelGridMatrix() { return linesToVoxel; }

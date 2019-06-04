@@ -21,6 +21,7 @@
 #include <Graphics/OpenGL/Texture.hpp>
 
 #include "Utils/HairLoader.hpp"
+#include "Utils/TrajectoryFile.hpp"
 #include "VoxelCurveDiscretizer.hpp"
 
 #define BIAS 0.001
@@ -164,14 +165,14 @@ VoxelCurveDiscretizer::~VoxelCurveDiscretizer()
     delete[] voxels;
 }
 
-VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filename, std::vector<float> &attributes,
-        float &_maxVorticity, unsigned int maxNumLinesPerVoxel, bool useGPU)
+VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filename,
+        TrajectoryType trajectoryType, std::vector<float> &attributes, float &_maxVorticity,
+        unsigned int maxNumLinesPerVoxel, bool useGPU)
 {
     linesBoundingBox = sgl::AABB3();
     std::vector<Curve> curves;
     Curve currentCurve;
     maxVorticity = 0.0f;
-    int lineCounter = 0;
     isHairDataset = false;
     uint64_t numLineSegments = 0;
     uint64_t numLines = 0;
@@ -180,145 +181,37 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
     bool isConvectionRolls = boost::starts_with(filename, "Data/ConvectionRolls/output");
 
 
+    Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
 
+    for (size_t i = 0; i < trajectories.size(); i++) {
+        Trajectory &trajectory = trajectories.at(i);
 
-
-
-    FILE *file = fopen(filename.c_str(), "r");
-    if (!file) {
-        sgl::Logfile::get()->writeError(std::string() + "Error in VoxelCurveDiscretizer::createFromTrajectoryDataset: "
-                "File \"" + filename + "\" does not exist.");
-        return VoxelGridDataCompressed();
-    }
-    fseek(file, 0, SEEK_END);
-    size_t length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *fileBuffer = new char[length];
-    fread(fileBuffer, 1, length, file);
-    fclose(file);
-    std::string lineBuffer;
-    std::string numberString;
-
-    for (size_t charPtr = 0; charPtr < length; charPtr++) {
-        while (charPtr < length) {
-            char currentChar = fileBuffer[charPtr];
-            if (currentChar == '\n' || currentChar == '\r') {
-                charPtr++;
-                break;
-            }
-            lineBuffer.push_back(currentChar);
-            charPtr++;
-        }
-
-        if (lineBuffer.size() == 0) {
-            continue;
-        }
-
-        char command = lineBuffer.at(0);
-        char command2 = ' ';
-        if (lineBuffer.size() > 1) {
-            command2 = lineBuffer.at(1);
-        }
-
-        if (command == 'g') {
-            // New path
-            /*static int ctr = 0;
-            if (ctr >= 999) {
-                Logfile::get()->writeInfo(std::string() + "Parsing trajectory line group " + line.at(1) + "...");
-            }
-            ctr = (ctr + 1) % 1000;*/
-            lineCounter++;
-        } else if (command == 'v' && command2 == 't') {
-            // Path line vertex attribute
-            float attr = 0.0f;
-            sscanf(lineBuffer.c_str()+2, "%f", &attr);
-            currentCurve.attributes.push_back(attr);
-            attributes.push_back(attr);
-            maxVorticity = std::max(maxVorticity, attr);
-        } else if (command == 'v' && command2 == 'n') {
-            // Not supported so far
-        } else if (command == 'v') {
-            // Path line vertex position
-            glm::vec3 position;
-            if (isConvectionRolls) {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.z, &position.y);
-            } else {
-                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.y, &position.z);
-            }
-
-            // Path line vertex position
-            currentCurve.points.push_back(position);
+        currentCurve = Curve();
+        for (size_t j = 0; j < trajectory.positions.size(); j++) {
+            glm::vec3 &position = trajectory.positions.at(j);
             linesBoundingBox.combine(position);
-        } else if (command == 'l') {
-            // Indices of path line signal all points read of current curve
-            numLines++;
-            numLineSegments += currentCurve.points.size() - 1;
-            curves.push_back(currentCurve);
-            currentCurve = Curve();
-            currentCurve.lineID = lineCounter;
-        } else if (command = '#') {
-            // Ignore comments
-        } else {
-            //Logfile::get()->writeError(std::string() + "Error in VoxelCurveDiscretizer::createFromTrajectoryDataset: "
-            //        "Unknown command \"" + command + "\".");
+            currentCurve.points.push_back(position);
+            currentCurve.attributes.push_back(trajectory.attributes.at(0).at(j));
         }
 
-        lineBuffer.clear();
+        currentCurve.lineID = numLines;
+        curves.push_back(currentCurve);
+        numLineSegments += currentCurve.points.size() - 1;
+        numLines++;
     }
+
 
     std::cout << "Num Lines: " << numLines << std::endl;
     std::cout << "Num LineSegments: " << numLineSegments << std::endl << std::flush;
 
 
-    // Normalize data for rings
-    float minValue = std::min(linesBoundingBox.getMinimum().x, std::min(linesBoundingBox.getMinimum().y, linesBoundingBox.getMinimum().z));
-    float maxValue = std::max(linesBoundingBox.getMaximum().x, std::max(linesBoundingBox.getMaximum().y, linesBoundingBox.getMaximum().z));
-
-//    sgl::AABB3 linesBoundingBoxNew = line
-
-    if (isConvectionRolls)
-    {
-        minValue = 0;
-        maxValue = 0.5;
-    }
-
-    glm::vec3 minVec(minValue, minValue, minValue);
-    glm::vec3 maxVec(maxValue, maxValue, maxValue);
-
-    float dimY = linesBoundingBox.getDimensions().y;
-
-    if (isRings || isConvectionRolls)
-    {
-        linesBoundingBox = sgl::AABB3();
-
-        for (auto& curve : curves)
-        {
-            for (auto &point : curve.points)
-            {
-                point = (point - minVec) / (maxVec - minVec);
-
-                if (isConvectionRolls)
-                {
-                    glm::vec3 dims = glm::vec3(1);
-                    dims.y = dimY;
-                    point -= dims;
-                }
-
-                linesBoundingBox.combine(point);
-//
-            }
-        }
-    }
-
-    if (isRings)
-    {
+    if (isRings) {
         linesBoundingBox = sgl::AABB3();
         linesBoundingBox.combine(glm::vec3(-2));
         linesBoundingBox.combine(glm::vec3(2));
     }
 
-    if (isConvectionRolls)
-    {
+    if (isConvectionRolls) {
         linesBoundingBox = sgl::AABB3();
         linesBoundingBox.combine(glm::vec3(-1.5, -0.5, -1.5));
         linesBoundingBox.combine(glm::vec3( 1.5, 0.5, 1.5));
@@ -326,20 +219,6 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
 
     std::cout << "Bounding box: " << linesBoundingBox.getMaximum().x << " " << linesBoundingBox.getMaximum().y << " " << linesBoundingBox.getMaximum().z << std::endl << std::flush;
 
-    // HACK
-    sgl::AABB3 linesBoundingBoxTemp = linesBoundingBox;
-
-    const float minZ = linesBoundingBox.getMinimum().z;
-    const float dimZ = linesBoundingBox.getDimensions().z;
-
-//    for (auto& curve : curves)
-//    {
-//        for (auto& point : curve.points)
-//        {
-//            point.z = (point.z - minZ) / (dimZ);
-//            linesBoundingBoxTemp.combine(point);
-//        }
-//    }
 
     _maxVorticity = maxVorticity;
     this->attributes = attributes;
@@ -348,9 +227,6 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
     // Move to origin and scale to range from (0, 0, 0) to (rx, ry, rz).
     linesToVoxel = sgl::matrixScaling(1.0f / linesBoundingBox.getDimensions() * glm::vec3(gridResolution))
             * sgl::matrixTranslation(-linesBoundingBox.getMinimum());
-
-    glm::mat4 linesToVoxelTemp = sgl::matrixScaling(1.0f / linesBoundingBoxTemp.getDimensions() * glm::vec3(gridResolution))
-                   * sgl::matrixTranslation(-linesBoundingBoxTemp.getMinimum());
 
     voxelToLines = glm::inverse(linesToVoxel);
 

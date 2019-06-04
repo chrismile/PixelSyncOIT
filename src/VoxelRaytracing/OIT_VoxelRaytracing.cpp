@@ -90,9 +90,10 @@ void OIT_VoxelRaytracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFram
     renderImage = sceneTexture;
 }
 
-void OIT_VoxelRaytracing::loadModel(int modelIndex, std::vector<float> &attributes, float &maxVorticity)
+void OIT_VoxelRaytracing::loadModel(int modelIndex, TrajectoryType trajectoryType, std::vector<float> &attributes,
+        float &maxVorticity)
 {
-    fromFile(MODEL_FILENAMES[modelIndex], attributes, maxVorticity);
+    fromFile(MODEL_FILENAMES[modelIndex], trajectoryType, attributes, maxVorticity);
 }
 
 void OIT_VoxelRaytracing::setNewState(const InternalState &newState)
@@ -109,7 +110,8 @@ void OIT_VoxelRaytracing::setNewState(const InternalState &newState)
     reloadShader();
 }
 
-void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<float> &attributes, float &maxVorticity)
+void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType trajectoryType,
+        std::vector<float> &attributes, float &maxVorticity)
 {
     // Check if voxel grid is already created
     // Pure filename without extension (to create compressed .voxel filename)
@@ -153,14 +155,17 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, std::vector<floa
     }
 
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
-        VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes), glm::ivec3(quantizationRes, quantizationRes, quantizationRes));
+        VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes),
+                glm::ivec3(quantizationRes, quantizationRes, quantizationRes));
 
         if (isHairDataset) {
             std::string modelFilenameHair = modelFilenamePure + ".hair";
-            compressedData = discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor, maxNumLinesPerVoxel);
+            compressedData = discretizer.createFromHairDataset(modelFilenameHair, lineRadius, hairStrandColor,
+                    maxNumLinesPerVoxel);
         } else {
             std::string modelFilenameObj = modelFilenamePure + ".obj";
-            compressedData = discretizer.createFromTrajectoryDataset(modelFilenameObj, attributes, maxVorticity, maxNumLinesPerVoxel);
+            compressedData = discretizer.createFromTrajectoryDataset(modelFilenameObj, trajectoryType, attributes,
+                    maxVorticity, maxNumLinesPerVoxel);
         }
 
         byteSize =
