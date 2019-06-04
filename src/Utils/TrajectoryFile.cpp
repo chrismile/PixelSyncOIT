@@ -225,18 +225,21 @@ Trajectories loadTrajectoriesFromBinLines(const std::string &filename, Trajector
 
 
     // Rest of header after format version
-    uint32_t numTrajectories, numAttributes;
+    uint32_t numTrajectories, numAttributes, trajectoryNumPoints;
     stream.read(numTrajectories);
+    stream.read(numAttributes);
     trajectories.resize(numTrajectories);
 
     for (uint32_t trajectoryIndex = 0; trajectoryIndex < numTrajectories; trajectoryIndex++) {
         Trajectory &currentTrajectory = trajectories.at(trajectoryIndex);
-        stream.readArray(currentTrajectory.positions);
-        stream.read(numAttributes);
+        stream.read(trajectoryNumPoints);
+        currentTrajectory.positions.resize(trajectoryNumPoints);
+        stream.read((void*)&currentTrajectory.positions.front(), sizeof(glm::vec3)*trajectoryNumPoints);
         currentTrajectory.attributes.resize(numAttributes);
         for (uint32_t attributeIndex = 0; attributeIndex < numAttributes; attributeIndex++) {
             std::vector<float> &currentAttribute = currentTrajectory.attributes.at(attributeIndex);
-            stream.readArray(currentTrajectory.positions);
+            currentAttribute.resize(trajectoryNumPoints);
+            stream.read((void*)&currentAttribute.front(), sizeof(float)*trajectoryNumPoints);
         }
     }
 
