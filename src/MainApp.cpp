@@ -83,6 +83,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
     }
 
+    sgl::FileUtils::get()->ensureDirectoryExists(saveDirectoryScreenshots);
+
     for (int i = 0; i < NUM_MODELS; i++) {
         if (startupModelName == MODEL_DISPLAYNAMES[i]) {
             usedModelIndex = i;
@@ -250,9 +252,11 @@ void PixelSyncApp::saveScreenshot(const std::string &filename)
         // Don't print at time sgl wants, as in this case we would need to include the GUI
         return;
     }
+    std::string imageFilename = saveDirectoryScreenshots + saveFilenameScreenshots + "_"
+            + std::to_string(numScreenshots++) + "_mode" + std::to_string(mode) + ".png";
 
     if (uiOnScreenshot) {
-        AppLogic::saveScreenshot(filename);
+        AppLogic::saveScreenshot(imageFilename);
     } else {
         Window *window = AppSettings::get()->getMainWindow();
         int width = window->getWidth();
@@ -260,7 +264,7 @@ void PixelSyncApp::saveScreenshot(const std::string &filename)
 
         BitmapPtr bitmap(new Bitmap(width, height, 32));
         glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, bitmap->getPixels());
-        bitmap->savePNG(filename.c_str(), true);
+        bitmap->savePNG(imageFilename.c_str(), true);
     }
 }
 
@@ -1767,7 +1771,7 @@ void PixelSyncApp::update(float dt)
 //        auto now = std::chrono::system_clock::now();
 //        std::time_t end_time = std::chrono::system_clock::to_time_t(now);
 
-        saveScreenshotOnKey(saveDirectoryScreenshots + saveFilenameScreenshots + "_" + std::to_string(numScreenshots++) + "_mode" + std::to_string(mode) + ".png");
+        //saveScreenshotOnKey(saveDirectoryScreenshots + saveFilenameScreenshots + "_" + std::to_string(numScreenshots++) + "_mode" + std::to_string(mode) + ".png");
     }
 
     if (Keyboard->isKeyDown(SDLK_u))
