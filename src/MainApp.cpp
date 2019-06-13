@@ -444,7 +444,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Rings_All.xml");
     }
 
-    else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+    else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/streamlines_9213.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransAneurysm.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTF_Aneurysm.xml");
