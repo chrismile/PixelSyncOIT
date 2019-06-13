@@ -6,6 +6,7 @@
 
 #include <Utils/File/Logfile.hpp>
 #include <Utils/AppSettings.hpp>
+#include <Utils/File/FileUtils.hpp>
 #include <Graphics/Renderer.hpp>
 #include <Graphics/Window.hpp>
 #include <Graphics/Texture/Bitmap.hpp>
@@ -21,6 +22,8 @@ AutoPerfMeasurer::AutoPerfMeasurer(std::vector<InternalState> _states,
        : states(_states), currentStateIndex(0), newStateCallback(_newStateCallback), file(_csvFilename),
          depthComplexityFile(_depthComplexityFilename), errorMetricFile("error_metrics.csv"), perfFile("performance_list.csv"), timeCoherence(measureTimeCoherence)
 {
+    sgl::FileUtils::get()->ensureDirectoryExists("images/");
+
     // Write header
     file.writeRow({"Name", "Average Time (ms)", "Image Filename", "Memory (GB)", "Buffer Size (GB)",
                    "SSIM", "RMSE", "PSNR", "Time Stamp (s), Frame Time (ns)"});

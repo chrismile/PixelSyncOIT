@@ -1,0 +1,12 @@
+<TransferFunction colorspace="sRGB" interpolation_colorspace="sRGB">
+    <OpacityPoints>
+        <OpacityPoint position="0" opacity="0.0099999997764825821"/>
+        <OpacityPoint position="0.7347266674041748" opacity="0.0099999997764825821"/>
+        <OpacityPoint position="0.80385851860046387" opacity="1"/>
+        <OpacityPoint position="1" opacity="1"/>
+    </OpacityPoints>
+    <ColorPoints>
+        <ColorPoint position="0" r="254" g="232" b="200"/>
+        <ColorPoint position="1" r="179" g="0" b="0"/>
+    </ColorPoints>
+</TransferFunction>

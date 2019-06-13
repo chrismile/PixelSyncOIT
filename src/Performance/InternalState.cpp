@@ -461,7 +461,7 @@ void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalSta
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
-//    getTestModesDepthPeeling(states, state);
+    getTestModesDepthPeeling(states, state);
 //    getTestModesNoOIT(states, state);
     getTestModesMLAB(states, state);
     getTestModesMBOIT(states, state);

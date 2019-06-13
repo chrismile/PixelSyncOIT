@@ -16,6 +16,7 @@ double mse(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
 {
     int N = expected->getW() * expected->getH() * expected->getChannels();
     double sum = 0.0;
+    #pragma omp parallel for reduction(+: sum)
     for (int i = 0; i < N; i++) {
         double diff = expected->getPixels()[i] - observed->getPixels()[i];
         sum += diff * diff;
@@ -33,6 +34,7 @@ double rmse(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
 double mean(std::function<double(int)> elementGetter, int N)
 {
     double sum = 0.0;
+    #pragma omp parallel for reduction(+: sum)
     for (int i = 0; i < N; i++) {
         sum += elementGetter(i);
     }
@@ -71,6 +73,7 @@ double psnr(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
     int N = expected->getW() * expected->getH() * expected->getChannels();
 
     uint8_t max_I = 0;
+    #pragma omp parallel for reduction(max: max_I)
     for (int i = 0; i < N; i++) {
         max_I = std::max(max_I, expected->getPixels()[i]);
     }
@@ -90,6 +93,7 @@ sgl::BitmapPtr computeNormalizedDifferenceMapRGBDiff(const sgl::BitmapPtr &expec
     int *differences = new int[N];
     int maxDifferenceRGB = 0;
     int maxDifferenceAlpha = 0;
+    #pragma omp parallel for reduction(max: maxDifferenceRGB) reduction(max: maxDifferenceAlpha)
     for (int i = 0; i < N; i++) {
         differences[i] = std::abs(
                 static_cast<int>(expected->getPixels()[i])
@@ -103,6 +107,7 @@ sgl::BitmapPtr computeNormalizedDifferenceMapRGBDiff(const sgl::BitmapPtr &expec
 
     // Normalize the difference map
     if (maxDifferenceRGB >= 1 /*&& maxDifferenceAlpha >= 1*/) {
+        #pragma omp parallel for
         for (int i = 0; i < N; i++) {
             if (i % 4 == 3) {
                 //differenceMap->getPixels()[i] = static_cast<double>(differences[i])
@@ -115,7 +120,14 @@ sgl::BitmapPtr computeNormalizedDifferenceMapRGBDiff(const sgl::BitmapPtr &expec
             }
         }
     } else {
-        differenceMap->fill(sgl::Color(0, 0, 0, 255));
+        #pragma omp parallel for
+        for (int i = 0; i < N; i++) {
+            if (i % 4 == 3) {
+                differenceMap->getPixels()[i] = 255;
+            } else {
+                differenceMap->getPixels()[i] = 0;
+            }
+        }
     }
     delete[] differences;
 

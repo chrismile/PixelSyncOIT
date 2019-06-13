@@ -78,5 +78,6 @@ cmake-build-*/
 Data/WCB/*.txt
 Data/CameraPaths/*
 Data/Screenshots/*
+Data/TransferFunctions_*
 Data/ControlPoints.txt
 imgui.ini
