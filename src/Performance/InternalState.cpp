@@ -172,6 +172,41 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
     }
 }
 
+void getTestModesLinkedListQuality(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_OIT_LINKED_LIST;
+
+    int maxNumFragmentsSorting = 256;
+    int expectedDepthComplexity = 128;
+    if (state.modelName == "Turbulence") {
+        // Highest depth complexity measured for this dataset
+        maxNumFragmentsSorting = 1024;
+        expectedDepthComplexity = 500;
+    }
+    if (state.modelName == "Convection Rolls") {
+        // Highest depth complexity measured for this dataset
+        maxNumFragmentsSorting = 512;
+        expectedDepthComplexity = 256;
+    }
+
+    if (state.modelName == "Warm Conveyor Belts") {
+        // Highest depth complexity measured for this dataset
+        expectedDepthComplexity = 300;
+    }
+
+    int sortingModeIdx = 0;
+    std::string sortingMode = sortingModeStrings[sortingModeIdx];
+    state.name = std::string() + "Linked List " + sortingMode + + " "
+                 + sgl::toString(maxNumFragmentsSorting) + " Layers, "
+                 + sgl::toString(expectedDepthComplexity) + " Nodes per Pixel";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "sortingMode", sortingMode },
+            { "maxNumFragmentsSorting", sgl::toString(maxNumFragmentsSorting) },
+            { "expectedDepthComplexity", sgl::toString(expectedDepthComplexity) },
+    });
+    states.push_back(state);
+}
+
 void getTestModesDepthPeeling(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_DEPTH_PEELING;
@@ -471,6 +506,18 @@ void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState 
 //    getTestModesDepthComplexity(states, state);
 }
 
+void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
+{
+    getTestModesDepthPeeling(states, state);
+//    getTestModesNoOIT(states, state);
+    getTestModesMLAB(states, state);
+    getTestModesMBOIT(states, state);
+    getTestModesLinkedListQuality(states, state);
+    getTestModesMLABBuckets(states, state);
+    getTestModesVoxelRaytracing(states, state);
+//    getTestModesDepthComplexity(states, state);
+}
+
 std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
@@ -486,7 +533,7 @@ std::vector<InternalState> getTestModesPaper()
         state.windowResolution = windowResolutions.at(i);
         for (size_t j = 0; j < modelNames.size(); j++) {
             state.modelName = modelNames.at(j);
-            getTestModesPaperForMesh(states, state);
+            getTestModesPaperForMeshQuality(states, state);
         }
     }
 
