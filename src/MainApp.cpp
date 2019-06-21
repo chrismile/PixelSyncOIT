@@ -438,7 +438,6 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    perfMeasurementMode = true;
     if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
     } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
@@ -466,7 +465,6 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     } else {
         sgl::ShaderManager->removePreprocessorDefine("CONVECTION_ROLLS");
     }
-    perfMeasurementMode = false;
 
     modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
             || boost::starts_with(modelFilenamePure, "Data/Rings")
