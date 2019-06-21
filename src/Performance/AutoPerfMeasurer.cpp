@@ -217,9 +217,8 @@ void AutoPerfMeasurer::setNextState(bool first)
     if (!first) {
         if (timeCoherence) {
             writeCurrentErrorMetricData();
-        } else {
-            writeCurrentModeData();
         }
+        writeCurrentModeData();
 
         currentStateIndex++;
     }
