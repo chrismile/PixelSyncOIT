@@ -860,6 +860,11 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
         lineSegmentOffset += numSegmentsCurrentVoxel;
     }
 
+    uint32_t offsetTest = lineSegmentOffsets.back();
+    LineSegmentCompressed lineSegmentTest = reducedLineSegmentBuffer.back();
+    std::vector<LineSegmentCompressed> testArray = reducedLineSegmentBuffer;
+    std::reverse(testArray.begin(), testArray.end());
+
     auto endPrefixSum = std::chrono::system_clock::now();
     auto elapsedPrefixSum = std::chrono::duration_cast<std::chrono::milliseconds>(endPrefixSum - startPrefixSum);
     sgl::Logfile::get()->writeInfo(std::string() + "Computational time to reduce the buffers: "

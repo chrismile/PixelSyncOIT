@@ -165,7 +165,7 @@ void OIT_DepthPeeling::renderScene()
 
     int SWAP_INTERVAL = 400;
     // Sorry Intel, your drivers are currently too slow :)
-    if (!boost::contains(boost::to_lower_copy(sgl::SystemGL::get()->getVendorString()), "intel")) {
+    if (boost::contains(boost::to_lower_copy(sgl::SystemGL::get()->getVendorString()), "intel")) {
         SWAP_INTERVAL = 200;
     }
 

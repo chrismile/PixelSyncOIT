@@ -148,11 +148,14 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
     float byteSize = 0;
 
     int maxNumLinesPerVoxel = 32;
-    if (boost::starts_with(filename, "Data/WCB")) {
+    if (voxelRes >= 256) {
+        maxNumLinesPerVoxel = 16;
+    }
+    /*if (boost::starts_with(filename, "Data/WCB")) {
         maxNumLinesPerVoxel = 128;
     } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
         maxNumLinesPerVoxel = 64;
-    }
+    }*/
 
     if (!sgl::FileUtils::get()->exists(modelFilenameVoxelGrid)) {
         VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes),

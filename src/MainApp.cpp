@@ -439,51 +439,45 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
 
     if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperRings.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperRings.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransRings.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTFRings.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Rings_All.xml");
-    }
-
-    else if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
+    } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
-    }
-    else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperAneurysm.xml");
+    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperAneurysm.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransAneurysm.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTF_Aneurysm.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Aneurysm_All.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTF_Exp2.xml");
 
-    }
-    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
+    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
-    }
-    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperTurb.xml");
+    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperTurb.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransTurb.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceTFTurb.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence_All.xml");
 
-    }
-    else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+    } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
-    }
-    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperCR.xml");
+    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/PaperCR.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output2.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransCR.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ReferenceCR.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/CR_All.xml");
-    }
-    else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+    } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
-    }
-    else
-    {
+    } else {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
     }
 
