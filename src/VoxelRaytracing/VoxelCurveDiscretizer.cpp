@@ -179,6 +179,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
 
     bool isRings = boost::starts_with(filename, "Data/Rings");
     bool isConvectionRolls = boost::starts_with(filename, "Data/ConvectionRolls/output");
+    bool isConvectionRollsSmall = boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000");
 
 
     Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
@@ -209,12 +210,16 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
         linesBoundingBox = sgl::AABB3();
         linesBoundingBox.combine(glm::vec3(-2));
         linesBoundingBox.combine(glm::vec3(2));
-    }
-
-    if (isConvectionRolls) {
+    } else if (isConvectionRolls) {
         linesBoundingBox = sgl::AABB3();
-        linesBoundingBox.combine(glm::vec3(-1.5, -0.5, -1.5));
-        linesBoundingBox.combine(glm::vec3( 1.5, 0.5, 1.5));
+        //linesBoundingBox.combine(glm::vec3(-1.5, -0.5, -1.5));
+        //linesBoundingBox.combine(glm::vec3( 1.5, 0.5, 1.5));
+        linesBoundingBox.combine(glm::vec3(-1.5, -1.5, -1.5));
+        linesBoundingBox.combine(glm::vec3( 1.5, 1.5, 1.5));
+    } else if (isConvectionRollsSmall) {
+        linesBoundingBox = sgl::AABB3();
+        linesBoundingBox.combine(glm::vec3(0.0, 0.0, 0.0));
+        linesBoundingBox.combine(glm::vec3(1.0, 1.0, 1.0)); // 1.0, 1.0, 0.03
     }
 
     std::cout << "Bounding box: " << linesBoundingBox.getMaximum().x << " " << linesBoundingBox.getMaximum().y << " " << linesBoundingBox.getMaximum().z << std::endl << std::flush;
