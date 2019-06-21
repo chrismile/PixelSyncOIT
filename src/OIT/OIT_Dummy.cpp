@@ -4,9 +4,12 @@
 
 #include <GL/glew.h>
 #include <Graphics/Shader/ShaderManager.hpp>
+#include <ImGui/ImGuiWrapper.hpp>
 
 #include "OIT_Dummy.hpp"
 #include "BufferSizeWatch.hpp"
+
+static bool useDepthBuffer = true;
 
 OIT_Dummy::OIT_Dummy()
 {
@@ -25,4 +28,29 @@ void OIT_Dummy::create()
     gatherShader = sgl::ShaderManager->getShaderProgram(gatherShaderIDs);
     glDisable(GL_STENCIL_TEST);
     setCurrentAlgorithmBufferSizeBytes(0);
+}
+
+void OIT_Dummy::gatherBegin()
+{
+    if (useDepthBuffer) {
+        glDepthMask(GL_TRUE);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+}
+
+void OIT_Dummy::gatherEnd()
+{
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+}
+
+void OIT_Dummy::renderGUI()
+{
+    ImGui::Separator();
+    if (ImGui::Checkbox("Depth Test", &useDepthBuffer)) {
+        reRender = true;
+    }
 }

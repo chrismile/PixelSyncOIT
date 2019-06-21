@@ -511,7 +511,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
     // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
-    if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Lines)")) {
+    if (lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_LINES) {
         modelFilenameOptimized += "_lines";
         if (useBillboardLines) {
             sgl::ShaderManager->addPreprocessorDefine("BILLBOARD_LINES", "");
@@ -524,7 +524,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         useGeometryShader = false;
     }
-    if (boost::ends_with(MODEL_DISPLAYNAMES[usedModelIndex], "(Fetch)")) {
+    if (lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_FETCH) {
         modelFilenameOptimized += "_lines";
         useProgrammableFetch = true;
         sgl::ShaderManager->addPreprocessorDefine("USE_PROGRAMMABLE_FETCH", "");
@@ -1294,6 +1294,12 @@ void PixelSyncApp::renderGUI()
             if (ImGui::Combo("Model Name", &usedModelIndex, MODEL_DISPLAYNAMES, IM_ARRAYSIZE(MODEL_DISPLAYNAMES))) {
                 loadModel(MODEL_FILENAMES[usedModelIndex]);
             }
+
+            if (ImGui::Combo("Rendering Mode", (int*)&lineRenderingTechnique, LINE_RENDERING_TECHNIQUE_DISPLAYNAMES,
+                    IM_ARRAYSIZE(LINE_RENDERING_TECHNIQUE_DISPLAYNAMES))) {
+                loadModel(MODEL_FILENAMES[usedModelIndex], false);
+            }
+
             ImGui::Separator();
 
             static bool showSceneSettings = true;
@@ -1533,10 +1539,6 @@ void PixelSyncApp::renderSceneSettingsGUI()
     if (ImGui::Button("Save screenshot")) {
         saveScreenshotOnKey(saveDirectoryScreenshots + saveFilenameScreenshots + ".png");
     }
-
-    ImGui::Separator();
-
-//    ImGui::SetCursorPos(cursorPosEnd);
 }
 
 sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()

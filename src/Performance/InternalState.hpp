@@ -31,18 +31,11 @@ enum RenderModeOIT {
 
 const char *const MODEL_FILENAMES[] = {
         "Data/Rings/rings.obj",
-        "Data/Rings/rings.obj",
-        "Data/Trajectories/9213_streamlines",
-        "Data/Trajectories/9213_streamlines",
         "Data/Trajectories/9213_streamlines",
         "Data/ConvectionRolls/output.obj",
-        "Data/ConvectionRolls/output.obj",
-        "Data/ConvectionRolls/turbulence80000.obj",
-        "Data/ConvectionRolls/turbulence80000.obj",
         "Data/ConvectionRolls/turbulence80000.obj",
         "Data/ConvectionRolls/turbulence20000.obj",
         "Data/Hair/ponytail.hair",
-        "Data/Trajectories/single_streamline",
         "Data/Trajectories/single_streamline",
 
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06pressureDiff.nc",
@@ -75,19 +68,11 @@ const char *const MODEL_FILENAMES[] = {
 const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)));
 const char *const MODEL_DISPLAYNAMES[] = {
         "Rings",
-        "Rings (Lines)",
         "Aneurysm",
-        "Aneurysm (Lines)",
-        "Aneurysm (Fetch)",
         "Convection Rolls",
-        "Convection Rolls (Lines)",
         "Turbulence",
-        "Turbulence (Lines)",
-        "Turbulence (Fetch)",
         "Convection Rolls Small",
         "Hair",
-        "Single Streamline (Lines)",
-        "Single Streamline (Fetch)",
 
 //        "Ponytail",
 
@@ -96,6 +81,13 @@ const char *const MODEL_DISPLAYNAMES[] = {
 //        "Turbulence", "Turbulence (Lines)", "Convection Rolls", "Warm Conveyor Belt #1", "Warm Conveyor Belt #2",
 //        "Warm Conveyor Belt #3", "Warm Conveyor Belt #4", "Warm Conveyor Belt #5", "Warm Conveyor Belt #6",
 //        "Warm Conveyor Belt #7", "Warm Conveyor Belt #8", "Warm Conveyor Belt #9",
+};
+
+enum LineRenderingTechnique {
+    LINE_RENDERING_TECHNIQUE_TRIANGLES, LINE_RENDERING_TECHNIQUE_LINES, LINE_RENDERING_TECHNIQUE_FETCH
+};
+const char *const LINE_RENDERING_TECHNIQUE_DISPLAYNAMES[] = {
+        "Triangles", "Geometry Shader (Lines)", "Prog. Vertex Fetch (Lines)"
 };
 
 enum AOTechniqueName {
@@ -173,6 +165,7 @@ struct InternalState
                && this->oitAlgorithmSettings.getMap() == rhs.oitAlgorithmSettings.getMap()
                && this->tilingWidth == rhs.tilingWidth && this->tilingHeight == rhs.tilingHeight
                && this->aoTechniqueName == rhs.aoTechniqueName && this->shadowTechniqueName == rhs.shadowTechniqueName
+               && this->lineRenderingTechnique == rhs.lineRenderingTechnique
                && this->transferFunctionName == transferFunctionName
                && this->importanceCriterionIndex == importanceCriterionIndex
                && this->windowResolution == windowResolution
@@ -193,6 +186,7 @@ struct InternalState
     bool useMortonCodeForTiling = false;
     AOTechniqueName aoTechniqueName = AO_TECHNIQUE_NONE;
     ShadowMappingTechniqueName shadowTechniqueName = NO_SHADOW_MAPPING;
+    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     std::string transferFunctionName;
     int importanceCriterionIndex = 0;
     glm::ivec2 windowResolution = glm::ivec2(0, 0);

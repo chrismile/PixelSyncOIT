@@ -25,15 +25,17 @@ public:
     virtual void resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
             sgl::RenderbufferObjectPtr &sceneDepthRBO) {}
 
-    virtual void gatherBegin() {}
+    virtual void gatherBegin();
     // In between "gatherBegin" and "gatherEnd", we can render our objects using the gather shader
-    virtual void gatherEnd() {}
+    virtual void gatherEnd();
 
     /**
      * Blit accumulated transparent objects to screen.
      * Disclaimer: May change view/projection matrices!
      */
     virtual void renderToScreen() {}
+
+    virtual void renderGUI();
 };
 
 #endif /* OIT_OIT_DUMMY_HPP_ */
