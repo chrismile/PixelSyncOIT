@@ -1,9 +1,14 @@
 # PixelSyncOIT
-A demo for order independent transparency using pixel synchronization (GL_ARB_fragment_shader_interlock)
+A program for triangle mesh and line dataset rendering using order independent transparency with pixel synchronization (GL_ARB_fragment_shader_interlock).
 
 Prerequisites (build currently only supported on Linux):
 - sgl: https://github.com/chrismile/sgl (use sudo make install to install this library on your system)
-- The datasets are not supplied with the repository.
+- The datasets are not supplied with the repository. Currently, to render all line datasets, the following files are needed:
+    * PixelSyncOIT/Data/Rings/rings.obj
+    * PixelSyncOIT/Data/Trajectories/9213_streamlines.obj
+    * PixelSyncOIT/Data/ConvectionRolls/output.obj
+    * PixelSyncOIT/Data/ConvectionRolls/turbulence80000.obj
+    * PixelSyncOIT/Data/ConvectionRolls/turbulence20000.obj
 
 ## Building and running the programm
 
