@@ -54,12 +54,14 @@ void initializeCircleData(int numSegments, float radius);
 void convertObjTrajectoryDataToBinaryTriangleMesh(
         TrajectoryType trajectoryType,
         const std::string &objFilename,
-        const std::string &binaryFilename);
+        const std::string &binaryFilename,
+        float lineRadius);
 
 void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
         TrajectoryType trajectoryType,
         const std::string &objFilename,
-        const std::string &binaryFilename);
+        const std::string &binaryFilename,
+        float lineRadius);
 
 void convertObjTrajectoryDataToBinaryLineMesh(
         TrajectoryType trajectoryType,

@@ -333,7 +333,7 @@ struct LinePointData
 };
 
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData,
-        bool useProgrammableFetch, bool programmableFetchUseAoS)
+        bool useProgrammableFetch, bool programmableFetchUseAoS, float lineRadius)
 {
     MeshRenderer meshRenderer(useProgrammableFetch);
     BinaryMesh mesh;

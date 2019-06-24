@@ -149,7 +149,7 @@ private:
     bool useBillboardLines = false;
     bool transparencyMapping = true;
     bool useLinearRGB = true;
-    float lineRadius = 0.001f;
+    float lineRadius = 0.0005f;
     std::vector<float> fpsArray;
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);

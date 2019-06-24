@@ -159,6 +159,6 @@ public:
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData = false,
-        bool useProgrammableFetch = false, bool programmableFetchUseAoS = true);
+        bool useProgrammableFetch = false, bool programmableFetchUseAoS = true, float lineRadius = 0.001f);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */

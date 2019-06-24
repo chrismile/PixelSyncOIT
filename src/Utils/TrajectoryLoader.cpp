@@ -38,8 +38,6 @@ void getPointsOnCircle(std::vector<glm::vec2> &points, const glm::vec2 &center, 
     }
 }
 
-const int NUM_CIRCLE_SEGMENTS = 3;
-const float TUBE_RADIUS = 0.001f;
 
 void initializeCircleData(int numSegments, float radius)
 {
@@ -60,7 +58,8 @@ void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, std::vector<gl
         const glm::vec3 &center, const glm::vec3 &normal, glm::vec3 &lastTangent)
 {
     if (circlePoints2D.size() == 0) {
-        initializeCircleData(NUM_CIRCLE_SEGMENTS, TUBE_RADIUS);
+        std::cerr << "Fatal error: circlePoints2D.size() == 0" << std::endl;
+        exit(1);
     }
 
     glm::vec3 tangent, binormal;
@@ -419,17 +418,17 @@ void createNormals(const std::vector<glm::vec3> &vertices,
 void convertObjTrajectoryDataToBinaryTriangleMesh(
         TrajectoryType trajectoryType,
         const std::string &objFilename,
-        const std::string &binaryFilename)
+        const std::string &binaryFilename,
+        float lineRadius)
 {
     auto start = std::chrono::system_clock::now();
 
     if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
         initializeCircleData(3, 0.05);
-    }
-    else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
-        initializeCircleData(3, TUBE_RADIUS);
+    } else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
+        initializeCircleData(3, lineRadius);
     } else {
-        initializeCircleData(3, TUBE_RADIUS);
+        initializeCircleData(3, lineRadius);
     }
 
     BinaryMesh binaryMesh;
@@ -669,7 +668,8 @@ struct TubeVertex {
 void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
         TrajectoryType trajectoryType,
         const std::string &objFilename,
-        const std::string &binaryFilename)
+        const std::string &binaryFilename,
+        float lineRadius)
 {
     auto start = std::chrono::system_clock::now();
 
@@ -677,13 +677,12 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
         sgl::ShaderManager->addPreprocessorDefine("NUM_CIRCLE_SEGMENTS", NUM_CIRCLE_SEGMENTS);
         sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", 0.05);
-    }
-    else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
+    } else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
         sgl::ShaderManager->addPreprocessorDefine("NUM_CIRCLE_SEGMENTS", NUM_CIRCLE_SEGMENTS);
-        sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", TUBE_RADIUS);
+        sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", lineRadius);
     } else {
         sgl::ShaderManager->addPreprocessorDefine("NUM_CIRCLE_SEGMENTS", NUM_CIRCLE_SEGMENTS);
-        sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", TUBE_RADIUS);
+        sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", lineRadius);
     }
 
     BinaryMesh binaryMesh;
@@ -955,15 +954,6 @@ void convertObjTrajectoryDataToBinaryLineMesh(
         const std::string &binaryFilename)
 {
     auto start = std::chrono::system_clock::now();
-
-    if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
-        initializeCircleData(3, 0.05);
-    }
-    else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
-        initializeCircleData(3, TUBE_RADIUS);
-    } else {
-        initializeCircleData(3, TUBE_RADIUS);
-    }
 
     BinaryMesh binaryMesh;
     binaryMesh.submeshes.push_back(BinarySubMesh());

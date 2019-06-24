@@ -525,8 +525,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
                 convertObjTrajectoryDataToBinaryLineMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
             } else {
-                //convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
-                convertObjTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, modelFilenameObj, modelFilenameOptimized);
+                //convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj,
+                //        modelFilenameOptimized, lineRadius);
+                convertObjTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, modelFilenameObj,
+                        modelFilenameOptimized, lineRadius);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             modelFilenameObj = filename;
@@ -555,7 +557,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
-                useProgrammableFetch, programmableFetchUseAoS);
+                useProgrammableFetch, programmableFetchUseAoS, lineRadius);
         if (shaderMode == SHADER_MODE_VORTICITY) {
             recomputeHistogramForMesh();
         }
@@ -595,13 +597,13 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
 
     if (recording || testCameraFlight) {
-        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+        /*if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
             lineRadius = 0.00335;
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             lineRadius = 0.001;
         } else {
             lineRadius = 0.001;
-        }
+        }*/
     }
 
     rotation = glm::mat4(1.0f);
@@ -795,13 +797,13 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
 
         if (recording || testCameraFlight) {
-            if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+            /*if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
                 lineRadius = 0.00335;
             } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
                 lineRadius = 0.001;
             } else {
                 lineRadius = 0.001;
-            }
+            }*/
         }
 
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
