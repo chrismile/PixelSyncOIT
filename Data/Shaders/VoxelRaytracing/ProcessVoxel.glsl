@@ -185,7 +185,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             const vec3 Ia = kA * ambientColor;
             const float kD = 0.7;
             const float kS = 0.1;
-            const float s = 100;
+            const float s = 10;
 
             const vec3 n = normalize(intersectionNormal);
             //            const vec3 v = normalize(cameraPosition - intersectionWorld);
@@ -208,7 +208,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             #ifdef HAIR_RENDERING
             float haloParameter = 0;
             #else
-            float haloParameter = 1.2;
+            float haloParameter = 1;
             #endif
 
 
@@ -217,7 +217,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             float halo = mix(1.0f,((angle1)+(angle2)) , haloParameter);
 
             vec3 diffuseShading = Ia + Id + Is;
-            diffuseShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
+            //diffuseShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
 
 
             hit.color = vec4(diffuseShading, intersectionColor.a);

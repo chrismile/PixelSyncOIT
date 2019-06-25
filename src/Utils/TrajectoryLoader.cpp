@@ -815,11 +815,19 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
             NUM_CIRCLE_SEGMENTS * pathLinePoints.size() * sizeof(TubeVertex),
             SHADER_STORAGE_BUFFER, BUFFER_STATIC);
 
+    int maxNumWorkGroupsSupported = 0;
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &maxNumWorkGroupsSupported);
+
     sgl::ShaderProgramPtr createTubePointsShader = sgl::ShaderManager->getShaderProgram({"CreateTubePoints.Compute"});
     sgl::ShaderManager->bindShaderStorageBuffer(2, pathLinePointsBuffer);
     sgl::ShaderManager->bindShaderStorageBuffer(3, tubeVertexBuffer);
     createTubePointsShader->setUniform("numLinePoints", numLinePointsOutput);
     numWorkGroups = iceil(pathLinePoints.size(), WORK_GROUP_SIZE_1D);
+    if (numWorkGroups > maxNumWorkGroupsSupported) {
+        sgl::Logfile::get()->writeInfo("Info: numWorkGroups > MAX_COMPUTE_WORK_GROUP_COUNT. Switching to CPU fallback.");
+        convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, objFilename, binaryFilename, lineRadius);
+        return;
+    }
     createTubePointsShader->dispatchCompute(numWorkGroups);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 

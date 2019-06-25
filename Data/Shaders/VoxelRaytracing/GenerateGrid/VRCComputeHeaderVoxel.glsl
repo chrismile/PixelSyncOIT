@@ -73,6 +73,9 @@ void decompressLine(vec3 voxelPosition, LineSegmentCompressed compressedLine, ou
     uint faceEndIndex = (compressedLine.linePosition >> 3) & 0x7u;
     uint quantizedStartPos1D = (compressedLine.linePosition >> 6) & bitmaskQuantizedPos;
     uint quantizedEndPos1D = (compressedLine.linePosition >> 6+c) & bitmaskQuantizedPos;
+    if (c > 12) {
+        quantizedEndPos1D |= (compressedLine.attributes << (c - (6 + 2*c - 32))) & bitmaskQuantizedPos;
+    }
     uint lineID = (compressedLine.attributes >> 11) & 32u;
     uint attr1 = (compressedLine.attributes >> 16) & 0xFFu;
     uint attr2 = (compressedLine.attributes >> 24) & 0xFFu;

@@ -529,7 +529,7 @@ void VoxelCurveDiscretizer::compressLine(const glm::ivec3 &voxelIndex, const Lin
     lineCompressed.linePosition |= lineQuantized.faceIndex2 << 3;
     lineCompressed.linePosition |= lineQuantized.facePositionQuantized1 << 6;
     lineCompressed.linePosition |= lineQuantized.facePositionQuantized2 << (6 + c);
-    lineCompressed.attributes = lineQuantized.facePositionQuantized2;
+    lineCompressed.attributes = 0;
     if (c > 12) {
         // Quantization resolution of 128 or 256
         lineCompressed.attributes |= lineQuantized.facePositionQuantized2 >> (c - (6 + 2*c - 32));
@@ -616,7 +616,7 @@ void VoxelCurveDiscretizer::decompressLine(const glm::vec3 &voxelPosition, const
     if (c > 12) {
         quantizedEndPos1D |= (compressedLine.attributes << (c - (6 + 2*c - 32))) & bitmaskQuantizedPos;
     }
-    uint32_t lineID = (compressedLine.attributes >> 11) & 32u;
+    uint32_t lineID = (compressedLine.attributes >> 11) & 31u;
     uint32_t attr1 = (compressedLine.attributes >> 16) & 0xFFu;
     uint32_t attr2 = (compressedLine.attributes >> 24) & 0xFFu;
 

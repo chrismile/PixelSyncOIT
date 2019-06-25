@@ -537,6 +537,10 @@ std::vector<InternalState> getTestModesPaper()
         }
     }
 
+    for (InternalState &state : states) {
+        state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+    }
+
     // Append model name to state name if more than one model is loaded
     if (modelNames.size() > 1 || windowResolutions.size() > 1) {
         for (InternalState &state : states) {

@@ -597,13 +597,15 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
 
     if (recording || testCameraFlight) {
-        /*if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
-            lineRadius = 0.00335;
+        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+            lineRadius = 0.002;
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             lineRadius = 0.001;
+        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+            lineRadius = 0.0005;
         } else {
-            lineRadius = 0.001;
-        }*/
+            lineRadius = 0.0007;
+        }
     }
 
     rotation = glm::mat4(1.0f);
@@ -797,13 +799,15 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
 
         if (recording || testCameraFlight) {
-            /*if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
-                lineRadius = 0.00335;
+            if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+                lineRadius = 0.002;
             } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
                 lineRadius = 0.001;
+            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+                lineRadius = 0.0005;
             } else {
-                lineRadius = 0.001;
-            }*/
+                lineRadius = 0.0007;
+            }
         }
 
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -875,7 +879,7 @@ void PixelSyncApp::setNewState(const InternalState &newState)
         window->setWindowSize(newResolution.x, newResolution.y);
     }
 
-    // 1. Test whether fragment shader invocation interlock (Pixel Sync) or atomic operations shall be disabled
+    // 1.1. Test whether fragment shader invocation interlock (Pixel Sync) or atomic operations shall be disabled
     if (newState.testNoInvocationInterlock) {
         ShaderManager->addPreprocessorDefine("TEST_NO_INVOCATION_INTERLOCK", "");
     } else {
@@ -891,6 +895,10 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     } else {
         ShaderManager->removePreprocessorDefine("PIXEL_SYNC_UNORDERED");
     }
+
+    // 1.2. Set the new line rendering mode
+    LineRenderingTechnique oldLineRenderingTechnique = lineRenderingTechnique;
+    lineRenderingTechnique = newState.lineRenderingTechnique;
 
     // 2.1. Handle global state changes like ambient occlusion, shadowing, tiling mode
     setNewTilingMode(newState.tilingWidth, newState.tilingHeight, newState.useMortonCodeForTiling);
@@ -935,7 +943,8 @@ void PixelSyncApp::setNewState(const InternalState &newState)
                 + newState.modelName + + "\".");
         exit(1);
     }
-    if (newModelIndex != usedModelIndex || shuffleGeometry != newState.testShuffleGeometry) {
+    if (newModelIndex != usedModelIndex || shuffleGeometry != newState.testShuffleGeometry
+            || oldLineRenderingTechnique != lineRenderingTechnique) {
         shuffleGeometry = newState.testShuffleGeometry;
         loadModel(modelFilename);
     }

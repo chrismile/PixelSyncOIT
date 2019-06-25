@@ -136,11 +136,11 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
         voxelRes = 128;
 //        quantizationRes = 16;
     }
-    if (isConvectionRolls)
+    /*if (isConvectionRolls)
     {
-        voxelRes = 256;
+        voxelRes = 512;
         //quantizationRes = 16;
-    }
+    }*/
 
     auto start = std::chrono::system_clock::now();
 
@@ -148,9 +148,11 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
     float byteSize = 0;
 
     int maxNumLinesPerVoxel = 32;
+    bool useGPU = true;
     if (voxelRes >= 256) {
-        maxNumLinesPerVoxel = 16;
+        useGPU = false;
     }
+
     /*if (boost::starts_with(filename, "Data/WCB")) {
         maxNumLinesPerVoxel = 128;
     } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
@@ -168,7 +170,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
         } else {
             std::string modelFilenameObj = modelFilenamePure + ".obj";
             compressedData = discretizer.createFromTrajectoryDataset(modelFilenameObj, trajectoryType, attributes,
-                    maxVorticity, maxNumLinesPerVoxel);
+                    maxVorticity, maxNumLinesPerVoxel, useGPU);
         }
 
         byteSize =
