@@ -83,6 +83,11 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
     }
 
+    if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
+        Logfile::get()->writeInfo("GL_ARB_fragment_shader_interlock unsupported. Switching to per-pixel linked lists.");
+        mode = RENDER_MODE_OIT_LINKED_LIST;
+    }
+
     sgl::FileUtils::get()->ensureDirectoryExists("Data/CameraPaths/");
     sgl::FileUtils::get()->ensureDirectoryExists(saveDirectoryScreenshots);
 
