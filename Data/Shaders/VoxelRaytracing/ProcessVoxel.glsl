@@ -217,7 +217,7 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             float halo = mix(1.0f,((angle1)+(angle2)) , haloParameter);
 
             vec3 diffuseShading = Ia + Id + Is;
-            //diffuseShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
+            diffuseShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
 
 
             hit.color = vec4(diffuseShading, intersectionColor.a);

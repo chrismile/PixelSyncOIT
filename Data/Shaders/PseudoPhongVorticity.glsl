@@ -466,7 +466,7 @@ void main()
     float halo = mix(1.0f,((angle1)+(angle2)) , haloParameter);
 
     vec3 colorShading = Ia + Id + Is;
-    //colorShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
+    colorShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
     #elif REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     vec3 colorShading = vec3(occlusionFactor * shadowFactor);
     #elif REFLECTION_MODEL == 2 // LOCAL_SHADOW_MAP_OCCLUSION

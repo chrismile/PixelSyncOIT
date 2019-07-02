@@ -83,9 +83,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
     }
 
-    if (!sgl::SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
-        Logfile::get()->writeInfo("Info: GL_ARB_fragment_shader_interlock unsupported. Switching to "
-                                  "per-pixel linked lists.");
+    if (!SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
+        Logfile::get()->writeInfo("GL_ARB_fragment_shader_interlock unsupported. Switching to per-pixel linked lists.");
         mode = RENDER_MODE_OIT_LINKED_LIST;
     }
 
