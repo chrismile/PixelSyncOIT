@@ -83,6 +83,12 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         glGetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &freeMemKilobytes);
     }
 
+    if (!sgl::SystemGL::get()->isGLExtensionAvailable("GL_ARB_fragment_shader_interlock")) {
+        Logfile::get()->writeInfo("Info: GL_ARB_fragment_shader_interlock unsupported. Switching to "
+                                  "per-pixel linked lists.");
+        mode = RENDER_MODE_OIT_LINKED_LIST;
+    }
+
     sgl::FileUtils::get()->ensureDirectoryExists("Data/CameraPaths/");
     sgl::FileUtils::get()->ensureDirectoryExists(saveDirectoryScreenshots);
 
@@ -160,7 +166,6 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     updateAOMode();
 
     setRenderMode(mode, true);
-    modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
     loadModel(MODEL_FILENAMES[usedModelIndex]);
 
     if ((testCameraFlight || recording) && recordingUseGlobalIlumination) {
@@ -470,7 +475,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             || boost::starts_with(modelFilenamePure, "Data/Rings")
             || boost::starts_with(modelFilenamePure, "Data/Turbulence")
             || boost::starts_with(modelFilenamePure, "Data/WCB")
-            || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls");
+            || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")
+            || boost::starts_with(modelFilenamePure, "Data/CFD");
     modelContainsHair = boost::starts_with(modelFilenamePure, "Data/Hair");
     if (modelContainsTrajectories) {
         if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
@@ -482,6 +488,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             trajectoryType = TRAJECTORY_TYPE_RINGS;
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
+        } else if (boost::starts_with(modelFilenamePure, "Data/CFD")) {
+            trajectoryType = TRAJECTORY_TYPE_CFD;
         } else {
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS;
         }
@@ -517,22 +525,20 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         sgl::ShaderManager->removePreprocessorDefine("USE_PROGRAMMABLE_FETCH");
     }
 
-    std::string modelFilenameObj = modelFilenamePure + ".obj";
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
         if (boost::starts_with(modelFilenamePure, "Data/Models")) {
-            convertObjMeshToBinary(modelFilenameObj, modelFilenameOptimized);
+            convertObjMeshToBinary(filename, modelFilenameOptimized);
         } else if (modelContainsTrajectories) {
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
-                convertObjTrajectoryDataToBinaryLineMesh(trajectoryType, modelFilenameObj, modelFilenameOptimized);
+                convertTrajectoryDataToBinaryLineMesh(trajectoryType, filename, modelFilenameOptimized);
             } else {
-                //convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj,
+                //convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj,
                 //        modelFilenameOptimized, lineRadius);
-                convertObjTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, modelFilenameObj,
+                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
                         modelFilenameOptimized, lineRadius);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
-            modelFilenameObj = filename;
-            convertHairDataToBinaryTriangleMesh(modelFilenameObj, modelFilenameOptimized);
+            convertHairDataToBinaryTriangleMesh(filename, modelFilenameOptimized);
         }
     }
 
@@ -703,6 +709,8 @@ void PixelSyncApp::changeImportanceCriterionType()
         importanceCriterionIndex = (int)importanceCriterionTypeAneurysm;
     } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
         importanceCriterionIndex = (int)importanceCriterionTypeWCB;
+    } else if (trajectoryType == TRAJECTORY_TYPE_CFD) {
+        importanceCriterionIndex = (int)importanceCriterionTypeCFD;
     } else {
         importanceCriterionIndex = (int)importanceCriterionTypeConvectionRolls;
     }
@@ -956,6 +964,8 @@ void PixelSyncApp::setNewState(const InternalState &newState)
             importanceCriterionTypeAneurysm = (ImportanceCriterionTypeAneurysm)newState.importanceCriterionIndex;
         } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
             importanceCriterionTypeWCB = (ImportanceCriterionTypeWCB)newState.importanceCriterionIndex;
+        } else if (trajectoryType == TRAJECTORY_TYPE_CFD) {
+            importanceCriterionTypeCFD = (ImportanceCriterionTypeCFD)newState.importanceCriterionIndex;
         } else {
             importanceCriterionTypeConvectionRolls
                     = (ImportanceCriterionTypeConvectionRolls)newState.importanceCriterionIndex;
@@ -1446,7 +1456,11 @@ void PixelSyncApp::renderSceneSettingsGUI()
                 || ((trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS || trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW || trajectoryType == TRAJECTORY_TYPE_RINGS)
                 && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeConvectionRolls,
                                 IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES,
-                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES))))) {
+                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES)))
+                || ((trajectoryType == TRAJECTORY_TYPE_CFD)
+                && ImGui::Combo("Importance Criterion", (int*)&importanceCriterionTypeCFD,
+                                IMPORTANCE_CRITERION_CFD_DISPLAYNAMES,
+                                IM_ARRAYSIZE(IMPORTANCE_CRITERION_CFD_DISPLAYNAMES))))) {
             changeImportanceCriterionType();
             recomputeHistogramForMesh();
             ShaderManager->invalidateShaderCache();

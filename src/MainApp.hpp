@@ -172,6 +172,8 @@ private:
             = IMPORTANCE_CRITERION_WCB_CURVATURE;
     ImportanceCriterionTypeConvectionRolls importanceCriterionTypeConvectionRolls
             = IMPORTANCE_CRITERION_CONVECTION_ROLLS_VORTICITY;
+    ImportanceCriterionTypeCFD importanceCriterionTypeCFD
+            = IMPORTANCE_CRITERION_CFD_CURL;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     bool useGeometryShader = false;

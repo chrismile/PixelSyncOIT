@@ -51,21 +51,21 @@ void createTubeRenderData<uint32_t>(const std::vector<glm::vec3> &pathLineCenter
 
 void initializeCircleData(int numSegments, float radius);
 
-void convertObjTrajectoryDataToBinaryTriangleMesh(
+void convertTrajectoryDataToBinaryTriangleMesh(
         TrajectoryType trajectoryType,
-        const std::string &objFilename,
+        const std::string &trajectoriesFilename,
         const std::string &binaryFilename,
         float lineRadius);
 
-void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
+void convertTrajectoryDataToBinaryTriangleMeshGPU(
         TrajectoryType trajectoryType,
-        const std::string &objFilename,
+        const std::string &trajectoriesFilename,
         const std::string &binaryFilename,
         float lineRadius);
 
-void convertObjTrajectoryDataToBinaryLineMesh(
+void convertTrajectoryDataToBinaryLineMesh(
         TrajectoryType trajectoryType,
-        const std::string &objFilename,
+        const std::string &trajectoriesFilename,
         const std::string &binaryFilename);
 
 #endif //PIXELSYNCOIT_TRAJECTORYLOADER_HPP

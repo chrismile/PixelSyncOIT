@@ -415,9 +415,9 @@ void createNormals(const std::vector<glm::vec3> &vertices,
 }
 
 
-void convertObjTrajectoryDataToBinaryTriangleMesh(
+void convertTrajectoryDataToBinaryTriangleMesh(
         TrajectoryType trajectoryType,
-        const std::string &objFilename,
+        const std::string &trajectoriesFilename,
         const std::string &binaryFilename,
         float lineRadius)
 {
@@ -445,7 +445,7 @@ void convertObjTrajectoryDataToBinaryTriangleMesh(
     uint32_t numLineSegments = 0;
 
 
-    Trajectories trajectories = loadTrajectoriesFromFile(objFilename, trajectoryType);
+    Trajectories trajectories = loadTrajectoriesFromFile(trajectoriesFilename, trajectoryType);
 
     for (size_t i = 0; i < trajectories.size(); i++) {
         Trajectory &trajectory = trajectories.at(i);
@@ -665,9 +665,9 @@ struct TubeVertex {
     float padding;
 };
 
-void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
+void convertTrajectoryDataToBinaryTriangleMeshGPU(
         TrajectoryType trajectoryType,
-        const std::string &objFilename,
+        const std::string &trajectoriesFilename,
         const std::string &binaryFilename,
         float lineRadius)
 {
@@ -704,7 +704,7 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
 
     auto startLoad = std::chrono::system_clock::now();
 
-    Trajectories trajectories = loadTrajectoriesFromFile(objFilename, trajectoryType);
+    Trajectories trajectories = loadTrajectoriesFromFile(trajectoriesFilename, trajectoryType);
 
     lineOffsetsInput.push_back(0);
     for (size_t i = 0; i < trajectories.size(); i++) {
@@ -825,7 +825,7 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
     numWorkGroups = iceil(pathLinePoints.size(), WORK_GROUP_SIZE_1D);
     if (numWorkGroups > maxNumWorkGroupsSupported) {
         sgl::Logfile::get()->writeInfo("Info: numWorkGroups > MAX_COMPUTE_WORK_GROUP_COUNT. Switching to CPU fallback.");
-        convertObjTrajectoryDataToBinaryTriangleMesh(trajectoryType, objFilename, binaryFilename, lineRadius);
+        convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, trajectoriesFilename, binaryFilename, lineRadius);
         return;
     }
     createTubePointsShader->dispatchCompute(numWorkGroups);
@@ -956,9 +956,9 @@ void convertObjTrajectoryDataToBinaryTriangleMeshGPU(
 
 
 
-void convertObjTrajectoryDataToBinaryLineMesh(
+void convertTrajectoryDataToBinaryLineMesh(
         TrajectoryType trajectoryType,
-        const std::string &objFilename,
+        const std::string &trajectoriesFilename,
         const std::string &binaryFilename)
 {
     auto start = std::chrono::system_clock::now();
@@ -975,7 +975,7 @@ void convertObjTrajectoryDataToBinaryLineMesh(
     std::vector<uint32_t> globalIndices;
 
 
-    Trajectories trajectories = loadTrajectoriesFromFile(objFilename, trajectoryType);
+    Trajectories trajectories = loadTrajectoriesFromFile(trajectoriesFilename, trajectoryType);
 
     for (size_t i = 0; i < trajectories.size(); i++) {
         Trajectory &trajectory = trajectories.at(i);
