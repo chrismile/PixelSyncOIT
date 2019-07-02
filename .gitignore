@@ -74,6 +74,7 @@ cmake-build-*/
 *.hair
 *.binpath
 *.camera
+*.binlines
 
 Data/WCB/*.txt
 Data/CameraPaths/*
