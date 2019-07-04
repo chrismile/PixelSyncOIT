@@ -1284,19 +1284,19 @@ void PixelSyncApp::renderOIT()
     glBlendEquation(GL_FUNC_ADD);
 
 #ifdef PROFILING_MODE
-    timer.start("gatherBegin");
+    timer.startGPU("gatherBegin");
     oitRenderer->gatherBegin();
     timer.end();
 
-    timer.start("renderScene");
+    timer.startGPU("renderScene");
     oitRenderer->renderScene();
     timer.end();
 
-    timer.start("gatherEnd");
+    timer.startGPU("gatherEnd");
     oitRenderer->gatherEnd();
     timer.end();
 
-    timer.start("renderToScreen");
+    timer.startGPU("renderToScreen");
     oitRenderer->renderToScreen();
     timer.end();
 #else
