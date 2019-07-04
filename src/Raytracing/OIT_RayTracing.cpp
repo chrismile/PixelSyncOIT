@@ -1,0 +1,188 @@
+/*
+ * BSD 2-Clause License
+ *
+ * Copyright (c) 2019, Christoph Neuhauser
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <GL/glew.h>
+
+#include <Math/Geometry/MatrixUtil.hpp>
+#include <Graphics/Texture/TextureManager.hpp>
+#include <Graphics/Scene/Camera.hpp>
+#include <Utils/MeshSerializer.hpp>
+
+#include "../Utils/TrajectoryFile.hpp"
+#include "OIT_RayTracing.hpp"
+
+OIT_RayTracing::OIT_RayTracing(sgl::CameraPtr &camera, const sgl::Color &clearColor)
+        : camera(camera), clearColor(clearColor)
+{
+    onTransferFunctionMapRebuilt();
+}
+
+void OIT_RayTracing::setLineRadius(float lineRadius)
+{
+    this->lineRadius = lineRadius;
+    renderBackend.setLineRadius(lineRadius);
+}
+
+float OIT_RayTracing::getLineRadius()
+{
+    return this->lineRadius;
+}
+
+void OIT_RayTracing::setClearColor(const sgl::Color &clearColor)
+{
+    this->clearColor = clearColor;
+}
+
+void OIT_RayTracing::setLightDirection(const glm::vec3 &lightDirection)
+{
+    this->lightDirection = lightDirection;
+}
+
+void OIT_RayTracing::renderGUI()
+{
+    //ImGui::Separator();
+}
+
+void OIT_RayTracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+        sgl::RenderbufferObjectPtr &sceneDepthRBO)
+{
+    sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
+
+    sgl::TextureSettings settings;
+    renderImage = sgl::TextureManager->createEmptyTexture(width, height, settings);
+
+    renderBackend.setViewportSize(width, height);
+}
+
+void OIT_RayTracing::loadModel(
+        int modelIndex, TrajectoryType trajectoryType, bool useTriangleMesh
+        /*, std::vector<float> &attributes, float &maxAttribute*/)
+{
+    fromFile(MODEL_FILENAMES[modelIndex], trajectoryType, useTriangleMesh/*, attributes, maxAttribute*/);
+}
+
+void OIT_RayTracing::fromFile(
+        const std::string &filename, TrajectoryType trajectoryType, bool useTriangleMesh
+        /*, std::vector<float> &attributes, float &maxAttribute*/)
+{
+    if (useTriangleMesh) {
+        BinaryMesh binmesh;
+        readMesh3D(filename, binmesh);
+        BinarySubMesh &submesh = binmesh.submeshes.at(0);
+        std::vector<uint32_t> &indices = submesh.indices;
+        std::vector<glm::vec3> vertices;
+        std::vector<glm::vec3> vertexNormals;
+        std::vector<float> vertexAttributes;
+
+        for (BinaryMeshAttribute &attr : submesh.attributes) {
+            if (attr.name == "vertexPosition") {
+                float *data = (float*)&attr.data.front();
+                size_t n = attr.data.size()/(sizeof(glm::vec3));
+                vertices.reserve(n);
+                for (size_t i = 0; i < n; i++) {
+                    vertices.push_back(glm::vec3(data[i*3+0], data[i*3+1], data[i*3+2]));
+                }
+            } else if (attr.name == "vertexNormal") {
+                float *data = (float*)&attr.data.front();
+                size_t n = attr.data.size()/(sizeof(glm::vec3));
+                vertexNormals.reserve(n);
+                for (size_t i = 0; i < n; i++) {
+                    vertexNormals.push_back(glm::vec3(data[i*3+0], data[i*3+1], data[i*3+2]));
+                }
+            } else if (attr.name == "vertexAttribute0") {
+                uint16_t *data = (uint16_t*)&attr.data.front();
+                size_t n = attr.data.size()/(sizeof(uint16_t));
+                vertexAttributes.reserve(n);
+                for (size_t i = 0; i < n; i++) {
+                    vertexAttributes.push_back(data[i] / 65535.0f);
+                }
+            }
+        }
+
+        renderBackend.loadTriangleMesh(filename, indices, vertices, vertexNormals, vertexAttributes);
+    } else {
+        Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
+        renderBackend.loadTrajectories(filename, trajectories);
+    }
+}
+
+void OIT_RayTracing::setNewState(const InternalState &newState)
+{
+}
+
+void OIT_RayTracing::renderToScreen()
+{
+    glm::vec3 linearRgbClearColorVec(clearColor.getFloatR(), clearColor.getFloatG(), clearColor.getFloatB());
+    glm::vec3 sRgbClearColorVec = TransferFunctionWindow::linearRGBTosRGB(linearRgbClearColorVec);
+    sgl::Color sRgbClearColor = sgl::colorFromFloat(sRgbClearColorVec.x, sRgbClearColorVec.y, sRgbClearColorVec.z);
+
+    sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
+    int width = window->getWidth();
+    int height = window->getHeight();
+
+    glm::mat4 viewMatrix = camera->getViewMatrix();
+    glm::vec3 upDir = camera->getViewMatrix()[1];
+    glm::vec3 lookDir = -camera->getViewMatrix()[2];
+    glm::vec3 pos = -camera->getViewMatrix()[3];
+    uint32_t *imageData = renderBackend.renderToImage(pos, lookDir, upDir, camera->getFOVy());
+    renderImage->uploadPixelData(width, height, imageData);
+
+    blitTexture();
+}
+
+void OIT_RayTracing::blitTexture()
+{
+    glm::vec3 linearRgbClearColorVec(clearColor.getFloatR(), clearColor.getFloatG(), clearColor.getFloatB());
+    glm::vec3 sRgbClearColorVec = TransferFunctionWindow::linearRGBTosRGB(linearRgbClearColorVec);
+    sgl::Color sRgbClearColor = sgl::colorFromFloat(sRgbClearColorVec.x, sRgbClearColorVec.y, sRgbClearColorVec.z);
+
+    // Blit the sRGB result image directly to the screen.
+    sgl::Renderer->unbindFBO();
+    glDepthMask(GL_FALSE);
+    glDisable(GL_DEPTH_TEST);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // Pre-multiplied alpha
+
+    sgl::Renderer->clearFramebuffer(GL_COLOR_BUFFER_BIT, sRgbClearColor);
+    sgl::Renderer->setProjectionMatrix(sgl::matrixIdentity());
+    sgl::Renderer->setViewMatrix(sgl::matrixIdentity());
+    sgl::Renderer->setModelMatrix(sgl::matrixIdentity());
+    sgl::Renderer->blitTexture(renderImage, sgl::AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
+
+    // Revert to normal alpha blending
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+    glDepthMask(GL_TRUE);
+}
+
+void OIT_RayTracing::onTransferFunctionMapRebuilt()
+{
+    const std::vector<OpacityPoint> &opacityPoints = g_TransferFunctionWindowHandle->getOpacityPoints();
+    const std::vector<ColorPoint_sRGB> &colorPoints_sRGB = g_TransferFunctionWindowHandle->getColorPoints_sRGB();
+    renderBackend.setTransferFunction(opacityPoints, colorPoints_sRGB);
+}
