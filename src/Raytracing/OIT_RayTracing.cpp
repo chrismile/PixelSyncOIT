@@ -128,8 +128,9 @@ void OIT_RayTracing::fromFile(
 
         renderBackend.loadTriangleMesh(filename, indices, vertices, vertexNormals, vertexAttributes);
     } else {
-        Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
-        renderBackend.loadTrajectories(filename, trajectories);
+        // Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
+        // renderBackend.loadTrajectories(filename, trajectories);
+        renderBackend.loadTubePrimitives(filename);
     }
 }
 

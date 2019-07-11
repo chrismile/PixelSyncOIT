@@ -22,6 +22,15 @@ ELSE()
 	target_link_libraries(PixelSyncOIT SDL2)
 ENDIF()
 
+option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" on)
+
+if(USE_RAYTRACING)
+	find_package(ospray REQUIRED)
+	include_directories(${OSPRAY_INCLUDE_DIRS})
+	target_link_libraries(PixelSyncOIT ${OSPRAY_LIBRARIES})
+endif()
+
+
 cmake_policy(SET CMP0012 NEW)
 find_package(OpenMP REQUIRED)
 find_package(SGL REQUIRED)

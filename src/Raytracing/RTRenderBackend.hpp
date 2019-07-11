@@ -33,6 +33,30 @@
 #include "../Utils/ImportanceCriteria.hpp"
 #include "../Utils/TrajectoryFile.hpp"
 
+#include "ospray/ospray.h"
+#include "ospray/ospcommon/vec.h"
+#include <ospray/ospcommon/box.h>
+
+struct Node
+{
+    ospcommon::vec3f position;
+    float radius;
+};
+
+struct Link
+{
+    int first;
+    int second;
+};
+
+struct TubePrimitives
+{
+    std::vector<Node> nodes;
+    std::vector<Link> links;
+    std::vector<ospcommon::vec4f> colors;
+    ospcommon::box3f worldBounds;
+};
+
 class RTRenderBackend {
 public:
     /**
@@ -48,7 +72,7 @@ public:
      * @param filename The filename of the trajectory dataset.
      * @param trajectories The trajectories to load.
      */
-    void loadTrajectories(const std::string &filename, const Trajectories &trajectories);
+    void loadTubePrimitives(const std::string &filename);
 
     /**
      * The data is stored as a list of triangles, i.e., the vertices referenced by three consecutive indices form one
@@ -109,6 +133,9 @@ private:
 
     // The image data.
     std::vector<uint32_t> image;
+
+    // hold the data 
+    TubePrimitives Tube;
 };
 
 
