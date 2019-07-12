@@ -112,6 +112,8 @@ public:
      */
     void setLineRadius(float lineRadius);
 
+    void commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy);
+
     /**
      * Renders the scene to an image in RGBA32 format.
      * @param backgroundColor The background color of the scene.
@@ -136,6 +138,8 @@ private:
 
     // hold the data 
     TubePrimitives Tube;
+    OSPFrameBuffer  framebuffer;
+    OSPRenderer renderer;
 };
 
 

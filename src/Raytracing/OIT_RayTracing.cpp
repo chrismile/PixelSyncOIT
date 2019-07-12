@@ -131,6 +131,10 @@ void OIT_RayTracing::fromFile(
         // Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
         // renderBackend.loadTrajectories(filename, trajectories);
         renderBackend.loadTubePrimitives(filename);
+        glm::vec3 upDir = camera->getViewMatrix()[1];
+        glm::vec3 lookDir = -camera->getViewMatrix()[2];
+        glm::vec3 pos = -camera->getViewMatrix()[3];
+        renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy());
     }
 }
 
