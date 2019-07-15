@@ -29,6 +29,10 @@
 #include "RTRenderBackend.hpp"
 #include <Utils/File/FileUtils.hpp>
 #include <Utils/AppSettings.hpp>
+#include "helper.h"
+
+#include <iterator>
+#include <algorithm>
 
 void writePPM(const char *fileName,
               const int x,
@@ -68,16 +72,21 @@ void RTRenderBackend::loadTubePrimitives(const std::string &filename){
      * As a simplification, we only use the first attribute for rendering and ignore everything else.
      * The data type 'Trajectories' is defined in "stc/Utils/TrajectoryFile.hpp".
      */
+    
+    Tube.nodes.clear();
+    Tube.links.clear();
+    Tube.colors.clear();
     std::cout << "Start loading obj file to tube primitives..." << std::endl;
     std::ifstream infile(filename);
     std::string line;
     std::vector<int> index;
     std::vector<float> pos;
-    std::vector<float> attr;
+    // std::vector<float> attr;
     Link tempNodeLink;
     Node tempNode;
     ospcommon::vec3f p;
     ospcommon::vec4f color;
+    float radius;
     color.x = 1.0; color.y = 0.0; color.z = 0.0; color.w = 1.0;
     while(std::getline(infile, line)){
         // std::cout << line << "\n";
@@ -86,7 +95,8 @@ void RTRenderBackend::loadTubePrimitives(const std::string &filename){
         if(ch == 'v'){
             if(line[1] == 't'){
             std::string substring = line.substr(3, line.length());
-            attr.push_back(std::stof(substring));
+            radius = std::stof(substring);
+            // attr.push_back(std::stof(substring));
             }else{
             std::string substring = line.substr(2, line.length());
                         std::string temp = "";
@@ -106,12 +116,12 @@ void RTRenderBackend::loadTubePrimitives(const std::string &filename){
                 temp = "";
                 }
             }
-            float radius = 0.01;
+            // float radius = 0.01;
             p.x = pos[0];
             p.y = pos[1];
             p.z = pos[2];
             tempNode = {p, radius};
-            Tube.colors.push_back(color);
+            // Tube.colors.push_back(color);
             Tube.nodes.push_back(tempNode);
             pos.clear();
             }
@@ -137,7 +147,7 @@ void RTRenderBackend::loadTubePrimitives(const std::string &filename){
             // save the index to tubes link
             int first = index[0];
             int second = first;
-            tempNodeLink = {first - 1, second - 1};
+            tempNodeLink = {first -1, second -1};
             Tube.links.push_back(tempNodeLink);
             
             for(int i = 1; i < index.size(); i++){
@@ -175,46 +185,105 @@ void RTRenderBackend::setTransferFunction(
         const std::vector<OpacityPoint> &opacityPoints, const std::vector<ColorPoint_sRGB> &colorPoints_sRGB) {
     // Interpolate the color points in sRGB space. Then, convert the result to linear RGB for rendering:
     //TransferFunctionWindow::sRGBToLinearRGB(glm::vec3(...));
+    for(int i = 0; i < opacityPoints.size(); i++){
+        std::cout << "opacity #" << i << " opacity " << opacityPoints[i].opacity << " position " << opacityPoints[i].position << "\n";
+    }
+    for(int i = 0; i < colorPoints_sRGB.size(); i++){
+        std::cout << "color points #" << i << " R " << (int)colorPoints_sRGB[i].color.getR() 
+                                            << " G " << (int)colorPoints_sRGB[i].color.getG()
+                                            << " B " << (int)colorPoints_sRGB[i].color.getB()
+                                            << " A " << (int)colorPoints_sRGB[i].color.getA()
+                                            << " position " << colorPoints_sRGB[i].position << "\n";
+    }
+    //! find the min and max
+    std::vector<float> attr;
+    for(int i = 0; i < Tube.nodes.size(); i++){
+        attr.push_back(Tube.nodes[i].radius);
+    }
+    const float amin = *std::min_element(attr.begin(), attr.end());
+    const float amax = *std::max_element(attr.begin(), attr.end());
+    // std::cout << "Attribute min " << amin << " max " << amax << std::endl;
+    const float dis = 1.f / (amax - amin);
+    // map attributes to the color 
+    for(int i = 0; i < attr.size(); ++i){
+        float a = attr[i];
+        const float ratio = (a - amin) * dis;
+        // find TFN index and the fraction
+        const int N = int(ratio * (colorPoints_sRGB.size() - 1));
+        const float R = ratio * (colorPoints_sRGB.size() - 1) - N;
+        // std::cout << "a = " << a << " N = " << N << " R " << R << std::endl;
+        if(N < 0){
+            glm::vec3 color_sRGB = colorPoints_sRGB.front().color.getFloatColorRGB();
+            float opacity = opacityPoints.front().opacity;
+            ospcommon::vec4f color(color_sRGB.x, color_sRGB.y , color_sRGB.z, opacity);
+            Tube.colors.push_back(color);
+        }else if(N >= colorPoints_sRGB.size() - 1){
+            glm::vec3 color_sRGB = colorPoints_sRGB.back().color.getFloatColorRGB();
+            float opacity = opacityPoints.back().opacity;
+            ospcommon::vec4f color(color_sRGB.x, color_sRGB.y , color_sRGB.z, opacity);
+            Tube.colors.push_back(color);
+        }else{
+            glm::vec3 color_sRGB_lo = colorPoints_sRGB[N].color.getFloatColorRGB();
+            glm::vec3 color_sRGB_hi = colorPoints_sRGB[N+1].color.getFloatColorRGB();
+            float opacity_lo = opacityPoints[N].opacity;
+            float opacity_hi = opacityPoints[N+1].opacity;
+            // convert sRGB to linear RGB
+            glm::vec3 color_linear_lo = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB_lo);
+            glm::vec3 color_linear_hi = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB_hi);
+            ospcommon::vec4f color_lo(color_linear_lo.x, color_linear_lo.y, color_linear_lo.z, opacity_lo);
+            ospcommon::vec4f color_hi(color_linear_hi.x, color_linear_hi.y, color_linear_hi.z, opacity_hi);
+            ospcommon::vec4f color = lerp(color_lo, color_hi, R);
+            Tube.colors.push_back(color);
+        }
+    }
+    // sleep(100);
 }
 
 void RTRenderBackend::setLineRadius(float lineRadius) {
     // TODO: Adapt the line radius (and ignore this function call for triangle meshes).
+    for(int i = 0; i < Tube.nodes.size(); ++i){
+        Tube.nodes[i].radius = lineRadius;
+    }
 }
 
 void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy)
 {
-    // ! Initialize OSPRay
-    int argc = sgl::FileUtils::get()->get_argc();
-    char **argv = sgl::FileUtils::get()->get_argv();
-    const char **av = const_cast<const char**>(argv);
-    OSPError init_error = ospInit(&argc, av);
-    if (init_error != OSP_NO_ERROR){
-        std::cout << "== ospray initialization fail" << std::endl;
-        exit (EXIT_FAILURE);
-    }else{
-        std::cout << "== ospray initialized successfully" << std::endl;
-    }
+    // // ! Initialize OSPRay
+    // int argc = sgl::FileUtils::get()->get_argc();
+    // char **argv = sgl::FileUtils::get()->get_argv();
+    // const char **av = const_cast<const char**>(argv);
+    // OSPError init_error = ospInit(&argc, av);
+    // if (init_error != OSP_NO_ERROR){
+    //     std::cout << "== ospray initialization fail" << std::endl;
+    //     exit (EXIT_FAILURE);
+    // }else{
+    //     std::cout << "== ospray initialized successfully" << std::endl;
+    // }
     // ! Load tube module
-    ospLoadModule("tubes");
-    std::cout << "camera pos " << pos.x << " " << pos.y << " " << pos.z << std::endl;
-    std::cout << "camera dir " << dir.x << " " << dir.y << " " << dir.z << std::endl;
-    std::cout << "camera pos " << up.x << " " << up.y << " " << up.z << std::endl;
-    std::cout << "fovy " << fovy << std::endl;
-    // ! Camera
-    glm::vec3 focus = glm::vec3((Tube.worldBounds.upper.x - Tube.worldBounds.lower.x) / 2.f  + Tube.worldBounds.lower.x, 
-                        (Tube.worldBounds.upper.y - Tube.worldBounds.lower.y) / 2.f  + Tube.worldBounds.lower.y, 
-                        (Tube.worldBounds.upper.z - Tube.worldBounds.lower.z) / 2.f  + Tube.worldBounds.lower.z);
-    glm::vec3 Dir = focus - pos;
-    OSPCamera camera = ospNewCamera("perspective");
-    float camPos[] = {pos.x, pos.y, pos.z };
-    float camDir[] = {Dir.x, Dir.y, Dir.z};
-    float camUp[] = {up.x, up.y, up.z};
-    ospSetf(camera, "aspect", width/(float)height);
-    ospSet1f(camera, "fovy", fovy);
-    ospSet3fv(camera, "pos", camPos);
-    ospSet3fv(camera, "dir", camDir);
-    ospSet3fv(camera, "up", camUp);
-    ospCommit(camera);
+    // ospLoadModule("tubes");
+    // std::cout << "camera pos " << pos.x << " " << pos.y << " " << pos.z << std::endl;
+    // std::cout << "camera dir " << dir.x << " " << dir.y << " " << dir.z << std::endl;
+    // std::cout << "camera pos " << up.x << " " << up.y << " " << up.z << std::endl;
+    // std::cout << "fovy " << fovy << std::endl;
+    // // ! Camera
+    // glm::vec3 focus = glm::vec3((Tube.worldBounds.upper.x - Tube.worldBounds.lower.x) / 2.f  + Tube.worldBounds.lower.x, 
+    //                     (Tube.worldBounds.upper.y - Tube.worldBounds.lower.y) / 2.f  + Tube.worldBounds.lower.y, 
+    //                     (Tube.worldBounds.upper.z - Tube.worldBounds.lower.z) / 2.f  + Tube.worldBounds.lower.z);
+    // glm::vec3 Pos;
+    // Pos.x = pos.x + Tube.worldBounds.upper.x;
+    // Pos.y = pos.y + pos.y + Tube.worldBounds.upper.y;
+    // Pos.z = pos.z + Tube.worldBounds.upper.z;
+    // glm::vec3 Dir = focus - pos;
+    // OSPCamera camera = ospNewCamera("perspective");
+    // float camPos[] = {Pos.x, Pos.y, Pos.z};
+    // float camDir[] = {Dir.x, Dir.y, Dir.z};
+    // float camUp[] = {up.x, up.y, up.z};
+    // ospSetf(camera, "aspect", width/(float)height);
+    // ospSet1f(camera, "fovy", fovy);
+    // ospSet3fv(camera, "pos", camPos);
+    // ospSet3fv(camera, "dir", camDir);
+    // ospSet3fv(camera, "up", camUp);
+    // ospCommit(camera);
     // ! tubeGeo
     OSPGeometry tubeGeo = ospNewGeometry("tubes");
     OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
@@ -259,12 +328,12 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
     ospSetVec4f(renderer, "bgColor", osp::vec4f{255.f / 255.f, 255.f/ 255.f, 255.f/ 255.f, 1.0f});
     ospSetData(renderer, "lights", lights);
     ospSetObject(renderer, "model", world);
-    ospSetObject(renderer, "camera", camera);
+    // ospSetObject(renderer, "camera", camera);
     ospSet1i(renderer, "shadowsEnabled", 1);
     ospSet1f(renderer, "epsilon", 0.1f);
     ospSet1i(renderer, "aoSamples", 0);
     ospSet1f(renderer, "aoDistance", 100.f);
-    ospSet1i(renderer, "spp", 10);
+    ospSet1i(renderer, "spp", 1);
     ospSet1i(renderer, "oneSidedLighting", 0);
     ospCommit(renderer);
 }
@@ -295,16 +364,21 @@ uint32_t *RTRenderBackend::renderToImage(
     // }
     // // ! Load tube module
     // ospLoadModule("tubes");
-    framebuffer = ospNewFrameBuffer(osp::vec2i{width, height}, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
 
     glm::vec3 focus = glm::vec3((Tube.worldBounds.upper.x - Tube.worldBounds.lower.x) / 2.f  + Tube.worldBounds.lower.x, 
                         (Tube.worldBounds.upper.y - Tube.worldBounds.lower.y) / 2.f  + Tube.worldBounds.lower.y, 
                         (Tube.worldBounds.upper.z - Tube.worldBounds.lower.z) / 2.f  + Tube.worldBounds.lower.z);
-    glm::vec3 Dir = focus - pos;
+    glm::vec3 Pos;
+    Pos.x = pos.x;
+    Pos.y = pos.y + Tube.worldBounds.upper.y + 1;
+    Pos.z = pos.z + Tube.worldBounds.upper.z + 1;
+    glm::vec3 Dir = focus - Pos;
+    glm::vec3 Up;
+    Up.x = 0.f; Up.y = 1.0f; Up.z = 0.f;
     OSPCamera camera = ospNewCamera("perspective");
-    float camPos[] = {pos.x, pos.y, pos.z};
+    float camPos[] = {Pos.x, Pos.y, Pos.z};
     float camDir[] = {Dir.x, Dir.y, Dir.z};
-    float camUp[] = {up.x, up.y, up.z};
+    float camUp[] = {Up.x, Up.y, Up.z};
     ospSetf(camera, "aspect", width/(float)height);
     ospSet1f(camera, "fovy", 40);
     ospSet3fv(camera, "pos", camPos);
@@ -315,18 +389,14 @@ uint32_t *RTRenderBackend::renderToImage(
     ospSetObject(renderer, "camera", camera);
     ospCommit(renderer);
 
+    framebuffer = ospNewFrameBuffer(osp::vec2i{width, height}, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
+
     ospFrameBufferClear(framebuffer, OSP_FB_COLOR| OSP_FB_ACCUM);
     ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR| OSP_FB_ACCUM);
     
-    const uint32_t * fb = (uint32_t*)ospMapFrameBuffer(framebuffer, OSP_FB_COLOR);
-    std::string filename = "test.ppm";
-    writePPM(filename.c_str(), width, height, fb);
-    std::cout << "done write image" << std::endl;
+    uint32_t * fb = (uint32_t*)ospMapFrameBuffer(framebuffer, OSP_FB_COLOR);
+    // std::string filename = "test_fb.ppm";
+    // writePPM(filename.c_str(), width, height, fb);
 
-    std::vector<uint32_t> im(fb, fb + width * height * 4);
-    image = im;
-
-    // sleep(100);
-
-    return &image.front();
+    return fb;
 }

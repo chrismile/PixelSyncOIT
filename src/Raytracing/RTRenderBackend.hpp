@@ -138,7 +138,7 @@ private:
 
     // hold the data 
     TubePrimitives Tube;
-    OSPFrameBuffer  framebuffer;
+    OSPFrameBuffer framebuffer;
     OSPRenderer renderer;
 };
 

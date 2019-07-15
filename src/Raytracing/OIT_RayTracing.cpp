@@ -36,10 +36,26 @@
 #include "../Utils/TrajectoryFile.hpp"
 #include "OIT_RayTracing.hpp"
 
+#include <Utils/File/FileUtils.hpp>
+
+#include "ospray/ospray.h"
+
 OIT_RayTracing::OIT_RayTracing(sgl::CameraPtr &camera, const sgl::Color &clearColor)
         : camera(camera), clearColor(clearColor)
 {
-    onTransferFunctionMapRebuilt();
+    // onTransferFunctionMapRebuilt();
+    // ! Initialize OSPRay
+    int argc = sgl::FileUtils::get()->get_argc();
+    char **argv = sgl::FileUtils::get()->get_argv();
+    const char **av = const_cast<const char**>(argv);
+    OSPError init_error = ospInit(&argc, av);
+    if (init_error != OSP_NO_ERROR){
+        std::cout << "== ospray initialization fail" << std::endl;
+        exit (EXIT_FAILURE);
+    }else{
+        std::cout << "== ospray initialized successfully" << std::endl;
+    }
+    ospLoadModule("tubes");
 }
 
 void OIT_RayTracing::setLineRadius(float lineRadius)
@@ -131,6 +147,8 @@ void OIT_RayTracing::fromFile(
         // Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
         // renderBackend.loadTrajectories(filename, trajectories);
         renderBackend.loadTubePrimitives(filename);
+        onTransferFunctionMapRebuilt();
+        renderBackend.setLineRadius(0.02);
         glm::vec3 upDir = camera->getViewMatrix()[1];
         glm::vec3 lookDir = -camera->getViewMatrix()[2];
         glm::vec3 pos = -camera->getViewMatrix()[3];
