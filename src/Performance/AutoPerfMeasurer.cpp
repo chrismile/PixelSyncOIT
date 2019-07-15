@@ -232,7 +232,7 @@ void AutoPerfMeasurer::setNextState(bool first)
 
 void AutoPerfMeasurer::startMeasure(float timeStamp)
 {
-    timerGL.start(currentState.name, timeStamp);
+    timerGL.startGPU(currentState.name, timeStamp);
 }
 
 void AutoPerfMeasurer::endMeasure()
