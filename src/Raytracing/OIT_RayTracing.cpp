@@ -144,11 +144,11 @@ void OIT_RayTracing::fromFile(
 
         renderBackend.loadTriangleMesh(filename, indices, vertices, vertexNormals, vertexAttributes);
     } else {
-        // Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
-        // renderBackend.loadTrajectories(filename, trajectories);
-        renderBackend.loadTubePrimitives(filename);
+        Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
+        renderBackend.loadTrajectories(filename, trajectories);
+        // renderBackend.loadTubePrimitives(filename);
         onTransferFunctionMapRebuilt();
-        renderBackend.setLineRadius(0.02);
+        renderBackend.setLineRadius(0.001);
         glm::vec3 upDir = camera->getViewMatrix()[1];
         glm::vec3 lookDir = -camera->getViewMatrix()[2];
         glm::vec3 pos = -camera->getViewMatrix()[3];

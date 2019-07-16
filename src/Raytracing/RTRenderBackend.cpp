@@ -65,6 +65,72 @@ void RTRenderBackend::setViewportSize(int width, int height) {
     image.resize(width * height);
 }
 
+void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajectories &trajectories)
+{
+    // convert trajectories to tubes
+    Tube.nodes.clear();
+    Tube.links.clear();
+    Tube.colors.clear();
+    std::cout << "Start convert trajectories to tube primitives..." << std::endl;
+    // std::cout << "node size = " << trajectories.positions.size() << std::endl;
+    // std::cout << "line size = " << trajectories.size() << std::endl;
+    int length = 0;
+    for(int i = 0; i < trajectories.size(); i++){
+        // one line 
+        Trajectory trajectory = trajectories[i];
+        // positions and attributes for one line
+        std::vector<glm::vec3> positions = trajectory.positions;
+        std::vector<std::vector<float>> attributes = trajectory.attributes;
+        // std::cout << "node size " << trajectory.positions.size() << std::endl;
+        ospcommon::vec4f color;
+        // color.x = 1.0; color.y = 0.0; color.z = 0.0; color.w = 1.0;
+
+        for(int j = 0; j < attributes.size(); j++){
+            // std::cout << "point size of line #" << i << " is " << positions.size() << std::endl; 
+            std::vector<float> attr = attributes[j];
+            // std::cout << "attribute size " << attr.size() << std::endl;
+            for(int k = 0; k < attr.size(); k++){
+                float r = attr[k];
+                glm::vec3 pos = positions[k];
+                // std::cout << "index " << i * length + k << " ";
+                ospcommon::vec3f p(pos.x, pos.y, pos.z);
+                Node node;
+                node.radius = r; node.position = p;
+                Tube.nodes.push_back(node);
+                // Tube.colors.push_back(color);
+                if(k == 0){
+                    int first = length + k;
+                    int second = first;
+                    // std::cout << second << " ";
+                    Link link;
+                    link.first = first; link.second = second;
+                    Tube.links.push_back(link);
+                    // std::cout << "length " << length << " first " << first << " second " << second << std::endl;
+                }else{
+                    int first = length + k;
+                    int second = first - 1;
+                    // std::cout << second << " ";
+                    Link link;
+                    link.first = first; link.second = second;
+                    Tube.links.push_back(link);
+                }
+            }
+        }
+        std::cout << std::endl;
+        length = length + positions.size();
+    }
+            // sleep(100);
+    
+    // Tube.worldBounds = ospcommon::empty;
+    // for (int i = 0; i < Tube.nodes.size(); i++) {
+    //   Tube.worldBounds.extend(Tube.nodes[i].position - ospcommon::vec3f(Tube.nodes[i].radius));
+    //   Tube.worldBounds.extend(Tube.nodes[i].position + ospcommon::vec3f(Tube.nodes[i].radius));
+    // }
+    // std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
+    //                                             Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
+    
+}
+
 void RTRenderBackend::loadTubePrimitives(const std::string &filename){
     /**
      * TODO: Convert the trajectories to an internal representation.
@@ -160,15 +226,6 @@ void RTRenderBackend::loadTubePrimitives(const std::string &filename){
             // std::cout << "\n";
         }
     }// end while
-    Tube.worldBounds = ospcommon::empty;
-    for (int i = 0; i < Tube.nodes.size(); i++) {
-      Tube.worldBounds.extend(Tube.nodes[i].position - ospcommon::vec3f(Tube.nodes[i].radius));
-      Tube.worldBounds.extend(Tube.nodes[i].position + ospcommon::vec3f(Tube.nodes[i].radius));
-    }
-    std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
-                                                Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
-    
-    std::cout << "Finish loading data " << std::endl;
     // sleep(100);
 }
 
@@ -241,9 +298,20 @@ void RTRenderBackend::setTransferFunction(
 
 void RTRenderBackend::setLineRadius(float lineRadius) {
     // TODO: Adapt the line radius (and ignore this function call for triangle meshes).
+    std::cout << "nodes size " << Tube.nodes.size() << "\n";
+    std::cout << "link size " << Tube.links.size() << "\n";
     for(int i = 0; i < Tube.nodes.size(); ++i){
         Tube.nodes[i].radius = lineRadius;
     }
+    Tube.worldBounds = ospcommon::empty;
+    for (int i = 0; i < Tube.nodes.size(); i++) {
+      Tube.worldBounds.extend(Tube.nodes[i].position - ospcommon::vec3f(Tube.nodes[i].radius));
+      Tube.worldBounds.extend(Tube.nodes[i].position + ospcommon::vec3f(Tube.nodes[i].radius));
+    }
+    std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
+                                                Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
+    
+    std::cout << "Finish loading data " << std::endl;
 }
 
 void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy)
@@ -370,8 +438,8 @@ uint32_t *RTRenderBackend::renderToImage(
                         (Tube.worldBounds.upper.z - Tube.worldBounds.lower.z) / 2.f  + Tube.worldBounds.lower.z);
     glm::vec3 Pos;
     Pos.x = pos.x;
-    Pos.y = pos.y + Tube.worldBounds.upper.y + 1;
-    Pos.z = pos.z + Tube.worldBounds.upper.z + 1;
+    Pos.y = pos.y + Tube.worldBounds.upper.y;
+    Pos.z = pos.z + Tube.worldBounds.upper.z;
     glm::vec3 Dir = focus - Pos;
     glm::vec3 Up;
     Up.x = 0.f; Up.y = 1.0f; Up.z = 0.f;
@@ -380,7 +448,7 @@ uint32_t *RTRenderBackend::renderToImage(
     float camDir[] = {Dir.x, Dir.y, Dir.z};
     float camUp[] = {Up.x, Up.y, Up.z};
     ospSetf(camera, "aspect", width/(float)height);
-    ospSet1f(camera, "fovy", 40);
+    ospSet1f(camera, "fovy", 30);
     ospSet3fv(camera, "pos", camPos);
     ospSet3fv(camera, "dir", camDir);
     ospSet3fv(camera, "up", camUp);

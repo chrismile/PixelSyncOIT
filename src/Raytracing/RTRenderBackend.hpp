@@ -74,6 +74,8 @@ public:
      */
     void loadTubePrimitives(const std::string &filename);
 
+    void loadTrajectories(const std::string &filename, const Trajectories &trajectories);
+
     /**
      * The data is stored as a list of triangles, i.e., the vertices referenced by three consecutive indices form one
      * triangle.
