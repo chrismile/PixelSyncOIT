@@ -77,6 +77,10 @@ public:
     sgl::TexturePtr &getTransferFunctionMapTexture();
     bool getTransferFunctionMapRebuilt();
 
+    // sRGB and linear RGB conversion
+    static glm::vec3 sRGBToLinearRGB(const glm::vec3 &color_LinearRGB);
+    static glm::vec3 linearRGBTosRGB(const glm::vec3 &color_sRGB);
+
 private:
     void renderFileDialog();
     void renderOpacityGraph();
@@ -88,10 +92,6 @@ private:
     void dragPoint();
     bool selectNearestOpacityPoint(int &currentSelectionIndex, const glm::vec2 &mousePosWidget);
     bool selectNearestColorPoint(int &currentSelectionIndex, const glm::vec2 &mousePosWidget);
-
-    // sRGB and linear RGB conversion
-    glm::vec3 sRGBToLinearRGB(const glm::vec3 &color_LinearRGB);
-    glm::vec3 linearRGBTosRGB(const glm::vec3 &color_sRGB);
 
     // Drag-and-drop data
     SelectedPointType selectedPointType = SELECTED_POINT_TYPE_NONE;
