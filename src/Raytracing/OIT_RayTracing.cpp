@@ -26,6 +26,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <chrono>
 #include <GL/glew.h>
 
 #include <Math/Geometry/MatrixUtil.hpp>
@@ -37,6 +38,7 @@
 #include "OIT_RayTracing.hpp"
 
 #include <Utils/File/FileUtils.hpp>
+#include <Utils/File/Logfile.hpp>
 
 #include "ospray/ospray.h"
 
