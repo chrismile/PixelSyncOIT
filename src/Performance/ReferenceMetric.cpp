@@ -5,6 +5,7 @@
 #include <cmath>
 #include <functional>
 
+#include "TransferFunctionWindow.hpp"
 #include "ReferenceMetric.hpp"
 
 inline double sqr(double v) {
@@ -43,6 +44,25 @@ double mean(std::function<double(int)> elementGetter, int N)
 
 double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
 {
+    int inputW = expected->getW();
+    int inputH = expected->getH();
+
+    // Compute the luminance values.
+    double *expectedLuminance = new double[inputW*inputH];
+    double *observedLuminance = new double[inputW*inputH];
+    for (int y = 0; y < inputH; y++) {
+        for (int x = 0; x < inputW; x++) {
+            glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 linearRGBColorExpected = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorExpected);
+            glm::vec3 sRGBColorObserved = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 linearRGBColorObserved = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorObserved);
+            expectedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorExpected.r
+                                                       + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b);
+            observedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorObserved.r
+                                                       + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b);
+        }
+    }
+
     // Constants of the algorithm
     const double k1 = 0.01;
     const double k2 = 0.03;
@@ -50,9 +70,9 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
     const double c1 = sqr(k1 * L);
     const double c2 = sqr(k2 * L);
 
-    int N = expected->getW() * expected->getH() * expected->getChannels();
-    uint8_t *X = expected->getPixels();
-    uint8_t *Y = observed->getPixels();
+    int N = inputW * inputH;
+    double *X = expectedLuminance;
+    double *Y = observedLuminance;
 
     double mu_x = mean([X](int i) -> double { return X[i]; }, N);
     double mu_y = mean([Y](int i) -> double { return Y[i]; }, N);
@@ -63,8 +83,124 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
     // Compute the covariance
     double rho_xy = mean([X,mu_x,Y,mu_y](int i) -> double { return (X[i] - mu_x)*(Y[i] - mu_y); }, N);
 
+    delete[] expectedLuminance;
+    delete[] observedLuminance;
+
     return ((2.0 * mu_x * mu_y + c1) * (2.0 * rho_xy + c2))
            / ((mu_x*mu_x + mu_y*mu_y + c1) * (rho2_x + rho2_y + c2));
+}
+
+sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed, int kernelSize)
+{
+    assert(expected->getW() % kernelSize == 0 && expected->getH() % kernelSize == 0);
+    int inputW = expected->getW();
+    int inputH = expected->getH();
+    int diffImgW = inputW / kernelSize;
+    int diffImgH = inputH / kernelSize;
+    int N = kernelSize * kernelSize;
+
+    double *expectedLuminance = new double[inputW*inputH];
+    double *observedLuminance = new double[inputW*inputH];
+    for (int y = 0; y < inputH; y++) {
+        for (int x = 0; x < inputW; x++) {
+            glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 linearRGBColorExpected = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorExpected);
+            glm::vec3 sRGBColorObserved = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 linearRGBColorObserved = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorObserved);
+            expectedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorExpected.r
+                    + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b);
+            observedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorObserved.r
+                    + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b);
+        }
+    }
+
+    double *ssimValues = new double[diffImgW * diffImgH];
+
+    for (int y = 0; y < diffImgH; y++) {
+        for (int x = 0; x < diffImgW; x++) {
+            // Constants of the algorithm
+            const double k1 = 0.01;
+            const double k2 = 0.03;
+            const double L = 255.0; // Max. range
+            const double c1 = sqr(k1 * L);
+            const double c2 = sqr(k2 * L);
+
+            double *X = expectedLuminance;
+            double *Y = observedLuminance;
+            int xc = x * kernelSize;
+            int yc = y * kernelSize;
+
+            double mu_x = mean([&](int i) -> double {
+                int xi = xc + i % kernelSize;
+                int yi = yc + i / kernelSize;
+                return X[yi*inputW + xi];
+            }, N);
+            double mu_y = mean([&](int i) -> double {
+                int xi = xc + i % kernelSize;
+                int yi = yc + i / kernelSize;
+                return Y[yi*inputW + xi];
+            }, N);
+            double rho2_x = mean([&](int i) -> double {
+                int xi = xc + i % kernelSize;
+                int yi = yc + i / kernelSize;
+                return sqr(X[yi*inputW + xi] - mu_x);
+            }, N);
+            double rho2_y = mean([&](int i) -> double {
+                int xi = xc + i % kernelSize;
+                int yi = yc + i / kernelSize;
+                return sqr(Y[yi*inputW + xi] - mu_y);
+            }, N);
+
+            double rho_x = std::sqrt(rho2_x);
+            double rho_y = std::sqrt(rho2_y);
+            // Compute the covariance
+            double rho_xy = mean([&](int i) -> double {
+                int xi = xc + i % kernelSize;
+                int yi = yc + i / kernelSize;
+                return (X[yi*inputW + xi] - mu_x)*(Y[yi*inputW + xi] - mu_y);
+            }, N);
+
+            ssimValues[y*diffImgW + x] = ((2.0 * mu_x * mu_y + c1) * (2.0 * rho_xy + c2))
+                   / ((mu_x*mu_x + mu_y*mu_y + c1) * (rho2_x + rho2_y + c2));
+
+        }
+    }
+
+    // Compute minimum and maximum of the SSIM values generated.
+    double minSSIMValue = 1.0, maxSSIMValue = -1.0;
+    #pragma omp parallel for reduction(min: minSSIMValue) reduction(max: maxSSIMValue)
+    for (int y = 0; y < diffImgH; y++) {
+        for (int x = 0; x < diffImgW; x++) {
+            double ssimValue = ssimValues[x + y*diffImgW];
+            minSSIMValue = std::min(minSSIMValue, ssimValue);
+            maxSSIMValue = std::max(maxSSIMValue, ssimValue);
+        }
+    }
+
+
+    // Normalization step.
+    sgl::BitmapPtr differenceMap(new sgl::Bitmap);
+    differenceMap->allocate(diffImgW, diffImgH, 32);
+    for (int y = 0; y < diffImgH; y++) {
+        for (int x = 0; x < diffImgW; x++) {
+            double ssimValue = ssimValues[x + y*diffImgW];
+
+            double normalizedGrayscaleValue = 0.0;
+            if (maxSSIMValue - minSSIMValue > 0.000001) {
+                normalizedGrayscaleValue = 1.0 - (ssimValue - minSSIMValue) / (maxSSIMValue - minSSIMValue);
+            }
+
+            sgl::colorFromFloat(normalizedGrayscaleValue, normalizedGrayscaleValue, normalizedGrayscaleValue, 1.0f);
+            differenceMap->setPixelColor(x, y, sgl::colorFromFloat(
+                    normalizedGrayscaleValue, normalizedGrayscaleValue, normalizedGrayscaleValue, 1.0f));
+        }
+    }
+
+    delete[] ssimValues;
+    delete[] expectedLuminance;
+    delete[] observedLuminance;
+
+    return differenceMap;
 }
 
 
