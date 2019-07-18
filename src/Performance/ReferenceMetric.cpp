@@ -50,6 +50,7 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
     // Compute the luminance values.
     double *expectedLuminance = new double[inputW*inputH];
     double *observedLuminance = new double[inputW*inputH];
+    #pragma omp parallel
     for (int y = 0; y < inputH; y++) {
         for (int x = 0; x < inputW; x++) {
             glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
@@ -105,6 +106,7 @@ sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::Bi
 
     double *expectedLuminance = new double[inputW*inputH];
     double *observedLuminance = new double[inputW*inputH];
+    #pragma omp parallel
     for (int y = 0; y < inputH; y++) {
         for (int x = 0; x < inputW; x++) {
             glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
@@ -124,6 +126,7 @@ sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::Bi
 
     double *ssimValues = new double[diffImgW * diffImgH];
 
+    #pragma omp parallel
     for (int y = 0; y < diffImgH; y++) {
         for (int x = 0; x < diffImgW; x++) {
             // Constants of the algorithm
@@ -189,6 +192,7 @@ sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::Bi
     // Normalization step.
     sgl::BitmapPtr differenceMap(new sgl::Bitmap);
     differenceMap->allocate(diffImgW, diffImgH, 32);
+    #pragma omp parallel
     for (int y = 0; y < diffImgH; y++) {
         for (int x = 0; x < diffImgW; x++) {
             double ssimValue = ssimValues[x + y*diffImgW];
