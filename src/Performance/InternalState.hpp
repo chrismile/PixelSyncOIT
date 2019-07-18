@@ -36,14 +36,14 @@ const char *const MODEL_FILENAMES[] = {
         "Data/ConvectionRolls/turbulence80000.obj",
         "Data/ConvectionRolls/turbulence20000.obj",
         "Data/Hair/ponytail.hair",
-        "Data/Trajectories/single_streamline.obj",
-        "Data/CFD/driven_cavity-streamlines.binlines",
+//        "Data/Trajectories/single_streamline.obj",
+//        "Data/CFD/driven_cavity-streamlines.binlines",
 
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06pressureDiff.nc",
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
 
 //        "Data/Hair/ponytail.hair",
-//        "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines",
+//       # "Data/Trajectories/single_streamline", "Data/Trajectories/9213_streamlines",
 //        "Data/Trajectories/9213_streamlines", "Data/Models/Ship_04", "Data/Models/Monkey", "Data/Models/Box",
 //        "Data/Models/Plane", "Data/Models/dragon", //"Data/Trajectories/lagranto_out",
 //        "Data/Hair/bear.hair",
@@ -74,8 +74,8 @@ const char *const MODEL_DISPLAYNAMES[] = {
         "Turbulence",
         "Convection Rolls Small",
         "Hair",
-        "Single Streamline",
-        "Driven Cavity",
+//        "Single Streamline",
+//        "Driven Cavity",
 
 //        "Ponytail",
 

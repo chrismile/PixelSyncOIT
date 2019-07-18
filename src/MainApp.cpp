@@ -446,9 +446,12 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
     } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
+    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode)
+    {
+        transferFunctionWindow.loadFunctionFromFile(
+                "Data/TransferFunctions/9213_streamlines_paper.xml");
+    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
-
     } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
     } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
@@ -609,7 +612,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             lineRadius = 0.0005;
         } else {
-            lineRadius = 0.0007;
+            lineRadius = 0.0005;
         }
     }
 
@@ -813,7 +816,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 lineRadius = 0.0005;
             } else {
-                lineRadius = 0.0007;
+                lineRadius = 0.0005;
             }
         }
 

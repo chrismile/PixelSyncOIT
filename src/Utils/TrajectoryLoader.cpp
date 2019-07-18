@@ -17,6 +17,8 @@
 #include "TrajectoryFile.hpp"
 #include "TrajectoryLoader.hpp"
 
+#include <iostream>
+
 using namespace sgl;
 
 static std::vector<glm::vec2> circlePoints2D;

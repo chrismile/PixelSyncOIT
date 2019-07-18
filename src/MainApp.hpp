@@ -140,7 +140,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Aneurysm";
+    std::string startupModelName = "Turbulence";
     LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     Color bandingColor;
     Color clearColor;
@@ -149,7 +149,7 @@ private:
     bool useBillboardLines = false;
     bool transparencyMapping = true;
     bool useLinearRGB = true;
-    float lineRadius = 0.001f;
+    float lineRadius = 0.0005f;
     std::vector<float> fpsArray;
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
@@ -191,8 +191,8 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = false;
-    bool timeCoherence = false;
+    bool perfMeasurementMode = true;
+    bool timeCoherence = true;
     InternalState lastState;
     bool firstState = true;
     bool usesNewState = true;
