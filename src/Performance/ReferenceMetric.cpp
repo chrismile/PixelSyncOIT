@@ -54,12 +54,16 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
         for (int x = 0; x < inputW; x++) {
             glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorExpected = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorExpected);
-            glm::vec3 sRGBColorObserved = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 sRGBColorObserved = observed->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorObserved = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorObserved);
-            expectedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorExpected.r
-                                                       + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b);
-            observedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorObserved.r
-                                                       + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b);
+            expectedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorExpected.r
+                    + 0.7152*linearRGBColorExpected.g
+                    + 0.0722*linearRGBColorExpected.b);
+            observedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorObserved.r
+                    + 0.7152*linearRGBColorObserved.g
+                    + 0.0722*linearRGBColorObserved.b);
         }
     }
 
@@ -105,12 +109,16 @@ sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::Bi
         for (int x = 0; x < inputW; x++) {
             glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorExpected = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorExpected);
-            glm::vec3 sRGBColorObserved = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 sRGBColorObserved = observed->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorObserved = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorObserved);
-            expectedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorExpected.r
-                    + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b);
-            observedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorObserved.r
-                    + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b);
+            expectedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorExpected.r
+                    + 0.7152*linearRGBColorExpected.g
+                    + 0.0722*linearRGBColorExpected.b);
+            observedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorObserved.r
+                    + 0.7152*linearRGBColorObserved.g
+                    + 0.0722*linearRGBColorObserved.b);
         }
     }
 
