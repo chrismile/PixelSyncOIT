@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <functional>
+#include <iostream>
 
 #include "TransferFunctionWindow.hpp"
 #include "ReferenceMetric.hpp"
@@ -56,6 +57,14 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
             glm::vec3 linearRGBColorExpected = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorExpected);
             glm::vec3 sRGBColorObserved = expected->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorObserved = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorObserved);
+
+//            if (x >= inputW / 2 && y >= inputH / 2)
+//            {
+//                std::cout << (255.0 * (0.2126*linearRGBColorExpected.r
+//                                       + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b)) << std::endl;
+//                std::cout << (255.0 * (0.2126*linearRGBColorObserved.r
+//                                       + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b)) << std::endl;
+//            }
             expectedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorExpected.r
                                                        + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b);
             observedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorObserved.r

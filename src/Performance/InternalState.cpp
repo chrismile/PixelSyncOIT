@@ -51,30 +51,30 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
     });
     states.push_back(state);
 
-    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.1";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.1" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(8) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
-
-    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.25" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(8) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
+//    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.1";
+//    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//            { "overestimationBeta", "0.1" },
+//            { "usePowerMoments", "true" },
+//            { "numMoments", sgl::toString(8) },
+//            { "pixelFormat", "Float" },
+//    });
+//    states.push_back(state);
+//
+//    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
+//    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//            { "overestimationBeta", "0.25" },
+//            { "usePowerMoments", "true" },
+//            { "numMoments", sgl::toString(8) },
+//            { "pixelFormat", "Float" },
+//    });
+//    states.push_back(state);
 }
 
 void getTestModesMLAB(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
 
-    for (int numLayers = 4; numLayers <= 8; numLayers *= 2) {
+    for (int numLayers = 8; numLayers <= 8; numLayers *= 2) {
         state.name = std::string() + "MLAB " + sgl::toString(numLayers) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numLayers", sgl::toString(numLayers) },
@@ -445,7 +445,7 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
-    for (int nodesPerBucket = 4; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+    for (int nodesPerBucket = 4; nodesPerBucket <= 4; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
@@ -465,7 +465,7 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 
     int gridResolution = 128;
 
-    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 64; }
+    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 128; }
     if (boost::starts_with(state.modelName, "Data/ConvectionRolls/output")) { gridResolution = 256; }
 
 //    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
@@ -476,13 +476,13 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
                 { "useNeighborSearch", "true" },
         });
         states.push_back(state);
-        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
-        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-                { "gridResolution", sgl::toString(gridResolution) },
-                { "quantizationResolution", sgl::toString(64) },
-                { "useNeighborSearch", "false" },
-        });
-        states.push_back(state);
+//        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
+//        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+//                { "gridResolution", sgl::toString(gridResolution) },
+//                { "quantizationResolution", sgl::toString(64) },
+//                { "useNeighborSearch", "false" },
+//        });
+//        states.push_back(state);
 //    }
 }
 
@@ -510,9 +510,9 @@ void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, Interna
 {
     getTestModesDepthPeeling(states, state);
 //    getTestModesNoOIT(states, state);
-    getTestModesMLAB(states, state);
-    getTestModesMBOIT(states, state);
     getTestModesLinkedListQuality(states, state);
+//    getTestModesMLAB(states, state);
+    getTestModesMBOIT(states, state);
     getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
 //    getTestModesDepthComplexity(states, state);
