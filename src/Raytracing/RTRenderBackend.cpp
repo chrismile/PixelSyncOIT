@@ -271,13 +271,15 @@ void RTRenderBackend::setTransferFunction(
         // std::cout << "a = " << a << " N = " << N << " R " << R << std::endl;
         if(N < 0){
             glm::vec3 color_sRGB = colorPoints_sRGB.front().color.getFloatColorRGB();
+            glm::vec3 color_linear_rgb = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
             float opacity = opacityPoints.front().opacity;
-            ospcommon::vec4f color(color_sRGB.x, color_sRGB.y , color_sRGB.z, opacity);
+            ospcommon::vec4f color(color_linear_rgb.x, color_linear_rgb.y , color_linear_rgb.z, opacity);
             Tube.colors.push_back(color);
         }else if(N >= colorPoints_sRGB.size() - 1){
             glm::vec3 color_sRGB = colorPoints_sRGB.back().color.getFloatColorRGB();
+            glm::vec3 color_linear_rgb = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
             float opacity = opacityPoints.back().opacity;
-            ospcommon::vec4f color(color_sRGB.x, color_sRGB.y , color_sRGB.z, opacity);
+            ospcommon::vec4f color(color_linear_rgb.x, color_linear_rgb.y , color_linear_rgb.z, opacity);
             Tube.colors.push_back(color);
         }else{
             glm::vec3 color_sRGB_lo = colorPoints_sRGB[N].color.getFloatColorRGB();
@@ -433,22 +435,22 @@ uint32_t *RTRenderBackend::renderToImage(
     // // ! Load tube module
     // ospLoadModule("tubes");
 
-    glm::vec3 focus = glm::vec3((Tube.worldBounds.upper.x - Tube.worldBounds.lower.x) / 2.f  + Tube.worldBounds.lower.x, 
-                        (Tube.worldBounds.upper.y - Tube.worldBounds.lower.y) / 2.f  + Tube.worldBounds.lower.y, 
-                        (Tube.worldBounds.upper.z - Tube.worldBounds.lower.z) / 2.f  + Tube.worldBounds.lower.z);
-    glm::vec3 Pos;
-    Pos.x = pos.x;
-    Pos.y = pos.y + Tube.worldBounds.upper.y;
-    Pos.z = pos.z + Tube.worldBounds.upper.z;
-    glm::vec3 Dir = focus - Pos;
-    glm::vec3 Up;
-    Up.x = 0.f; Up.y = 1.0f; Up.z = 0.f;
+    // glm::vec3 focus = glm::vec3((Tube.worldBounds.upper.x - Tube.worldBounds.lower.x) / 2.f  + Tube.worldBounds.lower.x, 
+    //                     (Tube.worldBounds.upper.y - Tube.worldBounds.lower.y) / 2.f  + Tube.worldBounds.lower.y, 
+    //                     (Tube.worldBounds.upper.z - Tube.worldBounds.lower.z) / 2.f  + Tube.worldBounds.lower.z);
+    // glm::vec3 Pos;
+    // Pos.x = pos.x;
+    // Pos.y = pos.y + Tube.worldBounds.upper.y;
+    // Pos.z = pos.z + Tube.worldBounds.upper.z;
+    // glm::vec3 Dir = focus - Pos;
+    // glm::vec3 Up;
+    // Up.x = 0.f; Up.y = 1.0f; Up.z = 0.f;
     OSPCamera camera = ospNewCamera("perspective");
-    float camPos[] = {Pos.x, Pos.y, Pos.z};
-    float camDir[] = {Dir.x, Dir.y, Dir.z};
-    float camUp[] = {Up.x, Up.y, Up.z};
+    float camPos[] = {pos.x, pos.y, pos.z};
+    float camDir[] = {dir.x, dir.y, dir.z};
+    float camUp[] = {up.x, up.y, up.z};
     ospSetf(camera, "aspect", width/(float)height);
-    ospSet1f(camera, "fovy", 30);
+    ospSet1f(camera, "fovy", fovy);
     ospSet3fv(camera, "pos", camPos);
     ospSet3fv(camera, "dir", camDir);
     ospSet3fv(camera, "up", camUp);
