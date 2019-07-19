@@ -639,19 +639,24 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 // TODO
                 //ControlPoint(1, 0.723282, 0.22395, 0.079609, -4.74008, -0.35447),
                 camera->setPosition(glm::vec3(0.723282f, 0.22395f, 0.079609f));
-                camera->setYaw(-4.74008);
+                camera->setYaw(-4.74008f);
                 camera->setPitch(0.079609f);
                 //ControlPoint(0, 0.604353, 0.223011, 0.144089, -5.23073, 0.0232946),
                 camera->setPosition(glm::vec3(0.604353f, 0.223011f, 0.144089f));
                 camera->setYaw(-5.23073f);
                 camera->setPitch(0.0232946f);
+            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/torus")) {
+                // ControlPoint(1, 1.94571, 0.761162, 2.9094, -1.61776, -0.0535428)
+                camera->setPosition(glm::vec3(1.94571f, 0.761162f, 2.9094f));
+                camera->setYaw(-1.61776f);
+                camera->setPitch(-0.0535428f);
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
                 // ControlPoint(1, 1.1286, 0.639969, 0.0575997, -2.98384, -0.411015),
                 camera->setPosition(glm::vec3(1.1286f, 0.639969f, 0.0575997f));
-                camera->setYaw(-2.98384);
-                camera->setPitch(-0.411015);
+                camera->setYaw(-2.98384f);
+                camera->setPitch(-0.411015f);
             } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
                 // ControlPoint(0, 1.13824, 0.369338, 0.937429, -2.58216, -0.0342094),
                 camera->setPosition(glm::vec3(0.468071f, 0.324327f, 0.50661f));

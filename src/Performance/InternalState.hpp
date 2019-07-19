@@ -37,6 +37,7 @@ const char *const MODEL_FILENAMES[] = {
         "Data/ConvectionRolls/turbulence20000.obj",
         "Data/Hair/ponytail.hair",
         "Data/Trajectories/single_streamline.obj",
+        "Data/Trajectories/torus.obj",
         "Data/CFD/driven_cavity-streamlines.binlines",
 
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06pressureDiff.nc",
@@ -75,6 +76,7 @@ const char *const MODEL_DISPLAYNAMES[] = {
         "Convection Rolls Small",
         "Hair",
         "Single Streamline",
+        "Torus",
         "Driven Cavity",
 
 //        "Ponytail",

@@ -85,7 +85,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     std::string lineBuffer;
     std::string numberString;
 
-    for (size_t charPtr = 0; charPtr < length; charPtr++) {
+    for (size_t charPtr = 0; charPtr < length; ) {
         while (charPtr < length) {
             char currentChar = fileBuffer[charPtr];
             if (currentChar == '\n' || currentChar == '\r') {
