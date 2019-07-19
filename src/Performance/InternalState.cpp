@@ -469,21 +469,30 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
     if (boost::starts_with(state.modelName, "Data/ConvectionRolls/output")) { gridResolution = 256; }
 
 //    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
-        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
-        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-                { "gridResolution", sgl::toString(gridResolution) },
-                { "quantizationResolution", sgl::toString(64) },
-                { "useNeighborSearch", "true" },
-        });
-        states.push_back(state);
-        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
-        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-                { "gridResolution", sgl::toString(gridResolution) },
-                { "quantizationResolution", sgl::toString(64) },
-                { "useNeighborSearch", "false" },
-        });
-        states.push_back(state);
+    state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "gridResolution", sgl::toString(gridResolution) },
+            { "quantizationResolution", sgl::toString(64) },
+            { "useNeighborSearch", "true" },
+    });
+    states.push_back(state);
+    state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "gridResolution", sgl::toString(gridResolution) },
+            { "quantizationResolution", sgl::toString(64) },
+            { "useNeighborSearch", "false" },
+    });
+    states.push_back(state);
 //    }
+}
+
+void getTestModesRayTracing(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_RAYTRACING;
+    state.name = std::string() + "Ray Tracing";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+    });
+    states.push_back(state);
 }
 
 void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalState state)
@@ -508,7 +517,7 @@ void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState 
 
 void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesDepthPeeling(states, state);
+    /*getTestModesDepthPeeling(states, state);
 //    getTestModesNoOIT(states, state);
     getTestModesMLAB(states, state);
     getTestModesMBOIT(states, state);
@@ -516,17 +525,21 @@ void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, Interna
     getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
 //    getTestModesDepthComplexity(states, state);
+*/
+    getTestModesDepthPeeling(states, state);
+    getTestModesLinkedListQuality(states, state);
+    getTestModesRayTracing(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720), glm::ivec2(1920, 1080), glm::ivec2(2560, 1440) };
-    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
+    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
-    std::vector<std::string> modelNames = { "Rings", "Aneurysm", /*"Turbulence",*/ "Convection Rolls"};
+    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {

@@ -26,6 +26,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <chrono>
 #include <GL/glew.h>
 
 #include <Math/Geometry/MatrixUtil.hpp>
@@ -37,6 +38,7 @@
 #include "OIT_RayTracing.hpp"
 
 #include <Utils/File/FileUtils.hpp>
+#include <Utils/File/Logfile.hpp>
 
 #include "ospray/ospray.h"
 
@@ -108,6 +110,8 @@ void OIT_RayTracing::fromFile(
         const std::string &filename, TrajectoryType trajectoryType, bool useTriangleMesh
         /*, std::vector<float> &attributes, float &maxAttribute*/)
 {
+    auto startLoadFile = std::chrono::system_clock::now();
+
     if (useTriangleMesh) {
         BinaryMesh binmesh;
         readMesh3D(filename, binmesh);
@@ -152,8 +156,22 @@ void OIT_RayTracing::fromFile(
         glm::vec3 upDir = camera->getViewMatrix()[1];
         glm::vec3 lookDir = -camera->getViewMatrix()[2];
         glm::vec3 pos = -camera->getViewMatrix()[3];
+
+        auto startRTPreprocessing = std::chrono::system_clock::now();
+
         renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy());
+
+        auto endRTPreprocesing = std::chrono::system_clock::now();
+        auto rtPreprocessingElapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+                endRTPreprocesing - startRTPreprocessing);
+        sgl::Logfile::get()->writeInfo(std::string() + "Computational time to pre-process dataset for ray tracer: "
+                                       + std::to_string(rtPreprocessingElapsedTime.count()));
     }
+
+    auto endLoadFile = std::chrono::system_clock::now();
+    auto loadFileElapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endLoadFile - startLoadFile);
+    sgl::Logfile::get()->writeInfo(std::string() + "Total time to load file in ray tracer: "
+                                   + std::to_string(loadFileElapsedTime.count()));
 }
 
 void OIT_RayTracing::setNewState(const InternalState &newState)
