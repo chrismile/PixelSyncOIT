@@ -8,6 +8,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <climits>
 #include <chrono>
+#include <thread>
 #include <ctime>
 #include <algorithm>
 #include <thread>
@@ -1097,8 +1098,12 @@ void PixelSyncApp::render()
 
     reRender = reRender || oitRenderer->needsReRender() || oitRenderer->isTestingMode();
 
+    GLsync fence;
+
     if (continuousRendering || reRender) {
         renderOIT();
+        fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
         reRender = false;
         Renderer->unbindFBO();
     }
@@ -1122,7 +1127,21 @@ void PixelSyncApp::render()
         }
 
         if (timeCoherence) {
+            while(glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0) != GL_ALREADY_SIGNALED)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+
             measurer->makeScreenshot(frameNum);
+
+//            if (glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0) == GL_ALREADY_SIGNALED)
+//            {
+//                measurer->makeScreenshot(frameNum);
+//            }
+//            else
+//            {
+//                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+//            }
         }
 
         frameNum++;
