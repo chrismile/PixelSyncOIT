@@ -1150,6 +1150,7 @@ void PixelSyncApp::render()
 
 
     reRender = reRender || oitRenderer->needsReRender() || oitRenderer->isTestingMode();
+    // reRender = true;
 
     if (continuousRendering || reRender) {
         renderOIT();

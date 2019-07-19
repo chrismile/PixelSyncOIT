@@ -47,17 +47,22 @@ OIT_RayTracing::OIT_RayTracing(sgl::CameraPtr &camera, const sgl::Color &clearCo
 {
     // onTransferFunctionMapRebuilt();
     // ! Initialize OSPRay
+    static bool ospray = false; 
     int argc = sgl::FileUtils::get()->get_argc();
     char **argv = sgl::FileUtils::get()->get_argv();
     const char **av = const_cast<const char**>(argv);
-    OSPError init_error = ospInit(&argc, av);
-    if (init_error != OSP_NO_ERROR){
-        std::cout << "== ospray initialization fail" << std::endl;
-        exit (EXIT_FAILURE);
-    }else{
-        std::cout << "== ospray initialized successfully" << std::endl;
+    if(!ospray){
+        OSPError init_error = ospInit(&argc, av);
+        if (init_error != OSP_NO_ERROR){
+            std::cout << "== ospray initialization fail" << std::endl;
+            exit (EXIT_FAILURE);
+        }else{
+            std::cout << "== ospray initialized successfully" << std::endl;
+        }
+        ospLoadModule("tubes");
+        ospray = true;
     }
-    ospLoadModule("tubes");
+
 }
 
 void OIT_RayTracing::setLineRadius(float lineRadius)
@@ -160,6 +165,7 @@ void OIT_RayTracing::fromFile(
         auto startRTPreprocessing = std::chrono::system_clock::now();
 
         renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy());
+        renderBackend.setCameraInitialize(lookDir);
 
         auto endRTPreprocesing = std::chrono::system_clock::now();
         auto rtPreprocessingElapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -180,6 +186,7 @@ void OIT_RayTracing::setNewState(const InternalState &newState)
 
 void OIT_RayTracing::renderToScreen()
 {
+    // std::cout << "render to screen " << std::endl;
     glm::vec3 linearRgbClearColorVec(clearColor.getFloatR(), clearColor.getFloatG(), clearColor.getFloatB());
     glm::vec3 sRgbClearColorVec = TransferFunctionWindow::linearRGBTosRGB(linearRgbClearColorVec);
     sgl::Color sRgbClearColor = sgl::colorFromFloat(sRgbClearColorVec.x, sRgbClearColorVec.y, sRgbClearColorVec.z);

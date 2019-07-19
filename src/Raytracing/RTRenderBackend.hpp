@@ -65,6 +65,7 @@ public:
      * @param height The height of the viewport in pixels.
      */
     void setViewportSize(int width, int height);
+    void setCameraInitialize(glm::vec3 dir);
 
     /**
      * This function loads trajectories (i.e., line datasets) and converts them to an internal representation.
@@ -72,7 +73,6 @@ public:
      * @param filename The filename of the trajectory dataset.
      * @param trajectories The trajectories to load.
      */
-    void loadTubePrimitives(const std::string &filename);
 
     void loadTrajectories(const std::string &filename, const Trajectories &trajectories);
 
@@ -140,8 +140,11 @@ private:
 
     // hold the data 
     TubePrimitives Tube;
-    OSPFrameBuffer framebuffer;
+    OSPFrameBuffer framebuffer = NULL;
     OSPRenderer renderer;
+    // glm::vec3 camera_pos;
+    glm::vec3 camera_dir;
+    // glm::vec3 camera_up;
 };
 
 
