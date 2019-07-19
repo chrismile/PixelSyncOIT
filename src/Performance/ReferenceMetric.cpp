@@ -51,24 +51,21 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
     // Compute the luminance values.
     double *expectedLuminance = new double[inputW*inputH];
     double *observedLuminance = new double[inputW*inputH];
+    #pragma omp parallel
     for (int y = 0; y < inputH; y++) {
         for (int x = 0; x < inputW; x++) {
             glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorExpected = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorExpected);
-            glm::vec3 sRGBColorObserved = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 sRGBColorObserved = observed->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorObserved = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorObserved);
-
-//            if (x >= inputW / 2 && y >= inputH / 2)
-//            {
-//                std::cout << (255.0 * (0.2126*linearRGBColorExpected.r
-//                                       + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b)) << std::endl;
-//                std::cout << (255.0 * (0.2126*linearRGBColorObserved.r
-//                                       + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b)) << std::endl;
-//            }
-            expectedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorExpected.r
-                                                       + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b);
-            observedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorObserved.r
-                                                       + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b);
+            expectedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorExpected.r
+                    + 0.7152*linearRGBColorExpected.g
+                    + 0.0722*linearRGBColorExpected.b);
+            observedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorObserved.r
+                    + 0.7152*linearRGBColorObserved.g
+                    + 0.0722*linearRGBColorObserved.b);
         }
     }
 
@@ -110,21 +107,27 @@ sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::Bi
 
     double *expectedLuminance = new double[inputW*inputH];
     double *observedLuminance = new double[inputW*inputH];
+    #pragma omp parallel
     for (int y = 0; y < inputH; y++) {
         for (int x = 0; x < inputW; x++) {
             glm::vec3 sRGBColorExpected = expected->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorExpected = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorExpected);
-            glm::vec3 sRGBColorObserved = expected->getPixelColor(x, y).getFloatColorRGB();
+            glm::vec3 sRGBColorObserved = observed->getPixelColor(x, y).getFloatColorRGB();
             glm::vec3 linearRGBColorObserved = TransferFunctionWindow::sRGBToLinearRGB(sRGBColorObserved);
-            expectedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorExpected.r
-                    + 0.7152*linearRGBColorExpected.g + 0.0722*linearRGBColorExpected.b);
-            observedLuminance[x + y*inputW] = 255.0 * (0.2126*linearRGBColorObserved.r
-                    + 0.7152*linearRGBColorObserved.g + 0.0722*linearRGBColorObserved.b);
+            expectedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorExpected.r
+                    + 0.7152*linearRGBColorExpected.g
+                    + 0.0722*linearRGBColorExpected.b);
+            observedLuminance[x + y*inputW] =
+                    255.0 * (0.2126*linearRGBColorObserved.r
+                    + 0.7152*linearRGBColorObserved.g
+                    + 0.0722*linearRGBColorObserved.b);
         }
     }
 
     double *ssimValues = new double[diffImgW * diffImgH];
 
+    #pragma omp parallel
     for (int y = 0; y < diffImgH; y++) {
         for (int x = 0; x < diffImgW; x++) {
             // Constants of the algorithm
@@ -190,6 +193,7 @@ sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::Bi
     // Normalization step.
     sgl::BitmapPtr differenceMap(new sgl::Bitmap);
     differenceMap->allocate(diffImgW, diffImgH, 32);
+    #pragma omp parallel
     for (int y = 0; y < diffImgH; y++) {
         for (int x = 0; x < diffImgW; x++) {
             double ssimValue = ssimValues[x + y*diffImgW];
