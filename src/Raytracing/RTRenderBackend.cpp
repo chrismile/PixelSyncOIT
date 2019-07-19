@@ -284,14 +284,13 @@ void RTRenderBackend::setTransferFunction(
         }else{
             glm::vec3 color_sRGB_lo = colorPoints_sRGB[N].color.getFloatColorRGB();
             glm::vec3 color_sRGB_hi = colorPoints_sRGB[N+1].color.getFloatColorRGB();
+            glm::vec3 color_sRGB = glm::mix(color_sRGB_lo, color_sRGB_hi, R);
             float opacity_lo = opacityPoints[N].opacity;
             float opacity_hi = opacityPoints[N+1].opacity;
+            float opacity = glm::mix(opacity_lo, opacity_hi, R);
             // convert sRGB to linear RGB
-            glm::vec3 color_linear_lo = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB_lo);
-            glm::vec3 color_linear_hi = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB_hi);
-            ospcommon::vec4f color_lo(color_linear_lo.x, color_linear_lo.y, color_linear_lo.z, opacity_lo);
-            ospcommon::vec4f color_hi(color_linear_hi.x, color_linear_hi.y, color_linear_hi.z, opacity_hi);
-            ospcommon::vec4f color = lerp(color_lo, color_hi, R);
+            glm::vec3 color_linear = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
+            ospcommon::vec4f color(color_linear.x, color_linear.y, color_linear.z, opacity);
             Tube.colors.push_back(color);
         }
     }
