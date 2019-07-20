@@ -203,6 +203,7 @@ void OIT_RayTracing::renderToScreen()
     renderImage->uploadPixelData(width, height, imageData);
 
     blitTexture();
+    reRender = true;
 }
 
 void OIT_RayTracing::blitTexture()
