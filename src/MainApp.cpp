@@ -481,7 +481,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
     } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/RayleighBenard.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/DrivenCavity.xml");
     } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
         transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/RayleighBenard.xml");
     } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
