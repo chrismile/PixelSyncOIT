@@ -31,25 +31,28 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
         }
     }
 
-    // Normalize data for rings
-    float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
-    float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
-
     bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
     bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
+    bool isCfdData = trajectoryType == TRAJECTORY_TYPE_CFD;
+
+    glm::vec3 minVec(boundingBox.getMinimum());
+    glm::vec3 maxVec(boundingBox.getMaximum());
     if (isConvectionRolls) {
-        minValue = 0;
-        maxValue = 0.5;
+        minVec = glm::vec3(0);
+        maxVec = glm::vec3(0.5);
+    } else {
+        // Normalize data for rings
+        float minValue = glm::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
+        float maxValue = glm::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
+        minVec = glm::vec3(minValue);
+        maxVec = glm::vec3(maxValue);
     }
 
-    glm::vec3 minVec(minValue, minValue, minValue);
-    glm::vec3 maxVec(maxValue, maxValue, maxValue);
-
-    if (isRings || isConvectionRolls) {
+    if (isRings || isConvectionRolls || isCfdData) {
         for (Trajectory &trajectory : trajectories) {
             for (glm::vec3 &position : trajectory.positions) {
                 position = (position - minVec) / (maxVec - minVec);
-                if (isConvectionRolls) {
+                if (isConvectionRolls || isCfdData) {
                     glm::vec3 dims = glm::vec3(1);
                     dims.y = boundingBox.getDimensions().y;
                     position -= dims;
