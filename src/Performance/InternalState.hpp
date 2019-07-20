@@ -39,6 +39,7 @@ const char *const MODEL_FILENAMES[] = {
         "Data/Trajectories/single_streamline.obj",
         "Data/Trajectories/torus.obj",
         "Data/CFD/driven_cavity-streamlines.binlines",
+        "Data/CFD/rayleigh_benard_convection_8-2-1-streamlines.binlines",
 
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06pressureDiff.nc",
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
@@ -78,6 +79,7 @@ const char *const MODEL_DISPLAYNAMES[] = {
         "Single Streamline",
         "Torus",
         "Driven Cavity",
+        "Rayleigh-Benard Convection",
 
 //        "Ponytail",
 
