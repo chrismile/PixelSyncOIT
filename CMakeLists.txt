@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 3.1)
 project (PixelSyncOIT)
+option(USE_OPENCV_SSIM "USE_OPENCV_SSIM" OFF)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
 #MESSAGE(STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH})
 
@@ -14,6 +15,15 @@ ENDIF()
 include_directories(src)
 
 #make VERBOSE=1
+
+if (USE_OPENCV_SSIM)
+	find_package(OpenCV REQUIRED)
+	include_directories(${OpenCV_INCLUDE_DIRS})
+	target_link_libraries(PixelSyncOIT ${OpenCV_LIBS})
+	add_definitions(-DUSE_OPENCV_SSIM)
+else()
+	list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/OpenCV/gpu-basics/similarity.cpp)
+endif()
 
 IF(WIN32)
 	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")

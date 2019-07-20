@@ -42,7 +42,33 @@ double mean(std::function<double(int)> elementGetter, int N)
     return sum/N;
 }
 
-double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
+#ifdef USE_OPENCV_SSIM
+
+#include "OpenCV/gpu-basics-similarity.hpp"
+
+double ssim(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed)
+{
+    cv::Mat expectedMat = bitmapToCvMat(expected);
+    cv::Mat observedMat = bitmapToCvMat(observed);
+    cv::Scalar scalarSSIM = getMSSIM(expectedMat, observedMat);
+    double ssimValue = 0.0;
+    for (int i = 0; i < 2; i++) {
+        ssimValue += scalarSSIM.val[i];
+    }
+    ssimValue /= 3.0;
+    return ssimValue;
+}
+
+double psnr(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed)
+{
+    cv::Mat expectedMat = bitmapToCvMat(expected);
+    cv::Mat observedMat = bitmapToCvMat(observed);
+    return getPSNR(expectedMat, observedMat);
+}
+
+#else
+
+double ssim(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed)
 {
     int inputW = expected->getW();
     int inputH = expected->getH();
@@ -95,7 +121,21 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
            / ((mu_x*mu_x + mu_y*mu_y + c1) * (rho2_x + rho2_y + c2));
 }
 
-sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed, int kernelSize)
+double psnr(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed)
+{
+    int N = expected->getW() * expected->getH() * expected->getChannels();
+
+    uint8_t max_I = 0;
+    #pragma omp parallel for reduction(max: max_I)
+    for (int i = 0; i < N; i++) {
+        max_I = std::max(max_I, expected->getPixels()[i]);
+    }
+    return 10 * std::log10(max_I * max_I / mse(expected, observed));
+}
+
+#endif
+
+sgl::BitmapPtr ssimDifferenceImage(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed, int kernelSize)
 {
     assert(expected->getW() % kernelSize == 0 && expected->getH() % kernelSize == 0);
     int inputW = expected->getW();
@@ -215,18 +255,6 @@ sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::Bi
     return differenceMap;
 }
 
-
-double psnr(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)
-{
-    int N = expected->getW() * expected->getH() * expected->getChannels();
-
-    uint8_t max_I = 0;
-    #pragma omp parallel for reduction(max: max_I)
-    for (int i = 0; i < N; i++) {
-        max_I = std::max(max_I, expected->getPixels()[i]);
-    }
-    return 10 * std::log10(max_I * max_I / mse(expected, observed));
-}
 
 
 sgl::BitmapPtr computeNormalizedDifferenceMapRGBDiff(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed)

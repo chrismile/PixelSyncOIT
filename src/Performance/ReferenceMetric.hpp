@@ -19,7 +19,7 @@ double rmse(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed);
  * Wang, Z., Bovik, A. C., Sheikh, H. R., and Simoncelli, E. P. 2004. Image Quality Assessment:
  * From Error Visibility to Structural Similarity. Trans. Img. Proc. 13, 4 (2004), 600–612.
  */
-double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed);
+double ssim(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed);
 
 /**
  * Returns an structural similarity index (SSIM) difference image for the specified kernel size.
@@ -27,10 +27,10 @@ double ssim(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed);
  * Wang, Z., Bovik, A. C., Sheikh, H. R., and Simoncelli, E. P. 2004. Image Quality Assessment:
  * From Error Visibility to Structural Similarity. Trans. Img. Proc. 13, 4 (2004), 600–612.
  */
-sgl::BitmapPtr ssimDifferenceImage(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed, int kernelSize);
+sgl::BitmapPtr ssimDifferenceImage(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed, int kernelSize);
 
 /// Returns peak signal-to-noise ratio (PSNR, in dB)
-double psnr(const sgl::BitmapPtr &expected, const sgl::BitmapPtr &observed);
+double psnr(sgl::BitmapPtr &expected, sgl::BitmapPtr &observed);
 
 /// Computes the difference map between the two passed bitmaps. The map is normalized so that the differences
 /// assume the total interval of [0,255] in the image.
