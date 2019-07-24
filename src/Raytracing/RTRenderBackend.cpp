@@ -307,7 +307,7 @@ uint32_t *RTRenderBackend::renderToImage(
      * image. For this, the following function can be used:
      * TransferFunctionWindow::linearRGBTosRGB(glm::vec3(...))
      */
-    if(camera_dir != dir){
+    if(camera_dir != dir || camera_pos != pos || camera_up != up){
         ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
     }
     // OSPCamera camera = ospNewCamera("perspective");
@@ -336,8 +336,10 @@ uint32_t *RTRenderBackend::renderToImage(
     // image.insert(image.begin(), fb, fb + width * height * 4);
 
     ospUnmapFrameBuffer(fb, framebuffer);
-    
+
     camera_dir = dir;
+    camera_up = up;
+    camera_pos = pos;
 
     return fb;
 }
