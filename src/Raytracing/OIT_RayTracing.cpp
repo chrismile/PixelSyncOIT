@@ -204,6 +204,7 @@ void OIT_RayTracing::renderToScreen()
     reRender = true;
 
     blitTexture();
+    reRender = true;
 }
 
 void OIT_RayTracing::blitTexture()
