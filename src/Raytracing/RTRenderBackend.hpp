@@ -136,12 +136,13 @@ private:
     float lineRadius;
 
     // The image data.
-    std::vector<uint32_t> image;
+    // std::vector<uint32_t> image;
 
     // hold the data 
     TubePrimitives Tube;
     OSPFrameBuffer framebuffer = NULL;
     OSPRenderer renderer;
+    OSPCamera camera;
     // glm::vec3 camera_pos;
     glm::vec3 camera_dir;
     // glm::vec3 camera_up;

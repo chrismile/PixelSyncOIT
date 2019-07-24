@@ -201,6 +201,7 @@ void OIT_RayTracing::renderToScreen()
     glm::vec3 pos = -camera->getViewMatrix()[3];
     uint32_t *imageData = renderBackend.renderToImage(pos, lookDir, upDir, camera->getFOVy());
     renderImage->uploadPixelData(width, height, imageData);
+    reRender = true;
 
     blitTexture();
 }
