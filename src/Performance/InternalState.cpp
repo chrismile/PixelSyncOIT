@@ -42,23 +42,23 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
     });
     states.push_back(state);
 
-    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.25";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.25" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(4) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
-
-//    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.1";
+//    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.25";
 //    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-//            { "overestimationBeta", "0.1" },
+//            { "overestimationBeta", "0.25" },
 //            { "usePowerMoments", "true" },
-//            { "numMoments", sgl::toString(8) },
+//            { "numMoments", sgl::toString(4) },
 //            { "pixelFormat", "Float" },
 //    });
 //    states.push_back(state);
+
+    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.1";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+            { "overestimationBeta", "0.1" },
+            { "usePowerMoments", "true" },
+            { "numMoments", sgl::toString(8) },
+            { "pixelFormat", "Float" },
+    });
+    states.push_back(state);
 //
 //    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
 //    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
@@ -496,26 +496,23 @@ void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalSta
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesDepthPeeling(states, state);
+//    getTestModesDepthPeeling(states, state);
 //    getTestModesNoOIT(states, state);
-    getTestModesMLAB(states, state);
-    getTestModesMBOIT(states, state);
-    getTestModesLinkedList(states, state);
+//    getTestModesMLAB(states, state);
+//    getTestModesMBOIT(states, state);
+//    getTestModesLinkedList(states, state);
     getTestModesMLABBuckets(states, state);
-    getTestModesVoxelRaytracing(states, state);
+//    getTestModesVoxelRaytracing(states, state);
 //    getTestModesDepthComplexity(states, state);
 }
 
 void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesDepthPeeling(states, state);
-//    getTestModesNoOIT(states, state);
-    getTestModesLinkedListQuality(states, state);
-//    getTestModesMLAB(states, state);
-    getTestModesMBOIT(states, state);
+//    getTestModesDepthPeeling(states, state);
+//    getTestModesLinkedListQuality(states, state);
+//    getTestModesMBOIT(states, state);
     getTestModesMLABBuckets(states, state);
-    getTestModesVoxelRaytracing(states, state);
-//    getTestModesDepthComplexity(states, state);
+//    getTestModesVoxelRaytracing(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()
@@ -527,7 +524,7 @@ std::vector<InternalState> getTestModesPaper()
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
     std::vector<std::string> modelNames = { /*"Rings",*/ "Aneurysm", "Turbulence", "Convection Rolls"};
-//    std::vector<std::string> modelNames = { /*"Rings",*/ "Turbulence"};
+//    std::vector<std::string> modelNames = { "Turbulence"};
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {
@@ -543,7 +540,7 @@ std::vector<InternalState> getTestModesPaper()
     }
 
     // Append model name to state name if more than one model is loaded
-    if (modelNames.size() > 1 || windowResolutions.size() > 1) {
+    if (modelNames.size() >= 1 || windowResolutions.size() >= 1) {
         for (InternalState &state : states) {
             state.name = sgl::toString(state.windowResolution.x) + "x" + sgl::toString(state.windowResolution.y)
                     + " " + state.modelName + " " + state.name;

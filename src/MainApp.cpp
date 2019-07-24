@@ -443,30 +443,49 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode)
+    if (boost::starts_with(modelFilenamePure, "Data/Trajectories"))
     {
-        transferFunctionWindow.loadFunctionFromFile(
-                "Data/TransferFunctions/9213_streamlines_paper.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
-
-    } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
-    } else {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransAneurysm2.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Aneurysm_All.xml");
     }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000"))
+    {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransTurb.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence_All.xml");
+    }
+    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
+    {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransCR.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/CR_All.xml");
+    }
+
+//    if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
+//    } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
+//    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode)
+//    {
+//        transferFunctionWindow.loadFunctionFromFile(
+//                "Data/TransferFunctions/9213_streamlines_paper.xml");
+//    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
+//    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
+//    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
+
+//    } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
+//    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
+//    } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
+//    } else {
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+//    }
 
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
         sgl::ShaderManager->addPreprocessorDefine("CONVECTION_ROLLS", "");
@@ -615,6 +634,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         } else {
             lineRadius = 0.0005;
         }
+
+//        lineRadius = 0.001;
     }
 
     rotation = glm::mat4(1.0f);
@@ -819,6 +840,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
             } else {
                 lineRadius = 0.0005;
             }
+
+//            lineRadius = 0.001;
         }
 
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -1129,7 +1152,7 @@ void PixelSyncApp::render()
         if (timeCoherence) {
             while(glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0) != GL_ALREADY_SIGNALED)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::nanoseconds(1));
             }
 
             measurer->makeScreenshot(frameNum);

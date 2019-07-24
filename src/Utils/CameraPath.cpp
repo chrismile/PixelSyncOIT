@@ -158,7 +158,7 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
 
     if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
         startAngle += 1.2f;
-        standardZoom = 0.75f;
+        standardZoom = 1.1f;
         centerOffset.x -= 0.1f;
     }
     else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
@@ -174,17 +174,47 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
     }
     else if (isConvectionRolls) {
         standardZoom = 0.8f;
-//        startAngle += 1.58f;
         startAngle += 1.58f;
-        centerOffset.y += 0.15f;
+        centerOffset.y += 0.4f;
 //        centerOffset.z -= 1.5;
 //        centerOffset.x += 0.3;
-        //yaw = -0.60769;
-        yaw = -0.50769;
+        yaw = -0.60769;
 
         // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
         // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
     }
+
+//    float pulseFactor = 0.0f;
+//
+//    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
+//        startAngle += 1.2f;
+//        standardZoom = 0.75f;
+//        centerOffset.x -= 0.1f;
+//    }
+//    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
+//        standardZoom = 1.3f;
+//    }
+//    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence2000")) {
+//        standardZoom = 2.0f;
+//        startAngle += 1.58f;
+//    }
+//    else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+//        centerOffset.y -= 0.05f;
+//        standardZoom = 1.3f;
+//    }
+//    else if (isConvectionRolls) {
+//        standardZoom = 0.8f;
+////        startAngle += 1.58f;
+//        startAngle += 1.58f;
+//        centerOffset.y += 0.15f;
+////        centerOffset.z -= 1.5;
+////        centerOffset.x += 0.3;
+//        //yaw = -0.60769;
+//        yaw = -0.50769;
+//
+//        // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
+//        // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
+//    }
 
     else if (isRings)
     {

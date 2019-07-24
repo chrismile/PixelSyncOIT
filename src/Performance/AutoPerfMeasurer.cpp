@@ -20,7 +20,8 @@ AutoPerfMeasurer::AutoPerfMeasurer(std::vector<InternalState> _states,
         const std::string &_csvFilename, const std::string &_depthComplexityFilename,
         std::function<void(const InternalState&)> _newStateCallback, bool measureTimeCoherence)
        : states(_states), currentStateIndex(0), newStateCallback(_newStateCallback), file(_csvFilename),
-         depthComplexityFile(_depthComplexityFilename), errorMetricFile("error_metrics.csv"), perfFile("performance_list.csv"), timeCoherence(measureTimeCoherence)
+         depthComplexityFile(_depthComplexityFilename), errorMetricFile("error_metrics.csv"), perfFile("performance_list.csv"), timeCoherence(measureTimeCoherence),
+         stateNameDepthPeeling("")
 {
     sgl::FileUtils::get()->ensureDirectoryExists("images/");
 
@@ -100,7 +101,7 @@ void AutoPerfMeasurer::writeCurrentModeData()
     file.writeCell(sgl::toString(currentAlgorithmsBufferSizeBytes*1e-9f));
 
     // Save normalized difference map
-    if (referenceImage != nullptr) {
+    if (false) {//referenceImage != nullptr) {
         std::string differenceMapFilename =
                 std::string() + "images/" + currentState.name + " Difference" + ".png";
         sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(referenceImage, image);
@@ -156,6 +157,15 @@ void AutoPerfMeasurer::writeCurrentErrorMetricData()
         stateNameDepthPeeling = currentState.name;
         return;
     }
+    else
+    {
+        if (stateNameDepthPeeling.empty())
+        {
+            std::string dpName = sgl::toString(currentState.windowResolution.x) + "x" + sgl::toString(currentState.windowResolution.y)
+                                 + " " + currentState.modelName + " " + "Depth Peeling";
+            stateNameDepthPeeling = dpName;
+        }
+    }
 
     std::vector<std::string> errorMetrics = { "RMSE", "PSNR", "SSIM" };
     const uint32_t MAX_FRAMES = 64;
@@ -169,19 +179,19 @@ void AutoPerfMeasurer::writeCurrentErrorMetricData()
     for (uint32_t f = 1; f <= MAX_FRAMES; ++f)
     {
         // reference image
-        std::string filenameGT = std::string() + "images/" + stateNameDepthPeeling + "_frame_" + std::to_string(f) + ".png";
-        sgl::BitmapPtr refImage(new sgl::Bitmap());
-        refImage->fromFile(filenameGT.c_str());
-
-        // output image
-        std::string filename = std::string() + "images/" + currentState.name + "_frame_" + std::to_string(f) + ".png";
-        sgl::BitmapPtr outputImage(new sgl::Bitmap());
-        outputImage->fromFile(filename.c_str());
+//        std::string filenameGT = std::string() + "images/" + stateNameDepthPeeling + "_frame_" + std::to_string(f) + ".png";
+//        sgl::BitmapPtr refImage(new sgl::Bitmap());
+//        refImage->fromFile(filenameGT.c_str());
+//
+//        // output image
+//        std::string filename = std::string() + "images/" + currentState.name + "_frame_" + std::to_string(f) + ".png";
+//        sgl::BitmapPtr outputImage(new sgl::Bitmap());
+//        outputImage->fromFile(filename.c_str());
 
         // Save normalized difference map
-        std::string differenceMapFilename = std::string() + "images/" + currentState.name + " Difference_frame_" + std::to_string(f) + ".png";
-        sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(refImage, outputImage);
-        differenceMap->savePNG(differenceMapFilename.c_str());
+//        std::string differenceMapFilename = std::string() + "images/" + currentState.name + " Difference_frame_" + std::to_string(f) + ".png";
+//        sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(refImage, outputImage);
+//        differenceMap->savePNG(differenceMapFilename.c_str());
 
 //        if (f == 1)
 //        {
@@ -189,30 +199,30 @@ void AutoPerfMeasurer::writeCurrentErrorMetricData()
 //            errorMetricFile.writeCell(filename);
 //        }
 
-        rmseValues.push_back(rmse(refImage, outputImage));
-        psnrValues.push_back(psnr(refImage, outputImage));
-        ssimValues.push_back(ssim(refImage, outputImage));
+//        rmseValues.push_back(rmse(refImage, outputImage));
+//        psnrValues.push_back(psnr(refImage, outputImage));
+//        ssimValues.push_back(ssim(refImage, outputImage));
 //        errorMetricFile.writeCell(sgl::toString(metric));
     }
 
-    errorMeasures.push_back(rmseValues);
-    errorMeasures.push_back(psnrValues);
-    errorMeasures.push_back(ssimValues);
-
-
-    for (uint32_t i = 0; i < errorMeasures.size(); ++i)
-    {
-        std::string metricName = errorMetrics[i];
-
-        errorMetricFile.writeCell(currentState.name + " (" + metricName + ")");
-
-        for (uint32_t f = 0; f < MAX_FRAMES; ++f)
-        {
-            errorMetricFile.writeCell(sgl::toString(errorMeasures[i][f]));
-        }
-
-        errorMetricFile.newRow();
-    }
+//    errorMeasures.push_back(rmseValues);
+//    errorMeasures.push_back(psnrValues);
+//    errorMeasures.push_back(ssimValues);
+//
+//
+//    for (uint32_t i = 0; i < errorMeasures.size(); ++i)
+//    {
+//        std::string metricName = errorMetrics[i];
+//
+//        errorMetricFile.writeCell(currentState.name + " (" + metricName + ")");
+//
+//        for (uint32_t f = 0; f < MAX_FRAMES; ++f)
+//        {
+//            errorMetricFile.writeCell(sgl::toString(errorMeasures[i][f]));
+//        }
+//
+//        errorMetricFile.newRow();
+//    }
 }
 
 void AutoPerfMeasurer::setNextState(bool first)
