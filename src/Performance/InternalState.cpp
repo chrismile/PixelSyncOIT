@@ -531,6 +531,11 @@ void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, Interna
     getTestModesRayTracing(states, state);
 }
 
+void getTestModesPaperForRTPerformance(std::vector<InternalState> &states, InternalState state)
+{
+    getTestModesRayTracing(states, state);
+}
+
 std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
@@ -546,7 +551,7 @@ std::vector<InternalState> getTestModesPaper()
         state.windowResolution = windowResolutions.at(i);
         for (size_t j = 0; j < modelNames.size(); j++) {
             state.modelName = modelNames.at(j);
-            getTestModesPaperForMeshQuality(states, state);
+            getTestModesPaperForRTPerformance(states, state);
         }
     }
 

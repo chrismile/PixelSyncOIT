@@ -66,7 +66,7 @@ void RTRenderBackend::setViewportSize(int width, int height) {
     if(framebuffer != NULL){
         ospRelease(framebuffer);
     }
-    framebuffer = ospNewFrameBuffer(osp::vec2i{width, height}, OSP_FB_RGBA8, OSP_FB_COLOR | OSP_FB_ACCUM);
+    framebuffer = ospNewFrameBuffer(osp::vec2i{width, height}, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
     std::cout << "call RTRenderBackend" << std::endl;
 }
 
@@ -84,41 +84,39 @@ void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajec
         // one line 
         Trajectory trajectory = trajectories[i];
         // positions and attributes for one line
-        std::vector<glm::vec3> positions = trajectory.positions;
-        std::vector<std::vector<float>> attributes = trajectory.attributes;
+        std::vector<glm::vec3> &positions = trajectory.positions;
+        std::vector<std::vector<float>> &attributes = trajectory.attributes;
         // std::cout << "node size " << trajectory.positions.size() << std::endl;
         ospcommon::vec4f color;
         // color.x = 1.0; color.y = 0.0; color.z = 0.0; color.w = 1.0;
 
-        for(int j = 0; j < attributes.size(); j++){
-            // std::cout << "point size of line #" << i << " is " << positions.size() << std::endl; 
-            std::vector<float> attr = attributes[j];
-            // std::cout << "attribute size " << attr.size() << std::endl;
-            for(int k = 0; k < attr.size(); k++){
-                float r = attr[k];
-                glm::vec3 pos = positions[k];
-                // std::cout << "index " << i * length + k << " ";
-                ospcommon::vec3f p(pos.x, pos.y, pos.z);
-                Node node;
-                node.radius = r; node.position = p;
-                Tube.nodes.push_back(node);
-                // Tube.colors.push_back(color);
-                if(k == 0){
-                    int first = length + k;
-                    int second = first;
-                    // std::cout << second << " ";
-                    Link link;
-                    link.first = first; link.second = second;
-                    Tube.links.push_back(link);
-                    // std::cout << "length " << length << " first " << first << " second " << second << std::endl;
-                }else{
-                    int first = length + k;
-                    int second = first - 1;
-                    // std::cout << second << " ";
-                    Link link;
-                    link.first = first; link.second = second;
-                    Tube.links.push_back(link);
-                }
+        // std::cout << "point size of line #" << i << " is " << positions.size() << std::endl;
+        std::vector<float> &attr = attributes.at(0);
+        // std::cout << "attribute size " << attr.size() << std::endl;
+        for(int k = 0; k < attr.size(); k++){
+            float r = attr[k];
+            glm::vec3 pos = positions[k];
+            // std::cout << "index " << i * length + k << " ";
+            ospcommon::vec3f p(pos.x, pos.y, pos.z);
+            Node node;
+            node.radius = r; node.position = p;
+            Tube.nodes.push_back(node);
+            // Tube.colors.push_back(color);
+            if(k == 0){
+                int first = length + k;
+                int second = first;
+                // std::cout << second << " ";
+                Link link;
+                link.first = first; link.second = second;
+                Tube.links.push_back(link);
+                // std::cout << "length " << length << " first " << first << " second " << second << std::endl;
+            }else{
+                int first = length + k;
+                int second = first - 1;
+                // std::cout << second << " ";
+                Link link;
+                link.first = first; link.second = second;
+                Tube.links.push_back(link);
             }
         }
         std::cout << std::endl;
@@ -145,8 +143,7 @@ void RTRenderBackend::loadTriangleMesh(
     // TODO: Convert the triangle mesh to an internal representation.
 }
 
-void RTRenderBackend::setTransferFunction(
-        const std::vector<OpacityPoint> &opacityPoints, const std::vector<ColorPoint_sRGB> &colorPoints_sRGB) {
+void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLookupTable) {
     // Interpolate the color points in sRGB space. Then, convert the result to linear RGB for rendering:
     //TransferFunctionWindow::sRGBToLinearRGB(glm::vec3(...));
     // for(int i = 0; i < opacityPoints.size(); i++){
@@ -168,40 +165,53 @@ void RTRenderBackend::setTransferFunction(
     const float amax = *std::max_element(attr.begin(), attr.end());
     // std::cout << "Attribute min " << amin << " max " << amax << std::endl;
     const float dis = 1.f / (amax - amin);
-    // map attributes to the color 
+    // map attributes to the color
+
+
+
+    Tube.colors.clear();
     for(int i = 0; i < attr.size(); ++i){
         float a = attr[i];
         const float ratio = (a - amin) * dis;
         // find TFN index and the fraction
-        const int N = int(ratio * (colorPoints_sRGB.size() - 1));
-        const float R = ratio * (colorPoints_sRGB.size() - 1) - N;
+        const int N = int(ratio * (tfLookupTable.size() - 1));
+        const float R = ratio * (tfLookupTable.size() - 1) - N;
         // std::cout << "a = " << a << " N = " << N << " R " << R << std::endl;
         if(N < 0){
-            glm::vec3 color_sRGB = colorPoints_sRGB.front().color.getFloatColorRGB();
+            glm::vec4 colorRGBA = tfLookupTable.front().getFloatColorRGBA();
+            glm::vec3 color_sRGB(colorRGBA);
             glm::vec3 color_linear_rgb = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
-            float opacity = opacityPoints.front().opacity;
-            ospcommon::vec4f color(color_linear_rgb.x, color_linear_rgb.y , color_linear_rgb.z, 0.5);
+            float opacity = colorRGBA.a;
+            ospcommon::vec4f color(color_linear_rgb.r, color_linear_rgb.g , color_linear_rgb.b, colorRGBA.a);
             Tube.colors.push_back(color);
-        }else if(N >= colorPoints_sRGB.size() - 1){
-            glm::vec3 color_sRGB = colorPoints_sRGB.back().color.getFloatColorRGB();
+        }else if(N >= tfLookupTable.size() - 1){
+            glm::vec4 colorRGBA = tfLookupTable.back().getFloatColorRGBA();
+            glm::vec3 color_sRGB(colorRGBA);
             glm::vec3 color_linear_rgb = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
-            float opacity = opacityPoints.back().opacity;
-            ospcommon::vec4f color(color_linear_rgb.x, color_linear_rgb.y , color_linear_rgb.z, 0.5);
+            float opacity = colorRGBA.a;
+            ospcommon::vec4f color(color_linear_rgb.r, color_linear_rgb.g , color_linear_rgb.b, opacity);
             Tube.colors.push_back(color);
         }else{
-            glm::vec3 color_sRGB_lo = colorPoints_sRGB[N].color.getFloatColorRGB();
-            glm::vec3 color_sRGB_hi = colorPoints_sRGB[N+1].color.getFloatColorRGB();
+            glm::vec4 colorRGBA_lo = tfLookupTable.at(N).getFloatColorRGBA();
+            glm::vec4 colorRGBA_hi = tfLookupTable.at(N+1).getFloatColorRGBA();
+            glm::vec3 color_sRGB_lo(colorRGBA_lo);
+            glm::vec3 color_sRGB_hi(colorRGBA_hi);
             glm::vec3 color_sRGB = glm::mix(color_sRGB_lo, color_sRGB_hi, R);
-            float opacity_lo = opacityPoints[N].opacity;
-            float opacity_hi = opacityPoints[N+1].opacity;
+            float opacity_lo = colorRGBA_lo.a;
+            float opacity_hi = colorRGBA_hi.a;
             float opacity = glm::mix(opacity_lo, opacity_hi, R);
             // convert sRGB to linear RGB
             glm::vec3 color_linear = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
-            ospcommon::vec4f color(color_linear.x, color_linear.y, color_linear.z, 0.5);
+            ospcommon::vec4f color(color_linear.x, color_linear.y, color_linear.z, opacity);
             Tube.colors.push_back(color);
         }
     }
     // sleep(100);
+
+    if (initializedColorData) {
+        ospCommit(colorData);
+        //ospSetData(tubeGeo, "colorData", colorData);
+    }
 }
 
 void RTRenderBackend::setLineRadius(float lineRadius) {
@@ -239,6 +249,8 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
         ospCommit(nodeData);
         ospCommit(linkData);
         ospCommit(colorData);
+
+        initializedColorData = true;
 
         OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
         ospCommit(materialList);

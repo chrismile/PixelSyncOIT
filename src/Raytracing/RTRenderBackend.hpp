@@ -94,19 +94,8 @@ public:
 
     /**
      * For mapping line attributes (i.e., importance criteria) to colors and opacities, transfer functions are used.
-     * 'OpacityPoint' and 'ColorPoint_sRGB' store an attribute value (called 'position') together with the corresponding
-     * opacity/color. 'position' is guaranteed to be a value between zero and one
-     * Between these control points, the opacity and color are linearly interpolated.
-     * The program specifies colors in sRGB and also interpolates between them is sRGB space.
-     * However, the final interpolated color is then converted to linear RGB for rendering.
-     * @param opacityPoints The control points of the opacity.
-     * @param colorPoints_sRGB The control points of the color.
-     *
-     * TODO: If you rather want an evenly-spaced look-up table of e.g. 256 colors, I could change the interface
-     * (Christoph 07/04).
      */
-    void setTransferFunction(
-            const std::vector<OpacityPoint> &opacityPoints, const std::vector<ColorPoint_sRGB> &colorPoints_sRGB);
+    void setTransferFunction(const std::vector<sgl::Color> &tfLookupTable);
 
     /**
      * Sets the line radius to use for rendering. This can be ignored when rendering a triangle mesh instead of
@@ -144,6 +133,10 @@ private:
     OSPFrameBuffer framebuffer = NULL;
     OSPRenderer renderer;
     OSPCamera camera;
+
+    OSPData colorData;
+    bool initializedColorData = false;
+
     glm::vec3 camera_pos;
     glm::vec3 camera_dir;
     glm::vec3 camera_up;
