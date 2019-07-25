@@ -489,8 +489,15 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 void getTestModesRayTracing(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_RAYTRACING;
-    state.name = std::string() + "Ray Tracing";
+    state.name = std::string() + "Ray Tracing (Tubes)";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "useEmbreeCurves", "false" },
+    });
+    states.push_back(state);
+
+    state.name = std::string() + "Ray Tracing (Embree)";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "useEmbreeCurves", "true" },
     });
     states.push_back(state);
 }
@@ -544,7 +551,7 @@ std::vector<InternalState> getTestModesPaper()
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
-    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
+    std::vector<std::string> modelNames = { "Rings" };
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {

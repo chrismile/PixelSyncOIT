@@ -70,8 +70,6 @@ void OIT_RayTracing::setLineRadius(float lineRadius)
 {
     this->lineRadius = lineRadius;
     renderBackend.setLineRadius(lineRadius);
-    // std::cout << "reset radius" << std::endl;
-    // renderBackend.recommitOSPGeometry();
 }
 
 float OIT_RayTracing::getLineRadius()
@@ -169,9 +167,11 @@ void OIT_RayTracing::fromFile(
         renderBackend.loadTrajectories(filename, trajectories);
         onTransferFunctionMapRebuilt();
         renderBackend.setLineRadius(0.001);
-        glm::vec3 upDir = camera->getViewMatrix()[1];
-        glm::vec3 lookDir = -camera->getViewMatrix()[2];
-        glm::vec3 pos = -camera->getViewMatrix()[3];
+        glm::mat4 viewMatrix = camera->getViewMatrix();
+        glm::mat4 invViewMatrix = glm::inverse(camera->getViewMatrix());
+        glm::vec3 upDir = invViewMatrix[1];
+        glm::vec3 lookDir = -invViewMatrix[2];
+        glm::vec3 pos = invViewMatrix[3];
 
         auto startRTPreprocessing = std::chrono::system_clock::now();
 
@@ -193,11 +193,17 @@ void OIT_RayTracing::fromFile(
 
 void OIT_RayTracing::setNewState(const InternalState &newState)
 {
+    bool useEmbreeCurvesNew = useEmbreeCurves;
+    newState.oitAlgorithmSettings.getValueOpt("useEmbreeCurves", useEmbreeCurvesNew);
+    if (useEmbreeCurves != useEmbreeCurvesNew) {
+        useEmbreeCurves = useEmbreeCurvesNew;
+        renderBackend.setUseEmbreeCurves(useEmbreeCurves);
+        loadModel(modelIndex, trajectoryType, useTriangleMesh);
+    }
 }
 
 void OIT_RayTracing::renderToScreen()
 {
-    // std::cout << "render to screen " << std::endl;
     glm::vec3 linearRgbClearColorVec(clearColor.getFloatR(), clearColor.getFloatG(), clearColor.getFloatB());
     glm::vec3 sRgbClearColorVec = TransferFunctionWindow::linearRGBTosRGB(linearRgbClearColorVec);
     sgl::Color sRgbClearColor = sgl::colorFromFloat(sRgbClearColorVec.x, sRgbClearColorVec.y, sRgbClearColorVec.z);
@@ -207,13 +213,13 @@ void OIT_RayTracing::renderToScreen()
     int height = window->getHeight();
 
     glm::mat4 viewMatrix = camera->getViewMatrix();
-    glm::vec3 upDir = camera->getCameraUp();
-    glm::vec3 lookDir = camera->getCameraFront();
-    glm::vec3 pos = camera->getPosition();
+    glm::mat4 invViewMatrix = glm::inverse(camera->getViewMatrix());
+    glm::vec3 upDir = invViewMatrix[1];
+    glm::vec3 lookDir = -invViewMatrix[2];
+    glm::vec3 pos = invViewMatrix[3];
     uint32_t *imageData = renderBackend.renderToImage(pos, lookDir, upDir, camera->getFOVy(), lineRadius, changeTFN);
     changeTFN = false;
     renderImage->uploadPixelData(width, height, imageData);
-    reRender = true;
 
     blitTexture();
     reRender = true;
@@ -244,10 +250,7 @@ void OIT_RayTracing::blitTexture()
 
 void OIT_RayTracing::onTransferFunctionMapRebuilt()
 {
-    const std::vector<OpacityPoint> &opacityPoints = g_TransferFunctionWindowHandle->getOpacityPoints();
-    const std::vector<ColorPoint_sRGB> &colorPoints_sRGB = g_TransferFunctionWindowHandle->getColorPoints_sRGB();
     std::vector<sgl::Color> tfLookupTable = g_TransferFunctionWindowHandle->getTransferFunctionMap_sRGB();
-    std::cout << "!!!! Transfer Function Changed !!! " << std::endl;
     renderBackend.setTransferFunction(tfLookupTable);
     if(changeTFN) changeTFN = false;
     else changeTFN = true;

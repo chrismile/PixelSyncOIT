@@ -69,7 +69,6 @@ void RTRenderBackend::setViewportSize(int width, int height) {
         ospRelease(framebuffer);
     }
     framebuffer = ospNewFrameBuffer(osp::vec2i{width, height}, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
-    std::cout << "call RTRenderBackend" << std::endl;
 }
 
 void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajectories &trajectories)
@@ -123,7 +122,6 @@ void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajec
                 Tube.links.push_back(link);
             }
         }
-        std::cout << std::endl;
         length = length + positions.size();
     }
     // sleep(100);
@@ -217,7 +215,7 @@ void RTRenderBackend::setLineRadius(float lineRadius) {
     // std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
     //                                             Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
 
-    // std::cout << "Finish loading data " << std::endl;
+    // std::cerr << "LINE RADIUS" << std::endl;
 }
 
 void RTRenderBackend::setUseEmbreeCurves(bool useEmbreeCurves) {
@@ -333,7 +331,6 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
             int first = Tube.links[i].first;
             int second = Tube.links[i].second;
             if(first == second && i != 0){
-                // std::cout << "first line " << i << std::endl;
                 indices.pop_back();
             }
             indices.push_back(first);
@@ -369,7 +366,6 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
     // ospSetVec3f(directional_light0, "color", osp::vec3f{1.0f, 255.f / 255.0f, 255.0f / 255.f});
     ospCommit(directional_light1);
     std::vector<OSPLight> light_list {ambient_light, directional_light0, directional_light1} ;
-    // std::cout << "light list " << light_list.size() << std::endl;
     OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, light_list.data());
     ospCommit(lights);
 
@@ -411,13 +407,10 @@ uint32_t *RTRenderBackend::renderToImage(
     //  }
 
     if(changeTFN){
-        std::cout << "!!!! Here Here Here Transfer Function Changed !!!! " << "\n";
         ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
         recommitColor();
     }
 
-
-    // std::cout << "change tfn ?" << changeTFN << std::endl;
 
 
     if(camera_dir != dir || camera_pos != pos || camera_up != up){
@@ -433,7 +426,6 @@ uint32_t *RTRenderBackend::renderToImage(
         ospCommit(camera);
     }
     if(lineRadius != radius){
-        std::cout << "radius changed " << std::endl;
         ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
         recommitRadius();
     }
