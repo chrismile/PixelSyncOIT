@@ -1801,7 +1801,7 @@ void PixelSyncApp::update(float dt)
                 recordingTime = 0.0f;
             }
         } else {
-            if (perfMeasurementMode && timeCoherence) {
+            if (perfMeasurementMode) {
                 recordingTime += 0.5f;
             } else{
                 recordingTime += FRAME_TIME;
