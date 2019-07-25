@@ -41,24 +41,24 @@ void writePPM(const char *fileName,
               const int y,
               const uint32_t *pixel)
 {
-  FILE *file = fopen(fileName, "wb");
-  if (!file) {
-    fprintf(stderr, "fopen('%s', 'wb') failed: %d", fileName, errno);
-    return;
-  }
-  fprintf(file, "P6\n%i %i\n255\n", x, y);
-  unsigned char *out = (unsigned char *)alloca(3 * x);
-  for (int iy = 0; iy < y; iy++) {
-    const unsigned char *in = (const unsigned char *)&pixel[(y-1-iy)*x];
-    for (int ix = 0; ix < x; ix++) {
-      out[3*ix + 0] = in[4*ix + 0];
-      out[3*ix + 1] = in[4*ix + 1];
-      out[3*ix + 2] = in[4*ix + 2];
+    FILE *file = fopen(fileName, "wb");
+    if (!file) {
+        fprintf(stderr, "fopen('%s', 'wb') failed: %d", fileName, errno);
+        return;
     }
-    fwrite(out, 3*x, sizeof(char), file);
-  }
-  fprintf(file, "\n");
-  fclose(file);
+    fprintf(file, "P6\n%i %i\n255\n", x, y);
+    unsigned char *out = (unsigned char *)alloca(3 * x);
+    for (int iy = 0; iy < y; iy++) {
+        const unsigned char *in = (const unsigned char *)&pixel[(y-1-iy)*x];
+        for (int ix = 0; ix < x; ix++) {
+            out[3*ix + 0] = in[4*ix + 0];
+            out[3*ix + 1] = in[4*ix + 1];
+            out[3*ix + 2] = in[4*ix + 2];
+        }
+        fwrite(out, 3*x, sizeof(char), file);
+    }
+    fprintf(file, "\n");
+    fclose(file);
 }
 
 void RTRenderBackend::setViewportSize(int width, int height) {
@@ -78,6 +78,7 @@ void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajec
     Tube.nodes.clear();
     Tube.links.clear();
     Tube.colors.clear();
+    this->attributes.clear();
     std::cout << "Start convert trajectories to tube primitives..." << std::endl;
     // std::cout << "node size = " << trajectories.positions.size() << std::endl;
     // std::cout << "line size = " << trajectories.size() << std::endl;
@@ -97,6 +98,7 @@ void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajec
         // std::cout << "attribute size " << attr.size() << std::endl;
         for(int k = 0; k < attr.size(); k++){
             float r = attr[k];
+            this->attributes.push_back(r);
             glm::vec3 pos = positions[k];
             // std::cout << "index " << i * length + k << " ";
             ospcommon::vec3f p(pos.x, pos.y, pos.z);
@@ -124,8 +126,8 @@ void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajec
         std::cout << std::endl;
         length = length + positions.size();
     }
-            // sleep(100);
-    
+    // sleep(100);
+
     // Tube.worldBounds = ospcommon::empty;
     // for (int i = 0; i < Tube.nodes.size(); i++) {
     //   Tube.worldBounds.extend(Tube.nodes[i].position - ospcommon::vec3f(Tube.nodes[i].radius));
@@ -133,7 +135,7 @@ void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajec
     // }
     // std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
     //                                             Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
-    
+
 }
 
 void RTRenderBackend::loadTriangleMesh(
@@ -149,19 +151,15 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
     // Interpolate the color points in sRGB space. Then, convert the result to linear RGB for rendering:
     //TransferFunctionWindow::sRGBToLinearRGB(glm::vec3(...));
     //! find the min and max
-    std::vector<float> attr;
-    for(int i = 0; i < Tube.nodes.size(); i++){
-        attr.push_back(Tube.nodes[i].radius);
-    }
-    const float amin = *std::min_element(attr.begin(), attr.end());
-    const float amax = *std::max_element(attr.begin(), attr.end());
+    const float amin = *std::min_element(this->attributes.begin(), this->attributes.end());
+    const float amax = *std::max_element(this->attributes.begin(), this->attributes.end());
     // std::cout << "Attribute min " << amin << " max " << amax << std::endl;
     const float dis = 1.f / (amax - amin);
     // map attributes to the color
 
     Tube.colors.clear();
-    for(int i = 0; i < attr.size(); ++i){
-        float a = attr[i];
+    for(int i = 0; i < this->attributes.size(); ++i){
+        float a = this->attributes[i];
         const float ratio = (a - amin) * dis;
         // find TFN index and the fraction
         const int N = int(ratio * (tfLookupTable.size() - 1));
@@ -218,8 +216,12 @@ void RTRenderBackend::setLineRadius(float lineRadius) {
     // }
     // std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
     //                                             Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
-    
+
     // std::cout << "Finish loading data " << std::endl;
+}
+
+void RTRenderBackend::setUseEmbreeCurves(bool useEmbreeCurves) {
+    use_Embree = useEmbreeCurves;
 }
 
 void RTRenderBackend::setCameraInitialize(glm::vec3 dir)
@@ -277,12 +279,11 @@ void RTRenderBackend::recommitColor()
     }
 }
 
-void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, bool useEmbree)
+void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy)
 {
-    use_Embree = useEmbree;
     world = ospNewModel();
 
-    if(!useEmbree){
+    if(!use_Embree){
         // ! tubeGeo
         tubeGeo = ospNewGeometry("tubes");
         OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
@@ -333,7 +334,7 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
             int second = Tube.links[i].second;
             if(first == second && i != 0){
                 // std::cout << "first line " << i << std::endl;
-                indices.pop_back();                
+                indices.pop_back();
             }
             indices.push_back(first);
         }
@@ -418,7 +419,7 @@ uint32_t *RTRenderBackend::renderToImage(
 
     // std::cout << "change tfn ?" << changeTFN << std::endl;
 
-    
+
     if(camera_dir != dir || camera_pos != pos || camera_up != up){
         ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
         float camPos[] = {pos.x, pos.y, pos.z};
@@ -445,9 +446,9 @@ uint32_t *RTRenderBackend::renderToImage(
     // auto t2 = std::chrono::high_resolution_clock::now();
     // auto dur = std::chrono::duration<double>(t2 - t1);
     // std::cout << "fps =  " <<  1 / dur.count()<< " fps" << std::endl;
-    
+
     uint32_t * fb = (uint32_t*)ospMapFrameBuffer(framebuffer, OSP_FB_COLOR);
-    
+
     // image.insert(image.begin(), fb, fb + width * height * 4);
 
     ospUnmapFrameBuffer(fb, framebuffer);

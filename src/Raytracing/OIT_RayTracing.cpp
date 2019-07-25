@@ -42,12 +42,14 @@
 
 #include "ospray/ospray.h"
 
+static bool useEmbreeCurves = false;
+
 OIT_RayTracing::OIT_RayTracing(sgl::CameraPtr &camera, const sgl::Color &clearColor)
-        : camera(camera), clearColor(clearColor)
+        : camera(camera), clearColor(clearColor), renderBackend(useEmbreeCurves)
 {
     // onTransferFunctionMapRebuilt();
     // ! Initialize OSPRay
-    static bool ospray = false; 
+    static bool ospray = false;
     int argc = sgl::FileUtils::get()->get_argc();
     char **argv = sgl::FileUtils::get()->get_argv();
     const char **av = const_cast<const char**>(argv);
@@ -62,7 +64,6 @@ OIT_RayTracing::OIT_RayTracing(sgl::CameraPtr &camera, const sgl::Color &clearCo
         ospLoadModule("tubes");
         ospray = true;
     }
-
 }
 
 void OIT_RayTracing::setLineRadius(float lineRadius)
@@ -90,11 +91,17 @@ void OIT_RayTracing::setLightDirection(const glm::vec3 &lightDirection)
 
 void OIT_RayTracing::renderGUI()
 {
-    //ImGui::Separator();
+    ImGui::Separator();
+
+    if (ImGui::Checkbox("Embree curves", &useEmbreeCurves)) {
+        renderBackend.setUseEmbreeCurves(useEmbreeCurves);
+        loadModel(modelIndex, trajectoryType, useTriangleMesh);
+        reRender = true;
+    }
 }
 
 void OIT_RayTracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
-        sgl::RenderbufferObjectPtr &sceneDepthRBO)
+                                       sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
     int width = window->getWidth();
@@ -110,7 +117,10 @@ void OIT_RayTracing::loadModel(
         int modelIndex, TrajectoryType trajectoryType, bool useTriangleMesh
         /*, std::vector<float> &attributes, float &maxAttribute*/)
 {
-    fromFile(MODEL_FILENAMES[modelIndex], trajectoryType, useTriangleMesh/*, attributes, maxAttribute*/);
+    this->modelIndex = modelIndex;
+    this->trajectoryType = trajectoryType;
+    this->useTriangleMesh = useTriangleMesh;
+    fromFile(MODEL_FILENAMES[modelIndex], trajectoryType, useTriangleMesh);
 }
 
 void OIT_RayTracing::fromFile(
@@ -165,8 +175,7 @@ void OIT_RayTracing::fromFile(
 
         auto startRTPreprocessing = std::chrono::system_clock::now();
 
-        useEmbree = false;
-        renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy(), useEmbree);
+        renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy());
         renderBackend.setCameraInitialize(lookDir);
 
         auto endRTPreprocesing = std::chrono::system_clock::now();

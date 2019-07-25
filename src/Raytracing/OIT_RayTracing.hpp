@@ -79,7 +79,10 @@ private:
     sgl::Color clearColor;
     glm::vec3 lightDirection;
 
-    bool useEmbree = true;
+    // Information about loaded data.
+    int modelIndex;
+    TrajectoryType trajectoryType;
+    bool useTriangleMesh;
     bool changeTFN = false;
 };
 

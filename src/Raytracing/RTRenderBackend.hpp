@@ -59,6 +59,8 @@ struct TubePrimitives
 
 class RTRenderBackend {
 public:
+    RTRenderBackend(bool use_Embree) : use_Embree(use_Embree) {}
+
     /**
      * Sets the viewport size to use for rendering.
      * @param width The width of the viewport in pixels.
@@ -103,11 +105,13 @@ public:
      */
     void setLineRadius(float lineRadius);
 
+    void setUseEmbreeCurves(bool useEmbreeCurves);
+
     void recommitRadius();
 
     void recommitColor();
 
-    void commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, bool useEmbree);
+    void commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy);
 
 
     /**
@@ -120,7 +124,9 @@ public:
      * @return A pointer to the image the scene was rendered to. It is expected that the image data is in the RGBA32
      * format and stores sRGB data.
      */
-    uint32_t *renderToImage(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, float radius, bool changeTFN);
+    uint32_t *renderToImage(
+            const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up,
+            const float fovy, float radius, bool changeTFN);
 
 private:
     // Viewport width and height.
@@ -142,6 +148,8 @@ private:
 
     OSPData colorData;
     bool initializedColorData = false;
+
+    std::vector<float> attributes;
 
     glm::vec3 camera_pos;
     glm::vec3 camera_dir;
