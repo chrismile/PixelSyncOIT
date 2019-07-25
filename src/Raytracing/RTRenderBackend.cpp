@@ -227,31 +227,89 @@ void RTRenderBackend::setCameraInitialize(glm::vec3 dir)
     camera_dir = dir;
 }
 
-void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy)
+void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, bool useEmbree)
 {
-    // ! tubeGeo
-    OSPGeometry tubeGeo = ospNewGeometry("tubes");
-    OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
-    OSPData linkData   = ospNewData(Tube.links.size() * sizeof(Link), OSP_RAW, Tube.links.data());
-    OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
-    ospCommit(nodeData);
-    ospCommit(linkData);
-    ospCommit(colorData);
-
-    OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
-    ospCommit(materialList);
-
-    ospSetData(tubeGeo, "nodeData", nodeData);
-    ospSetData(tubeGeo, "linkData", linkData);
-    ospSetData(tubeGeo, "colorData", colorData);
-    ospSetMaterial(tubeGeo, materialList);
-    ospCommit(tubeGeo);
-
-    // ! Add tubeGeo to the world
     OSPModel world = ospNewModel();
-    ospAddGeometry(world, tubeGeo);
-    ospRelease(tubeGeo); // we are done using this handle
-    ospCommit(world);
+    if(!useEmbree){
+        // ! tubeGeo
+        OSPGeometry tubeGeo = ospNewGeometry("tubes");
+        OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
+        OSPData linkData   = ospNewData(Tube.links.size() * sizeof(Link), OSP_RAW, Tube.links.data());
+        OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
+        ospCommit(nodeData);
+        ospCommit(linkData);
+        ospCommit(colorData);
+
+        OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
+        ospCommit(materialList);
+
+        ospSetData(tubeGeo, "nodeData", nodeData);
+        ospSetData(tubeGeo, "linkData", linkData);
+        ospSetData(tubeGeo, "colorData", colorData);
+        ospSetMaterial(tubeGeo, materialList);
+        ospCommit(tubeGeo);
+
+        // ! Add tubeGeo to the world
+        ospAddGeometry(world, tubeGeo);
+        ospRelease(tubeGeo); // we are done using this handle
+        ospCommit(world);
+    }else{
+        // Use embree
+        OSPGeometry tubeGeo = ospNewGeometry("streamlines");
+        // construct vertex
+        std::vector<ospcommon::vec3f> vertices;
+        std::vector<float> radius;
+        std::vector<ospcommon::vec4f> colors;
+        for(int i = 0; i < Tube.nodes.size(); ++i){
+            vertices.push_back(ospcommon::vec3f{Tube.nodes[i].position.x, Tube.nodes[i].position.y, Tube.nodes[i].position.z});
+            radius.push_back(Tube.nodes[i].radius);
+            colors.push_back(ospcommon::vec4f{Tube.colors[i].x, Tube.colors[i].y, Tube.colors[i].z, Tube.colors[i].w});
+        }
+
+        // construct index
+        std::vector<int> indices; 
+        for(int i = 0; i < Tube.links.size(); ++i){
+            int first = Tube.links[i].first;
+            int second = Tube.links[i].second;
+            if(first == second){
+                // pop back the last 
+                if(indices.size() != 0){
+                    indices.pop_back();
+                }
+            }
+            if(i == Tube.links.size()){
+                break;
+            }
+            // this is the first point
+            indices.push_back(first);
+        }
+        OSPData vertex = ospNewData(vertices.size(), OSP_FLOAT3, vertices.data());
+        OSPData vertex_radius = ospNewData(radius.size(), OSP_FLOAT, radius.data());
+        OSPData vertex_color = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
+        OSPData index = ospNewData(indices.size(), OSP_INT, indices.data());
+        ospCommit(vertex);
+        ospCommit(vertex_color);
+        ospCommit(vertex_radius);
+        ospCommit(index);
+
+        ospSet1i(tubeGeo, "smooth", 1);
+        ospSetData(tubeGeo, "vertex", vertex);
+        ospSetData(tubeGeo, "vertex.color", vertex_color);
+        ospSetData(tubeGeo, "vertex.radius", vertex_radius);
+        ospSetData(tubeGeo, "index", index);
+        ospCommit(tubeGeo);
+
+        ospRelease(vertex);
+        ospRelease(vertex_color);
+        ospRelease(vertex_radius);
+        ospRelease(index);
+
+        // ! Add tubeGeo to the world
+        ospAddGeometry(world, tubeGeo);
+        ospRelease(tubeGeo); // we are done using this handle
+        ospCommit(world);
+    }
+   
 
     renderer = ospNewRenderer("scivis");
     //! lighting

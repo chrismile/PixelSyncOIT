@@ -164,7 +164,8 @@ void OIT_RayTracing::fromFile(
 
         auto startRTPreprocessing = std::chrono::system_clock::now();
 
-        renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy());
+        useEmbree = true;
+        renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy(), useEmbree);
         renderBackend.setCameraInitialize(lookDir);
 
         auto endRTPreprocesing = std::chrono::system_clock::now();

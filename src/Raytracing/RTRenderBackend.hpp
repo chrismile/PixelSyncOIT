@@ -114,7 +114,8 @@ public:
      */
     void setLineRadius(float lineRadius);
 
-    void commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy);
+    void commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, bool useEmbree);
+
 
     /**
      * Renders the scene to an image in RGBA32 format.

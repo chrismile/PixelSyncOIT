@@ -78,6 +78,8 @@ private:
     float lineRadius;
     sgl::Color clearColor;
     glm::vec3 lightDirection;
+
+    bool useEmbree = true;
 };
 
 
