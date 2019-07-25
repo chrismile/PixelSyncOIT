@@ -72,6 +72,7 @@ public:
 
     // For querying transfer function in application
     float getOpacityAtAttribute(float attribute); // attribute: Between 0 and 1
+    const std::vector<sgl::Color> &getTransferFunctionMap_sRGB() { return transferFunctionMap_sRGB; }
 
     // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
     sgl::TexturePtr &getTransferFunctionMapTexture();

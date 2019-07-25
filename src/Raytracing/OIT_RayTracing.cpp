@@ -234,5 +234,6 @@ void OIT_RayTracing::onTransferFunctionMapRebuilt()
 {
     const std::vector<OpacityPoint> &opacityPoints = g_TransferFunctionWindowHandle->getOpacityPoints();
     const std::vector<ColorPoint_sRGB> &colorPoints_sRGB = g_TransferFunctionWindowHandle->getColorPoints_sRGB();
-    renderBackend.setTransferFunction(opacityPoints, colorPoints_sRGB);
+    std::vector<sgl::Color> tfLookupTable = g_TransferFunctionWindowHandle->getTransferFunctionMap_sRGB();
+    renderBackend.setTransferFunction(tfLookupTable);
 }
