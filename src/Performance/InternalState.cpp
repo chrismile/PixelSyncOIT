@@ -550,8 +550,8 @@ std::vector<InternalState> getTestModesPaper()
     std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
-//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
-    std::vector<std::string> modelNames = { "Rings" };
+//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
+    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {

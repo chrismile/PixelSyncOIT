@@ -75,7 +75,7 @@ private:
 
     // Data from MainApp
     sgl::CameraPtr camera;
-    float lineRadius;
+    float lineRadius = 0.001;
     sgl::Color clearColor;
     glm::vec3 lightDirection;
 
