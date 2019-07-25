@@ -33,6 +33,8 @@
 
 #include <iterator>
 #include <algorithm>
+#include <cmath>
+#include <random>
 
 void writePPM(const char *fileName,
               const int x,
@@ -167,8 +169,6 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
     const float dis = 1.f / (amax - amin);
     // map attributes to the color
 
-
-
     Tube.colors.clear();
     for(int i = 0; i < attr.size(); ++i){
         float a = attr[i];
@@ -216,8 +216,8 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
 
 void RTRenderBackend::setLineRadius(float lineRadius) {
     // TODO: Adapt the line radius (and ignore this function call for triangle meshes).
-    std::cout << "nodes size " << Tube.nodes.size() << "\n";
-    std::cout << "link size " << Tube.links.size() << "\n";
+    // std::cout << "nodes size " << Tube.nodes.size() << "\n";
+    // std::cout << "link size " << Tube.links.size() << "\n";
     for(int i = 0; i < Tube.nodes.size(); ++i){
         Tube.nodes[i].radius = lineRadius;
     }
@@ -266,59 +266,46 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
         ospRelease(tubeGeo); // we are done using this handle
         ospCommit(world);
     }else{
-        // Use embree
-        OSPGeometry tubeGeo = ospNewGeometry("streamlines");
-        // construct vertex
-        std::vector<ospcommon::vec3f> vertices;
-        std::vector<float> radius;
+        std::cout << "Using Embree Streamlines" << "\n";
+        auto slGeom = ospNewGeometry("streamlines");
+        std::vector<ospcommon::vec4f> points;
+        std::vector<int> indices;
         std::vector<ospcommon::vec4f> colors;
-        for(int i = 0; i < Tube.nodes.size(); ++i){
-            vertices.push_back(ospcommon::vec3f{Tube.nodes[i].position.x, Tube.nodes[i].position.y, Tube.nodes[i].position.z});
-            radius.push_back(Tube.nodes[i].radius);
-            colors.push_back(ospcommon::vec4f{Tube.colors[i].x, Tube.colors[i].y, Tube.colors[i].z, Tube.colors[i].w});
-        }
 
-        // construct index
-        std::vector<int> indices; 
-        for(int i = 0; i < Tube.links.size(); ++i){
+        for(int i = 0; i < Tube.nodes.size(); i++){
+            ospcommon::vec4f p;
+            p.x = Tube.nodes[i].position.x;
+            p.y = Tube.nodes[i].position.y;
+            p.z = Tube.nodes[i].position.z;
+            p.w = Tube.nodes[i].radius;
+            points.push_back(p);
+            ospcommon::vec4f c;
+            c.x = Tube.colors[i].x;
+            c.y = Tube.colors[i].y;
+            c.z = Tube.colors[i].z;
+            c.w = Tube.colors[i].w;
+            colors.push_back(c);
+        }
+        for(int i = 0; i < Tube.links.size() - 1; i++){
             int first = Tube.links[i].first;
             int second = Tube.links[i].second;
-            if(first == second){
-                // pop back the last 
-                if(indices.size() != 0){
-                    indices.pop_back();
-                }
+            if(first == second && i != 0){
+                // std::cout << "first line " << i << std::endl;
+                indices.pop_back();                
             }
-            if(i == Tube.links.size()){
-                break;
-            }
-            // this is the first point
             indices.push_back(first);
         }
-        OSPData vertex = ospNewData(vertices.size(), OSP_FLOAT3, vertices.data());
-        OSPData vertex_radius = ospNewData(radius.size(), OSP_FLOAT, radius.data());
-        OSPData vertex_color = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
-        OSPData index = ospNewData(indices.size(), OSP_INT, indices.data());
-        ospCommit(vertex);
-        ospCommit(vertex_color);
-        ospCommit(vertex_radius);
-        ospCommit(index);
 
-        ospSet1i(tubeGeo, "smooth", 1);
-        ospSetData(tubeGeo, "vertex", vertex);
-        ospSetData(tubeGeo, "vertex.color", vertex_color);
-        ospSetData(tubeGeo, "vertex.radius", vertex_radius);
-        ospSetData(tubeGeo, "index", index);
-        ospCommit(tubeGeo);
+        OSPData pointsData  = ospNewData(points.size(), OSP_FLOAT4, points.data());
+        OSPData indicesData = ospNewData(indices.size(), OSP_INT, indices.data());
+        OSPData colorsData  = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
+        ospSetData(slGeom, "vertex", pointsData);
+        ospSetData(slGeom, "index", indicesData);
+        ospSetData(slGeom, "vertex.color", colorsData);
+        ospCommit(slGeom);
 
-        ospRelease(vertex);
-        ospRelease(vertex_color);
-        ospRelease(vertex_radius);
-        ospRelease(index);
-
-        // ! Add tubeGeo to the world
-        ospAddGeometry(world, tubeGeo);
-        ospRelease(tubeGeo); // we are done using this handle
+        ospAddGeometry(world, slGeom);
+        ospRelease(slGeom); // we are done using this handle
         ospCommit(world);
     }
    
@@ -340,7 +327,7 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
     // ospSetVec3f(directional_light0, "color", osp::vec3f{1.0f, 255.f / 255.0f, 255.0f / 255.f});
     ospCommit(directional_light1);
     std::vector<OSPLight> light_list {ambient_light, directional_light0, directional_light1} ;
-    std::cout << "light list " << light_list.size() << std::endl;
+    // std::cout << "light list " << light_list.size() << std::endl;
     OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, light_list.data());
     ospCommit(lights);
 
@@ -394,12 +381,12 @@ uint32_t *RTRenderBackend::renderToImage(
     // ospSetObject(renderer, "camera", camera);
     // ospCommit(renderer);
 
-    auto t1 = std::chrono::high_resolution_clock::now();
+    // auto t1 = std::chrono::high_resolution_clock::now();
 
     ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR| OSP_FB_ACCUM);
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto dur = std::chrono::duration<double>(t2 - t1);
-    std::cout << "fps =  " <<  1 / dur.count()<< " fps" << std::endl;
+    // auto t2 = std::chrono::high_resolution_clock::now();
+    // auto dur = std::chrono::duration<double>(t2 - t1);
+    // std::cout << "fps =  " <<  1 / dur.count()<< " fps" << std::endl;
     
     uint32_t * fb = (uint32_t*)ospMapFrameBuffer(framebuffer, OSP_FB_COLOR);
     
