@@ -196,9 +196,9 @@ void OIT_RayTracing::renderToScreen()
     int height = window->getHeight();
 
     glm::mat4 viewMatrix = camera->getViewMatrix();
-    glm::vec3 upDir = camera->getViewMatrix()[1];
-    glm::vec3 lookDir = -camera->getViewMatrix()[2];
-    glm::vec3 pos = -camera->getViewMatrix()[3];
+    glm::vec3 upDir = camera->getCameraUp();
+    glm::vec3 lookDir = camera->getCameraFront();
+    glm::vec3 pos = camera->getPosition();
     uint32_t *imageData = renderBackend.renderToImage(pos, lookDir, upDir, camera->getFOVy());
     renderImage->uploadPixelData(width, height, imageData);
     reRender = true;
