@@ -69,6 +69,8 @@ void OIT_RayTracing::setLineRadius(float lineRadius)
 {
     this->lineRadius = lineRadius;
     renderBackend.setLineRadius(lineRadius);
+    // std::cout << "reset radius" << std::endl;
+    // renderBackend.recommitOSPGeometry();
 }
 
 float OIT_RayTracing::getLineRadius()
@@ -155,7 +157,6 @@ void OIT_RayTracing::fromFile(
     } else {
         Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
         renderBackend.loadTrajectories(filename, trajectories);
-        // renderBackend.loadTubePrimitives(filename);
         onTransferFunctionMapRebuilt();
         renderBackend.setLineRadius(0.001);
         glm::vec3 upDir = camera->getViewMatrix()[1];
@@ -164,7 +165,7 @@ void OIT_RayTracing::fromFile(
 
         auto startRTPreprocessing = std::chrono::system_clock::now();
 
-        useEmbree = true;
+        useEmbree = false;
         renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy(), useEmbree);
         renderBackend.setCameraInitialize(lookDir);
 
@@ -200,7 +201,8 @@ void OIT_RayTracing::renderToScreen()
     glm::vec3 upDir = camera->getCameraUp();
     glm::vec3 lookDir = camera->getCameraFront();
     glm::vec3 pos = camera->getPosition();
-    uint32_t *imageData = renderBackend.renderToImage(pos, lookDir, upDir, camera->getFOVy());
+    uint32_t *imageData = renderBackend.renderToImage(pos, lookDir, upDir, camera->getFOVy(), lineRadius, changeTFN);
+    changeTFN = false;
     renderImage->uploadPixelData(width, height, imageData);
     reRender = true;
 
@@ -236,5 +238,8 @@ void OIT_RayTracing::onTransferFunctionMapRebuilt()
     const std::vector<OpacityPoint> &opacityPoints = g_TransferFunctionWindowHandle->getOpacityPoints();
     const std::vector<ColorPoint_sRGB> &colorPoints_sRGB = g_TransferFunctionWindowHandle->getColorPoints_sRGB();
     std::vector<sgl::Color> tfLookupTable = g_TransferFunctionWindowHandle->getTransferFunctionMap_sRGB();
+    std::cout << "!!!! Transfer Function Changed !!! " << std::endl;
     renderBackend.setTransferFunction(tfLookupTable);
+    if(changeTFN) changeTFN = false;
+    else changeTFN = true;
 }

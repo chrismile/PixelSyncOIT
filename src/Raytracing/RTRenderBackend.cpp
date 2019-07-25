@@ -148,16 +148,6 @@ void RTRenderBackend::loadTriangleMesh(
 void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLookupTable) {
     // Interpolate the color points in sRGB space. Then, convert the result to linear RGB for rendering:
     //TransferFunctionWindow::sRGBToLinearRGB(glm::vec3(...));
-    // for(int i = 0; i < opacityPoints.size(); i++){
-    //     std::cout << "opacity #" << i << " opacity " << opacityPoints[i].opacity << " position " << opacityPoints[i].position << "\n";
-    // }
-    // for(int i = 0; i < colorPoints_sRGB.size(); i++){
-    //     std::cout << "color points #" << i << " R " << (int)colorPoints_sRGB[i].color.getR() 
-    //                                         << " G " << (int)colorPoints_sRGB[i].color.getG()
-    //                                         << " B " << (int)colorPoints_sRGB[i].color.getB()
-    //                                         << " A " << (int)colorPoints_sRGB[i].color.getA()
-    //                                         << " position " << colorPoints_sRGB[i].position << "\n";
-    // }
     //! find the min and max
     std::vector<float> attr;
     for(int i = 0; i < Tube.nodes.size(); i++){
@@ -208,10 +198,10 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
     }
     // sleep(100);
 
-    if (initializedColorData) {
-        ospCommit(colorData);
-        //ospSetData(tubeGeo, "colorData", colorData);
-    }
+    // if (initializedColorData) {
+    //     ospCommit(colorData);
+    //     //ospSetData(tubeGeo, "colorData", colorData);
+    // }
 }
 
 void RTRenderBackend::setLineRadius(float lineRadius) {
@@ -221,15 +211,15 @@ void RTRenderBackend::setLineRadius(float lineRadius) {
     for(int i = 0; i < Tube.nodes.size(); ++i){
         Tube.nodes[i].radius = lineRadius;
     }
-    Tube.worldBounds = ospcommon::empty;
-    for (int i = 0; i < Tube.nodes.size(); i++) {
-      Tube.worldBounds.extend(Tube.nodes[i].position - ospcommon::vec3f(Tube.nodes[i].radius));
-      Tube.worldBounds.extend(Tube.nodes[i].position + ospcommon::vec3f(Tube.nodes[i].radius));
-    }
-    std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
-                                                Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
+    // Tube.worldBounds = ospcommon::empty;
+    // for (int i = 0; i < Tube.nodes.size(); i++) {
+    //   Tube.worldBounds.extend(Tube.nodes[i].position - ospcommon::vec3f(Tube.nodes[i].radius));
+    //   Tube.worldBounds.extend(Tube.nodes[i].position + ospcommon::vec3f(Tube.nodes[i].radius));
+    // }
+    // std::cout << "Data world bound lower: (" << Tube.worldBounds.lower.x << ", " << Tube.worldBounds.lower.y << ", " << Tube.worldBounds.lower.z << "), upper (" <<
+    //                                             Tube.worldBounds.upper.x << ", " << Tube.worldBounds.upper.y << ", " << Tube.worldBounds.upper.z << ")" << "\n";
     
-    std::cout << "Finish loading data " << std::endl;
+    // std::cout << "Finish loading data " << std::endl;
 }
 
 void RTRenderBackend::setCameraInitialize(glm::vec3 dir)
@@ -237,12 +227,64 @@ void RTRenderBackend::setCameraInitialize(glm::vec3 dir)
     camera_dir = dir;
 }
 
+void RTRenderBackend::recommitRadius()
+{
+    if(use_Embree){
+        std::vector<ospcommon::vec4f> points;
+
+        for(int i = 0; i < Tube.nodes.size(); i++){
+            ospcommon::vec4f p;
+            p.x = Tube.nodes[i].position.x;
+            p.y = Tube.nodes[i].position.y;
+            p.z = Tube.nodes[i].position.z;
+            p.w = Tube.nodes[i].radius;
+            points.push_back(p);
+        }
+        OSPData pointsData  = ospNewData(points.size(), OSP_FLOAT4, points.data());
+        ospSetData(tubeGeo, "vertex", pointsData);
+        ospCommit(tubeGeo);
+        ospCommit(world);
+    }else{
+        OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
+        ospSetData(tubeGeo, "nodeData", nodeData);
+        ospCommit(tubeGeo);
+        ospCommit(world);
+    }
+}
+
+void RTRenderBackend::recommitColor()
+{
+    if(use_Embree){
+        std::vector<ospcommon::vec4f> colors;
+        for(int i = 0; i < Tube.nodes.size(); i++){
+            ospcommon::vec4f c;
+            c.x = Tube.colors[i].x;
+            c.y = Tube.colors[i].y;
+            c.z = Tube.colors[i].z;
+            c.w = Tube.colors[i].w;
+            colors.push_back(c);
+        }
+        OSPData colorsData  = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
+        ospSetData(tubeGeo, "vertex.color", colorsData);
+        ospCommit(tubeGeo);
+        ospCommit(world);
+    }else{
+        OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
+        ospSetData(tubeGeo, "colorData", colorData);
+        // ospSetMaterial(tubeGeo, materialList);
+        ospCommit(tubeGeo);
+        ospCommit(world);
+    }
+}
+
 void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, bool useEmbree)
 {
-    OSPModel world = ospNewModel();
+    use_Embree = useEmbree;
+    world = ospNewModel();
+
     if(!useEmbree){
         // ! tubeGeo
-        OSPGeometry tubeGeo = ospNewGeometry("tubes");
+        tubeGeo = ospNewGeometry("tubes");
         OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
         OSPData linkData   = ospNewData(Tube.links.size() * sizeof(Link), OSP_RAW, Tube.links.data());
         OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
@@ -250,7 +292,7 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
         ospCommit(linkData);
         ospCommit(colorData);
 
-        initializedColorData = true;
+        // initializedColorData = true;
 
         OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
         ospCommit(materialList);
@@ -267,7 +309,7 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
         ospCommit(world);
     }else{
         std::cout << "Using Embree Streamlines" << "\n";
-        auto slGeom = ospNewGeometry("streamlines");
+        tubeGeo = ospNewGeometry("streamlines");
         std::vector<ospcommon::vec4f> points;
         std::vector<int> indices;
         std::vector<ospcommon::vec4f> colors;
@@ -299,16 +341,15 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
         OSPData pointsData  = ospNewData(points.size(), OSP_FLOAT4, points.data());
         OSPData indicesData = ospNewData(indices.size(), OSP_INT, indices.data());
         OSPData colorsData  = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
-        ospSetData(slGeom, "vertex", pointsData);
-        ospSetData(slGeom, "index", indicesData);
-        ospSetData(slGeom, "vertex.color", colorsData);
-        ospCommit(slGeom);
+        ospSetData(tubeGeo, "vertex", pointsData);
+        ospSetData(tubeGeo, "index", indicesData);
+        ospSetData(tubeGeo, "vertex.color", colorsData);
+        ospCommit(tubeGeo);
 
-        ospAddGeometry(world, slGeom);
-        ospRelease(slGeom); // we are done using this handle
+        ospAddGeometry(world, tubeGeo);
+        ospRelease(tubeGeo); // we are done using this handle
         ospCommit(world);
     }
-   
 
     renderer = ospNewRenderer("scivis");
     //! lighting
@@ -357,29 +398,46 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
 }
 
 uint32_t *RTRenderBackend::renderToImage(
-        const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy) {
+        const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, float radius, bool changeTFN) {
     /**
      * TODO: Write to the image (RGBA32, pre-multiplied alpha, sRGB).
      * For internal computations, linear RGB is used. The values need to be converted to sRGB before writing to the
      * image. For this, the following function can be used:
      * TransferFunctionWindow::linearRGBTosRGB(glm::vec3(...))
      */
+    //  if(changeTFN){
+    //     std::cout << "!!!! Here Here Here Transfer Function Changed !!!! " << "\n";
+    //  }
+
+    if(changeTFN){
+        std::cout << "!!!! Here Here Here Transfer Function Changed !!!! " << "\n";
+        ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
+        recommitColor();
+    }
+
+
+    // std::cout << "change tfn ?" << changeTFN << std::endl;
+
+    
     if(camera_dir != dir || camera_pos != pos || camera_up != up){
         ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
+        float camPos[] = {pos.x, pos.y, pos.z};
+        float camDir[] = {dir.x, dir.y, dir.z};
+        float camUp[] = {up.x, up.y, up.z};
+        ospSetf(camera, "aspect", width/(float)height);
+        ospSet1f(camera, "fovy", glm::degrees(fovy));
+        ospSet3fv(camera, "pos", camPos);
+        ospSet3fv(camera, "dir", camDir);
+        ospSet3fv(camera, "up", camUp);
+        ospCommit(camera);
     }
+    if(lineRadius != radius){
+        std::cout << "radius changed " << std::endl;
+        ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
+        recommitRadius();
+    }
+    // recommitOSPGeometry();
     // OSPCamera camera = ospNewCamera("perspective");
-    float camPos[] = {pos.x, pos.y, pos.z};
-    float camDir[] = {dir.x, dir.y, dir.z};
-    float camUp[] = {up.x, up.y, up.z};
-    ospSetf(camera, "aspect", width/(float)height);
-    ospSet1f(camera, "fovy", glm::degrees(fovy));
-    ospSet3fv(camera, "pos", camPos);
-    ospSet3fv(camera, "dir", camDir);
-    ospSet3fv(camera, "up", camUp);
-    ospCommit(camera);
-
-    // ospSetObject(renderer, "camera", camera);
-    // ospCommit(renderer);
 
     // auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -397,6 +455,8 @@ uint32_t *RTRenderBackend::renderToImage(
     camera_dir = dir;
     camera_up = up;
     camera_pos = pos;
+    lineRadius = radius;
+
 
     return fb;
 }

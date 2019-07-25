@@ -80,6 +80,7 @@ private:
     glm::vec3 lightDirection;
 
     bool useEmbree = true;
+    bool changeTFN = false;
 };
 
 

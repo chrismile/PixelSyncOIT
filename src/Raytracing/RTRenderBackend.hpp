@@ -103,6 +103,10 @@ public:
      */
     void setLineRadius(float lineRadius);
 
+    void recommitRadius();
+
+    void recommitColor();
+
     void commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, bool useEmbree);
 
 
@@ -116,7 +120,7 @@ public:
      * @return A pointer to the image the scene was rendered to. It is expected that the image data is in the RGBA32
      * format and stores sRGB data.
      */
-    uint32_t *renderToImage(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy);
+    uint32_t *renderToImage(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy, float radius, bool changeTFN);
 
 private:
     // Viewport width and height.
@@ -131,8 +135,10 @@ private:
     // hold the data 
     TubePrimitives Tube;
     OSPFrameBuffer framebuffer = NULL;
+    OSPModel world;
     OSPRenderer renderer;
     OSPCamera camera;
+    OSPGeometry tubeGeo;
 
     OSPData colorData;
     bool initializedColorData = false;
@@ -140,6 +146,7 @@ private:
     glm::vec3 camera_pos;
     glm::vec3 camera_dir;
     glm::vec3 camera_up;
+    bool use_Embree;
 };
 
 
