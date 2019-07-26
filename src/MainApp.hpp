@@ -191,7 +191,7 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = true;
+    bool perfMeasurementMode = false;
     bool timeCoherence = false;
     InternalState lastState;
     bool firstState = true;

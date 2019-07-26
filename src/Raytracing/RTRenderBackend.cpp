@@ -282,30 +282,42 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
     world = ospNewModel();
 
     if(!use_Embree){
-        // ! tubeGeo
-        tubeGeo = ospNewGeometry("tubes");
-        OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
-        OSPData linkData   = ospNewData(Tube.links.size() * sizeof(Link), OSP_RAW, Tube.links.data());
-        OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
-        ospCommit(nodeData);
-        ospCommit(linkData);
-        ospCommit(colorData);
+        if(Tubes.links.size() > 40000){
+            // separate into two geometris
+            // ! tubeGeo
+            tubeGeo = ospNewGeometry("tubes");
+            tubeGeo1 = ospNewGeometry("tubes");
+            std::vector<Node> nodes;
+            std::vector<Link> links;
+            // std::vector<ospcommon::vec4f> 
+        }else{
+            tubeGeo = ospNewGeometry("tubes");
+            OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
+            OSPData linkData   = ospNewData(Tube.links.size() * sizeof(Link), OSP_RAW, Tube.links.data());
+            OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
+            ospCommit(nodeData);
+            ospCommit(linkData);
+            ospCommit(colorData);
 
-        // initializedColorData = true;
+            // initializedColorData = true;
 
-        OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
-        ospCommit(materialList);
+            OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
+            ospCommit(materialList);
 
-        ospSetData(tubeGeo, "nodeData", nodeData);
-        ospSetData(tubeGeo, "linkData", linkData);
-        ospSetData(tubeGeo, "colorData", colorData);
-        ospSetMaterial(tubeGeo, materialList);
-        ospCommit(tubeGeo);
+            ospSetData(tubeGeo, "nodeData", nodeData);
+            ospSetData(tubeGeo, "linkData", linkData);
+            ospSetData(tubeGeo, "colorData", colorData);
+            ospSetMaterial(tubeGeo, materialList);
+            ospCommit(tubeGeo);
 
-        // ! Add tubeGeo to the world
-        ospAddGeometry(world, tubeGeo);
-        ospRelease(tubeGeo); // we are done using this handle
-        ospCommit(world);
+            // ! Add tubeGeo to the world
+            ospAddGeometry(world, tubeGeo);
+            ospRelease(tubeGeo); // we are done using this handle
+            ospCommit(world);
+
+        }
+
+
     }else{
         std::cout << "Using Embree Streamlines" << "\n";
         tubeGeo = ospNewGeometry("streamlines");

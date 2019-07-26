@@ -145,6 +145,8 @@ private:
     OSPRenderer renderer;
     OSPCamera camera;
     OSPGeometry tubeGeo;
+    // if data is too large will be separate into two geometries
+    OSPGeometry tubeGeo1;
 
     OSPData colorData;
     bool initializedColorData = false;
