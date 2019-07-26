@@ -166,7 +166,11 @@ void OIT_RayTracing::fromFile(
         Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
         renderBackend.loadTrajectories(filename, trajectories);
         onTransferFunctionMapRebuilt();
+<<<<<<< HEAD
         renderBackend.setLineRadius(lineRadius);
+=======
+        renderBackend.setLineRadius(this->lineRadius);
+>>>>>>> 693c1851090ca72bc811f2d38f678abbd5538a2c
         glm::mat4 viewMatrix = camera->getViewMatrix();
         glm::mat4 invViewMatrix = glm::inverse(camera->getViewMatrix());
         glm::vec3 upDir = invViewMatrix[1];
