@@ -139,11 +139,16 @@ private:
     // std::vector<uint32_t> image;
 
     // hold the data 
+    int threshold = 40000;
+    int numOfLines;
+    bool needSplit = false;
+    std::vector<int> index = {0};
     TubePrimitives Tube;
     OSPFrameBuffer framebuffer = NULL;
     OSPModel world;
     OSPRenderer renderer;
     OSPCamera camera;
+
     OSPGeometry tubeGeo;
     // if data is too large will be separate into two geometries
     OSPGeometry tubeGeo1;
