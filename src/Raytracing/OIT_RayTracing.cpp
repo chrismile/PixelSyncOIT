@@ -36,6 +36,7 @@
 
 #include "../Utils/TrajectoryFile.hpp"
 #include "OIT_RayTracing.hpp"
+#include "../OIT/BufferSizeWatch.hpp"
 
 #include <Utils/File/FileUtils.hpp>
 #include <Utils/File/Logfile.hpp>
@@ -108,6 +109,7 @@ void OIT_RayTracing::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     sgl::TextureSettings settings;
     renderImage = sgl::TextureManager->createEmptyTexture(width, height, settings);
 
+    setCurrentAlgorithmBufferSizeBytes(0);
     renderBackend.setViewportSize(width, height);
 }
 
