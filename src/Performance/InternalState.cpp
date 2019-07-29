@@ -4,6 +4,7 @@
 
 #include "../OIT/OIT_LinkedList.hpp"
 #include "InternalState.hpp"
+#include <Utils/File/FileUtils.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
 void getTestModesNoOIT(std::vector<InternalState> &states, InternalState state)
@@ -551,7 +552,7 @@ std::vector<InternalState> getTestModesPaper()
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
-    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
+    std::vector<std::string> modelNames = { "Rings"/*, "Aneurysm", "Turbulence", "Convection Rolls" */};
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {
@@ -571,6 +572,30 @@ std::vector<InternalState> getTestModesPaper()
         for (InternalState &state : states) {
             state.name = sgl::toString(state.windowResolution.x) + "x" + sgl::toString(state.windowResolution.y)
                     + " " + state.modelName + " " + state.name;
+        }
+    }
+
+
+    // Use different transfer functions?
+    std::vector<std::string> transferFunctionNameSuffices = { "Semi", "Full", "High" };
+    size_t n = states.size();
+    std::vector<InternalState> oldStates = states;
+    states.clear();
+    for (size_t i = 0; i < oldStates.size(); i++) {
+        for (int j = 0; j < transferFunctionNameSuffices.size(); j++) {
+            InternalState state = oldStates.at(i);
+            std::string modelFilename;
+            for (int i = 0; i < NUM_MODELS; i++) {
+                if (MODEL_DISPLAYNAMES[i] == state.modelName) {
+                    modelFilename = MODEL_FILENAMES[i];
+                }
+            }
+            std::string modelNamePure =
+                    sgl::FileUtils::get()->getPureFilename(sgl::FileUtils::get()->removeExtension(modelFilename));
+            std::string tfSuffix = transferFunctionNameSuffices.at(j);
+            state.name = state.name + "(TF: " + tfSuffix + ")";
+            state.transferFunctionName = std::string() + "tests/" + modelNamePure + "_" + tfSuffix + ".xml";
+            states.push_back(state);
         }
     }
 
