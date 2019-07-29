@@ -163,6 +163,7 @@ void OIT_RayTracing::fromFile(
 
         renderBackend.loadTriangleMesh(filename, indices, vertices, vertexNormals, vertexAttributes);
     } else {
+        std::cout << "----file name using is " << filename << std::endl;
         Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
         renderBackend.loadTrajectories(filename, trajectories);
         onTransferFunctionMapRebuilt();
