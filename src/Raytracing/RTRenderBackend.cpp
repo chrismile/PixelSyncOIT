@@ -36,6 +36,28 @@
 #include <cmath>
 #include <random>
 
+// See: https://stackoverflow.com/questions/2513505/how-to-get-available-memory-c-g
+#ifdef linux
+#include <unistd.h>
+size_t getUsedSystemMemoryBytes()
+{
+    size_t totalNumPages = sysconf(_SC_PHYS_PAGES);
+    size_t availablePages = sysconf(_SC_AVPHYS_PAGES);
+    size_t pageSizeBytes = sysconf(_SC_PAGE_SIZE);
+    return (totalNumPages - availablePages) * pageSizeBytes;
+}
+#endif
+#ifdef windows
+#include <windows.h>
+size_t getUsedSystemMemoryBytes()
+{
+    MEMORYSTATUSEX status;
+    status.dwLength = sizeof(status);
+    GlobalMemoryStatusEx(&status);
+    return status.ullTotalPhys - status.ullAvailPhys;
+}
+#endif
+
 void writePPM(const char *fileName,
               const int x,
               const int y,
@@ -372,20 +394,20 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
                 ospCommit(linkData);
                 ospCommit(colorData);
                 
-                OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
-                ospCommit(materialList);
+                // OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
+                // ospCommit(materialList);
 
                 if(i == 0){
                     ospSetData(tubeGeo, "nodeData", nodeData);
                     ospSetData(tubeGeo, "linkData", linkData);
                     ospSetData(tubeGeo, "colorData", colorData);
-                    ospSetMaterial(tubeGeo, materialList);
+                    // ospSetMaterial(tubeGeo, materialList);
                     ospCommit(tubeGeo);
                 }else{
                     ospSetData(tubeGeo1, "nodeData", nodeData);
                     ospSetData(tubeGeo1, "linkData", linkData);
                     ospSetData(tubeGeo1, "colorData", colorData);
-                    ospSetMaterial(tubeGeo1, materialList);
+                    // ospSetMaterial(tubeGeo1, materialList);
                     ospCommit(tubeGeo1);
                 }            
             }
@@ -393,7 +415,15 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
             ospAddGeometry(world, tubeGeo1);
             ospRelease(tubeGeo); // we are done using this handle
             ospRelease(tubeGeo1);
+            size_t before = getUsedSystemMemoryBytes();
             ospCommit(world);
+            size_t after = getUsedSystemMemoryBytes();
+            std::cout << "====================================== " << "\n";
+            std::cout << "              MEMORY USAGE             " << std::endl;
+            std::cout << " Before : " << before << " After: " << after << std::endl;
+            std::cout << " Used: " << after - before << std::endl;
+            std::cout << "====================================== " << "\n";
+
         }else{
             tubeGeo = ospNewGeometry("tubes");
             OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
@@ -411,13 +441,21 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
             ospSetData(tubeGeo, "nodeData", nodeData);
             ospSetData(tubeGeo, "linkData", linkData);
             ospSetData(tubeGeo, "colorData", colorData);
-            ospSetMaterial(tubeGeo, materialList);
+            // ospSetMaterial(tubeGeo, materialList);
             ospCommit(tubeGeo);
 
             // ! Add tubeGeo to the world
             ospAddGeometry(world, tubeGeo);
             ospRelease(tubeGeo); // we are done using this handle
+            
+            size_t before = getUsedSystemMemoryBytes();
             ospCommit(world);
+            size_t after = getUsedSystemMemoryBytes();
+            std::cout << "====================================== " << "\n";
+            std::cout << "              MEMORY USAGE             " << std::endl;
+            std::cout << " Before : " << before << " After: " << after << std::endl;
+            std::cout << " Used: " << after - before << std::endl;
+            std::cout << "====================================== " << "\n";
 
         }
 
@@ -462,7 +500,14 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
 
         ospAddGeometry(world, tubeGeo);
         ospRelease(tubeGeo); // we are done using this handle
+        size_t before = getUsedSystemMemoryBytes();
         ospCommit(world);
+        size_t after = getUsedSystemMemoryBytes();
+        std::cout << "====================================== " << "\n";
+        std::cout << "              MEMORY USAGE             " << std::endl;
+        std::cout << " Before : " << before << " After: " << after << std::endl;
+        std::cout << " Used: " << after - before << std::endl;
+        std::cout << "====================================== " << "\n";
     }
 
     renderer = ospNewRenderer("scivis");

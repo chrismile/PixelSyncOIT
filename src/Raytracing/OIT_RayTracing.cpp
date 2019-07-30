@@ -43,29 +43,7 @@
 
 #include "ospray/ospray.h"
 
-static bool useEmbreeCurves = false;
-
-// See: https://stackoverflow.com/questions/2513505/how-to-get-available-memory-c-g
-#ifdef linux
-#include <unistd.h>
-size_t getUsedSystemMemoryBytes()
-{
-    size_t totalNumPages = sysconf(_SC_PHYS_PAGES);
-    size_t availablePages = sysconf(_SC_AVPHYS_PAGES);
-    size_t pageSizeBytes = sysconf(_SC_PAGE_SIZE);
-    return (totalNumPages - availablePages) * pageSizeBytes;
-}
-#endif
-#ifdef windows
-#include <windows.h>
-size_t getUsedSystemMemoryBytes()
-{
-    MEMORYSTATUSEX status;
-    status.dwLength = sizeof(status);
-    GlobalMemoryStatusEx(&status);
-    return status.ullTotalPhys - status.ullAvailPhys;
-}
-#endif
+static bool useEmbreeCurves = true;
 
 OIT_RayTracing::OIT_RayTracing(sgl::CameraPtr &camera, const sgl::Color &clearColor)
         : camera(camera), clearColor(clearColor), renderBackend(useEmbreeCurves)
