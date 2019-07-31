@@ -33,6 +33,7 @@
 #include <Graphics/Texture/TextureManager.hpp>
 #include <Graphics/Scene/Camera.hpp>
 #include <Utils/MeshSerializer.hpp>
+#include <Utils/TrajectoryLoader.hpp>
 
 #include "../Utils/TrajectoryFile.hpp"
 #include "OIT_RayTracing.hpp"
@@ -151,8 +152,13 @@ void OIT_RayTracing::fromFile(
     auto startLoadFile = std::chrono::system_clock::now();
 
     if (useTriangleMesh) {
+        std::string modelFilenameBinmesh = sgl::FileUtils::get()->removeExtension(filename) + ".binmesh";
         BinaryMesh binmesh;
-        readMesh3D(filename, binmesh);
+        if (!sgl::FileUtils::get()->exists(modelFilenameBinmesh)) {
+            //convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, filename, modelFilenameBinmesh, lineRadius);
+            convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename, modelFilenameBinmesh, lineRadius);
+        }
+        readMesh3D(modelFilenameBinmesh, binmesh);
         BinarySubMesh &submesh = binmesh.submeshes.at(0);
         std::vector<uint32_t> &indices = submesh.indices;
         std::vector<glm::vec3> vertices;
