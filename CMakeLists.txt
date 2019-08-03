@@ -6,14 +6,30 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
 set (CMAKE_CXX_STANDARD 11)
 
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.c)
+include_directories(src)
+
+#make VERBOSE=1
+
+option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" on)
+
+if(USE_RAYTRACING)
+	find_package(ospray REQUIRED)
+	include_directories(${OSPRAY_INCLUDE_DIRS})
+	add_definitions(-DUSE_RAYTRACING)
+else()
+	list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/Raytracing/OIT_RayTracing.cpp)
+	list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/Raytracing/RTRenderBackend.cpp)
+endif()
+
 IF(WIN32)
 	add_executable(PixelSyncOIT WIN32 ${SOURCES})
 ELSE()
 	add_executable(PixelSyncOIT ${SOURCES})
 ENDIF()
-include_directories(src)
 
-#make VERBOSE=1
+if(USE_RAYTRACING)
+	target_link_libraries(PixelSyncOIT ${OSPRAY_LIBRARIES})
+endif()
 
 IF(WIN32)
 	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
@@ -21,14 +37,6 @@ IF(WIN32)
 ELSE()
 	target_link_libraries(PixelSyncOIT SDL2)
 ENDIF()
-
-option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" on)
-
-if(USE_RAYTRACING)
-	find_package(ospray REQUIRED)
-	include_directories(${OSPRAY_INCLUDE_DIRS})
-	target_link_libraries(PixelSyncOIT ${OSPRAY_LIBRARIES})
-endif()
 
 
 cmake_policy(SET CMP0012 NEW)

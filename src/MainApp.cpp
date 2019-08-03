@@ -60,8 +60,11 @@
 #include "OIT/OIT_DepthPeeling.hpp"
 #include "OIT/TilingMode.hpp"
 #include "VoxelRaytracing/OIT_VoxelRaytracing.hpp"
-#include "Raytracing/OIT_RayTracing.hpp"
 #include "Tests/TestPixelSyncPerformance.hpp"
+#ifdef USE_RAYTRACING
+#include "Raytracing/OIT_RayTracing.hpp"
+#endif
+
 #include "MainApp.hpp"
 
 void openglErrorCallback()
@@ -631,6 +634,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         transparentObject = MeshRenderer();
+#ifdef USE_RAYTRACING
     } else if (mode == RENDER_MODE_RAYTRACING) {
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
                 useProgrammableFetch, programmableFetchUseAoS);
@@ -646,8 +650,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         transparentObject = MeshRenderer();
+#endif
     }
-    
+
     rotation = glm::mat4(1.0f);
     scaling = glm::mat4(1.0f);
 
@@ -807,8 +812,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLABBucket);
     } else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_VoxelRaytracing(camera, clearColor));
+#ifdef USE_RAYTRACING
     } else if (mode == RENDER_MODE_RAYTRACING) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_RayTracing(camera, clearColor));
+#endif
     } else if (mode == RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new TestPixelSyncPerformance);
     } else {
@@ -853,6 +860,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
     }
 
+#ifdef USE_RAYTRACING
     if (modelFilenamePure.length() > 0 && mode == RENDER_MODE_RAYTRACING) {
         std::vector<float> lineAttributes;
         OIT_RayTracing *raytracer = (OIT_RayTracing*)oitRenderer.get();
@@ -865,6 +873,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
     }
+#endif
 
     if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
@@ -876,6 +885,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         voxelRaytracer->setTransferFunctionTexture(transferFunctionWindow.getTransferFunctionMapTexture());
     }
 
+#ifdef USE_RAYTRACING
     if (mode == RENDER_MODE_RAYTRACING) {
         modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
 
@@ -896,6 +906,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         raytracer->setClearColor(clearColor);
         raytracer->setLightDirection(lightDirection);
     }
+#endif
 
 
     clearColorSelection = ImColor(255, 255, 255, 255);
@@ -914,8 +925,10 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
                                 clearColorSelection.w);
     if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
+#ifdef USE_RAYTRACING
     } else if (mode == RENDER_MODE_RAYTRACING) {
         static_cast<OIT_RayTracing*>(oitRenderer.get())->setClearColor(clearColor);
+#endif
     }
     transferFunctionWindow.setClearColor(clearColor);
 
@@ -1190,8 +1203,10 @@ void PixelSyncApp::render()
         } else {
             Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
         }
+#ifdef USE_RAYTRACING
     } else {
         static_cast<OIT_RayTracing*>(oitRenderer.get())->blitTexture();
+#endif
     }
 
     if (perfMeasurementMode) {// && frameNum == 0) {
@@ -1416,8 +1431,10 @@ void PixelSyncApp::renderGUI()
         if (transferFunctionWindow.getTransferFunctionMapRebuilt()) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
                 static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->onTransferFunctionMapRebuilt();
+#ifdef USE_RAYTRACING
             } else if (mode == RENDER_MODE_RAYTRACING) {
                 static_cast<OIT_RayTracing*>(oitRenderer.get())->onTransferFunctionMapRebuilt();
+#endif
             }
         }
     }
@@ -1451,8 +1468,10 @@ void PixelSyncApp::renderSceneSettingsGUI()
                                     clearColorSelection.w);
         if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
             static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
+#ifdef USE_RAYTRACING
         } else if (mode == RENDER_MODE_RAYTRACING) {
             static_cast<OIT_RayTracing*>(oitRenderer.get())->setClearColor(clearColor);
+#endif
         }
         transferFunctionWindow.setClearColor(clearColor);
         reRender = true;
@@ -1470,8 +1489,10 @@ void PixelSyncApp::renderSceneSettingsGUI()
         lightDirection = glm::vec3(sinf(theta) * cosf(phi), sinf(theta) * sinf(phi), cosf(theta));
         if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
             static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLightDirection(lightDirection);
+#ifdef USE_RAYTRACING
         } else if (mode == RENDER_MODE_RAYTRACING) {
             static_cast<OIT_RayTracing*>(oitRenderer.get())->setLightDirection(lightDirection);
+#endif
         }
         if (currentShadowTechnique != NO_SHADOW_MAPPING) {
             shadowTechnique->setLightDirection(lightDirection, boundingBox);
@@ -1542,8 +1563,10 @@ void PixelSyncApp::renderSceneSettingsGUI()
             && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
                 static_cast<OIT_VoxelRaytracing *>(oitRenderer.get())->setLineRadius(lineRadius);
+#ifdef USE_RAYTRACING
             } else if (mode == RENDER_MODE_RAYTRACING) {
                 static_cast<OIT_RayTracing*>(oitRenderer.get())->setLineRadius(lineRadius);
+#endif
             }
             reRender = true;
         }

@@ -6,7 +6,7 @@ else()
 	set(SGL_INCLUDE_DIR "${SGL_INCLUDE_DIR}/sgl")
 endif()
 include_directories(${SGL_INCLUDE_DIR})
-message(${SGL_INCLUDE_DIR})
+#message(${SGL_INCLUDE_DIR})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SGL DEFAULT_MSG SGL_LIBRARIES SGL_INCLUDE_DIR)
