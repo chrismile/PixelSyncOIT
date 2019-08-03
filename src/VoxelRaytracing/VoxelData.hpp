@@ -65,20 +65,6 @@ struct LineSegmentCompressed
 };
 
 
-/*class Voxel
-{
-    std::vector<LineSegment> lineSegments;
-};
-
-struct VoxelGridData
-{
-    glm::ivec3 gridResolution, quantizationResolution;
-    std::vector<Voxel> voxels;
-
-    /// Every entry is one LOD
-    std::vector<std::vector<float>> voxelDensityLODs;
-};*/
-
 struct VoxelGridDataCompressed
 {
     glm::ivec3 gridResolution, quantizationResolution;
@@ -96,9 +82,8 @@ struct VoxelGridDataCompressed
     std::vector<uint32_t> voxelLineListOffsets;
     std::vector<uint32_t> numLinesInVoxel;
 
-    std::vector<float> voxelDensityLODs;
-    std::vector<float> voxelAOLODs;
-    std::vector<uint32_t> octreeLODs;
+    std::vector<float> voxelDensities;
+    std::vector<float> voxelAOFactors;
 
 #ifdef PACK_LINES
     std::vector<LineSegmentCompressed> lineSegments;
@@ -117,7 +102,6 @@ struct VoxelGridDataGPU
 
     sgl::TexturePtr densityTexture;
     sgl::TexturePtr aoTexture;
-    sgl::TexturePtr octreeTexture;
 
     sgl::GeometryBufferPtr lineSegments;
 };

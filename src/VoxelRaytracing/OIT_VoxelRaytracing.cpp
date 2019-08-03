@@ -176,9 +176,8 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
         byteSize =
                 compressedData.voxelLineListOffsets.size() * sizeof(uint32_t)
                 + compressedData.numLinesInVoxel.size() * sizeof(uint32_t)
-                + compressedData.voxelDensityLODs.size() * sizeof(float)
-                + compressedData.voxelAOLODs.size() * sizeof(float)
-                + compressedData.octreeLODs.size() * sizeof(uint32_t)
+                + compressedData.voxelDensities.size() * sizeof(float)
+                + compressedData.voxelAOFactors.size() * sizeof(float)
                 + compressedData.attributes.size() * sizeof(float)
 #ifdef PACK_LINES
                 + compressedData.lineSegments.size() * sizeof(uint32_t) * 2;
@@ -310,8 +309,8 @@ void OIT_VoxelRaytracing::setUniformData()
     if (renderShader->hasUniform("densityTexture")) {
         renderShader->setUniform("densityTexture", data.densityTexture, 0);
     }
-    if (renderShader->hasUniform("octreeTexture")) {
-        renderShader->setUniform("octreeTexture", data.octreeTexture, 1);
+    if (renderShader->hasUniform("aoTexture")) {
+        renderShader->setUniform("aoTexture", data.aoTexture, 1);
     }
     if (renderShader->hasUniform("transferFunctionTexture")) {
         renderShader->setUniform("transferFunctionTexture", this->tfTexture, 2);

@@ -149,6 +149,28 @@ float VoxelDiscretizer::computeDensityHair(float opacity)
 VoxelCurveDiscretizer::VoxelCurveDiscretizer(const glm::ivec3 &gridResolution, const glm::ivec3 &quantizationResolution)
         : gridResolution(gridResolution), quantizationResolution(quantizationResolution)
 {
+    voxels = nullptr;
+}
+
+VoxelCurveDiscretizer::~VoxelCurveDiscretizer()
+{
+    delete[] voxels;
+}
+
+void VoxelCurveDiscretizer::setVoxelGrid(const sgl::AABB3 &aabb)
+{
+    glm::vec3 gridDimensions = aabb.getDimensions();
+    glm::vec3 gridResolutionCubic = gridResolution;
+
+    float maxDimensionLength = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        maxDimensionLength = std::max(maxDimensionLength, gridDimensions[i]);
+    }
+    for (int i = 0; i < 3; i++) {
+        float sideLengthFactor = gridDimensions[i] / maxDimensionLength;
+        gridResolution[i] = (int)std::ceil(gridResolution[i] * sideLengthFactor);
+    }
+
     voxels = new VoxelDiscretizer[gridResolution.x * gridResolution.y * gridResolution.z];
     for (int z = 0; z < gridResolution.z; z++) {
         for (int y = 0; y < gridResolution.y; y++) {
@@ -160,10 +182,6 @@ VoxelCurveDiscretizer::VoxelCurveDiscretizer(const glm::ivec3 &gridResolution, c
     }
 }
 
-VoxelCurveDiscretizer::~VoxelCurveDiscretizer()
-{
-    delete[] voxels;
-}
 
 VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const std::string &filename,
         TrajectoryType trajectoryType, std::vector<float> &attributes, float &_maxVorticity,
@@ -206,7 +224,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
     std::cout << "Num LineSegments: " << numLineSegments << std::endl << std::flush;
 
 
-    if (isRings) {
+    /*if (isRings) {
         linesBoundingBox = sgl::AABB3();
         linesBoundingBox.combine(glm::vec3(-2));
         linesBoundingBox.combine(glm::vec3(2));
@@ -220,20 +238,22 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
         linesBoundingBox = sgl::AABB3();
         linesBoundingBox.combine(glm::vec3(0.0, 0.0, 0.0));
         linesBoundingBox.combine(glm::vec3(1.0, 1.0, 1.0)); // 1.0, 1.0, 0.03
-    }
-
-    std::cout << "Bounding box: " << linesBoundingBox.getMaximum().x << " " << linesBoundingBox.getMaximum().y << " " << linesBoundingBox.getMaximum().z << std::endl << std::flush;
-
+    }*/
 
     _maxVorticity = maxVorticity;
     this->attributes = attributes;
 
 
     // Move to origin and scale to range from (0, 0, 0) to (rx, ry, rz).
+    setVoxelGrid(linesBoundingBox);
     linesToVoxel = sgl::matrixScaling(1.0f / linesBoundingBox.getDimensions() * glm::vec3(gridResolution))
             * sgl::matrixTranslation(-linesBoundingBox.getMinimum());
-
     voxelToLines = glm::inverse(linesToVoxel);
+
+    std::cout << "Grid resolution: " << gridResolution.x << " " << gridResolution.y
+              << " " << gridResolution.z << std::endl;
+    std::cout << "Bounding box: " << linesBoundingBox.getMaximum().x << " " << linesBoundingBox.getMaximum().y
+              << " " << linesBoundingBox.getMaximum().z << std::endl << std::flush;
 
     // Transform curves to voxel grid space
     for (Curve &curve : curves) {
@@ -301,6 +321,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromHairDataset(const std::
     }
 
     // Move to origin and scale to range from (0, 0, 0) to (rx, ry, rz).
+    setVoxelGrid(linesBoundingBox);
     linesToVoxel = sgl::matrixScaling(1.0f / linesBoundingBox.getDimensions() * glm::vec3(gridResolution))
                    * sgl::matrixTranslation(-linesBoundingBox.getMinimum());
     voxelToLines = glm::inverse(linesToVoxel);
@@ -391,9 +412,8 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::compressData()
     voxelAOFactors.resize(n);
     generateVoxelAOFactorsFromDensity(voxelDensities, voxelAOFactors, gridResolution, isHairDataset);
 
-    dataCompressed.voxelDensityLODs = generateMipmapsForDensity(&voxelDensities.front(), gridResolution);
-    dataCompressed.voxelAOLODs = generateMipmapsForDensity(&voxelAOFactors.front(), gridResolution);
-    dataCompressed.octreeLODs = generateMipmapsForOctree(&usedVoxels.front(), gridResolution);
+    dataCompressed.voxelDensities = voxelDensities;
+    dataCompressed.voxelAOFactors = voxelAOFactors;
     return dataCompressed;
 }
 
@@ -949,8 +969,7 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
     dataCompressed.numLinesInVoxel = numSegmentsPerVoxel;
     dataCompressed.lineSegments = reducedLineSegmentBuffer;
 
-    dataCompressed.voxelDensityLODs = generateMipmapsForDensity(&voxelDensities.front(), gridResolution);
-    dataCompressed.voxelAOLODs = generateMipmapsForDensity(&voxelAOFactors.front(), gridResolution);
-    dataCompressed.octreeLODs = generateMipmapsForOctree(&numSegmentsPerVoxel.front(), gridResolution);
+    dataCompressed.voxelDensities = voxelDensities;
+    dataCompressed.voxelAOFactors = voxelAOFactors;
     return dataCompressed;
 }

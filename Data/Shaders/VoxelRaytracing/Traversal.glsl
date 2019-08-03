@@ -1,7 +1,7 @@
 #ifndef TRAVERSAL_GLSL
 #define TRAVERSAL_GLSL
 
-#define MAX_STACK_SIZE (GRID_RESOLUTION_LOG2+1)
+/*#define MAX_STACK_SIZE (GRID_RESOLUTION_LOG2+1)
 
 bool isPositionOutsideOfParent(ivec3 lodIndex, ivec3 parentStack[MAX_STACK_SIZE], int stackSize) {
     if (stackSize == 0) {
@@ -18,7 +18,7 @@ int intlog2(int x) {
         ++log2x;
     }
     return log2x;
-}
+}*/
 
 ivec3 getNextVoxelIndex(ivec3 voxelIndex, float tMaxX, float tMaxY, float tMaxZ, int stepX, int stepY, int stepZ) {
     ivec3 nextVoxelIndex = voxelIndex;
