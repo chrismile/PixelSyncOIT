@@ -424,7 +424,7 @@ void convertTrajectoryDataToBinaryTriangleMesh(
     auto start = std::chrono::system_clock::now();
 
     if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
-        initializeCircleData(3, 0.05);
+        initializeCircleData(3, lineRadius);
     } else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
         initializeCircleData(3, lineRadius);
     } else {
@@ -676,7 +676,7 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     unsigned int NUM_CIRCLE_SEGMENTS = 3;
     if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
         sgl::ShaderManager->addPreprocessorDefine("NUM_CIRCLE_SEGMENTS", NUM_CIRCLE_SEGMENTS);
-        sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", 0.05);
+        sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", lineRadius);
     } else if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
         sgl::ShaderManager->addPreprocessorDefine("NUM_CIRCLE_SEGMENTS", NUM_CIRCLE_SEGMENTS);
         sgl::ShaderManager->addPreprocessorDefine("CIRCLE_RADIUS", lineRadius);

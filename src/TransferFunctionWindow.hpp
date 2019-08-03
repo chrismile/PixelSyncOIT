@@ -72,10 +72,16 @@ public:
 
     // For querying transfer function in application
     float getOpacityAtAttribute(float attribute); // attribute: Between 0 and 1
+    const std::vector<sgl::Color> &getTransferFunctionMap_sRGB() { return transferFunctionMap_sRGB; }
 
     // For OpenGL: Has 256 entries. Get mapped color for normalized attribute by accessing entry at "attr*255".
     sgl::TexturePtr &getTransferFunctionMapTexture();
     bool getTransferFunctionMapRebuilt();
+
+    // For ray tracing interface
+    inline const std::vector<OpacityPoint> &getOpacityPoints() { return opacityPoints; }
+    inline const std::vector<ColorPoint_sRGB> &getColorPoints_sRGB() { return colorPoints; }
+    inline const std::vector<ColorPoint_LinearRGB> &getColorPoints_LinearRGB() { return colorPoints_LinearRGB; }
 
     // sRGB and linear RGB conversion
     static glm::vec3 sRGBToLinearRGB(const glm::vec3 &color_LinearRGB);

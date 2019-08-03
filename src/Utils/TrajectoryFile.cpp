@@ -156,6 +156,14 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             trajectory.positions.reserve(currentLineIndices.size());
             pathLineVorticities.reserve(currentLineIndices.size());
             for (size_t i = 0; i < currentLineIndices.size(); i++) {
+                glm::vec3 pos = globalLineVertices.at(currentLineIndices.at(i));
+
+                // Remove invalid line points (used in many scientific datasets to indicate invalid lines).
+                const float MAX_VAL = 1e10f;
+                if (std::fabs(pos.x) > MAX_VAL || std::fabs(pos.y) > MAX_VAL || std::fabs(pos.z) > MAX_VAL) {
+                    continue;
+                }
+
                 trajectory.positions.push_back(globalLineVertices.at(currentLineIndices.at(i)));
                 pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
             }

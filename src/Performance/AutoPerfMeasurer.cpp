@@ -235,7 +235,12 @@ void AutoPerfMeasurer::setNextState(bool first)
 
 void AutoPerfMeasurer::startMeasure(float timeStamp)
 {
-    timerGL.startGPU(currentState.name, timeStamp);
+    if (currentState.oitAlgorithm == RENDER_MODE_RAYTRACING) {
+        // CPU rendering algorithm, thus use a CPU timer and not a GPU timer.
+        timerGL.startCPU(currentState.name, timeStamp);
+    } else {
+        timerGL.startGPU(currentState.name, timeStamp);
+    }
 }
 
 void AutoPerfMeasurer::endMeasure()

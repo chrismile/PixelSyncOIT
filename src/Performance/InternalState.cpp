@@ -4,6 +4,7 @@
 
 #include "../OIT/OIT_LinkedList.hpp"
 #include "InternalState.hpp"
+#include <Utils/File/FileUtils.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
 void getTestModesNoOIT(std::vector<InternalState> &states, InternalState state)
@@ -469,21 +470,37 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
     if (boost::starts_with(state.modelName, "Data/ConvectionRolls/output")) { gridResolution = 256; }
 
 //    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
-        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
-        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-                { "gridResolution", sgl::toString(gridResolution) },
-                { "quantizationResolution", sgl::toString(64) },
-                { "useNeighborSearch", "true" },
-        });
-        states.push_back(state);
-        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
-        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-                { "gridResolution", sgl::toString(gridResolution) },
-                { "quantizationResolution", sgl::toString(64) },
-                { "useNeighborSearch", "false" },
-        });
-        states.push_back(state);
+    state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "gridResolution", sgl::toString(gridResolution) },
+            { "quantizationResolution", sgl::toString(64) },
+            { "useNeighborSearch", "true" },
+    });
+    states.push_back(state);
+    state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "gridResolution", sgl::toString(gridResolution) },
+            { "quantizationResolution", sgl::toString(64) },
+            { "useNeighborSearch", "false" },
+    });
+    states.push_back(state);
 //    }
+}
+
+void getTestModesRayTracing(std::vector<InternalState> &states, InternalState state)
+{
+    state.oitAlgorithm = RENDER_MODE_RAYTRACING;
+    state.name = std::string() + "Ray Tracing (Tubes)";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "useEmbreeCurves", "false" },
+    });
+    states.push_back(state);
+
+    state.name = std::string() + "Ray Tracing (Embree)";
+    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+            { "useEmbreeCurves", "true" },
+    });
+    states.push_back(state);
 }
 
 void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalState state)
@@ -508,7 +525,7 @@ void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState 
 
 void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesDepthPeeling(states, state);
+    /*getTestModesDepthPeeling(states, state);
 //    getTestModesNoOIT(states, state);
     getTestModesMLAB(states, state);
     getTestModesMBOIT(states, state);
@@ -516,24 +533,33 @@ void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, Interna
     getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
 //    getTestModesDepthComplexity(states, state);
+*/
+    getTestModesDepthPeeling(states, state);
+    getTestModesLinkedListQuality(states, state);
+    getTestModesRayTracing(states, state);
+}
+
+void getTestModesPaperForRTPerformance(std::vector<InternalState> &states, InternalState state)
+{
+    getTestModesRayTracing(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720), glm::ivec2(1920, 1080), glm::ivec2(2560, 1440) };
-    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
+    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
-//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
-    std::vector<std::string> modelNames = { "Rings", "Aneurysm", /*"Turbulence",*/ "Convection Rolls"};
+//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
+    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {
         state.windowResolution = windowResolutions.at(i);
         for (size_t j = 0; j < modelNames.size(); j++) {
             state.modelName = modelNames.at(j);
-            getTestModesPaperForMeshQuality(states, state);
+            getTestModesPaperForRTPerformance(states, state);
         }
     }
 
@@ -546,6 +572,30 @@ std::vector<InternalState> getTestModesPaper()
         for (InternalState &state : states) {
             state.name = sgl::toString(state.windowResolution.x) + "x" + sgl::toString(state.windowResolution.y)
                     + " " + state.modelName + " " + state.name;
+        }
+    }
+
+
+    // Use different transfer functions?
+    std::vector<std::string> transferFunctionNameSuffices = { "Semi", "Full", "High" };
+    size_t n = states.size();
+    std::vector<InternalState> oldStates = states;
+    states.clear();
+    for (size_t i = 0; i < oldStates.size(); i++) {
+        for (int j = 0; j < transferFunctionNameSuffices.size(); j++) {
+            InternalState state = oldStates.at(i);
+            std::string modelFilename;
+            for (int i = 0; i < NUM_MODELS; i++) {
+                if (MODEL_DISPLAYNAMES[i] == state.modelName) {
+                    modelFilename = MODEL_FILENAMES[i];
+                }
+            }
+            std::string modelNamePure =
+                    sgl::FileUtils::get()->getPureFilename(sgl::FileUtils::get()->removeExtension(modelFilename));
+            std::string tfSuffix = transferFunctionNameSuffices.at(j);
+            state.name = state.name + "(TF: " + tfSuffix + ")";
+            state.transferFunctionName = std::string() + "tests/" + modelNamePure + "_" + tfSuffix + ".xml";
+            states.push_back(state);
         }
     }
 

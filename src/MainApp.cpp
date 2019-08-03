@@ -60,6 +60,7 @@
 #include "OIT/OIT_DepthPeeling.hpp"
 #include "OIT/TilingMode.hpp"
 #include "VoxelRaytracing/OIT_VoxelRaytracing.hpp"
+#include "Raytracing/OIT_RayTracing.hpp"
 #include "Tests/TestPixelSyncPerformance.hpp"
 #include "MainApp.hpp"
 
@@ -207,7 +208,11 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
     // Buffers for off-screen rendering
     sceneFramebuffer = Renderer->createFBO();
     TextureSettings textureSettings;
-    textureSettings.internalFormat = GL_RGBA16; // GL_RGBA8 For i965 driver to accept image load/store
+    if (useLinearRGB) {
+        textureSettings.internalFormat = GL_RGBA16;
+    } else {
+        textureSettings.internalFormat = GL_RGBA8; // GL_RGBA8 For i965 driver to accept image load/store (legacy)
+    }
     textureSettings.pixelType = GL_UNSIGNED_BYTE;
     textureSettings.pixelFormat = GL_RGB;
     sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
@@ -464,30 +469,31 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
-
-    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
-
-    } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/DrivenCavity.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/RayleighBenard.xml");
-    } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
-    } else {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+    // Only load new TF if loading dataset-specific transfer functions isn't overwritten.
+    if (transferFunctionName.empty()) {
+        if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/DrivenCavity.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/RayleighBenard.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
+        } else {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+        }
     }
 
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
@@ -586,7 +592,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
-    if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+    if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING) {
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
                 useProgrammableFetch, programmableFetchUseAoS, lineRadius);
         if (shaderMode == SHADER_MODE_VORTICITY) {
@@ -611,7 +617,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 transparentObject.setNewShader(transparencyShader);
             }
         }
-    } else {
+    } else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
                 useProgrammableFetch, programmableFetchUseAoS);
         boundingBox = transparentObject.boundingBox;
@@ -625,8 +631,23 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
         transparentObject = MeshRenderer();
+    } else if (mode == RENDER_MODE_RAYTRACING) {
+        transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
+                useProgrammableFetch, programmableFetchUseAoS);
+        boundingBox = transparentObject.boundingBox;
+        std::vector<float> lineAttributes;
+        OIT_RayTracing *raytracer = (OIT_RayTracing*)oitRenderer.get();
+        float maxVorticity = 0.0f;
+        bool useTriangleMesh = lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_TRIANGLES;
+        raytracer->loadModel(usedModelIndex, trajectoryType, useTriangleMesh/*, lineAttributes, maxVorticity*/);
+        // Hair stores own line thickness
+        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            lineRadius = raytracer->getLineRadius();
+        }
+        transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
+        transparentObject = MeshRenderer();
     }
-
+    
     rotation = glm::mat4(1.0f);
     scaling = glm::mat4(1.0f);
 
@@ -786,6 +807,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLABBucket);
     } else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_VoxelRaytracing(camera, clearColor));
+    } else if (mode == RENDER_MODE_RAYTRACING) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_RayTracing(camera, clearColor));
     } else if (mode == RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new TestPixelSyncPerformance);
     } else {
@@ -799,15 +822,15 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
 
     transparencyShader = oitRenderer->getGatherShader();
 
-    if (oldMode == RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
-            && !transparentObject.isLoaded()) {
+    if ((oldMode == RENDER_MODE_VOXEL_RAYTRACING_LINES || oldMode == RENDER_MODE_RAYTRACING)
+        && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING) {
         loadModel(MODEL_FILENAMES[usedModelIndex], false);
     }
     if (oldMode == RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE) {
         loadModel(MODEL_FILENAMES[usedModelIndex], true);
     }
 
-    if (transparentObject.isLoaded() && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
+    if (transparentObject.isLoaded() && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING
             && !oitRenderer->isTestingMode()) {
         transparentObject.setNewShader(transparencyShader);
         if (shaderMode != SHADER_MODE_VORTICITY) {
@@ -830,8 +853,20 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
     }
 
-    if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+    if (modelFilenamePure.length() > 0 && mode == RENDER_MODE_RAYTRACING) {
+        std::vector<float> lineAttributes;
+        OIT_RayTracing *raytracer = (OIT_RayTracing*)oitRenderer.get();
+        float maxVorticity = 0.0f;
+        bool useTriangleMesh = lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_TRIANGLES;
+        raytracer->loadModel(usedModelIndex, trajectoryType, useTriangleMesh/*, lineAttributes, maxVorticity*/);
+        // Hair stores own line thickness
+        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            lineRadius = raytracer->getLineRadius();
+        }
+        transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
+    }
 
+    if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
 
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
@@ -839,6 +874,27 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         voxelRaytracer->setClearColor(clearColor);
         voxelRaytracer->setLightDirection(lightDirection);
         voxelRaytracer->setTransferFunctionTexture(transferFunctionWindow.getTransferFunctionMapTexture());
+    }
+
+    if (mode == RENDER_MODE_RAYTRACING) {
+        modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
+
+        if (recording || testCameraFlight) {
+            if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+                lineRadius = 0.002;
+            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+                lineRadius = 0.001;
+            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+                lineRadius = 0.0005;
+            } else {
+                lineRadius = 0.0007;
+            }
+        }
+
+        OIT_RayTracing *raytracer = (OIT_RayTracing*)oitRenderer.get();
+        raytracer->setLineRadius(lineRadius);
+        raytracer->setClearColor(clearColor);
+        raytracer->setLightDirection(lightDirection);
     }
 
 
@@ -858,6 +914,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
                                 clearColorSelection.w);
     if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
         static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
+    } else if (mode == RENDER_MODE_RAYTRACING) {
+        static_cast<OIT_RayTracing*>(oitRenderer.get())->setClearColor(clearColor);
     }
     transferFunctionWindow.setClearColor(clearColor);
 
@@ -1110,6 +1168,7 @@ void PixelSyncApp::render()
 
 
     reRender = reRender || oitRenderer->needsReRender() || oitRenderer->isTestingMode();
+    // reRender = true;
 
     if (continuousRendering || reRender) {
         renderOIT();
@@ -1118,16 +1177,21 @@ void PixelSyncApp::render()
     }
 
 
-    glDisable(GL_FRAMEBUFFER_SRGB);
+    //glDisable(GL_FRAMEBUFFER_SRGB);
 
-    // Render to screen
-    Renderer->setProjectionMatrix(matrixIdentity());
-    Renderer->setViewMatrix(matrixIdentity());
-    Renderer->setModelMatrix(matrixIdentity());
-    if (useLinearRGB) {
-        Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)), gammaCorrectionShader);
+    if (mode != RENDER_MODE_RAYTRACING) {
+        // Render to screen
+        Renderer->setProjectionMatrix(matrixIdentity());
+        Renderer->setViewMatrix(matrixIdentity());
+        Renderer->setModelMatrix(matrixIdentity());
+        if (useLinearRGB) {
+            Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)),
+                                  gammaCorrectionShader);
+        } else {
+            Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
+        }
     } else {
-        Renderer->blitTexture(sceneTexture, AABB2(glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, 1.0f)));
+        static_cast<OIT_RayTracing*>(oitRenderer.get())->blitTexture();
     }
 
     if (perfMeasurementMode) {// && frameNum == 0) {
@@ -1196,6 +1260,25 @@ void PixelSyncApp::renderOIT()
 #endif
         return;
     }
+
+    if (mode == RENDER_MODE_RAYTRACING) {
+#ifdef PROFILING_MODE
+        oitRenderer->renderToScreen();
+#else
+        if (perfMeasurementMode) {
+            measurer->startMeasure(recordingTimeLast);
+        }
+
+        Renderer->bindFBO(sceneFramebuffer);
+        oitRenderer->renderToScreen();
+
+        if (perfMeasurementMode) {
+            measurer->endMeasure();
+        }
+#endif
+        return;
+    }
+
     //Renderer->setBlendMode(BLEND_ALPHA);
 
     if (currentAOTechnique == AO_TECHNIQUE_SSAO) {
@@ -1220,19 +1303,19 @@ void PixelSyncApp::renderOIT()
     glBlendEquation(GL_FUNC_ADD);
 
 #ifdef PROFILING_MODE
-    timer.start("gatherBegin");
+    timer.startGPU("gatherBegin");
     oitRenderer->gatherBegin();
     timer.end();
 
-    timer.start("renderScene");
+    timer.startGPU("renderScene");
     oitRenderer->renderScene();
     timer.end();
 
-    timer.start("gatherEnd");
+    timer.startGPU("gatherEnd");
     oitRenderer->gatherEnd();
     timer.end();
 
-    timer.start("renderToScreen");
+    timer.startGPU("renderToScreen");
     oitRenderer->renderToScreen();
     timer.end();
 #else
@@ -1333,6 +1416,8 @@ void PixelSyncApp::renderGUI()
         if (transferFunctionWindow.getTransferFunctionMapRebuilt()) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
                 static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->onTransferFunctionMapRebuilt();
+            } else if (mode == RENDER_MODE_RAYTRACING) {
+                static_cast<OIT_RayTracing*>(oitRenderer.get())->onTransferFunctionMapRebuilt();
             }
         }
     }
@@ -1366,6 +1451,8 @@ void PixelSyncApp::renderSceneSettingsGUI()
                                     clearColorSelection.w);
         if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
             static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
+        } else if (mode == RENDER_MODE_RAYTRACING) {
+            static_cast<OIT_RayTracing*>(oitRenderer.get())->setClearColor(clearColor);
         }
         transferFunctionWindow.setClearColor(clearColor);
         reRender = true;
@@ -1383,6 +1470,8 @@ void PixelSyncApp::renderSceneSettingsGUI()
         lightDirection = glm::vec3(sinf(theta) * cosf(phi), sinf(theta) * sinf(phi), cosf(theta));
         if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
             static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setLightDirection(lightDirection);
+        } else if (mode == RENDER_MODE_RAYTRACING) {
+            static_cast<OIT_RayTracing*>(oitRenderer.get())->setLightDirection(lightDirection);
         }
         if (currentShadowTechnique != NO_SHADOW_MAPPING) {
             shadowTechnique->setLightDirection(lightDirection, boundingBox);
@@ -1453,6 +1542,8 @@ void PixelSyncApp::renderSceneSettingsGUI()
             && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
             if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
                 static_cast<OIT_VoxelRaytracing *>(oitRenderer.get())->setLineRadius(lineRadius);
+            } else if (mode == RENDER_MODE_RAYTRACING) {
+                static_cast<OIT_RayTracing*>(oitRenderer.get())->setLineRadius(lineRadius);
             }
             reRender = true;
         }
@@ -1728,7 +1819,7 @@ void PixelSyncApp::update(float dt)
                 recordingTime = 0.0f;
             }
         } else {
-            if (perfMeasurementMode && timeCoherence) {
+            if (perfMeasurementMode) {
                 recordingTime += 0.5f;
             } else{
                 recordingTime += FRAME_TIME;
