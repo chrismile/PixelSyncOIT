@@ -20,7 +20,10 @@
 #include "../TransferFunctionWindow.hpp"
 #include "VoxelData.hpp"
 
-const uint32_t VOXEL_GRID_FORMAT_VERSION = 3u;
+/**
+ * New in version 4: Support for non-uniform grids.
+ */
+const uint32_t VOXEL_GRID_FORMAT_VERSION = 4u;
 
 void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data)
 {
@@ -47,9 +50,8 @@ void saveToFile(const std::string &filename, const VoxelGridDataCompressed &data
 
     stream.writeArray(data.voxelLineListOffsets);
     stream.writeArray(data.numLinesInVoxel);
-    stream.writeArray(data.voxelDensityLODs);
-    stream.writeArray(data.voxelAOLODs);
-    stream.writeArray(data.octreeLODs);
+    stream.writeArray(data.voxelDensities);
+    stream.writeArray(data.voxelAOFactors);
     stream.writeArray(data.lineSegments);
     std::cout << "Number of line segments written: " << data.lineSegments.size() << std::endl;
     std::cout << "Buffer size (in MB): " << (stream.getSize() / 1024. / 1024.) << std::endl;
@@ -102,9 +104,8 @@ void loadFromFile(const std::string &filename, VoxelGridDataCompressed &data)
 
     stream.readArray(data.voxelLineListOffsets);
     stream.readArray(data.numLinesInVoxel);
-    stream.readArray(data.voxelDensityLODs);
-    stream.readArray(data.voxelAOLODs);
-    stream.readArray(data.octreeLODs);
+    stream.readArray(data.voxelDensities);
+    stream.readArray(data.voxelAOFactors);
     stream.readArray(data.lineSegments);
 
     //delete[] buffer; // BinaryReadStream does deallocation
@@ -228,105 +229,21 @@ std::vector<uint32_t> generateMipmapsForOctree(uint32_t *numLines, glm::ivec3 si
 
 sgl::TexturePtr generateDensityTexture(const std::vector<float> &lods, glm::ivec3 size)
 {
-    int numMipmapLevels = 0;
-    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
-        numMipmapLevels++;
-    }
-
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_3D, textureID);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, numMipmapLevels-1);
-
-#ifdef USE_OPENGL_LOD_GENERATION
     glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size.x, size.y, size.z, 0, GL_RED, GL_FLOAT, &lods.front());
-    glGenerateMipmap(GL_TEXTURE_3D);
-#else
-    // Now upload the LOD levels
-    int lodIndex = 0;
-    const float *data = &lods.front();
-    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
-        glTexImage3D(GL_TEXTURE_3D, lodIndex, GL_R32F, lodSize.x, lodSize.y, lodSize.z, 0, GL_RED, GL_FLOAT, data);
-        lodIndex++;
-        data += lodSize.x * lodSize.y * lodSize.z;
-    }
-#endif
 
     sgl::TextureSettings textureSettings;
     textureSettings.type = sgl::TEXTURE_3D;
     return sgl::TexturePtr(new sgl::TextureGL(textureID, size.x, size.y, size.z, textureSettings));
 }
 
-
-sgl::TexturePtr generateOctreeTexture(const std::vector<uint32_t> &lods, glm::ivec3 size)
-{
-    int numMipmapLevels = 0;
-    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
-        numMipmapLevels++;
-    }
-
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_3D, textureID);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, numMipmapLevels-1);
-
-#ifdef USE_OPENGL_LOD_GENERATION
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size.x, size.y, size.z, 0, GL_RED, GL_FLOAT, &lods.front());
-    glGenerateMipmap(GL_TEXTURE_3D);
-#else
-    // Now upload the LOD levels
-    int lodIndex = 0;
-    const uint32_t *data = &lods.front();
-    for (glm::ivec3 lodSize = size; lodSize.x > 0 && lodSize.y > 0 && lodSize.z > 0; lodSize /= 2) {
-        // TODO: GL_R8UI and only one bit indicator?
-        glTexImage3D(GL_TEXTURE_3D, lodIndex, GL_R8UI, lodSize.x, lodSize.y, lodSize.z, 0, GL_RED_INTEGER,
-                GL_UNSIGNED_INT, data);
-        //std::cout << data[0] << std::endl;
-        lodIndex++;
-        data += lodSize.x * lodSize.y * lodSize.z;
-    }
-#endif
-
-    //std::cout << "LOD: " << lodIndex << std::endl;
-
-    /*if (lods.at(lods.size()-1) != 0) {
-        std::cout << "HERE: " << lods.at(lods.size()-1) << std::endl;
-    }
-
-    uint32_t array1[] = {1,0, 0,0,
-                        0,1, 0,1,};
-    std::vector<uint32_t> v1 = generateMipmapsForOctree(array1, glm::ivec3(2));
-    for (size_t i = 0; i < v1.size(); i++) {
-        std::cout << v1.at(i) << " ";
-    }
-    std::cout << std::endl;
-
-    uint32_t array2[] = {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-                        0,0,0,0, 0,1,0,0, 0,0,0,0, 0,0,0,0,
-                        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0,
-                        1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1,};
-    std::vector<uint32_t> v2 = generateMipmapsForOctree(array2, glm::ivec3(4));
-    for (size_t i = 0; i < v2.size(); i++) {
-        std::cout << v2.at(i) << " ";
-    }
-    std::cout << std::endl;*/
-
-    sgl::TextureSettings textureSettings;
-    textureSettings.type = sgl::TEXTURE_3D;
-    return sgl::TexturePtr(new sgl::TextureGL(textureID, size.x, size.y, size.z, textureSettings));
-}
 
 
 void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGridDataGPU &gpuData)
@@ -347,9 +264,8 @@ void compressedToGPUData(const VoxelGridDataCompressed &compressedData, VoxelGri
         value = 1;
     }*/
 
-    gpuData.densityTexture = generateDensityTexture(compressedData.voxelDensityLODs, gpuData.gridResolution);
-    gpuData.aoTexture = generateDensityTexture(compressedData.voxelAOLODs, gpuData.gridResolution);
-    gpuData.octreeTexture = generateOctreeTexture(compressedData.octreeLODs, gpuData.gridResolution);
+    gpuData.densityTexture = generateDensityTexture(compressedData.voxelDensities, gpuData.gridResolution);
+    gpuData.aoTexture = generateDensityTexture(compressedData.voxelAOFactors, gpuData.gridResolution);
 
 #ifdef PACK_LINES
     int baseSize = sizeof(LineSegmentCompressed);

@@ -77,6 +77,9 @@ private:
     float hairThickness;
     float hairOpacity;
 
+    // Grid generation
+    void setVoxelGrid(const sgl::AABB3 &aabb);
+
     // On CPU
     VoxelGridDataCompressed compressData();
     void nextStreamline(const Curve &line);

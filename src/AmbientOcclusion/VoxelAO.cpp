@@ -75,7 +75,7 @@ void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename, Traj
         loadFromFile(modelFilenameVoxelGrid, compressedData);
     }
 
-    aoTexture = generateDensityTexture(compressedData.voxelAOLODs, compressedData.gridResolution);
+    aoTexture = generateDensityTexture(compressedData.voxelAOFactors, compressedData.gridResolution);
     worldToVoxelGridMatrix = compressedData.worldToVoxelGridMatrix;
     gridResolution = compressedData.gridResolution;
 }
