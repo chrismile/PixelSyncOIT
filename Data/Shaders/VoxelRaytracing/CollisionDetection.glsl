@@ -126,9 +126,14 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
     intersectionPosition = rayOrigin + t0 * rayDirection;
     if (t0 >= 0.0
             && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
-            && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))) {
+            && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
+    #if defined(FAST_NEIGHBOR_SEARCH) || !defined(VOXEL_RAY_CASTING_FAST)
+            && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
+            && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
+    #endif
+    ) {
         return true;
-    } else {
+    }/* else {
         float t1 = (-B + discriminantSqrt) / (2.0 * A);
         intersectionPosition = rayOrigin + t1 * rayDirection;
         if (t1 >= 0.0
@@ -136,7 +141,7 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
                 && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))) {
             return true;
         }
-    }
+    }*/
 
     return false;
 }
@@ -173,7 +178,7 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         intersectionPosition = rayOrigin + t0 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0
-        #ifdef FAST_NEIGHBOR_SEARCH
+        #if defined(FAST_NEIGHBOR_SEARCH) || !defined(VOXEL_RAY_CASTING_FAST)
                 && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
                 && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
         #endif
@@ -183,12 +188,12 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
         }
     }
 
-    float t1 = (-B + discriminantSqrt) / (2.0 * A);
+    /*float t1 = (-B + discriminantSqrt) / (2.0 * A);
     if (t1 >= 0.0) {
         intersectionPosition = rayOrigin + t1 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0
-        #ifdef FAST_NEIGHBOR_SEARCH
+        #if defined(FAST_NEIGHBOR_SEARCH) || !defined(VOXEL_RAY_CASTING_FAST)
                 && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
                 && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
         #endif
@@ -196,7 +201,7 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
             // Inside of finite cylinder
             return true; // TODO
         }
-    }
+    }*/
 
     return false;
 }

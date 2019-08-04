@@ -54,9 +54,9 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
 
     // Bit-mask for already blended lines
     uint blendedLineIDs = 0;
-    uint newBlendedLineIDs = 0;
-    uint lastNewBlendedLineIDs = 0;
-    uint lastLastNewBlendedLineIDs = 0;
+    uint newBlendedLineIDs0 = 0;
+    uint newBlendedLineIDs1 = 0;
+    uint newBlendedLineIDs2 = 0;
 
 
     float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
@@ -206,21 +206,21 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
     int iterationNum = 0;
     while (all(greaterThanEqual(voxelIndex, ivec3(0))) && all(lessThan(voxelIndex, gridResolution))) {
         int voxelIndex1D = getVoxelIndex1D(voxelIndex);
-        if (getNumLinesInVoxel(voxelIndex1D) > 0) {
+        //if (getNumLinesInVoxel(voxelIndex1D) > 0) {
             ivec3 nextVoxelIndex = getNextVoxelIndex(voxelIndex, tMaxX, tMaxY, tMaxZ, stepX, stepY, stepZ);
             vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex,
-                    blendedLineIDs, newBlendedLineIDs);
+                    blendedLineIDs, newBlendedLineIDs0);
             iterationNum++;
-            blendedLineIDs = newBlendedLineIDs | lastNewBlendedLineIDs | lastNewBlendedLineIDs;
-            lastLastNewBlendedLineIDs = lastNewBlendedLineIDs;
-            lastNewBlendedLineIDs = newBlendedLineIDs;
-            newBlendedLineIDs = 0;
             if (blendPremul(voxelColor, color)) {
                 // Early ray termination
                 return color;
             }
             //return vec4(vec3(1.0), 1.0);
-        }
+        //}
+        blendedLineIDs = newBlendedLineIDs0 | newBlendedLineIDs1 | newBlendedLineIDs2;
+        newBlendedLineIDs2 = newBlendedLineIDs1;
+        newBlendedLineIDs1 = newBlendedLineIDs0;
+        newBlendedLineIDs0 = 0;
 
         if (tMaxX < tMaxY) {
             if (tMaxX < tMaxZ) {
