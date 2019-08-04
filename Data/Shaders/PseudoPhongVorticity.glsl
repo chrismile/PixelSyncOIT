@@ -143,7 +143,7 @@ layout(lines) in;
 layout(triangle_strip, max_vertices = 4) out;
 uniform vec3 cameraPosition;
 #else
-layout(triangle_strip, max_vertices = 32) out;
+layout(triangle_strip, max_vertices = 64) out;
 #endif
 
 uniform float radius = 0.001f;
@@ -168,7 +168,7 @@ out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
 
-#define NUM_SEGMENTS 5
+#define NUM_SEGMENTS 16
 
 void main()
 {

@@ -384,7 +384,7 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     // TODO: Macht u.U. Probleme bei sehr kurzen und transparenten Linien
     if (currDensity <= 0.001) { return vec4(0); }
 
-    bool isClose = distance <= 1.0 * GRID_RESOLUTION / 8.0;
+    bool isClose = true;//distance <= 1.0 * GRID_RESOLUTION / 8.0;
 
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, isClose, hits, numHits, blendedLineIDs,
             newBlendedLineIDs, currOpacity);
