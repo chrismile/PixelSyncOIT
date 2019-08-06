@@ -31,25 +31,28 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
         }
     }
 
-    // Normalize data for rings
-    float minValue = std::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
-    float maxValue = std::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
-
     bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
     bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
+    bool isCfdData = trajectoryType == TRAJECTORY_TYPE_CFD;
+
+    glm::vec3 minVec(boundingBox.getMinimum());
+    glm::vec3 maxVec(boundingBox.getMaximum());
     if (isConvectionRolls) {
-        minValue = 0;
-        maxValue = 0.5;
+        minVec = glm::vec3(0);
+        maxVec = glm::vec3(0.5);
+    } else {
+        // Normalize data for rings
+        float minValue = glm::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
+        float maxValue = glm::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z));
+        minVec = glm::vec3(minValue);
+        maxVec = glm::vec3(maxValue);
     }
 
-    glm::vec3 minVec(minValue, minValue, minValue);
-    glm::vec3 maxVec(maxValue, maxValue, maxValue);
-
-    if (isRings || isConvectionRolls) {
+    if (isRings || isConvectionRolls || isCfdData) {
         for (Trajectory &trajectory : trajectories) {
             for (glm::vec3 &position : trajectory.positions) {
                 position = (position - minVec) / (maxVec - minVec);
-                if (isConvectionRolls) {
+                if (isConvectionRolls || isCfdData) {
                     glm::vec3 dims = glm::vec3(1);
                     dims.y = boundingBox.getDimensions().y;
                     position -= dims;
@@ -85,7 +88,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     std::string lineBuffer;
     std::string numberString;
 
-    for (size_t charPtr = 0; charPtr < length; charPtr++) {
+    for (size_t charPtr = 0; charPtr < length; ) {
         while (charPtr < length) {
             char currentChar = fileBuffer[charPtr];
             if (currentChar == '\n' || currentChar == '\r') {
@@ -153,6 +156,14 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             trajectory.positions.reserve(currentLineIndices.size());
             pathLineVorticities.reserve(currentLineIndices.size());
             for (size_t i = 0; i < currentLineIndices.size(); i++) {
+                glm::vec3 pos = globalLineVertices.at(currentLineIndices.at(i));
+
+                // Remove invalid line points (used in many scientific datasets to indicate invalid lines).
+                const float MAX_VAL = 1e10f;
+                if (std::fabs(pos.x) > MAX_VAL || std::fabs(pos.y) > MAX_VAL || std::fabs(pos.z) > MAX_VAL) {
+                    continue;
+                }
+
                 trajectory.positions.push_back(globalLineVertices.at(currentLineIndices.at(i)));
                 pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
             }
@@ -201,7 +212,7 @@ Trajectories loadTrajectoriesFromBinLines(const std::string &filename, Trajector
     std::ifstream file(filename.c_str(), std::ifstream::binary);
     if (!file.is_open()) {
         sgl::Logfile::get()->writeError(std::string() + "Error in loadTrajectoriesFromBinLines: File \""
-                + filename + "\" not found.");
+                                        + filename + "\" not found.");
         return trajectories;
     }
 
@@ -218,7 +229,7 @@ Trajectories loadTrajectoriesFromBinLines(const std::string &filename, Trajector
     stream.read(versionNumber);
     if (versionNumber != LINE_FILE_FORMAT_VERSION) {
         sgl::Logfile::get()->writeError(std::string()
-                + "Error in loadTrajectoriesFromBinLines: Invalid magic number in file \"" + filename + "\".");
+                                        + "Error in loadTrajectoriesFromBinLines: Invalid magic number in file \"" + filename + "\".");
         return trajectories;
     }
 

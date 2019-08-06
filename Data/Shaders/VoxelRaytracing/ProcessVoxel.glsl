@@ -354,6 +354,8 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
 
 
     #ifdef VOXEL_RAY_CASTING_FAST
+    if (currDensity <= 0.001) { return vec4(0); }
+
     // Faster, but with holes in line tubes
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, false, hits, numHits, blendedLineIDs, newBlendedLineIDs, currOpacity);
     #else
@@ -381,10 +383,7 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     //    float opacityThreshold = 12. / 255.0;
     //    if (currOpacity >= opacityThreshold)
 
-    // TODO: Macht u.U. Probleme bei sehr kurzen und transparenten Linien
-    if (currDensity <= 0.001) { return vec4(0); }
-
-    bool isClose = distance <= 1.0 * GRID_RESOLUTION / 8.0;
+    bool isClose = true;//distance <= 1.0 * GRID_RESOLUTION / 2.0;
 
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, isClose, hits, numHits, blendedLineIDs,
             newBlendedLineIDs, currOpacity);
@@ -411,49 +410,71 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
         vec3 entrancePoint, exitPoint;
         vec3 lower = vec3(voxelIndex);
         rayBoxIntersection(rayOrigin, rayDirection, lower, lower+vec3(1.0), entrancePoint, exitPoint);
-        vec3 voxelEntry = fract(entrancePoint);
-        vec3 voxelExit = fract(exitPoint);
+        vec3 voxelEntry = exitPoint - vec3(voxelIndex);
+        vec3 voxelExit = exitPoint - vec3(voxelIndex);
 
         ivec3 offset;
         if (voxelEntry.x <= 0.2) {
             offset = ivec3(-1, 0, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+            blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelEntry.x >= 0.8) {
             offset = ivec3(1, 0, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+            blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelEntry.y <= 0.2) {
             offset = ivec3(0, -1, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+            blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelEntry.y >= 0.8) {
             offset = ivec3(0, 1, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+            blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelEntry.z <= 0.2) {
             offset = ivec3(0, 0, -1);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+            blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelEntry.z >= 0.8) {
             offset = ivec3(0, 0, 1);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+            blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
-        processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                blendedLineIDs, newBlendedLineIDs, currOpacity);
 
         #ifdef USE_VOXEL_EXIT_POINT
         if (voxelExit.x <= 0.2) {
             offset = ivec3(-1, 0, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelExit.x >= 0.8) {
             offset = ivec3(1, 0, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelExit.y <= 0.2) {
             offset = ivec3(0, -1, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelExit.y >= 0.8) {
             offset = ivec3(0, 1, 0);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelExit.z <= 0.2) {
             offset = ivec3(0, 0, -1);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         if (voxelExit.z >= 0.8) {
             offset = ivec3(0, 0, 1);
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
+                    blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
         processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
                 blendedLineIDs, newBlendedLineIDs, currOpacity);
@@ -461,32 +482,25 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     }
     #endif
 
-    //    } else if (distance < GRID_RESOLUTION / 2.0) {
-        //        // Far voxels
-        //        const ivec3 offsetTable[7] = { ivec3(0,0,0), ivec3(-1,0,0), ivec3(1,0,0), ivec3(0,-1,0),
-        //                ivec3(0,1,0), ivec3(0,0,-1), ivec3(0,0,1) };
-        //        for (int i = 0; i <= 7; i++) {
-        //            ivec3 processedVoxelIndex = voxelIndex + offsetTable[i];
-        //            if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
-        //                    && all(lessThan(processedVoxelIndex, gridResolution))) {
-        //                processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
-        //                        blendedLineIDs, newBlendedLineIDs);
-        //            }
-        //        }
-        //    } else {
-        // Very far voxels
-        //        processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits, blendedLineIDs, newBlendedLineIDs);
-        //    }
-        #endif
+//    } else if (distance < GRID_RESOLUTION / 2.0) {
+    //        // Far voxels
+    //        const ivec3 offsetTable[7] = { ivec3(0,0,0), ivec3(-1,0,0), ivec3(1,0,0), ivec3(0,-1,0),
+    //                ivec3(0,1,0), ivec3(0,0,-1), ivec3(0,0,1) };
+    //        for (int i = 0; i <= 7; i++) {
+    //            ivec3 processedVoxelIndex = voxelIndex + offsetTable[i];
+    //            if (all(greaterThanEqual(processedVoxelIndex, ivec3(0)))
+    //                    && all(lessThan(processedVoxelIndex, gridResolution))) {
+    //                processVoxel(rayOrigin, rayDirection, voxelIndex, processedVoxelIndex, hits, numHits,
+    //                        blendedLineIDs, newBlendedLineIDs);
+    //            }
+    //        }
+    //    } else {
+    // Very far voxels
+    //        processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, hits, numHits, blendedLineIDs, newBlendedLineIDs);
+    //    }
+    #endif
 
 
-    /*if (all(greaterThanEqual(nextVoxelIndex, ivec3(0)))
-            && all(lessThan(nextVoxelIndex, gridResolution))) {
-        processVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex, hits, numHits,
-                blendedLineIDs, newBlendedLineIDs);
-    }*/
-    blendedLineIDs = newBlendedLineIDs;
-    blendedLineIDs |= newBlendedLineIDs;
 
     if (numHits == 0) {
         //return vec4(vec3(0.8, mod(float(voxelIndex.x + voxelIndex.y + voxelIndex.z) * 0.39475587, 1.0), 0.0), 0.2);

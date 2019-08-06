@@ -136,11 +136,11 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
         voxelRes = 128;
 //        quantizationRes = 16;
     }
-    /*if (isConvectionRolls)
+    if (isConvectionRolls)
     {
-        voxelRes = 512;
+        voxelRes = 256;
         //quantizationRes = 16;
-    }*/
+    }
 
     auto start = std::chrono::system_clock::now();
 
