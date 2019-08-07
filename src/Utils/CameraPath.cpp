@@ -17,8 +17,8 @@
 #include "CameraPath.hpp"
 #include "Math/Math.hpp"
 
-#define ROTATION_AND_ZOOMING_MODE
-//#define ROTATION_MODE
+//#define ROTATION_AND_ZOOMING_MODE
+#define ROTATION_MODE
 //#define ZOOMING_MODE
 //#define VIDEO_MODE
 

@@ -168,7 +168,7 @@ out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 out float fragmentAttribute;
 
-#define NUM_SEGMENTS 5
+#define NUM_SEGMENTS 8
 
 void main()
 {

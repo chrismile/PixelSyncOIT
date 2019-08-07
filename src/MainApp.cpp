@@ -445,20 +445,20 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (boost::starts_with(modelFilenamePure, "Data/Trajectories"))
     {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
-//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransAneurysm2.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransAneurysm2.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Aneurysm_All.xml");
     }
     else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000"))
     {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
-//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransTurb.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransTurb.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Turbulence_All.xml");
     }
     else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
     {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
-//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransCR.xml");
+//        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
+        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/SemiTransCR.xml");
 //        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/CR_All.xml");
     }
 
@@ -635,7 +635,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             lineRadius = 0.0005;
         }
 
-//        lineRadius = 0.001;
+        lineRadius = 0.001;
     }
 
     rotation = glm::mat4(1.0f);
@@ -841,7 +841,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
                 lineRadius = 0.0005;
             }
 
-//            lineRadius = 0.001;
+            lineRadius = 0.001;
         }
 
         OIT_VoxelRaytracing *voxelRaytracer = (OIT_VoxelRaytracing*)oitRenderer.get();
