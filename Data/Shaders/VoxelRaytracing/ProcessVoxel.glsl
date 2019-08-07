@@ -123,9 +123,9 @@ void processVoxel(vec3 rayOrigin, vec3 rayDirection, ivec3 centerVoxelIndex, ive
             hasIntersection = true;
         } else if (isClose) {
             hasSphereIntersection1 = raySphereIntersection(rayOrigin, rayDirection, tubePoint1, lineRadius,
-                    sphereIntersection1, centerVoxelPosMin, centerVoxelPosMax);
+                    sphereIntersection1, centerVoxelPosMin, centerVoxelPosMax, isClose);
             hasSphereIntersection2 = raySphereIntersection(rayOrigin, rayDirection, tubePoint2, lineRadius,
-                    sphereIntersection2, centerVoxelPosMin, centerVoxelPosMax);
+                    sphereIntersection2, centerVoxelPosMin, centerVoxelPosMax, isClose);
 
             int closestIntersectionIdx = 0;
             vec3 intersection = tubeIntersection;
@@ -383,7 +383,7 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     //    float opacityThreshold = 12. / 255.0;
     //    if (currOpacity >= opacityThreshold)
 
-    bool isClose = true;//distance <= 1.0 * GRID_RESOLUTION / 2.0;
+    bool isClose = distance <= GRID_RESOLUTION / 2.0;
 
     processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, isClose, hits, numHits, blendedLineIDs,
             newBlendedLineIDs, currOpacity);
@@ -410,39 +410,34 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
         vec3 entrancePoint, exitPoint;
         vec3 lower = vec3(voxelIndex);
         rayBoxIntersection(rayOrigin, rayDirection, lower, lower+vec3(1.0), entrancePoint, exitPoint);
-        vec3 voxelEntry = exitPoint - vec3(voxelIndex);
         vec3 voxelExit = exitPoint - vec3(voxelIndex);
 
-        ivec3 offset;
-        if (voxelEntry.x <= 0.2) {
-            offset = ivec3(-1, 0, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-            blendedLineIDs, newBlendedLineIDs, currOpacity);
+
+        int offsetTableCounter = 0;
+        ivec3 offsetTable[6];
+
+        if (voxelExit.x <= 0.2) {
+            offsetTable[offsetTableCounter++] = ivec3(-1, 0, 0);
         }
-        if (voxelEntry.x >= 0.8) {
-            offset = ivec3(1, 0, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-            blendedLineIDs, newBlendedLineIDs, currOpacity);
+        if (voxelExit.x >= 0.8) {
+            offsetTable[offsetTableCounter++] = ivec3(1, 0, 0);
         }
-        if (voxelEntry.y <= 0.2) {
-            offset = ivec3(0, -1, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-            blendedLineIDs, newBlendedLineIDs, currOpacity);
+        if (voxelExit.y <= 0.2) {
+            offsetTable[offsetTableCounter++] = ivec3(0, -1, 0);
         }
-        if (voxelEntry.y >= 0.8) {
-            offset = ivec3(0, 1, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-            blendedLineIDs, newBlendedLineIDs, currOpacity);
+        if (voxelExit.y >= 0.8) {
+            offsetTable[offsetTableCounter++] = ivec3(0, 1, 0);
         }
-        if (voxelEntry.z <= 0.2) {
-            offset = ivec3(0, 0, -1);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-            blendedLineIDs, newBlendedLineIDs, currOpacity);
+        if (voxelExit.z <= 0.2) {
+            offsetTable[offsetTableCounter++] = ivec3(0, 0, -1);
         }
-        if (voxelEntry.z >= 0.8) {
-            offset = ivec3(0, 0, 1);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-            blendedLineIDs, newBlendedLineIDs, currOpacity);
+        if (voxelExit.z >= 0.8) {
+            offsetTable[offsetTableCounter++] = ivec3(0, 0, 1);
+        }
+
+        for (int i = 0; i < offsetTableCounter; i++) {
+            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offsetTable[i],
+                    isClose, hits, numHits, blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
 
         #ifdef USE_VOXEL_EXIT_POINT
