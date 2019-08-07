@@ -206,7 +206,9 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
     int iterationNum = 0;
     while (all(greaterThanEqual(voxelIndex, ivec3(0))) && all(lessThan(voxelIndex, gridResolution))) {
         int voxelIndex1D = getVoxelIndex1D(voxelIndex);
-        //if (getNumLinesInVoxel(voxelIndex1D) > 0) {
+        #if defined(VOXEL_RAY_CASTING_FAST)
+        if (getNumLinesInVoxel(voxelIndex1D) > 0) {
+        #endif
             ivec3 nextVoxelIndex = getNextVoxelIndex(voxelIndex, tMaxX, tMaxY, tMaxZ, stepX, stepY, stepZ);
             vec4 voxelColor = nextVoxel(rayOrigin, rayDirection, voxelIndex, nextVoxelIndex,
                     blendedLineIDs, newBlendedLineIDs0);
@@ -216,7 +218,9 @@ vec4 traverseVoxelGrid(vec3 rayOrigin, vec3 rayDirection, vec3 startPoint, vec3 
                 return color;
             }
             //return vec4(vec3(1.0), 1.0);
-        //}
+        #if defined(VOXEL_RAY_CASTING_FAST)
+        }
+        #endif
         blendedLineIDs = newBlendedLineIDs0 | newBlendedLineIDs1 | newBlendedLineIDs2;
         newBlendedLineIDs2 = newBlendedLineIDs1;
         newBlendedLineIDs1 = newBlendedLineIDs0;
