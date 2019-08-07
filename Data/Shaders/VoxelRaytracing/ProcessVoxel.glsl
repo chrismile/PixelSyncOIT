@@ -439,41 +439,6 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
             processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offsetTable[i],
                     isClose, hits, numHits, blendedLineIDs, newBlendedLineIDs, currOpacity);
         }
-
-        #ifdef USE_VOXEL_EXIT_POINT
-        if (voxelExit.x <= 0.2) {
-            offset = ivec3(-1, 0, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
-        }
-        if (voxelExit.x >= 0.8) {
-            offset = ivec3(1, 0, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
-        }
-        if (voxelExit.y <= 0.2) {
-            offset = ivec3(0, -1, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
-        }
-        if (voxelExit.y >= 0.8) {
-            offset = ivec3(0, 1, 0);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
-        }
-        if (voxelExit.z <= 0.2) {
-            offset = ivec3(0, 0, -1);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
-        }
-        if (voxelExit.z >= 0.8) {
-            offset = ivec3(0, 0, 1);
-            processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                    blendedLineIDs, newBlendedLineIDs, currOpacity);
-        }
-        processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex + offset, isClose, hits, numHits,
-                blendedLineIDs, newBlendedLineIDs, currOpacity);
-        #endif
     }
     #endif
 

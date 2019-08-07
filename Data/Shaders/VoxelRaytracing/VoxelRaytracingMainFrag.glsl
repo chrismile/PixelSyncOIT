@@ -40,7 +40,6 @@ uniform vec4 hairStrandColor = vec4(1.0, 0.0, 0.0, 1.0);
 #endif
 
 #define FAST_NEIGHBOR_SEARCH
-//#define USE_VOXEL_EXIT_POINT
 #include "CollisionDetection.glsl"
 #include "TransferFunction.glsl"
 #include "Blend.glsl"
