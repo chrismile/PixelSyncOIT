@@ -350,14 +350,16 @@ inout uint blendedLineIDs, inout uint newBlendedLineIDs)
     }*/
 
     float currOpacity = 0;
-    float currDensity = getVoxelDensity(vec3(voxelIndex), 0);
+    //float currDensity = getVoxelDensity(vec3(voxelIndex), 0);
 
 
     #ifdef VOXEL_RAY_CASTING_FAST
-    if (currDensity <= 0.001) { return vec4(0); }
+    //if (currDensity <= 0.001) { return vec4(0); }
 
     // Faster, but with holes in line tubes
-    processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, false, hits, numHits, blendedLineIDs, newBlendedLineIDs, currOpacity);
+    float distance = length(rayOrigin - vec3(voxelIndex));
+    bool isClose = distance <= GRID_RESOLUTION / 2.0;
+    processVoxel(rayOrigin, rayDirection, voxelIndex, voxelIndex, isClose, hits, numHits, blendedLineIDs, newBlendedLineIDs, currOpacity);
     #else
     // Much slower, but uses neighbor search for closing holes in tubes protuding into neighboring voxels
     /*for (int z = -1; z <= 1; z++) {
