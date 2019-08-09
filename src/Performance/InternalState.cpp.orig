@@ -4,7 +4,6 @@
 
 #include "../OIT/OIT_LinkedList.hpp"
 #include "InternalState.hpp"
-#include <Utils/File/FileUtils.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
 void getTestModesNoOIT(std::vector<InternalState> &states, InternalState state)
@@ -43,14 +42,14 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
     });
     states.push_back(state);
 
-    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.25";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.25" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(4) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
+//    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.25";
+//    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//            { "overestimationBeta", "0.25" },
+//            { "usePowerMoments", "true" },
+//            { "numMoments", sgl::toString(4) },
+//            { "pixelFormat", "Float" },
+//    });
+//    states.push_back(state);
 
     state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.1";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
@@ -60,22 +59,22 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
             { "pixelFormat", "Float" },
     });
     states.push_back(state);
-
-    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.25" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(8) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
+//
+//    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
+//    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//            { "overestimationBeta", "0.25" },
+//            { "usePowerMoments", "true" },
+//            { "numMoments", sgl::toString(8) },
+//            { "pixelFormat", "Float" },
+//    });
+//    states.push_back(state);
 }
 
 void getTestModesMLAB(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB;
 
-    for (int numLayers = 4; numLayers <= 8; numLayers *= 2) {
+    for (int numLayers = 8; numLayers <= 8; numLayers *= 2) {
         state.name = std::string() + "MLAB " + sgl::toString(numLayers) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numLayers", sgl::toString(numLayers) },
@@ -446,7 +445,7 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
-    for (int nodesPerBucket = 4; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+    for (int nodesPerBucket = 4; nodesPerBucket <= 4; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
@@ -466,41 +465,25 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 
     int gridResolution = 128;
 
-    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 64; }
+    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 128; }
     if (boost::starts_with(state.modelName, "Data/ConvectionRolls/output")) { gridResolution = 256; }
 
-//    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
-    state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "gridResolution", sgl::toString(gridResolution) },
-            { "quantizationResolution", sgl::toString(64) },
-            { "useNeighborSearch", "true" },
-    });
-    states.push_back(state);
-    state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "gridResolution", sgl::toString(gridResolution) },
-            { "quantizationResolution", sgl::toString(64) },
-            { "useNeighborSearch", "false" },
-    });
-    states.push_back(state);
-//    }
-}
-
-void getTestModesRayTracing(std::vector<InternalState> &states, InternalState state)
-{
-    state.oitAlgorithm = RENDER_MODE_RAYTRACING;
-    state.name = std::string() + "Ray Tracing (Tubes)";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "useEmbreeCurves", "false" },
-    });
-    states.push_back(state);
-
-    state.name = std::string() + "Ray Tracing (Embree)";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
-            { "useEmbreeCurves", "true" },
-    });
-    states.push_back(state);
+    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
+        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "gridResolution", sgl::toString(gridResolution) },
+                { "quantizationResolution", sgl::toString(64) },
+                { "useNeighborSearch", "true" },
+        });
+        states.push_back(state);
+        state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, No Neighbor Search)";
+        state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
+                { "gridResolution", sgl::toString(gridResolution) },
+                { "quantizationResolution", sgl::toString(64) },
+                { "useNeighborSearch", "false" },
+        });
+        states.push_back(state);
+    }
 }
 
 void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalState state)
@@ -513,39 +496,37 @@ void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalSta
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesDepthPeeling(states, state);
+//    getTestModesDepthPeeling(states, state);
 //    getTestModesNoOIT(states, state);
-    getTestModesMLAB(states, state);
-    getTestModesMBOIT(states, state);
-    getTestModesLinkedList(states, state);
-    getTestModesMLABBuckets(states, state);
+//    getTestModesMLAB(states, state);
+//    getTestModesMBOIT(states, state);
+//    getTestModesLinkedList(states, state);
+//    getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
 //    getTestModesDepthComplexity(states, state);
 }
 
 void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
 {
-    /*getTestModesDepthPeeling(states, state);
-//    getTestModesNoOIT(states, state);
-    getTestModesMLAB(states, state);
-    getTestModesMBOIT(states, state);
-    getTestModesLinkedListQuality(states, state);
-    getTestModesMLABBuckets(states, state);
-    getTestModesVoxelRaytracing(states, state);
-//    getTestModesDepthComplexity(states, state);
-*/
 //    getTestModesDepthPeeling(states, state);
 //    getTestModesLinkedListQuality(states, state);
-//    getTestModesRayTracing(states, state);
-
+//    getTestModesMBOIT(states, state);
     getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
+<<<<<<< HEAD
+=======
+//    getTestModesDepthComplexity(states, state);
+*/
+    getTestModesDepthPeeling(states, state);
+    getTestModesLinkedListQuality(states, state);
+    getTestModesRayTracing(states, state);
 }
 
 void getTestModesPaperForRTPerformance(std::vector<InternalState> &states, InternalState state)
 {
     getTestModesDepthPeeling(states, state);
     getTestModesVoxelRaytracing(states, state);
+>>>>>>> 9d9148f... Fixed bug in VRC neighbor search.
 }
 
 std::vector<InternalState> getTestModesPaper()
@@ -555,8 +536,9 @@ std::vector<InternalState> getTestModesPaper()
     std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
-//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
-    std::vector<std::string> modelNames = { "Aneurysm", "Turbulence", "Convection Rolls" };
+//    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls"};
+    std::vector<std::string> modelNames = { /*"Rings",*/ "Aneurysm", "Turbulence", "Convection Rolls"};
+//    std::vector<std::string> modelNames = { "Convection Rolls"};
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {
@@ -572,16 +554,18 @@ std::vector<InternalState> getTestModesPaper()
     }
 
     // Append model name to state name if more than one model is loaded
-    if (modelNames.size() > 1 || windowResolutions.size() > 1) {
+    if (modelNames.size() >= 1 || windowResolutions.size() >= 1) {
         for (InternalState &state : states) {
             state.name = sgl::toString(state.windowResolution.x) + "x" + sgl::toString(state.windowResolution.y)
                     + " " + state.modelName + " " + state.name;
         }
     }
 
+<<<<<<< HEAD
+=======
 
     // Use different transfer functions?
-    std::vector<std::string> transferFunctionNameSuffices = { "Full", "Semi", "High" };
+    std::vector<std::string> transferFunctionNameSuffices = { /*"Semi", "Full", "High"*/ };
     if (transferFunctionNameSuffices.size() > 0) {
         std::vector<InternalState> oldStates = states;
         states.clear();
@@ -604,6 +588,7 @@ std::vector<InternalState> getTestModesPaper()
         }
     }
 
+>>>>>>> 9d9148f... Fixed bug in VRC neighbor search.
     return states;
 }
 

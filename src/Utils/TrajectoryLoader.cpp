@@ -12,6 +12,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <GL/glew.h>
+#include <iostream>
 
 #include "MeshSerializer.hpp"
 #include "TrajectoryFile.hpp"
