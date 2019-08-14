@@ -463,7 +463,7 @@ void main()
     float haloParameter = 1;
     float angle1 = abs( dot( v, n));
     float angle2 = abs( dot( v, normalize(t))) * 0.7;
-    float halo = mix(1.0f,((angle1)+(angle2)) , haloParameter);
+    float halo = 1.0f;//mix(1.0f,((angle1)+(angle2)) , haloParameter);
 
     vec3 colorShading = Ia + Id + Is;
     colorShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);

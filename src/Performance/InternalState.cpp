@@ -34,23 +34,23 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
 //        }
 //    }
 //
-    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.1";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.1" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(4) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
+//    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.1";
+//    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//            { "overestimationBeta", "0.1" },
+//            { "usePowerMoments", "true" },
+//            { "numMoments", sgl::toString(4) },
+//            { "pixelFormat", "Float" },
+//    });
+//    states.push_back(state);
 
-    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.25";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.25" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(4) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
+//    state.name = std::string() + "MBOIT 4 Power Moments Float beta 0.25";
+//    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//            { "overestimationBeta", "0.25" },
+//            { "usePowerMoments", "true" },
+//            { "numMoments", sgl::toString(4) },
+//            { "pixelFormat", "Float" },
+//    });
+//    states.push_back(state);
 
     state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.1";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
@@ -61,14 +61,14 @@ void getTestModesMBOIT(std::vector<InternalState> &states, InternalState state)
     });
     states.push_back(state);
 
-    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
-    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
-            { "overestimationBeta", "0.25" },
-            { "usePowerMoments", "true" },
-            { "numMoments", sgl::toString(8) },
-            { "pixelFormat", "Float" },
-    });
-    states.push_back(state);
+//    state.name = std::string() + "MBOIT 8 Power Moments Float beta 0.25";
+//    state.oitAlgorithmSettings.set(std::map<std::string, std::string> {
+//            { "overestimationBeta", "0.25" },
+//            { "usePowerMoments", "true" },
+//            { "numMoments", sgl::toString(8) },
+//            { "pixelFormat", "Float" },
+//    });
+//    states.push_back(state);
 }
 
 void getTestModesMLAB(std::vector<InternalState> &states, InternalState state)
@@ -446,7 +446,7 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
-    for (int nodesPerBucket = 4; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+    for (int nodesPerBucket = 4; nodesPerBucket <= 4; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
@@ -538,7 +538,13 @@ void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, Interna
 //    getTestModesLinkedListQuality(states, state);
 //    getTestModesRayTracing(states, state);
 
+//    getTestModesMLABBuckets(states, state);
+//    getTestModesVoxelRaytracing(states, state);
+//    getTestModesMLAB(states, state);
+    getTestModesDepthPeeling(states, state);
+    getTestModesLinkedListQuality(states, state);
     getTestModesMLABBuckets(states, state);
+    getTestModesMBOIT(states, state);
     getTestModesVoxelRaytracing(states, state);
 }
 
@@ -552,11 +558,11 @@ std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720), glm::ivec2(1920, 1080), glm::ivec2(2560, 1440) };
-    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
-//    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
+//    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
+    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
-    std::vector<std::string> modelNames = { "Aneurysm", "Turbulence", "Convection Rolls" };
+    std::vector<std::string> modelNames = { /*"Aneurysm", "Turbulence",*/ "Convection Rolls" };
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {
@@ -572,7 +578,7 @@ std::vector<InternalState> getTestModesPaper()
     }
 
     // Append model name to state name if more than one model is loaded
-    if (modelNames.size() > 1 || windowResolutions.size() > 1) {
+    if (modelNames.size() >= 1 || windowResolutions.size() >= 1) {
         for (InternalState &state : states) {
             state.name = sgl::toString(state.windowResolution.x) + "x" + sgl::toString(state.windowResolution.y)
                     + " " + state.modelName + " " + state.name;
@@ -581,28 +587,28 @@ std::vector<InternalState> getTestModesPaper()
 
 
     // Use different transfer functions?
-    std::vector<std::string> transferFunctionNameSuffices = { "Full", "Semi", "High" };
-    if (transferFunctionNameSuffices.size() > 0) {
-        std::vector<InternalState> oldStates = states;
-        states.clear();
-        for (size_t i = 0; i < oldStates.size(); i++) {
-            for (int j = 0; j < transferFunctionNameSuffices.size(); j++) {
-                InternalState state = oldStates.at(i);
-                std::string modelFilename;
-                for (int i = 0; i < NUM_MODELS; i++) {
-                    if (MODEL_DISPLAYNAMES[i] == state.modelName) {
-                        modelFilename = MODEL_FILENAMES[i];
-                    }
-                }
-                std::string modelNamePure =
-                        sgl::FileUtils::get()->getPureFilename(sgl::FileUtils::get()->removeExtension(modelFilename));
-                std::string tfSuffix = transferFunctionNameSuffices.at(j);
-                state.name = state.name + "(TF: " + tfSuffix + ")";
-                state.transferFunctionName = std::string() + "tests/" + modelNamePure + "_" + tfSuffix + ".xml";
-                states.push_back(state);
-            }
-        }
-    }
+//    std::vector<std::string> transferFunctionNameSuffices = { /*"Full"*/ "Semi" /*, "High"*/ };
+//    if (transferFunctionNameSuffices.size() > 1) {
+//        std::vector<InternalState> oldStates = states;
+//        states.clear();
+//        for (size_t i = 0; i < oldStates.size(); i++) {
+//            for (int j = 0; j < transferFunctionNameSuffices.size(); j++) {
+//                InternalState state = oldStates.at(i);
+//                std::string modelFilename;
+//                for (int i = 0; i < NUM_MODELS; i++) {
+//                    if (MODEL_DISPLAYNAMES[i] == state.modelName) {
+//                        modelFilename = MODEL_FILENAMES[i];
+//                    }
+//                }
+//                std::string modelNamePure =
+//                        sgl::FileUtils::get()->getPureFilename(sgl::FileUtils::get()->removeExtension(modelFilename));
+//                std::string tfSuffix = transferFunctionNameSuffices.at(j);
+//                state.name = state.name + "(TF: " + tfSuffix + ")";
+//                state.transferFunctionName = std::string() + "tests/" + modelNamePure + "_" + tfSuffix + ".xml";
+//                states.push_back(state);
+//            }
+//        }
+//    }
 
     return states;
 }

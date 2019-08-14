@@ -31,16 +31,16 @@ enum RenderModeOIT {
 };
 
 const char *const MODEL_FILENAMES[] = {
-        "Data/Rings/rings.obj",
+//        "Data/Rings/rings.obj",
         "Data/Trajectories/9213_streamlines.obj",
         "Data/ConvectionRolls/output.obj",
         "Data/ConvectionRolls/turbulence80000.obj",
-        "Data/ConvectionRolls/turbulence20000.obj",
-        "Data/Hair/ponytail.hair",
-        "Data/Trajectories/single_streamline.obj",
-        "Data/Trajectories/torus.obj",
-        "Data/CFD/driven_cavity-streamlines.binlines",
-        "Data/CFD/rayleigh_benard_convection_8-2-1-streamlines.binlines",
+//        "Data/ConvectionRolls/turbulence20000.obj",
+//        "Data/Hair/ponytail.hair",
+//        "Data/Trajectories/single_streamline.obj",
+//        "Data/Trajectories/torus.obj",
+//        "Data/CFD/driven_cavity-streamlines.binlines",
+//        "Data/CFD/rayleigh_benard_convection_8-2-1-streamlines.binlines",
 
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06pressureDiff.nc",
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
@@ -71,16 +71,16 @@ const char *const MODEL_FILENAMES[] = {
 };
 const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)));
 const char *const MODEL_DISPLAYNAMES[] = {
-        "Rings",
+//        "Rings",
         "Aneurysm",
         "Convection Rolls",
         "Turbulence",
-        "Convection Rolls Small",
-        "Hair",
-        "Single Streamline",
-        "Torus",
-        "Driven Cavity",
-        "Rayleigh-Benard Convection",
+//        "Convection Rolls Small",
+//        "Hair",
+//        "Single Streamline",
+//        "Torus",
+//        "Driven Cavity",
+//        "Rayleigh-Benard Convection",
 
 //        "Ponytail",
 

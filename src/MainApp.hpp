@@ -140,7 +140,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Rings";
+    std::string startupModelName = "Convection Rolls";
     LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     Color bandingColor;
     Color clearColor;
@@ -191,8 +191,8 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = false;
-    bool timeCoherence = false;
+    bool perfMeasurementMode = true;
+    bool timeCoherence = true;
     InternalState lastState;
     bool firstState = true;
     bool usesNewState = true;

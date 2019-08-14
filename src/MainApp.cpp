@@ -487,7 +487,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
             transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/output_paper.xml");
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/tests/output_High.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
             transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/DrivenCavity.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
@@ -1182,8 +1182,10 @@ void PixelSyncApp::render()
 
     reRender = reRender || oitRenderer->needsReRender() || oitRenderer->isTestingMode();
     // reRender = true;
+    GLsync fence;
 
     if (continuousRendering || reRender) {
+        fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         renderOIT();
         reRender = false;
         Renderer->unbindFBO();
@@ -1215,6 +1217,11 @@ void PixelSyncApp::render()
         }
 
         if (timeCoherence) {
+            while(glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0) != GL_ALREADY_SIGNALED)
+            {
+                std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+            }
+
             measurer->makeScreenshot(frameNum);
         }
 
