@@ -575,11 +575,34 @@ std::vector<InternalState> getTestModesPaper()
         }
     }
 
+    std::vector<InternalState> oldStates;
+
+    // Test both lines and triangles in ray tracing
+    oldStates = states;
+    states.clear();
+    for (size_t i = 0; i < oldStates.size(); i++) {
+        InternalState state = oldStates.at(i);
+        if (state.oitAlgorithm == RENDER_MODE_RAYTRACING) {
+            state.name = oldStates.at(i).name;
+            state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+            states.push_back(state);
+            if (oldStates.at(i).name.find("(Embree)") != std::string::npos) {
+                size_t strStart = oldStates.at(i).name.find("(Embree)");
+                size_t strEnd = strStart + strlen("(Embree)");
+                state.name = oldStates.at(i).name.substr(0, strStart) + "(Triangles)" + oldStates.at(i).name.substr(strEnd);
+                state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
+                states.push_back(state);
+            }
+        } else {
+            states.push_back(state);
+        }
+    }
+
 
     // Use different transfer functions?
     std::vector<std::string> transferFunctionNameSuffices = { "Semi", "Full", "High" };
     size_t n = states.size();
-    std::vector<InternalState> oldStates = states;
+    oldStates = states;
     states.clear();
     for (size_t i = 0; i < oldStates.size(); i++) {
         for (int j = 0; j < transferFunctionNameSuffices.size(); j++) {
@@ -599,22 +622,6 @@ std::vector<InternalState> getTestModesPaper()
         }
     }
 
-    // Test both lines and triangles in ray tracing
-    oldStates = states;
-    states.clear();
-    for (size_t i = 0; i < oldStates.size(); i++) {
-        InternalState state = oldStates.at(i);
-        if (state.oitAlgorithm == RENDER_MODE_RAYTRACING) {
-            state.name = oldStates.at(i).name + "(Lines)";
-            state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
-            states.push_back(state);
-            state.name = oldStates.at(i).name + "(Triangles)";
-            state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
-            states.push_back(state);
-        } else {
-            states.push_back(state);
-        }
-    }
 
     return states;
 }
