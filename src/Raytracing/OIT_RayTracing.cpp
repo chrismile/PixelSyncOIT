@@ -130,6 +130,7 @@ void OIT_RayTracing::fromFile(
     auto startLoadFile = std::chrono::system_clock::now();
 
     if (useTriangleMesh) {
+        std::cout << "---- file name is " << filename << std::endl;
         std::string modelFilenameBinmesh = sgl::FileUtils::get()->removeExtension(filename) + ".binmesh";
         BinaryMesh binmesh;
         if (!sgl::FileUtils::get()->exists(modelFilenameBinmesh)) {
@@ -170,28 +171,32 @@ void OIT_RayTracing::fromFile(
 
         renderBackend.loadTriangleMesh(filename, indices, vertices, vertexNormals, vertexAttributes);
     } else {
-        std::cout << "----file name using is " << filename << std::endl;
+        std::cout << "---- file name is " << filename << std::endl;
         Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);
         renderBackend.loadTrajectories(filename, trajectories);
         onTransferFunctionMapRebuilt();
         renderBackend.setLineRadius(this->lineRadius);
-        glm::mat4 viewMatrix = camera->getViewMatrix();
-        glm::mat4 invViewMatrix = glm::inverse(camera->getViewMatrix());
-        glm::vec3 upDir = invViewMatrix[1];
-        glm::vec3 lookDir = -invViewMatrix[2];
-        glm::vec3 pos = invViewMatrix[3];
-
-        auto startRTPreprocessing = std::chrono::system_clock::now();
-
-        renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy());
-        renderBackend.setCameraInitialize(lookDir);
-
-        auto endRTPreprocesing = std::chrono::system_clock::now();
-        auto rtPreprocessingElapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-                endRTPreprocesing - startRTPreprocessing);
-        sgl::Logfile::get()->writeInfo(std::string() + "Computational time to pre-process dataset for ray tracer: "
-                                       + std::to_string(rtPreprocessingElapsedTime.count()));
     }
+
+    onTransferFunctionMapRebuilt();
+
+    glm::mat4 viewMatrix = camera->getViewMatrix();
+    glm::mat4 invViewMatrix = glm::inverse(camera->getViewMatrix());
+    glm::vec3 upDir = invViewMatrix[1];
+    glm::vec3 lookDir = -invViewMatrix[2];
+    glm::vec3 pos = invViewMatrix[3];
+
+    auto startRTPreprocessing = std::chrono::system_clock::now();
+
+    renderBackend.commitToOSPRay(pos, lookDir, upDir, camera->getFOVy());
+    renderBackend.setCameraInitialize(lookDir);
+
+    auto endRTPreprocesing = std::chrono::system_clock::now();
+    auto rtPreprocessingElapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+            endRTPreprocesing - startRTPreprocessing);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computational time to pre-process dataset for ray tracer: "
+                                   + std::to_string(rtPreprocessingElapsedTime.count()));
+
 
     auto endLoadFile = std::chrono::system_clock::now();
     auto loadFileElapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endLoadFile - startLoadFile);

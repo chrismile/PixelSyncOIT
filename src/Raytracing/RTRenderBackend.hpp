@@ -57,6 +57,14 @@ struct TubePrimitives
     ospcommon::box3f worldBounds;
 };
 
+struct TriangleMesh
+{
+    std::vector<int> indices;
+    std::vector<glm::vec3> vertices;
+    std::vector<glm::vec3> vertexNormals;
+    std::vector<ospcommon::vec4f> vertexColors;
+};
+
 class RTRenderBackend {
 public:
     RTRenderBackend(bool use_Embree) : use_Embree(use_Embree) {}
@@ -129,6 +137,8 @@ public:
             const float fovy, float radius, bool changeTFN);
 
 private:
+    void clearData();
+
     // Viewport width and height.
     int width, height;
 
@@ -153,6 +163,11 @@ private:
     // if data is too large will be separate into two geometries
     OSPGeometry tubeGeo1;
 
+    OSPGeometry triangleGeo;
+    TriangleMesh triangleMesh;
+
+    bool tubeGeoUsed = false, tubeGeo1Used = false, triangleGeoUsed = false;
+
     OSPData colorData;
     bool initializedColorData = false;
 
@@ -162,6 +177,7 @@ private:
     glm::vec3 camera_dir;
     glm::vec3 camera_up;
     bool use_Embree;
+    bool isTriangles = false;
 };
 
 

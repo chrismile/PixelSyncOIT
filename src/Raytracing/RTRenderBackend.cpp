@@ -93,13 +93,25 @@ void RTRenderBackend::setViewportSize(int width, int height) {
     framebuffer = ospNewFrameBuffer(osp::vec2i{width, height}, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
 }
 
-void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajectories &trajectories)
-{
-    // convert trajectories to tubes
+void RTRenderBackend::clearData() {
     Tube.nodes.clear();
     Tube.links.clear();
     Tube.colors.clear();
+
+    this->triangleMesh.indices.clear();
+    this->triangleMesh.vertices.clear();
+    this->triangleMesh.vertexNormals.clear();
+    this->triangleMesh.vertexColors.clear();
+
     this->attributes.clear();
+}
+
+void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajectories &trajectories)
+{
+    isTriangles = false;
+    clearData();
+
+    // convert trajectories to tubes
     std::cout << "Start convert trajectories to tube primitives..." << std::endl;
     // std::cout << "node size = " << trajectories.positions.size() << std::endl;
     // std::cout << "line size = " << trajectories.size() << std::endl;
@@ -155,8 +167,19 @@ void RTRenderBackend::loadTriangleMesh(
         const std::vector<uint32_t> &indices,
         const std::vector<glm::vec3> &vertices,
         const std::vector<glm::vec3> &vertexNormals,
-        const std::vector<float> &vertexAttributes) {
-    // TODO: Convert the triangle mesh to an internal representation.
+        const std::vector<float> &vertexAttributes)
+{
+    isTriangles = true;
+    clearData();
+
+    this->triangleMesh.vertices = vertices;
+    this->triangleMesh.vertexNormals = vertexNormals;
+    this->attributes = vertexAttributes;
+
+    this->triangleMesh.indices.resize(indices.size());
+    for (size_t i = 0; i < indices.size(); i++) {
+        this->triangleMesh.indices.at(i) = indices.at(i);
+    }
 }
 
 void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLookupTable) {
@@ -169,7 +192,9 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
     const float dis = 1.f / (amax - amin);
     // map attributes to the color
 
-    Tube.colors.clear();
+    std::vector<ospcommon::vec4f> newColors;
+    newColors.reserve(this->attributes.size());
+
     for(int i = 0; i < this->attributes.size(); ++i){
         float a = this->attributes[i];
         const float ratio = (a - amin) * dis;
@@ -183,14 +208,14 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
             glm::vec3 color_linear_rgb = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
             float opacity = colorRGBA.a;
             ospcommon::vec4f color(color_linear_rgb.r, color_linear_rgb.g , color_linear_rgb.b, colorRGBA.a);
-            Tube.colors.push_back(color);
+            newColors.push_back(color);
         }else if(N >= tfLookupTable.size() - 1){
             glm::vec4 colorRGBA = tfLookupTable.back().getFloatColorRGBA();
             glm::vec3 color_sRGB(colorRGBA);
             glm::vec3 color_linear_rgb = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
             float opacity = colorRGBA.a;
             ospcommon::vec4f color(color_linear_rgb.r, color_linear_rgb.g , color_linear_rgb.b, opacity);
-            Tube.colors.push_back(color);
+            newColors.push_back(color);
         }else{
             glm::vec4 colorRGBA_lo = tfLookupTable.at(N).getFloatColorRGBA();
             glm::vec4 colorRGBA_hi = tfLookupTable.at(N+1).getFloatColorRGBA();
@@ -203,8 +228,14 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
             // convert sRGB to linear RGB
             glm::vec3 color_linear = TransferFunctionWindow::sRGBToLinearRGB(color_sRGB);
             ospcommon::vec4f color(color_linear.x, color_linear.y, color_linear.z, opacity);
-            Tube.colors.push_back(color);
+            newColors.push_back(color);
         }
+    }
+
+    if (isTriangles) {
+        this->triangleMesh.vertexColors = newColors;
+    } else {
+        Tube.colors = newColors;
     }
 }
 
@@ -228,7 +259,11 @@ void RTRenderBackend::setCameraInitialize(glm::vec3 dir)
 
 void RTRenderBackend::recommitRadius()
 {
-    if(use_Embree){
+    if (isTriangles) {
+        return;
+    }
+
+    if (use_Embree){
         std::vector<ospcommon::vec4f> points;
 
         for(int i = 0; i < Tube.nodes.size(); i++){
@@ -243,14 +278,14 @@ void RTRenderBackend::recommitRadius()
         ospSetData(tubeGeo, "vertex", pointsData);
         ospCommit(tubeGeo);
         ospCommit(world);
-    }else{
-        if(needSplit){
-            for(int i = 0; i < index.size(); i++){
+    } else {
+        if (needSplit) {
+            for (int i = 0; i < index.size(); i++) {
                 int start,end;
-                if(i == index.size() - 1){
+                if (i == index.size() - 1) {
                     start = index[i];
                     end = Tube.links.size() - 1;
-                }else{
+                } else {
                     start = index[i];
                     end = index[i+1] - 1;
                 }
@@ -260,75 +295,79 @@ void RTRenderBackend::recommitRadius()
                 OSPData nodeData   = ospNewData(sub_nodes.size() * sizeof(Node), OSP_RAW, sub_nodes.data());
                 ospCommit(nodeData);
 
-                if(i == 0){
+                if (i == 0) {
                     ospSetData(tubeGeo, "nodeData", nodeData);
                     ospCommit(tubeGeo);
-                }else{                  
+                } else {
                     ospSetData(tubeGeo1, "nodeData", nodeData);
                     ospCommit(tubeGeo1);
                 }            
             }
             ospCommit(world);
-        }else{
+        } else {
             OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
             ospSetData(tubeGeo, "nodeData", nodeData);
             ospCommit(tubeGeo);
             ospCommit(world);
         }
-
     }
 }
 
 void RTRenderBackend::recommitColor()
 {
-    if(use_Embree){
-        std::vector<ospcommon::vec4f> colors;
-        for(int i = 0; i < Tube.nodes.size(); i++){
-            ospcommon::vec4f c;
-            c.x = Tube.colors[i].x;
-            c.y = Tube.colors[i].y;
-            c.z = Tube.colors[i].z;
-            c.w = Tube.colors[i].w;
-            colors.push_back(c);
-        }
-        OSPData colorsData  = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
-        ospSetData(tubeGeo, "vertex.color", colorsData);
-        ospCommit(tubeGeo);
+    if (isTriangles) {
+        OSPData colorsData  = ospNewData(triangleMesh.vertexColors.size(), OSP_FLOAT4, triangleMesh.vertexColors.data());
+        ospSetData(triangleGeo, "vertex.color", colorsData);
+        ospCommit(triangleGeo);
         ospCommit(world);
-
-    }else{
-        if(needSplit){
-            for(int i = 0; i < index.size(); i++){
-                int start,end;
-                if(i == index.size() - 1){
-                    start = index[i];
-                    end = Tube.links.size() - 1;
-                }else{
-                    start = index[i];
-                    end = index[i+1] - 1;
-                }
-                auto first_color = Tube.colors.begin() + start;
-                auto last_color = Tube.colors.begin() + end + 1;
-                std::vector<ospcommon::vec4f> sub_colors(first_color, last_color);  
-                OSPData colorData   = ospNewData(sub_colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, sub_colors.data());
-                ospCommit(colorData);
-
-                if(i == 0){
-                    ospSetData(tubeGeo, "colorData", colorData);
-                    ospCommit(tubeGeo);
-                }else{                  
-                    ospSetData(tubeGeo1, "colorData", colorData);
-                    ospCommit(tubeGeo1);
-                }            
+    } else {
+        if(use_Embree){
+            std::vector<ospcommon::vec4f> colors;
+            for(int i = 0; i < Tube.nodes.size(); i++){
+                ospcommon::vec4f c;
+                c.x = Tube.colors[i].x;
+                c.y = Tube.colors[i].y;
+                c.z = Tube.colors[i].z;
+                c.w = Tube.colors[i].w;
+                colors.push_back(c);
             }
-            ospCommit(world);
-        }else{
-            OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
-            ospSetData(tubeGeo, "colorData", colorData);
+            OSPData colorsData  = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
+            ospSetData(tubeGeo, "vertex.color", colorsData);
             ospCommit(tubeGeo);
             ospCommit(world);
-        }
+        } else {
+            if (needSplit) {
+                for (int i = 0; i < index.size(); i++) {
+                    int start,end;
+                    if (i == index.size() - 1) {
+                        start = index[i];
+                        end = Tube.links.size() - 1;
+                    } else {
+                        start = index[i];
+                        end = index[i+1] - 1;
+                    }
+                    auto first_color = Tube.colors.begin() + start;
+                    auto last_color = Tube.colors.begin() + end + 1;
+                    std::vector<ospcommon::vec4f> sub_colors(first_color, last_color);
+                    OSPData colorData   = ospNewData(sub_colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, sub_colors.data());
+                    ospCommit(colorData);
 
+                    if (i == 0) {
+                        ospSetData(tubeGeo, "colorData", colorData);
+                        ospCommit(tubeGeo);
+                    } else {
+                        ospSetData(tubeGeo1, "colorData", colorData);
+                        ospCommit(tubeGeo1);
+                    }
+                }
+                ospCommit(world);
+            } else {
+                OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
+                ospSetData(tubeGeo, "colorData", colorData);
+                ospCommit(tubeGeo);
+                ospCommit(world);
+            }
+        }
     }
 }
 
@@ -336,170 +375,25 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
 {
     world = ospNewModel();
 
-    if(!use_Embree){
-        if(needSplit){
-            // separate into two geometris
-            // Now is hardcoded for turbulence data set
-            // ! tubeGeo
-            tubeGeo = ospNewGeometry("tubes");
-            tubeGeo1 = ospNewGeometry("tubes");
-            //! Construct Links first
-            int count = 0;
-            for(int i = 0; i < Tube.links.size(); i++){
-                int first = Tube.links[i].first;
-                int second = Tube.links[i].second;
-                if(first == second){
-                    count++;
-                }
-                if(count == threshold + 1){
-                    index.push_back(i);
-                    count = 1;
-                }
-            }
-            for(int i = 0; i < index.size(); i++){
-                int start,end;
-                if(i == index.size() - 1){
-                    start = index[i];
-                    end = Tube.links.size() - 1;
-                }else{
-                    start = index[i];
-                    end = index[i+1] - 1;
-                }
-
-                auto first_link = Tube.links.begin() + start;
-                auto last_link = Tube.links.begin() + end + 1;
-                std::vector<Link> sub_links(first_link, last_link);
-                for(int j = 0; j < sub_links.size(); j++){
-                    int first = sub_links[j].first;
-                    int second = sub_links[j].second;
-                    if(first == second){
-                        sub_links[j].first = j;
-                        sub_links[j].second = j;
-                    }else{
-                        sub_links[j].first = j;
-                        sub_links[j].second = j - 1;
-                    }
-                }
-
-                auto first_node = Tube.nodes.begin() + start;
-                auto last_node = Tube.nodes.begin() + end + 1;
-                std::vector<Node> sub_nodes(first_node, last_node);
-                auto first_color = Tube.colors.begin() + start;
-                auto last_color = Tube.colors.begin() + end + 1;
-                std::vector<ospcommon::vec4f> sub_colors(first_color, last_color);  
-                OSPData nodeData = ospNewData(sub_nodes.size() * sizeof(Node), OSP_RAW, sub_nodes.data());
-                OSPData linkData   = ospNewData(sub_links.size() * sizeof(Link), OSP_RAW, sub_links.data());
-                OSPData colorData   = ospNewData(sub_colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, sub_colors.data());
-                ospCommit(nodeData);
-                ospCommit(linkData);
-                ospCommit(colorData);
-                
-                // OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
-                // ospCommit(materialList);
-
-                if(i == 0){
-                    ospSetData(tubeGeo, "nodeData", nodeData);
-                    ospSetData(tubeGeo, "linkData", linkData);
-                    ospSetData(tubeGeo, "colorData", colorData);
-                    // ospSetMaterial(tubeGeo, materialList);
-                    ospCommit(tubeGeo);
-                }else{
-                    ospSetData(tubeGeo1, "nodeData", nodeData);
-                    ospSetData(tubeGeo1, "linkData", linkData);
-                    ospSetData(tubeGeo1, "colorData", colorData);
-                    // ospSetMaterial(tubeGeo1, materialList);
-                    ospCommit(tubeGeo1);
-                }            
-            }
-            ospAddGeometry(world, tubeGeo);
-            ospAddGeometry(world, tubeGeo1);
-            ospRelease(tubeGeo); // we are done using this handle
-            ospRelease(tubeGeo1);
-            size_t before = getUsedSystemMemoryBytes();
-            ospCommit(world);
-            size_t after = getUsedSystemMemoryBytes();
-            std::cout << "====================================== " << "\n";
-            std::cout << "              MEMORY USAGE             " << std::endl;
-            std::cout << " Before : " << before << " After: " << after << std::endl;
-            std::cout << " Used: " << after - before << std::endl;
-            std::cout << "====================================== " << "\n";
-
-        }else{
-            tubeGeo = ospNewGeometry("tubes");
-            OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
-            OSPData linkData   = ospNewData(Tube.links.size() * sizeof(Link), OSP_RAW, Tube.links.data());
-            OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
-            ospCommit(nodeData);
-            ospCommit(linkData);
-            ospCommit(colorData);
-
-            // initializedColorData = true;
-
-            OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
-            ospCommit(materialList);
-
-            ospSetData(tubeGeo, "nodeData", nodeData);
-            ospSetData(tubeGeo, "linkData", linkData);
-            ospSetData(tubeGeo, "colorData", colorData);
-            // ospSetMaterial(tubeGeo, materialList);
-            ospCommit(tubeGeo);
-
-            // ! Add tubeGeo to the world
-            ospAddGeometry(world, tubeGeo);
-            ospRelease(tubeGeo); // we are done using this handle
-            
-            size_t before = getUsedSystemMemoryBytes();
-            ospCommit(world);
-            size_t after = getUsedSystemMemoryBytes();
-            std::cout << "====================================== " << "\n";
-            std::cout << "              MEMORY USAGE             " << std::endl;
-            std::cout << " Before : " << before << " After: " << after << std::endl;
-            std::cout << " Used: " << after - before << std::endl;
-            std::cout << "====================================== " << "\n";
-
-        }
-
-
-    }else{
-        std::cout << "Using Embree Streamlines" << "\n";
-        tubeGeo = ospNewGeometry("streamlines");
+    if (isTriangles) {
+        std::cout << "Using triangle mesh" << "\n";
+        triangleGeo = ospNewGeometry("triangles");
         std::vector<ospcommon::vec4f> points;
         std::vector<int> indices;
         std::vector<ospcommon::vec4f> colors;
 
-        for(int i = 0; i < Tube.nodes.size(); i++){
-            ospcommon::vec4f p;
-            p.x = Tube.nodes[i].position.x;
-            p.y = Tube.nodes[i].position.y;
-            p.z = Tube.nodes[i].position.z;
-            p.w = Tube.nodes[i].radius;
-            points.push_back(p);
-            ospcommon::vec4f c;
-            c.x = Tube.colors[i].x;
-            c.y = Tube.colors[i].y;
-            c.z = Tube.colors[i].z;
-            c.w = Tube.colors[i].w;
-            colors.push_back(c);
-        }
-        for(int i = 0; i < Tube.links.size() - 1; i++){
-            int first = Tube.links[i].first;
-            int second = Tube.links[i].second;
-            if(first == second && i != 0){
-                indices.pop_back();
-            }
-            indices.push_back(first);
-        }
+        OSPData vertexData  = ospNewData(triangleMesh.vertices.size(), OSP_FLOAT3, triangleMesh.vertices.data());
+        OSPData normalData  = ospNewData(triangleMesh.vertexNormals.size(), OSP_FLOAT3, triangleMesh.vertexNormals.data());
+        OSPData colorData  = ospNewData(triangleMesh.vertexColors.size(), OSP_FLOAT4, triangleMesh.vertexColors.data());
+        OSPData indexData  = ospNewData(triangleMesh.indices.size(), OSP_INT, triangleMesh.indices.data());
+        ospSetData(triangleGeo, "vertex", vertexData);
+        ospSetData(triangleGeo, "vertex.normal", normalData);
+        ospSetData(triangleGeo, "vertex.color", colorData);
+        ospSetData(triangleGeo, "index", indexData);
+        ospCommit(triangleGeo);
 
-        OSPData pointsData  = ospNewData(points.size(), OSP_FLOAT4, points.data());
-        OSPData indicesData = ospNewData(indices.size(), OSP_INT, indices.data());
-        OSPData colorsData  = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
-        ospSetData(tubeGeo, "vertex", pointsData);
-        ospSetData(tubeGeo, "index", indicesData);
-        ospSetData(tubeGeo, "vertex.color", colorsData);
-        ospCommit(tubeGeo);
-
-        ospAddGeometry(world, tubeGeo);
-        ospRelease(tubeGeo); // we are done using this handle
+        ospAddGeometry(world, triangleGeo);
+        ospRelease(triangleGeo); // we are done using this handle
         size_t before = getUsedSystemMemoryBytes();
         ospCommit(world);
         size_t after = getUsedSystemMemoryBytes();
@@ -508,7 +402,180 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
         std::cout << " Before : " << before << " After: " << after << std::endl;
         std::cout << " Used: " << after - before << std::endl;
         std::cout << "====================================== " << "\n";
+    } else {
+        if (!use_Embree) {
+            if (needSplit) {
+                // separate into two geometris
+                // Now is hardcoded for turbulence data set
+                // ! tubeGeo
+                tubeGeo = ospNewGeometry("tubes");
+                tubeGeo1 = ospNewGeometry("tubes");
+                //! Construct Links first
+                int count = 0;
+                for(int i = 0; i < Tube.links.size(); i++){
+                    int first = Tube.links[i].first;
+                    int second = Tube.links[i].second;
+                    if(first == second){
+                        count++;
+                    }
+                    if(count == threshold + 1){
+                        index.push_back(i);
+                        count = 1;
+                    }
+                }
+                for(int i = 0; i < index.size(); i++){
+                    int start,end;
+                    if(i == index.size() - 1){
+                        start = index[i];
+                        end = Tube.links.size() - 1;
+                    }else{
+                        start = index[i];
+                        end = index[i+1] - 1;
+                    }
+
+                    auto first_link = Tube.links.begin() + start;
+                    auto last_link = Tube.links.begin() + end + 1;
+                    std::vector<Link> sub_links(first_link, last_link);
+                    for(int j = 0; j < sub_links.size(); j++){
+                        int first = sub_links[j].first;
+                        int second = sub_links[j].second;
+                        if(first == second){
+                            sub_links[j].first = j;
+                            sub_links[j].second = j;
+                        }else{
+                            sub_links[j].first = j;
+                            sub_links[j].second = j - 1;
+                        }
+                    }
+
+                    auto first_node = Tube.nodes.begin() + start;
+                    auto last_node = Tube.nodes.begin() + end + 1;
+                    std::vector<Node> sub_nodes(first_node, last_node);
+                    auto first_color = Tube.colors.begin() + start;
+                    auto last_color = Tube.colors.begin() + end + 1;
+                    std::vector<ospcommon::vec4f> sub_colors(first_color, last_color);
+                    OSPData nodeData = ospNewData(sub_nodes.size() * sizeof(Node), OSP_RAW, sub_nodes.data());
+                    OSPData linkData   = ospNewData(sub_links.size() * sizeof(Link), OSP_RAW, sub_links.data());
+                    OSPData colorData   = ospNewData(sub_colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, sub_colors.data());
+                    ospCommit(nodeData);
+                    ospCommit(linkData);
+                    ospCommit(colorData);
+
+                    // OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
+                    // ospCommit(materialList);
+
+                    if(i == 0){
+                        ospSetData(tubeGeo, "nodeData", nodeData);
+                        ospSetData(tubeGeo, "linkData", linkData);
+                        ospSetData(tubeGeo, "colorData", colorData);
+                        // ospSetMaterial(tubeGeo, materialList);
+                        ospCommit(tubeGeo);
+                    }else{
+                        ospSetData(tubeGeo1, "nodeData", nodeData);
+                        ospSetData(tubeGeo1, "linkData", linkData);
+                        ospSetData(tubeGeo1, "colorData", colorData);
+                        // ospSetMaterial(tubeGeo1, materialList);
+                        ospCommit(tubeGeo1);
+                    }
+                }
+                ospAddGeometry(world, tubeGeo);
+                ospAddGeometry(world, tubeGeo1);
+                ospRelease(tubeGeo); // we are done using this handle
+                ospRelease(tubeGeo1);
+                size_t before = getUsedSystemMemoryBytes();
+                ospCommit(world);
+                size_t after = getUsedSystemMemoryBytes();
+                std::cout << "====================================== " << "\n";
+                std::cout << "              MEMORY USAGE             " << std::endl;
+                std::cout << " Before : " << before << " After: " << after << std::endl;
+                std::cout << " Used: " << after - before << std::endl;
+                std::cout << "====================================== " << "\n";
+
+            } else {
+                tubeGeo = ospNewGeometry("tubes");
+                OSPData nodeData = ospNewData(Tube.nodes.size() * sizeof(Node), OSP_RAW, Tube.nodes.data());
+                OSPData linkData   = ospNewData(Tube.links.size() * sizeof(Link), OSP_RAW, Tube.links.data());
+                OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
+                ospCommit(nodeData);
+                ospCommit(linkData);
+                ospCommit(colorData);
+
+                // initializedColorData = true;
+
+                OSPMaterial materialList = ospNewMaterial2("scivis", "OBJMaterial");
+                ospCommit(materialList);
+
+                ospSetData(tubeGeo, "nodeData", nodeData);
+                ospSetData(tubeGeo, "linkData", linkData);
+                ospSetData(tubeGeo, "colorData", colorData);
+                // ospSetMaterial(tubeGeo, materialList);
+                ospCommit(tubeGeo);
+
+                // ! Add tubeGeo to the world
+                ospAddGeometry(world, tubeGeo);
+                ospRelease(tubeGeo); // we are done using this handle
+
+                size_t before = getUsedSystemMemoryBytes();
+                ospCommit(world);
+                size_t after = getUsedSystemMemoryBytes();
+                std::cout << "====================================== " << "\n";
+                std::cout << "              MEMORY USAGE             " << std::endl;
+                std::cout << " Before : " << before << " After: " << after << std::endl;
+                std::cout << " Used: " << after - before << std::endl;
+                std::cout << "====================================== " << "\n";
+
+            }
+        } else {
+            std::cout << "Using Embree Streamlines" << "\n";
+            tubeGeo = ospNewGeometry("streamlines");
+            std::vector<ospcommon::vec4f> points;
+            std::vector<int> indices;
+            std::vector<ospcommon::vec4f> colors;
+
+            for (int i = 0; i < Tube.nodes.size(); i++) {
+                ospcommon::vec4f p;
+                p.x = Tube.nodes[i].position.x;
+                p.y = Tube.nodes[i].position.y;
+                p.z = Tube.nodes[i].position.z;
+                p.w = Tube.nodes[i].radius;
+                points.push_back(p);
+                ospcommon::vec4f c;
+                c.x = Tube.colors[i].x;
+                c.y = Tube.colors[i].y;
+                c.z = Tube.colors[i].z;
+                c.w = Tube.colors[i].w;
+                colors.push_back(c);
+            }
+            for (int i = 0; i < Tube.links.size() - 1; i++) {
+                int first = Tube.links[i].first;
+                int second = Tube.links[i].second;
+                if(first == second && i != 0){
+                    indices.pop_back();
+                }
+                indices.push_back(first);
+            }
+
+            OSPData pointsData  = ospNewData(points.size(), OSP_FLOAT4, points.data());
+            OSPData indicesData = ospNewData(indices.size(), OSP_INT, indices.data());
+            OSPData colorsData  = ospNewData(colors.size(), OSP_FLOAT4, colors.data());
+            ospSetData(tubeGeo, "vertex", pointsData);
+            ospSetData(tubeGeo, "index", indicesData);
+            ospSetData(tubeGeo, "vertex.color", colorsData);
+            ospCommit(tubeGeo);
+
+            ospAddGeometry(world, tubeGeo);
+            ospRelease(tubeGeo); // we are done using this handle
+            size_t before = getUsedSystemMemoryBytes();
+            ospCommit(world);
+            size_t after = getUsedSystemMemoryBytes();
+            std::cout << "====================================== " << "\n";
+            std::cout << "              MEMORY USAGE             " << std::endl;
+            std::cout << " Before : " << before << " After: " << after << std::endl;
+            std::cout << " Used: " << after - before << std::endl;
+            std::cout << "====================================== " << "\n";
+        }
     }
+
 
     renderer = ospNewRenderer("scivis");
     //! lighting
