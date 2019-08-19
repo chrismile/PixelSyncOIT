@@ -26,8 +26,6 @@ int main(int argc, char *argv[]) {
     AppSettings::get()->getSettings().addKeyValue("window-debugContext", true);
     AppSettings::get()->getSettings().addKeyValue("window-vSync", true);
     AppSettings::get()->getSettings().addKeyValue("window-resizable", false);
-    AppSettings::get()->getSettings().addKeyValue("window-width", 1920);
-    AppSettings::get()->getSettings().addKeyValue("window-height", 1080);
     AppSettings::get()->setLoadGUI();
 
     Window *window = AppSettings::get()->createWindow();

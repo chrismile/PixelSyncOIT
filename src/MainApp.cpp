@@ -969,8 +969,8 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     int currentWindowWidth = window->getWidth();
     int currentWindowHeight = window->getHeight();
     glm::ivec2 newResolution = newState.windowResolution;
-    if (newResolution.x > 0 && newResolution.x > 0 && currentWindowWidth != newResolution.x
-            && currentWindowHeight != newResolution.y) {
+    if (newResolution.x > 0 && newResolution.y > 0 && (currentWindowWidth != newResolution.x
+            || currentWindowHeight != newResolution.y)) {
         window->setWindowSize(newResolution.x, newResolution.y);
     }
 
