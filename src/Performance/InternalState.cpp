@@ -491,8 +491,8 @@ void getTestModesRayTracing(std::vector<InternalState> &states, InternalState st
 {
     state.oitAlgorithm = RENDER_MODE_RAYTRACING;
 
-    state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     state.name = std::string() + "Ray Tracing (Tubes)";
+    state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
             { "useEmbreeCurves", "false" },
     });
@@ -584,7 +584,7 @@ std::vector<InternalState> getTestModesPaper()
 
     std::vector<InternalState> oldStates;
 
-    // Test both lines and triangles in ray tracing
+    // Force correct line rendering mode for ray tracing.
     oldStates = states;
     states.clear();
     for (size_t i = 0; i < oldStates.size(); i++) {
