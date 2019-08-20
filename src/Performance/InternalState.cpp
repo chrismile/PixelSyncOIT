@@ -490,6 +490,8 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 void getTestModesRayTracing(std::vector<InternalState> &states, InternalState state)
 {
     state.oitAlgorithm = RENDER_MODE_RAYTRACING;
+
+    state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     state.name = std::string() + "Ray Tracing (Tubes)";
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
             { "useEmbreeCurves", "false" },
@@ -497,9 +499,14 @@ void getTestModesRayTracing(std::vector<InternalState> &states, InternalState st
     states.push_back(state);
 
     state.name = std::string() + "Ray Tracing (Embree)";
+    state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
             { "useEmbreeCurves", "true" },
     });
+    states.push_back(state);
+
+    state.name = std::string() + "Ray Tracing (Triangles)";
+    state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     states.push_back(state);
 }
 
@@ -583,19 +590,13 @@ std::vector<InternalState> getTestModesPaper()
     for (size_t i = 0; i < oldStates.size(); i++) {
         InternalState state = oldStates.at(i);
         if (state.oitAlgorithm == RENDER_MODE_RAYTRACING) {
-            state.name = oldStates.at(i).name;
-            state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
-            states.push_back(state);
-            if (oldStates.at(i).name.find("(Embree)") != std::string::npos) {
-                size_t strStart = oldStates.at(i).name.find("(Embree)");
-                size_t strEnd = strStart + strlen("(Embree)");
-                state.name = oldStates.at(i).name.substr(0, strStart) + "(Triangles)" + oldStates.at(i).name.substr(strEnd);
+            if (oldStates.at(i).name.find("(Triangles)") != std::string::npos) {
                 state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
-                states.push_back(state);
+            } else {
+                state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
             }
-        } else {
-            states.push_back(state);
         }
+        states.push_back(state);
     }
 
 
