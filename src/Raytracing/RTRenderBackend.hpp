@@ -97,10 +97,10 @@ public:
      */
     void loadTriangleMesh(
             const std::string &filename,
-            const std::vector<uint32_t> &indices,
-            const std::vector<glm::vec3> &vertices,
-            const std::vector<glm::vec3> &vertexNormals,
-            const std::vector<float> &vertexAttributes);
+            std::vector<uint32_t> &indices,
+            std::vector<glm::vec3> &vertices,
+            std::vector<glm::vec3> &vertexNormals,
+            std::vector<float> &vertexAttributes);
 
     /**
      * For mapping line attributes (i.e., importance criteria) to colors and opacities, transfer functions are used.
@@ -167,6 +167,8 @@ private:
     TriangleMesh triangleMesh;
 
     bool tubeGeoUsed = false, tubeGeo1Used = false, triangleGeoUsed = false;
+    bool worldLoaded = false;
+    bool colorNeedsRecommit = false;
 
     OSPData colorData;
     bool initializedColorData = false;

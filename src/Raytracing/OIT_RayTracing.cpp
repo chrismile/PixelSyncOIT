@@ -139,7 +139,9 @@ void OIT_RayTracing::fromFile(
         }
         readMesh3D(modelFilenameBinmesh, binmesh);
         BinarySubMesh &submesh = binmesh.submeshes.at(0);
-        std::vector<uint32_t> &indices = submesh.indices;
+        std::vector<uint32_t> indices = submesh.indices;
+        submesh.indices.clear();
+        submesh.indices.shrink_to_fit();
         std::vector<glm::vec3> vertices;
         std::vector<glm::vec3> vertexNormals;
         std::vector<float> vertexAttributes;
@@ -167,7 +169,10 @@ void OIT_RayTracing::fromFile(
                     vertexAttributes.push_back(data[i] / 65535.0f);
                 }
             }
+            attr.data.clear();
+            attr.data.shrink_to_fit();
         }
+        binmesh = BinaryMesh();
 
         renderBackend.loadTriangleMesh(filename, indices, vertices, vertexNormals, vertexAttributes);
     } else {

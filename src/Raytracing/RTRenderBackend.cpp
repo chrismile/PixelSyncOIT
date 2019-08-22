@@ -94,16 +94,29 @@ void RTRenderBackend::setViewportSize(int width, int height) {
 }
 
 void RTRenderBackend::clearData() {
+    if (worldLoaded) {
+        ospRelease(world);
+        worldLoaded = false;
+    }
+
     Tube.nodes.clear();
     Tube.links.clear();
     Tube.colors.clear();
+    Tube.nodes.shrink_to_fit();
+    Tube.links.shrink_to_fit();
+    Tube.colors.shrink_to_fit();
 
     this->triangleMesh.indices.clear();
     this->triangleMesh.vertices.clear();
     this->triangleMesh.vertexNormals.clear();
     this->triangleMesh.vertexColors.clear();
+    this->triangleMesh.indices.shrink_to_fit();
+    this->triangleMesh.vertices.shrink_to_fit();
+    this->triangleMesh.vertexNormals.shrink_to_fit();
+    this->triangleMesh.vertexColors.shrink_to_fit();
 
     this->attributes.clear();
+    this->attributes.shrink_to_fit();
 }
 
 void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajectories &trajectories)
@@ -164,22 +177,30 @@ void RTRenderBackend::loadTrajectories(const std::string &filename, const Trajec
 
 void RTRenderBackend::loadTriangleMesh(
         const std::string &filename,
-        const std::vector<uint32_t> &indices,
-        const std::vector<glm::vec3> &vertices,
-        const std::vector<glm::vec3> &vertexNormals,
-        const std::vector<float> &vertexAttributes)
+        std::vector<uint32_t> &indices,
+        std::vector<glm::vec3> &vertices,
+        std::vector<glm::vec3> &vertexNormals,
+        std::vector<float> &vertexAttributes)
 {
     isTriangles = true;
     clearData();
 
     this->triangleMesh.vertices = vertices;
+    vertices.clear();
+    vertices.shrink_to_fit();
     this->triangleMesh.vertexNormals = vertexNormals;
+    vertexNormals.clear();
+    vertexNormals.shrink_to_fit();
     this->attributes = vertexAttributes;
+    vertexAttributes.clear();
+    vertexAttributes.shrink_to_fit();
 
     this->triangleMesh.indices.resize(indices.size());
     for (size_t i = 0; i < indices.size(); i++) {
         this->triangleMesh.indices.at(i) = indices.at(i);
     }
+    indices.clear();
+    indices.shrink_to_fit();
 }
 
 void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLookupTable) {
@@ -234,6 +255,7 @@ void RTRenderBackend::setTransferFunction(const std::vector<sgl::Color> &tfLooku
 
     if (isTriangles) {
         this->triangleMesh.vertexColors = newColors;
+        colorNeedsRecommit = true;
     } else {
         Tube.colors = newColors;
     }
@@ -316,10 +338,15 @@ void RTRenderBackend::recommitRadius()
 void RTRenderBackend::recommitColor()
 {
     if (isTriangles) {
-        OSPData colorsData  = ospNewData(triangleMesh.vertexColors.size(), OSP_FLOAT4, triangleMesh.vertexColors.data());
-        ospSetData(triangleGeo, "vertex.color", colorsData);
-        ospCommit(triangleGeo);
-        ospCommit(world);
+        if (colorNeedsRecommit) {
+            OSPData colorsData = ospNewData(triangleMesh.vertexColors.size(), OSP_FLOAT4, triangleMesh.vertexColors.data());
+            triangleMesh.vertexColors.clear();
+            triangleMesh.vertexColors.shrink_to_fit();
+            colorNeedsRecommit = false;
+            ospSetData(triangleGeo, "vertex.color", colorsData);
+            ospCommit(triangleGeo);
+            ospCommit(world);
+        }
     } else {
         if(use_Embree){
             std::vector<ospcommon::vec4f> colors;
@@ -374,6 +401,7 @@ void RTRenderBackend::recommitColor()
 void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &up, const float fovy)
 {
     world = ospNewModel();
+    worldLoaded = true;
 
     if (isTriangles) {
         std::cout << "Using triangle mesh" << "\n";
@@ -382,10 +410,19 @@ void RTRenderBackend::commitToOSPRay(const glm::vec3 &pos, const glm::vec3 &dir,
         std::vector<int> indices;
         std::vector<ospcommon::vec4f> colors;
 
-        OSPData vertexData  = ospNewData(triangleMesh.vertices.size(), OSP_FLOAT3, triangleMesh.vertices.data());
-        OSPData normalData  = ospNewData(triangleMesh.vertexNormals.size(), OSP_FLOAT3, triangleMesh.vertexNormals.data());
-        OSPData colorData  = ospNewData(triangleMesh.vertexColors.size(), OSP_FLOAT4, triangleMesh.vertexColors.data());
-        OSPData indexData  = ospNewData(triangleMesh.indices.size(), OSP_INT, triangleMesh.indices.data());
+        OSPData vertexData = ospNewData(triangleMesh.vertices.size(), OSP_FLOAT3, triangleMesh.vertices.data());
+        triangleMesh.vertices.clear();
+        triangleMesh.vertices.shrink_to_fit();
+        OSPData normalData = ospNewData(triangleMesh.vertexNormals.size(), OSP_FLOAT3, triangleMesh.vertexNormals.data());
+        triangleMesh.vertexNormals.clear();
+        triangleMesh.vertexNormals.shrink_to_fit();
+        OSPData colorData = ospNewData(triangleMesh.vertexColors.size(), OSP_FLOAT4, triangleMesh.vertexColors.data());
+        triangleMesh.vertexColors.clear();
+        triangleMesh.vertexColors.shrink_to_fit();
+        colorNeedsRecommit = false;
+        OSPData indexData = ospNewData(triangleMesh.indices.size(), OSP_INT, triangleMesh.indices.data());
+        triangleMesh.indices.clear();
+        triangleMesh.indices.shrink_to_fit();
         ospSetData(triangleGeo, "vertex", vertexData);
         ospSetData(triangleGeo, "vertex.normal", normalData);
         ospSetData(triangleGeo, "vertex.color", colorData);
