@@ -14,15 +14,6 @@
 #include "ImportanceCriteria.hpp"
 
 /**
- * Creates normals for the specified indexed vertex set.
- * NOTE: If a vertex is indexed by more than one triangle, then the average normal is stored per vertex.
- * If you want to have non-smooth normals, then make sure each vertex is only referenced by one face.
- */
-void createNormals(const std::vector<glm::vec3> &vertices,
-                   const std::vector<uint32_t> &indices,
-                   std::vector<glm::vec3> &normals);
-
-/**
  * @param pathLineCenters: The (input) path line points to create a tube from.
  * @param pathLineAttributes: The (input) path line point vertex attributes (belonging to pathLineCenters).
  * @param vertices: The (output) vertex points, which are a set of oriented circles around the centers (see above).
