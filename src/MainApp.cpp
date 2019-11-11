@@ -474,29 +474,37 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     // Only load new TF if loading dataset-specific transfer functions isn't overwritten.
     if (transferFunctionName.empty()) {
-        if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
-        } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
-        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
-        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
+
+        if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/quality/9213_streamlines_high.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
-        } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/quality/turbulence80000_high.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/tests/output_High.xml");
-        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/DrivenCavity.xml");
-        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/RayleighBenard.xml");
-        } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
-        } else {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/quality/output_high.xml");
         }
+//        if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/tests/output_High.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/DrivenCavity.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/RayleighBenard.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
+//        } else {
+//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+//        }
     }
 
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
@@ -1176,7 +1184,7 @@ PixelSyncApp::~PixelSyncApp()
 void PixelSyncApp::render()
 {
     if (videoWriter == NULL && recording) {
-        videoWriter = new VideoWriter("video.mp4", 60);
+        videoWriter = new VideoWriter("video.avi", 60);
     }
 
 

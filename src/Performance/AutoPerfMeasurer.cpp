@@ -85,6 +85,8 @@ void AutoPerfMeasurer::writeCurrentModeData()
     perfFile.writeCell(currentState.name);
     file.writeCell(sgl::toString(timeMS));
 
+    return;
+
     // Make screenshot of rendering result with current algorithm
     std::string filename = std::string() + "images/" + currentState.name + ".png";
     file.writeCell(filename);
@@ -156,6 +158,8 @@ void AutoPerfMeasurer::writeCurrentErrorMetricData()
         stateNameDepthPeeling = currentState.name;
         return;
     }
+
+    return;
 
     std::vector<std::string> errorMetrics = { "RMSE", "PSNR", "SSIM" };
     const uint32_t MAX_FRAMES = 64;
