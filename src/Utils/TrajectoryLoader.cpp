@@ -9,6 +9,7 @@
 #include <Graphics/Renderer.hpp>
 
 #include <chrono>
+#include <iostream>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <GL/glew.h>

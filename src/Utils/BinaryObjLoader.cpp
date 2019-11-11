@@ -30,6 +30,7 @@
 #include <vector>
 #include <fstream>
 #include <cstdint>
+#include <cstring>
 #include <Utils/File/Logfile.hpp>
 #include "MeshSerializer.hpp"
 #include "ComputeNormals.hpp"
@@ -90,7 +91,7 @@ void convertBinaryObjMeshToBinmesh(
     positionAttribute.attributeFormat = sgl::ATTRIB_FLOAT;
     positionAttribute.numComponents = 3;
     positionAttribute.data.resize(vertices.size() * sizeof(glm::vec3));
-    memcpy(&positionAttribute.data.front(), vertices.data(), vertices.size() * sizeof(glm::vec3));
+    std::memcpy(&positionAttribute.data.front(), vertices.data(), vertices.size() * sizeof(glm::vec3));
     binarySubmesh.attributes.push_back(positionAttribute);
 
     BinaryMeshAttribute normalAttribute;
@@ -98,7 +99,7 @@ void convertBinaryObjMeshToBinmesh(
     normalAttribute.attributeFormat = sgl::ATTRIB_FLOAT;
     normalAttribute.numComponents = 3;
     normalAttribute.data.resize(normals.size() * sizeof(glm::vec3));
-    memcpy(&normalAttribute.data.front(), &normals.front(), normals.size() * sizeof(glm::vec3));
+    std::memcpy(&normalAttribute.data.front(), &normals.front(), normals.size() * sizeof(glm::vec3));
     binarySubmesh.attributes.push_back(normalAttribute);
 
     BinaryMeshAttribute vertexAttribute;
@@ -107,7 +108,7 @@ void convertBinaryObjMeshToBinmesh(
     vertexAttribute.numComponents = 1;
     std::vector<uint16_t> vertexAttributeData(vertices.size(), 0u); // Just zero for now
     vertexAttribute.data.resize(vertexAttributeData.size() * sizeof(uint16_t));
-    memcpy(&vertexAttribute.data.front(), &vertexAttributeData.front(), vertexAttributeData.size() * sizeof(uint16_t));
+    std::memcpy(&vertexAttribute.data.front(), &vertexAttributeData.front(), vertexAttributeData.size() * sizeof(uint16_t));
     binarySubmesh.attributes.push_back(vertexAttribute);
 
     sgl::Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
