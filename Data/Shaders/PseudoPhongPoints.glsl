@@ -210,10 +210,9 @@ void main()
     }
 
     // Radial weight function
-    //vec4 color = vec4(1.0, 0.0, 0.0, 1.0);
     vec2 centerOffset = 2.0 * fragmentTextureCoords - vec2(1.0, 1.0);
-    float centerDistance = 1.0 - clamp(length(centerOffset), 0.0, 1.0);
-    color.a *= sqrt(centerDistance);
+    float invCenterDistance = 1.0 - clamp(length(centerOffset), 0.0, 1.0);
+    color.a *= sqrt(invCenterDistance);
 
     if (color.a < 1.0/255.0) {
         discard;
