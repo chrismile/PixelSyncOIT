@@ -44,43 +44,92 @@ void computeNormals(
     // For finding all triangles with a specific index. Maps vertex index -> first triangle index.
     sgl::Logfile::get()->writeInfo(std::string() + "Creating index map for "
             + sgl::toString(indices.size()) + " indices...");
-    std::multimap<size_t, size_t> indexMap;
+//    std::multimap<size_t, size_t> indexMap;
+//    for (size_t j = 0; j < indices.size(); j++) {
+//        size_t faceIndex = j / 3;
+//        indexMap.insert(std::make_pair(indices.at(j), faceIndex));
+//    }
+
+    std::vector<std::vector<size_t>> indexMap;
+    indexMap.resize(vertices.size());
+
     for (size_t j = 0; j < indices.size(); j++) {
-        indexMap.insert(std::make_pair(indices.at(j), (j/3)*3));
+        size_t vindex = indices.at(j);
+        size_t faceIndex = j / 3;
+
+        indexMap[vindex].push_back(faceIndex);
+    }
+
+    std::vector<glm::vec3> faceNormals(indices.size() / 3);
+    sgl::Logfile::get()->writeInfo(std::string() + "Computing face normals for "
+                                   + sgl::toString(faceNormals.size()) + " faces...");
+#pragma omp parallel for
+    for (size_t f = 0; f < faceNormals.size(); ++f)
+    {
+        size_t vertIndex = f * 3;
+        size_t i1 = indices.at(vertIndex), i2 = indices.at(vertIndex+1), i3 = indices.at(vertIndex+2);
+        glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+        faceNormal = glm::normalize(faceNormal);
+        faceNormals[f] = faceNormal;
     }
 
     sgl::Logfile::get()->writeInfo(std::string() + "Computing normals for "
             + sgl::toString(vertices.size()) + " vertices...");
-    normals.reserve(vertices.size());
+    normals.resize(vertices.size());
+#pragma omp parallel for
     for (size_t i = 0; i < vertices.size(); i++) {
+//        sgl::Logfile::get()->writeInfo(std::string() + "Processing vertex "
+//                                       + sgl::toString(i));
+
         glm::vec3 normal(0.0f, 0.0f, 0.0f);
         int numTrianglesSharedBy = 0;
-        auto triangleRange = indexMap.equal_range(i);
-        for (auto it = triangleRange.first; it != triangleRange.second; it++) {
-            size_t j = it->second;
-            size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
-            glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
-            faceNormal = glm::normalize(faceNormal);
+
+        const auto& faceIndices = indexMap[i];
+        for (const auto& face : faceIndices)
+        {
+            const glm::vec3& faceNormal = faceNormals[face];
             normal += faceNormal;
             numTrianglesSharedBy++;
         }
+
+//        auto triangleRange = indexMap.equal_range(i);
+//        for (auto it = triangleRange.first; it != triangleRange.second; it++) {
+//            size_t faceIndex = it->second;
+////            size_t j = it->second;
+////            size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+////            glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+////            faceNormal = glm::normalize(faceNormal);
+//            glm::vec3& faceNormal = faceNormals[faceIndex];
+//            normal += faceNormal;
+//            numTrianglesSharedBy++;
+//        }
         // Naive code, O(n^2)
-        /*for (size_t j = 0; j < indices.size(); j += 3) {
-            // Does this triangle contain vertex #i?
-            if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
-                size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
-                glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
-                faceNormal = glm::normalize(faceNormal);
-                normal += faceNormal;
-                numTrianglesSharedBy++;
-            }
-        }*/
+//        for (size_t j = 0; j < indices.size(); j += 3) {
+//            size_t faceIndex = j / 3;
+//            if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
+//                const glm::vec3& faceNormal = faceNormals[faceIndex];
+//                normal += faceNormal;
+//                numTrianglesSharedBy++;
+//            }
+//        }
+
+//        for (size_t j = 0; j < indices.size(); j += 3) {
+//            // Does this triangle contain vertex #i?
+//            if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
+//                size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+//                glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+//                faceNormal = glm::normalize(faceNormal);
+//                normal += faceNormal;
+//                numTrianglesSharedBy++;
+//            }
+//        }
 
         if (numTrianglesSharedBy == 0) {
             sgl::Logfile::get()->writeError("Error in createNormals: numTrianglesSharedBy == 0");
             exit(1);
         }
         normal /= (float)numTrianglesSharedBy;
-        normals.push_back(normal);
+        normal = glm::normalize(normal);
+        normals[i] = normal;
     }
 }

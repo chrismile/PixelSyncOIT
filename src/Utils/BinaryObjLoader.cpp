@@ -56,6 +56,14 @@ void convertBinaryObjMeshToBinmesh(
     std::vector<uint64_t> indices(header[1] * 3, 0);
     fin.read(reinterpret_cast<char*>(indices.data()), sizeof(uint64_t) * 3 * header[1]);
 
+    // normalize vertices
+    for (auto& vertex : vertices)
+    {
+        vertex.x /= 1024;
+        vertex.y /= 1024;
+        vertex.z /= 1024;
+    }
+
     // The indices are 64-bit, however, OpenGL currently only supports 32-bit indices. Check if 32-bit is enough.
     sgl::Logfile::get()->writeInfo(std::string() + "Computing additional mesh data...");
     if (vertices.size() / 3 > UINT32_MAX) {
@@ -65,7 +73,7 @@ void convertBinaryObjMeshToBinmesh(
     }
 
     // Convert indices to 32-bit values for the mesh.
-    std::vector<uint32_t> indices32(header[1] * 3, 0);
+    std::vector<uint32_t> indices32(indices.size());//header[1] * 3, 0);
     #pragma omp parallel for
     for (size_t i = 0; i < indices.size(); i++) {
         indices32[i] = static_cast<uint32_t>(indices[i]);
@@ -106,7 +114,7 @@ void convertBinaryObjMeshToBinmesh(
     vertexAttribute.name = "vertexAttribute0";
     vertexAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_SHORT;
     vertexAttribute.numComponents = 1;
-    std::vector<uint16_t> vertexAttributeData(vertices.size(), 0u); // Just zero for now
+    std::vector<uint16_t> vertexAttributeData(vertices.size(), 1u); // Just zero for now
     vertexAttribute.data.resize(vertexAttributeData.size() * sizeof(uint16_t));
     std::memcpy(&vertexAttribute.data.front(), &vertexAttributeData.front(), vertexAttributeData.size() * sizeof(uint16_t));
     binarySubmesh.attributes.push_back(vertexAttribute);

@@ -95,7 +95,7 @@ void main()
     phongColor = Ia + Id + Is;
 
     vec4 color = vec4(phongColor, fragmentColor.a);
-    color = vec4(1,0,0,1);
+//    color = vec4(1,0,0,1);
 
     // Pseudo Phong shading
     if (bandedColorShading == 1) {

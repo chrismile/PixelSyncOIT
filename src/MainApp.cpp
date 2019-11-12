@@ -46,6 +46,7 @@
 
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
+#include "Utils/BinaryObjLoader.hpp"
 #include "Utils/TrajectoryLoader.hpp"
 #include "Utils/HairLoader.hpp"
 #include "OIT/BufferSizeWatch.hpp"
@@ -560,8 +561,12 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
 
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
-        if (boost::starts_with(modelFilenamePure, "Data/Models")) {
+        if (boost::starts_with(modelFilenamePure, "Data/Models"))
+        {
             convertObjMeshToBinary(filename, modelFilenameOptimized);
+        } else if (boost::starts_with(modelFilenamePure, "Data/Surfaces"))
+        {
+            convertBinaryObjMeshToBinmesh(filename, modelFilenameOptimized);
         } else if (modelContainsTrajectories) {
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
                 convertTrajectoryDataToBinaryLineMesh(trajectoryType, filename, modelFilenameOptimized);
@@ -576,8 +581,11 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Models")) {
+    if (boost::starts_with(modelFilenamePure, "Data/Models"))
+    {
         gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
+    } else if (boost::starts_with(modelFilenamePure, "Data/Surfaces")) {
+            gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
     } else if (modelContainsTrajectories) {
         if (boost::ends_with(modelFilenameOptimized, "_lines")) {
             if (!useProgrammableFetch) {
@@ -727,6 +735,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
                 camera->setPosition(glm::vec3(0.154441f, 0.0162448f, 0.483843f));
+            } else if (boost::starts_with(modelFilenamePure, "Data/Surfaces")) {
+                // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
+//                camera->setPosition(glm::vec3(1023, 1023, 977));
+                camera->setPosition(glm::vec3(1, 1, 0.7));
             } else {
                 camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
             }
@@ -1705,7 +1717,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             // Hack for supporting multiple passes...
             if (modelFilenamePure == "Data/Models/Ship_04") {
                 transparencyShader->setUniform("bandedColorShading", 0);
-            } else if (!isHairDataset) {
+            } else if (boost::starts_with(modelFilenamePure, "Data/Surfaces"))
+            {
+                transparencyShader->setUniform("bandedColorShading", 0);
+            }
+            else if (!isHairDataset) {
                 transparencyShader->setUniform("bandedColorShading", 1);
             }
         }

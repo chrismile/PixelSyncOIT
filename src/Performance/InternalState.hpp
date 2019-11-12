@@ -31,6 +31,7 @@ enum RenderModeOIT {
 };
 
 const char *const MODEL_FILENAMES[] = {
+        "Data/Surfaces/rm-140-isosurface.bobj",
         "Data/Rings/rings.obj",
         "Data/Trajectories/9213_streamlines.obj",
         "Data/ConvectionRolls/output.obj",
@@ -71,6 +72,7 @@ const char *const MODEL_FILENAMES[] = {
 };
 const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)));
 const char *const MODEL_DISPLAYNAMES[] = {
+        "Meshkov",
         "Rings",
         "Aneurysm",
         "Convection Rolls",
