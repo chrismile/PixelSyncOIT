@@ -53,6 +53,7 @@ void computeNormals(
     std::vector<std::vector<size_t>> indexMap;
     indexMap.resize(vertices.size());
 
+#pragma omp parallel for
     for (size_t j = 0; j < indices.size(); j++) {
         size_t vindex = indices.at(j);
         size_t faceIndex = j / 3;
@@ -68,14 +69,17 @@ void computeNormals(
     {
         size_t vertIndex = f * 3;
         size_t i1 = indices.at(vertIndex), i2 = indices.at(vertIndex+1), i3 = indices.at(vertIndex+2);
-        glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
-        faceNormal = glm::normalize(faceNormal);
+        glm::vec3 faceNormal = glm::cross(vertices.at(i3) - vertices.at(i1), vertices.at(i2) - vertices.at(i1));
+//        faceNormal = glm::normalize(faceNormal);
+        // don't normalize weights as triangle area is encoded in cross product
+        // area is then used to weight contribution of normal to average normal at each vertex
         faceNormals[f] = faceNormal;
     }
 
     sgl::Logfile::get()->writeInfo(std::string() + "Computing normals for "
             + sgl::toString(vertices.size()) + " vertices...");
     normals.resize(vertices.size());
+
 #pragma omp parallel for
     for (size_t i = 0; i < vertices.size(); i++) {
 //        sgl::Logfile::get()->writeInfo(std::string() + "Processing vertex "

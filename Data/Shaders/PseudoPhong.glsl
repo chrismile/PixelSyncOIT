@@ -74,19 +74,19 @@ void main()
 
     // Blinn-Phong Shading
     const vec3 lightColor = vec3(1,1,1);
-    const vec3 ambientColor = lightColor;
+    const vec3 ambientColor = fragmentColor.rgb;
     const vec3 diffuseColor = fragmentColor.rgb;
     vec3 phongColor = vec3(0);
 
-    const float kA = 0.1 * occlusionFactor * shadowFactor;
+    const float kA = 0.2 * occlusionFactor * shadowFactor;
     const vec3 Ia = kA * ambientColor;
     const float kD = 0.7;
-    const float kS = 0.2;
+    const float kS = 0.1;
     const float s = 10;
 
-    const vec3 l = normalize(lightDirection);
     const vec3 n = normalize(fragmentNormal);
     const vec3 v = normalize(cameraPosition - fragmentPositonWorld);
+    const vec3 l = v;//normalize(lightDirection);
     const vec3 h = normalize(v + l);
 
     vec3 Id = kD * clamp(abs(dot(n, l)), 0.0, 1.0) * diffuseColor;
