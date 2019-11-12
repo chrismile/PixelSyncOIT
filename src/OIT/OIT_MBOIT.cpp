@@ -328,8 +328,9 @@ void OIT_MBOIT::renderGUI()
 
 void OIT_MBOIT::setScreenSpaceBoundingBox(const sgl::AABB3 &screenSpaceBB, sgl::CameraPtr &camera)
 {
-    float minViewZ = screenSpaceBB.getMaximum().z;
-    float maxViewZ = screenSpaceBB.getMinimum().z;
+    // Add offset of 0.1 for e.g. point data sets where additonal vertices may be added in the shader for quads.
+    float minViewZ = screenSpaceBB.getMaximum().z + 0.1;
+    float maxViewZ = screenSpaceBB.getMinimum().z - 0.1;
     minViewZ = std::max(-minViewZ, camera->getNearClipDistance());
     maxViewZ = std::min(-maxViewZ, camera->getFarClipDistance());
     minViewZ = std::min(minViewZ, camera->getFarClipDistance());

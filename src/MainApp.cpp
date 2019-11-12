@@ -46,6 +46,8 @@
 
 #include "Utils/MeshSerializer.hpp"
 #include "Utils/OBJLoader.hpp"
+#include "Utils/BinaryObjLoader.hpp"
+#include "Utils/PointRendering/PointFileLoader.hpp"
 #include "Utils/TrajectoryLoader.hpp"
 #include "Utils/HairLoader.hpp"
 #include "OIT/BufferSizeWatch.hpp"
@@ -505,14 +507,36 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         sgl::ShaderManager->removePreprocessorDefine("CONVECTION_ROLLS");
     }
 
-    modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
+    modelType = MODEL_TYPE_TRIANGLE_MESH_NORMAL;
+
+    bool modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
             || boost::starts_with(modelFilenamePure, "Data/Rings")
             || boost::starts_with(modelFilenamePure, "Data/Turbulence")
             || boost::starts_with(modelFilenamePure, "Data/WCB")
             || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")
             || boost::starts_with(modelFilenamePure, "Data/CFD");
-    modelContainsHair = boost::starts_with(modelFilenamePure, "Data/Hair");
     if (modelContainsTrajectories) {
+        modelType = MODEL_TYPE_TRAJECTORIES;
+    }
+
+    if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        modelType = MODEL_TYPE_HAIR;
+    }
+
+    if (boost::starts_with(modelFilenamePure, "Data/Models")
+            || boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+        modelType = MODEL_TYPE_TRIANGLE_MESH_NORMAL;
+    }
+
+    /*if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+        modelType = MODEL_TYPE_TRIANGLE_MESH_SCIENTIFIC;
+    }*/
+
+    if (boost::starts_with(modelFilenamePure, "Data/PointDatasets")) {
+        modelType = MODEL_TYPE_POINTS;
+    }
+
+    if (modelType == MODEL_TYPE_TRAJECTORIES) {
         if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             trajectoryType = TRAJECTORY_TYPE_ANEURYSM;
         } else if (boost::starts_with(modelFilenamePure, "Data/WCB"))
@@ -532,7 +556,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
     // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
-    if (lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_LINES) {
+    if (modelType == MODEL_TYPE_TRAJECTORIES && lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_LINES) {
         modelFilenameOptimized += "_lines";
         if (useBillboardLines) {
             sgl::ShaderManager->addPreprocessorDefine("BILLBOARD_LINES", "");
@@ -545,7 +569,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         useGeometryShader = false;
     }
-    if (lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_FETCH) {
+    if (modelType == MODEL_TYPE_TRAJECTORIES && lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_FETCH) {
         modelFilenameOptimized += "_lines";
         useProgrammableFetch = true;
         sgl::ShaderManager->addPreprocessorDefine("USE_PROGRAMMABLE_FETCH", "");
@@ -560,9 +584,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     }
 
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
-        if (boost::starts_with(modelFilenamePure, "Data/Models")) {
+        if (modelType == MODEL_TYPE_TRIANGLE_MESH_NORMAL) {
             convertObjMeshToBinary(filename, modelFilenameOptimized);
-        } else if (modelContainsTrajectories) {
+        } else if (modelType == MODEL_TYPE_TRAJECTORIES) {
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
                 convertTrajectoryDataToBinaryLineMesh(trajectoryType, filename, modelFilenameOptimized);
             } else {
@@ -573,24 +597,44 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             convertHairDataToBinaryTriangleMesh(filename, modelFilenameOptimized);
+        } else if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+            convertBinaryObjMeshToBinmesh(filename, modelFilenameOptimized);
+        } else if (boost::starts_with(modelFilenamePure, "Data/PointDatasets")) {
+            convertPointDataSetToBinmesh(filename, modelFilenameOptimized);
         }
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Models")) {
+    if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+        if (cullBackface) {
+            cullBackface = false;
+            glDisable(GL_CULL_FACE);
+        }
+    } else {
+        if (!cullBackface) {
+            cullBackface = true;
+            glEnable(GL_CULL_FACE);
+        }
+    }
+
+    if (modelType == MODEL_TYPE_TRIANGLE_MESH_NORMAL) {
         gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
-    } else if (modelContainsTrajectories) {
+    } else if (modelType == MODEL_TYPE_TRAJECTORIES) {
         if (boost::ends_with(modelFilenameOptimized, "_lines")) {
             if (!useProgrammableFetch) {
-                gatherShaderIDs = {"PseudoPhongVorticity.Vertex", "PseudoPhongVorticity.Geometry",
-                                   "PseudoPhongVorticity.Fragment"};
+                gatherShaderIDs = {"PseudoPhongTrajectories.Vertex", "PseudoPhongTrajectories.Geometry",
+                                   "PseudoPhongTrajectories.Fragment"};
             } else {
-                gatherShaderIDs = {"PseudoPhongVorticity.FetchVertex", "PseudoPhongVorticity.Fragment"};
+                gatherShaderIDs = {"PseudoPhongTrajectories.FetchVertex", "PseudoPhongTrajectories.Fragment"};
             }
         } else {
-            gatherShaderIDs = {"PseudoPhongVorticity.TriangleVertex", "PseudoPhongVorticity.Fragment"};
+            gatherShaderIDs = {"PseudoPhongTrajectories.TriangleVertex", "PseudoPhongTrajectories.Fragment"};
         }
-    } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+    } else if (modelType == MODEL_TYPE_HAIR) {
         gatherShaderIDs = {"PseudoPhongHair.Vertex", "PseudoPhongHair.Fragment"};
+    } else if (modelType == MODEL_TYPE_TRIANGLE_MESH_SCIENTIFIC) {
+        gatherShaderIDs = {"PseudoPhongTriangleScientific.Vertex", "PseudoPhongTriangleScientific.Fragment"};
+    } else if (modelType == MODEL_TYPE_POINTS) {
+        gatherShaderIDs = {"PseudoPhongPoints.Vertex", "PseudoPhongPoints.Geometry", "PseudoPhongPoints.Fragment"};
     }
 
     updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
@@ -598,7 +642,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING) {
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
                 useProgrammableFetch, programmableFetchUseAoS, lineRadius);
-        if (shaderMode == SHADER_MODE_VORTICITY) {
+        if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
             recomputeHistogramForMesh();
         }
         boundingBox = transparentObject.boundingBox;
@@ -667,7 +711,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             camera->setPosition(glm::vec3(0.0f, 1.5f, 5.0f));
         }
     } else {
-        if (shaderMode != SHADER_MODE_VORTICITY && !boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE && !boost::starts_with(modelFilenamePure, "Data/Hair")) {
             transparencyShader->setUniform("bandedColorShading", 1);
         }
 
@@ -840,7 +884,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
     if (transparentObject.isLoaded() && mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING
             && !oitRenderer->isTestingMode()) {
         transparentObject.setNewShader(transparencyShader);
-        if (shaderMode != SHADER_MODE_VORTICITY) {
+        if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
             if (modelFilenamePure == "Data/Models/Ship_04") {
                 transparencyShader->setUniform("bandedColorShading", 0);
             } else if (!boost::starts_with(modelFilenamePure, "Data/Hair")) {
@@ -950,13 +994,14 @@ void PixelSyncApp::updateShaderMode(ShaderModeUpdate modeUpdate)
         transparencyShader = oitRenderer->getGatherShader();
     }
     // TODO: SHADER_MODE_UPDATE_EFFECT_CHANGE
-    if (modelContainsTrajectories) {
-        if (shaderMode != SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_NEW_OIT_RENDERER
-                || modeUpdate == SHADER_MODE_UPDATE_EFFECT_CHANGE) {
-            shaderMode = SHADER_MODE_VORTICITY;
+    if (modelType == MODEL_TYPE_TRAJECTORIES || modelType == MODEL_TYPE_TRIANGLE_MESH_SCIENTIFIC
+            || modelType == MODEL_TYPE_POINTS) {
+        if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE || modeUpdate == SHADER_MODE_UPDATE_NEW_OIT_RENDERER
+            || modeUpdate == SHADER_MODE_UPDATE_EFFECT_CHANGE) {
+            shaderMode = SHADER_MODE_SCIENTIFIC_ATTRIBUTE;
         }
     } else {
-        if (shaderMode == SHADER_MODE_VORTICITY || modeUpdate == SHADER_MODE_UPDATE_EFFECT_CHANGE) {
+        if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE || modeUpdate == SHADER_MODE_UPDATE_EFFECT_CHANGE) {
             shaderMode = SHADER_MODE_PSEUDO_PHONG;
         }
     }
@@ -1046,7 +1091,7 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     usedModelIndex = newModelIndex;
 
     // 3.2. If trajectory model: Set correct importance criterion
-    if (modelContainsTrajectories && importanceCriterionIndex != newState.importanceCriterionIndex) {
+    if (modelType == MODEL_TYPE_TRAJECTORIES && importanceCriterionIndex != newState.importanceCriterionIndex) {
         if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
             importanceCriterionTypeAneurysm = (ImportanceCriterionTypeAneurysm)newState.importanceCriterionIndex;
         } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
@@ -1514,7 +1559,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
     ImGui::Checkbox("Continuous Rendering", &continuousRendering);
     ImGui::Checkbox("UI on Screenshot", &uiOnScreenshot);
 
-    if (shaderMode == SHADER_MODE_VORTICITY || modelContainsHair) {
+    if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE || modelType == MODEL_TYPE_HAIR) {
         ImGui::SameLine();
         if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
             reRender = true;
@@ -1570,9 +1615,13 @@ void PixelSyncApp::renderSceneSettingsGUI()
             }
             reRender = true;
         }
+        if (modelType == MODEL_TYPE_POINTS
+            && ImGui::SliderFloat("Point radius", &pointRadius, 0.00005f, 0.0005f, "%.5f")) {
+            reRender = true;
+        }
     }
 
-    if (shaderMode == SHADER_MODE_VORTICITY) {
+    if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
         // Switch importance criterion
         if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES
                 && ((trajectoryType == TRAJECTORY_TYPE_ANEURYSM
@@ -1683,11 +1732,15 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
     if ((currentAOTechnique != AO_TECHNIQUE_SSAO || !ssaoHelper->isPreRenderPass())
             && (currentShadowTechnique == NO_SHADOW_MAPPING || !shadowTechnique->isShadowMapCreatePass())) {
         transparencyShader = oitRenderer->getGatherShader();
-        if (shaderMode == SHADER_MODE_VORTICITY) {
+        if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
             transparencyShader->setUniform("minCriterionValue", minCriterionValue);
             transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
             if (transparencyShader->hasUniform("radius")) {
-                transparencyShader->setUniform("radius", lineRadius);
+                if (modelType == MODEL_TYPE_POINTS) {
+                    transparencyShader->setUniform("radius", pointRadius);
+                } else {
+                    transparencyShader->setUniform("radius", lineRadius);
+                }
             }
             transparencyShader->setUniform("transparencyMapping", transparencyMapping);
             transparencyShader->setUniform("transferFunctionTexture",
@@ -1701,7 +1754,7 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             transparencyShader->setUniform("cameraPosition", camera->getPosition());
         }
 
-        if (shaderMode != SHADER_MODE_VORTICITY) {
+        if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
             // Hack for supporting multiple passes...
             if (modelFilenamePure == "Data/Models/Ship_04") {
                 transparencyShader->setUniform("bandedColorShading", 0);
@@ -1722,7 +1775,7 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
         if (shadowTechnique->isShadowMapCreatePass()) {
             transparencyShader = shadowTechnique->getShadowMapCreationShader();
             shadowTechnique->setUniformValuesCreateShadowMap();
-            if (shaderMode == SHADER_MODE_VORTICITY) {
+            if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
                 transparencyShader->setUniform("minCriterionValue", minCriterionValue);
                 transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
                 if (transparencyShader->hasUniform("radius")) {

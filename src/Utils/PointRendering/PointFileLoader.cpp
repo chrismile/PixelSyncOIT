@@ -43,15 +43,39 @@ void convertPointDataSetToBinmesh(
     sgl::Logfile::get()->writeInfo(std::string() + "Loading point data from \"" + inputFilename + "\"...");
 
     pl::ParticleModel particleModel;
-    if (inputFilename == "timestep.xml") {
+    if (boost::ends_with(inputFilename, "timestep.xml")) {
         pl::import_uintah(pl::FileName(inputFilename), particleModel);
     } else if (boost::ends_with(inputFilename, ".dat")) {
         pl::import_cosmic_web(pl::FileName(inputFilename), particleModel);
+    } else {
+        sgl::Logfile::get()->writeError(
+                std::string() + "Error: Unknown point data set file association for \""
+                + inputFilename + "\"!");
+        return;
     }
 
-    auto positions = dynamic_cast<pl::DataT<float>*>(particleModel["positions"].get());
+    auto positions = static_cast<pl::DataT<float>*>(particleModel["positions"].get());
     size_t numPoints = positions->size() / 3;
+    glm::vec3 *positionValues = (glm::vec3*)positions->data.data();
 
+    // Compute the bounding box.
+    sgl::AABB3 aabb;
+    for (size_t i = 0; i < numPoints; i++) {
+        aabb.combine(positionValues[i]);
+    }
+
+    // Find the maximum axis of the box.
+    float largestAxis = 0.0f;
+    for (size_t i = 0; i < 3; i++) {
+        largestAxis = std::max(largestAxis, aabb.getExtent()[i]);
+    }
+
+    // Now normalize the data range.
+    #pragma omp parallel for
+    for (size_t i = 0; i < numPoints; i++) {
+        glm::vec3 oldPoint = positionValues[i];
+        positionValues[i] = (oldPoint - aabb.getCenter()) / largestAxis;
+    }
 
     // Create a binary mesh from the data.
     BinaryMesh binaryMesh;
@@ -72,11 +96,11 @@ void convertPointDataSetToBinmesh(
     vertexAttribute.name = "vertexAttribute0";
     vertexAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_SHORT;
     vertexAttribute.numComponents = 1;
-    std::vector<uint16_t> vertexAttributeData(positions->size(), 0u); // Just zero if no other attribute exists
+    std::vector<uint16_t> vertexAttributeData(numPoints, 0u); // Just zero if no other attribute exists
     if (particleModel.find("velocities") != particleModel.end()) {
         // Cosmic web data set.
         // Compute velocity magnitudes as the vertex attribute.
-        auto velocities = dynamic_cast<pl::DataT<float>*>(particleModel["velocities"].get());
+        auto velocities = static_cast<pl::DataT<float>*>(particleModel["velocities"].get());
         assert(numPoints == velocities->size() / 3);
         glm::vec3 *velocityValues = (glm::vec3*)velocities->data.data();
 
@@ -86,10 +110,43 @@ void convertPointDataSetToBinmesh(
             velocityMagnitudes[i] = glm::length(velocityValues[i]);
         }
         packUnorm16Array(velocityMagnitudes, vertexAttributeData);
+    } else if (particleModel.find("p.u") != particleModel.end() && particleModel.find("p.v") != particleModel.end()
+            && particleModel.find("p.w") != particleModel.end()) {
+        // Cosmic web data set.
+        // Compute velocity magnitudes as the vertex attribute.
+        auto us = static_cast<pl::DataT<double>*>(particleModel["p.u"].get());
+        auto vs = static_cast<pl::DataT<double>*>(particleModel["p.v"].get());
+        auto ws = static_cast<pl::DataT<double>*>(particleModel["p.w"].get());
+        //assert(numPoints == rhos->size());
+        double *uValues = (double*)us->data.data();
+        double *vValues = (double*)vs->data.data();
+        double *wValues = (double*)ws->data.data();
+
+        std::vector<float> velocityMagnitudes(numPoints);
+        #pragma omp parallel for
+        for (size_t i = 0; i < numPoints; i++) {
+            velocityMagnitudes[i] = glm::length(glm::vec3(uValues[i], vValues[i], wValues[i]));
+        }
+        packUnorm16Array(velocityMagnitudes, vertexAttributeData);
     }
     vertexAttribute.data.resize(vertexAttributeData.size() * sizeof(uint16_t));
     memcpy(&vertexAttribute.data.front(), &vertexAttributeData.front(), vertexAttributeData.size() * sizeof(uint16_t));
     binarySubmesh.attributes.push_back(vertexAttribute);
+
+    // TODO: Test
+    /*BinaryMeshAttribute positionAttribute;
+    positionAttribute.name = "vertexPosition";
+    positionAttribute.attributeFormat = sgl::ATTRIB_FLOAT;
+    positionAttribute.numComponents = 3;
+    positionAttribute.data.resize(1 * sizeof(glm::vec3), 0u);
+    binarySubmesh.attributes.push_back(positionAttribute);
+
+    BinaryMeshAttribute vertexAttribute;
+    vertexAttribute.name = "vertexAttribute0";
+    vertexAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_SHORT;
+    vertexAttribute.numComponents = 1;
+    vertexAttribute.data.resize(1 * sizeof(uint16_t), 0u);
+    binarySubmesh.attributes.push_back(vertexAttribute);*/
 
     sgl::Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);

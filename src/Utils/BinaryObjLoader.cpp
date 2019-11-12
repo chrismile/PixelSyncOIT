@@ -70,7 +70,7 @@ void convertBinaryObjMeshToBinmesh(
         indices32[i] = static_cast<uint32_t>(indices[i]);
     }
     // Free the memory.
-    indices.clear();
+    indices = std::vector<uint64_t>();
 
     // Compute the normals for our mesh.
     std::vector<glm::vec3> normals;

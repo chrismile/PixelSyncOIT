@@ -77,6 +77,8 @@ cmake-build-*/
 *.binlines
 
 Data/WCB/*.txt
+Data/PointDatasets/*
+Data/IsoSurfaces/*
 Data/CameraPaths/*
 Data/Screenshots/*
 Data/TransferFunctions_*
