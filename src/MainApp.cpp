@@ -1620,7 +1620,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
             reRender = true;
         }
         if (modelType == MODEL_TYPE_POINTS
-            && ImGui::SliderFloat("Point radius", &pointRadius, 0.00005f, 0.0005f, "%.5f")) {
+            && ImGui::SliderFloat("Point radius", &pointRadius, 0.00005f, 0.005f, "%.5f")) {
             reRender = true;
         }
     }

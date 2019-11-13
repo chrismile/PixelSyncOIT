@@ -29,7 +29,7 @@ layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 uniform vec3 cameraPosition;
 
-uniform float radius = 0.01f;
+uniform float radius;
 
 in VertexData
 {
@@ -39,6 +39,7 @@ in VertexData
 
 out vec3 fragmentNormal;
 out vec3 fragmentPositionWorld;
+out vec3 worldSpaceSplatCenter;
 out vec3 screenSpacePosition;
 out vec2 fragmentTextureCoords;
 out float fragmentAttribute;
@@ -53,10 +54,18 @@ void main()
 
     //radius = 10;
 
-    vec3 right = cross(quadNormal, vec3(0, 1, 0));
-    vec3 top = cross(quadNormal, right);
+    worldSpaceSplatCenter = pointCoords;
 
-    vertexPosition = pointCoords + radius * (right - top);
+//    vec3 right = cross(quadNormal, vec3(0, 1, 0));
+//    vec3 top = cross(quadNormal, right);
+
+    mat4 vMatrixInv = inverse(vMatrix);
+    vec3 right = (vMatrixInv * vec4(vec3(1, 0, 0), 0.0)).xyz;
+    vec3 top = (vMatrixInv * vec4(vec3(0, 1, 0), 0.0)).xyz;
+
+    vec3 splatCenter = pointCoords + quadNormal * radius;
+
+    vertexPosition = splatCenter + radius * (right - top);
     fragmentNormal = quadNormal;
     fragmentPositionWorld = vertexPosition;
     screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
@@ -65,7 +74,7 @@ void main()
     gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
     EmitVertex();
 
-    vertexPosition = pointCoords + radius * (right + top);
+    vertexPosition = splatCenter + radius* 2 * (right + top);
     fragmentNormal = quadNormal;
     fragmentPositionWorld = vertexPosition;
     screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
@@ -73,7 +82,7 @@ void main()
     gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
     EmitVertex();
 
-    vertexPosition = pointCoords + radius * (-right - top);
+    vertexPosition = splatCenter + radius* 2 * (-right - top);
     fragmentNormal = quadNormal;
     fragmentPositionWorld = vertexPosition;
     screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
@@ -82,7 +91,7 @@ void main()
     gl_Position = pMatrix * vMatrix * vec4(vertexPosition, 1.0);
     EmitVertex();
 
-    vertexPosition = pointCoords + radius * (-right + top);
+    vertexPosition = splatCenter + radius * 2 * (-right + top);
     fragmentNormal = quadNormal;
     fragmentPositionWorld = vertexPosition;
     screenSpacePosition = (vMatrix * vec4(vertexPosition, 1.0)).xyz;
@@ -100,6 +109,7 @@ void main()
 #version 430 core
 
 in vec3 screenSpacePosition;
+in vec3 worldSpaceSplatCenter;
 
 #if !defined(DIRECT_BLIT_GATHER) || defined(SHADOW_MAPPING_MOMENTS_GENERATE)
 #include OIT_GATHER_HEADER
@@ -130,12 +140,46 @@ uniform float minCriterionValue = 0.0;
 uniform float maxCriterionValue = 1.0;
 uniform bool transparencyMapping = true;
 
+uniform float radius;
+
 // Color of the object
 uniform vec4 colorGlobal;
 
 
 // Transfer function color lookup table
 uniform sampler1D transferFunctionTexture;
+
+bool raySphereIntersection(in vec3 origin, in vec3 dir, in vec3 center, in float r, out float t)
+{
+    t = 0;
+    vec3 OC = origin - center;
+
+    float a = 1;
+    float b = 2 * dot(dir, OC);
+    float c = dot(OC, OC) - r * r;
+
+    float root = b * b - 4 * a * c;
+
+    // no solution
+    if (root < 0)
+    {
+        return false;
+    }
+    // one solution
+    if (root == 0)
+    {
+        t = (-b) / (2 * a);
+        return true;
+    } else
+    // multiple solutions
+    {
+        float t1 = (sqrt(root) - b) / (2 * a);
+        float t2 = (-b - sqrt(root)) / (2 * a);
+
+        t = min(t1, t2);
+        return true;
+    }
+}
 
 vec4 transferFunction(float attr)
 {
@@ -159,6 +203,27 @@ void main()
 
     vec4 colorAttribute = transferFunction(fragmentAttribute);
 
+    vec3 origin = cameraPosition;
+    vec3 dir = normalize(fragmentPositionWorld - cameraPosition);
+    vec3 center = worldSpaceSplatCenter;
+    float tRay = 0;
+
+    bool isIntersect = raySphereIntersection(origin, dir, center, radius, tRay);
+    vec3 spherePos = fragmentPositionWorld;
+    vec3 sphereNormal = fragmentNormal;
+
+    if (isIntersect)
+    {
+        spherePos = origin + tRay * dir;
+        sphereNormal = normalize(spherePos - center);
+    }
+    else
+    {
+        discard;
+    }
+
+    float opacity = colorAttribute.a;
+
     #if REFLECTION_MODEL == 0 // PSEUDO_PHONG_LIGHTING
     const vec3 lightColor = vec3(1,1,1);
     const vec3 ambientColor = colorAttribute.rgb;
@@ -170,28 +235,29 @@ void main()
     const float kS = 0.1;
     const float s = 10;
 
-    const vec3 n = normalize(fragmentNormal);
-    const vec3 v = normalize(cameraPosition - fragmentPositionWorld);
+    const vec3 n = normalize(sphereNormal);
+    const vec3 v = normalize(cameraPosition - spherePos);
 //    const vec3 l = normalize(lightDirection);
     const vec3 l = normalize(v);
     const vec3 h = normalize(v + l);
 
-    #ifdef CONVECTION_ROLLS
-    vec3 t = normalize(cross(vec3(0, 0, 1), n));
-    #else
-    vec3 t = normalize(cross(vec3(0, 0, 1), n));
-    #endif
+//    #ifdef CONVECTION_ROLLS
+//    vec3 t = normalize(cross(vec3(0, 0, 1), n));
+//    #else
+//    vec3 t = normalize(cross(vec3(0, 0, 1), n));
+//    #endif
 
     vec3 Id = kD * clamp(abs(dot(n, l)), 0.0, 1.0) * diffuseColor;
     vec3 Is = kS * pow(clamp(abs(dot(n, h)), 0.0, 1.0), s) * lightColor;
 
-    float haloParameter = 1;
-    float angle1 = abs( dot( v, n));
-    float angle2 = abs( dot( v, normalize(t))) * 0.7;
-    float halo = mix(1.0f,((angle1)+(angle2)) , haloParameter);
+//    float haloParameter = 1;
+//    float angle1 = abs( dot( v, n));
+//    float angle2 = abs( dot( v, normalize(t))) * 0.7;
+//    float halo = mix(1.0f,((angle1)+(angle2)) , haloParameter);
 
     vec3 colorShading = Ia + Id + Is;
-    colorShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
+
+//    colorShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
     #elif REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     vec3 colorShading = vec3(occlusionFactor * shadowFactor);
     #elif REFLECTION_MODEL == 2 // LOCAL_SHADOW_MAP_OCCLUSION
@@ -200,8 +266,12 @@ void main()
     vec3 colorShading = vec3(occlusionFactor);
     #elif REFLECTION_MODEL == 4 // NO_LIGHTING
     vec3 colorShading = colorAttribute.rgb;
+    vec2 centerOffset = 2.0 * fragmentTextureCoords - vec2(1.0, 1.0);
+    float invCenterDistance = 1.0 - clamp(length(centerOffset), 0.0, 1.0);
+    opacity *= sqrt(invCenterDistance);
+
     #endif
-    vec4 color = vec4(colorShading, colorAttribute.a);
+    vec4 color = vec4(colorShading, opacity);
 
     //color.rgb = fragmentNormal;
 
@@ -210,9 +280,9 @@ void main()
     }
 
     // Radial weight function
-    vec2 centerOffset = 2.0 * fragmentTextureCoords - vec2(1.0, 1.0);
-    float invCenterDistance = 1.0 - clamp(length(centerOffset), 0.0, 1.0);
-    color.a *= sqrt(invCenterDistance);
+//    vec2 centerOffset = 2.0 * fragmentTextureCoords - vec2(1.0, 1.0);
+//    float invCenterDistance = 1.0 - clamp(length(centerOffset), 0.0, 1.0);
+//    color.a *= sqrt(invCenterDistance);
 
     if (color.a < 1.0/255.0) {
         discard;
