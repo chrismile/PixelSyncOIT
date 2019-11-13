@@ -141,7 +141,7 @@ private:
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
     std::string startupModelName = "Meshkov";
-    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);

@@ -738,7 +738,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             } else if (boost::starts_with(modelFilenamePure, "Data/Surfaces")) {
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
 //                camera->setPosition(glm::vec3(1023, 1023, 977));
-                camera->setPosition(glm::vec3(1, 1, 0.7));
+                camera->setPosition(glm::vec3(0, 0.5, 0));
             } else {
                 camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
             }

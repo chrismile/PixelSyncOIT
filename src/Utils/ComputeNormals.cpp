@@ -30,6 +30,7 @@
 #include <Utils/Convert.hpp>
 #include <Utils/File/Logfile.hpp>
 #include "ComputeNormals.hpp"
+#include <iostream>
 
 /**
  * Creates normals for the specified indexed vertex set.
@@ -44,13 +45,7 @@ void computeNormals(
     // For finding all triangles with a specific index. Maps vertex index -> first triangle index.
     sgl::Logfile::get()->writeInfo(std::string() + "Creating index map for "
             + sgl::toString(indices.size()) + " indices...");
-//    std::multimap<size_t, size_t> indexMap;
-//    for (size_t j = 0; j < indices.size(); j++) {
-//        size_t faceIndex = j / 3;
-//        indexMap.insert(std::make_pair(indices.at(j), faceIndex));
-//    }
-
-    std::vector<std::vector<size_t>> indexMap;
+    std::vector<std::vector<uint32_t>> indexMap;
     indexMap.resize(vertices.size());
 
 #pragma omp parallel for
@@ -91,6 +86,10 @@ void computeNormals(
         const auto& faceIndices = indexMap[i];
         for (const auto& face : faceIndices)
         {
+//            size_t vertIndex = face * 3;
+//            size_t i1 = indices.at(vertIndex), i2 = indices.at(vertIndex+1), i3 = indices.at(vertIndex+2);
+//            glm::vec3 faceNormal = glm::cross(vertices.at(i3) - vertices.at(i1), vertices.at(i2) - vertices.at(i1));
+
             const glm::vec3& faceNormal = faceNormals[face];
             normal += faceNormal;
             numTrianglesSharedBy++;
@@ -136,4 +135,12 @@ void computeNormals(
         normal = glm::normalize(normal);
         normals[i] = normal;
     }
+
+    // try to free memory for large data
+    std::cout << "Free memory" << std::endl << std::flush;
+    faceNormals.clear();
+    faceNormals.shrink_to_fit();
+    indexMap.clear();
+    indexMap.shrink_to_fit();
+    std::cout << "Free memory done." << std::endl << std::flush;
 }
