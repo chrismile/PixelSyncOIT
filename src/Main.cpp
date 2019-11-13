@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     AppSettings::get()->getSettings().addKeyValue("window-multisamples", 0);
     AppSettings::get()->getSettings().addKeyValue("window-debugContext", true);
     AppSettings::get()->getSettings().addKeyValue("window-vSync", true);
-    AppSettings::get()->getSettings().addKeyValue("window-resizable", false);
+    AppSettings::get()->getSettings().addKeyValue("window-resizable", true);
     AppSettings::get()->setLoadGUI();
 
     Window *window = AppSettings::get()->createWindow();

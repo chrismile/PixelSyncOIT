@@ -5,18 +5,13 @@
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
 
-out vec4 fragmentColor;
 out vec3 fragmentNormal;
 out vec3 fragmentPositonLocal;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
 
-// Color of the object
-uniform vec4 colorGlobal;
-
 void main()
 {
-    fragmentColor = colorGlobal;
     fragmentNormal = vertexNormal;
     fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
     fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
@@ -35,7 +30,6 @@ in vec3 screenSpacePosition;
 #include OIT_GATHER_HEADER
 #endif
 
-in vec4 fragmentColor;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
 in vec3 fragmentPositonWorld;
@@ -53,12 +47,25 @@ uniform vec3 cameraPosition; // world space
 uniform float aoFactorGlobal = 1.0f;
 uniform float shadowFactorGlobal = 1.0f;
 
-uniform vec3 ambientColor;
-uniform vec3 diffuseColor;
-uniform vec3 specularColor;
-uniform float specularExponent;
-uniform float opacity;
-uniform int bandedColorShading = 1;
+
+uniform float minCriterionValue = 0.0;
+uniform float maxCriterionValue = 1.0;
+uniform bool transparencyMapping = true;
+
+// Color of the object
+uniform vec4 colorGlobal;
+
+
+// Transfer function color lookup table
+uniform sampler1D transferFunctionTexture;
+
+vec4 transferFunction(float attr)
+{
+    // Transfer to range [0,1]
+    float posFloat = clamp((attr - minCriterionValue) / (maxCriterionValue - minCriterionValue), 0.0, 1.0);
+    // Look up the color value
+    return texture(transferFunctionTexture, posFloat);
+}
 
 void main()
 {
@@ -72,14 +79,16 @@ void main()
     float shadowFactor = 1.0f;
 #endif
 
+//    vec4 colorAttribute = transferFunction(fragmentAttribute);
+
     // Blinn-Phong Shading
     const vec3 lightColor = vec3(1,1,1);
-    //const vec3 ambientColor = lightColor;
-    //const vec3 diffuseColor = fragmentColor.rgb;
+    const vec3 ambientColor = vec3(0.5, fragmentPositonWorld.g, fragmentPositonWorld.b);
+    const vec3 diffuseColor = ambientColor;
     vec3 phongColor = vec3(0);
 
-    const float kA = 0.1 * occlusionFactor * shadowFactor;
-    const vec3 Ia = kA * diffuseColor; //ambientColor
+    const float kA = 0.2 * occlusionFactor * shadowFactor;
+    const vec3 Ia = kA * ambientColor;
     const float kD = 0.7;
     const float kS = 0.1;
     const float s = 10;
@@ -94,17 +103,8 @@ void main()
 
     phongColor = Ia + Id + Is;
 
-    vec4 color = vec4(phongColor, fragmentColor.a);
-
-    // Pseudo Phong shading
-    if (bandedColorShading == 1) {
-        vec4 bandColor = fragmentColor;
-        float stripWidth = 2.0;
-        if (mod(fragmentPositonLocal.x, 2.0*stripWidth) < stripWidth) {
-            bandColor = vec4(1.0,1.0,1.0,1.0);
-        }
-        color = vec4(bandColor.rgb * (dot(n, l)/4.0+0.75 * occlusionFactor * shadowFactor), fragmentColor.a);
-    }
+    float tempAlpha = 0.3;
+    vec4 color = vec4(phongColor, tempAlpha);
 
     #if REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     color.rgb = vec3(occlusionFactor * shadowFactor);

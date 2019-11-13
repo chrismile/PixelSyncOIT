@@ -356,58 +356,6 @@ vec4 transferFunction(float attr)
     return texture(transferFunctionTexture, posFloat);
 }
 
-vec3 to_rgb(vec3 v)
-{
-    return mix(pow((v + 0.055) / 1.055, vec3(2.4)), v / 12.92, lessThanEqual(v, vec3(0.04045)));
-}
-
-//vec4 transferFunction(float attr)
-//{
-    /*
-    <TransferFunction colorspace="sRGB" interpolation_colorspace="sRGB">
-        <OpacityPoints>
-            <OpacityPoint position="0" opacity="0"/>
-            <OpacityPoint position="0.15955056250095367" opacity="0.0099999997764825821"/>
-            <OpacityPoint position="0.25168538093566895" opacity="0.0099999997764825821"/>
-            <OpacityPoint position="0.36629214882850647" opacity="0"/>
-            <OpacityPoint position="0.45842695236206055" opacity="0.5402684211730957"/>
-            <OpacityPoint position="0.56629210710525513" opacity="1"/>
-            <OpacityPoint position="0.80674159526824951" opacity="0.20805370807647705"/>
-            <OpacityPoint position="0.88988763093948364" opacity="0.51677852869033813"/>
-            <OpacityPoint position="1" opacity="0.89932882785797119"/>
-        </OpacityPoints>
-        <ColorPoints>
-            <ColorPoint position="0" r="96" g="249" b="251"/>
-            <ColorPoint position="0.24402730166912079" r="96" g="249" b="251"/>
-            <ColorPoint position="0.57885903120040894" r="171" g="147" b="0"/>
-            <ColorPoint position="1" r="255" g="0" b="0"/>
-        </ColorPoints>
-    </TransferFunction>
-    */
-
-    /*vec4 r;
-
-    if(attr < 0.0 || attr > 1.0)
-        return vec4(1.0, 0.0, 0.0, 1.0);
-
-    // Opacity
-    if(attr <= 0.15955056250095367) r.a = mix(0.0, 0.0099999997764825821, (attr - 0.0) / (0.15955056250095367 - 0.0));
-    else if(attr <= 0.25168538093566895) r.a = mix(0.0099999997764825821, 0.0099999997764825821, (attr - 0.15955056250095367) / (0.25168538093566895 - 0.15955056250095367));
-    else if(attr <= 0.36629214882850647) r.a = mix(0.0099999997764825821, 0.0, (attr - 0.25168538093566895) / (0.36629214882850647 - 0.25168538093566895));
-    else if(attr <= 0.45842695236206055) r.a = mix(0.0, 0.5402684211730957, (attr - 0.36629214882850647) / (0.45842695236206055 - 0.36629214882850647));
-    else if(attr <= 0.56629210710525513) r.a = mix(0.5402684211730957, 1.0, (attr - 0.45842695236206055) / (0.56629210710525513 - 0.45842695236206055));
-    else if(attr <= 0.80674159526824951) r.a = mix(1.0, 0.20805370807647705, (attr - 0.56629210710525513) / (0.80674159526824951 - 0.56629210710525513));
-    else if(attr <= 0.88988763093948364) r.a = mix(0.20805370807647705, 0.51677852869033813, (attr - 0.80674159526824951) / (0.88988763093948364 - 0.80674159526824951));
-    else r.a = mix(0.51677852869033813, 0.89932882785797119, (attr - 0.88988763093948364) / (1.0 - 0.88988763093948364));
-
-    // Color
-    if(attr <= 0.24402730166912079) r.rgb = mix(vec3(96.0 / 255.0, 249.0 / 255.0, 251.0 / 255.0), vec3(96.0 / 255.0, 249.0 / 255.0, 251.0 / 255.0), (attr - 0.0) / (0.24402730166912079 - 0.0));
-    else if(attr <= 0.57885903120040894) r.rgb = mix(vec3(96.0 / 255.0, 249.0 / 255.0, 251.0 / 255.0), vec3(171.0 / 255.0, 147.0 / 255.0, 0.0 / 255.0), (attr - 0.24402730166912079) / (0.57885903120040894 - 0.24402730166912079));
-    else r.rgb = mix(vec3(171.0 / 255.0, 147.0 / 255.0, 0.0 / 255.0), vec3(255.0 / 255.0, 0.0 / 255.0, 0.0 / 255.0), (attr - 0.57885903120040894) / (1.0 - 0.57885903120040894));
-
-    return vec4(to_rgb(r.rgb), r.a);
-}*/
-
 void main()
 {
 #if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
