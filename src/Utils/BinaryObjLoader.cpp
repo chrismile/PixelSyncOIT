@@ -34,6 +34,7 @@
 #include <Utils/File/Logfile.hpp>
 #include "MeshSerializer.hpp"
 #include "ComputeNormals.hpp"
+#include "ImportanceCriteria.hpp"
 #include "BinaryObjLoader.hpp"
 
 void convertBinaryObjMeshToBinmesh(
@@ -98,7 +99,8 @@ void convertBinaryObjMeshToBinmesh(
 
     // Compute the normals for our mesh.
     std::vector<glm::vec3> normals;
-    computeNormals(vertices, indices32, normals);
+    std::vector<float> attributes;
+    computeNormals(vertices, indices32, normals, attributes);
 
     // Create a binary mesh from the data.
     BinaryMesh binaryMesh;
@@ -116,6 +118,9 @@ void convertBinaryObjMeshToBinmesh(
     std::memcpy(&positionAttribute.data.front(), vertices.data(), vertices.size() * sizeof(glm::vec3));
     binarySubmesh.attributes.push_back(positionAttribute);
 
+    vertices.clear(); vertices.shrink_to_fit();
+    indices32.clear(); indices32.shrink_to_fit();
+
     BinaryMeshAttribute normalAttribute;
     normalAttribute.name = "vertexNormal";
     normalAttribute.attributeFormat = sgl::ATTRIB_FLOAT;
@@ -124,21 +129,21 @@ void convertBinaryObjMeshToBinmesh(
     std::memcpy(&normalAttribute.data.front(), &normals.front(), normals.size() * sizeof(glm::vec3));
     binarySubmesh.attributes.push_back(normalAttribute);
 
+    normals.clear(); normals.shrink_to_fit();
+
     BinaryMeshAttribute vertexAttribute;
     vertexAttribute.name = "vertexAttribute0";
     vertexAttribute.attributeFormat = sgl::ATTRIB_UNSIGNED_SHORT;
     vertexAttribute.numComponents = 1;
-    //std::vector<uint16_t> vertexAttributeData(vertices.size(), 0u); // Just zero for now
-    vertexAttribute.data.resize(vertices.size() * sizeof(uint16_t), 0);
-//    vertexAttribute.data.resize(vertexAttributeData.size() * sizeof(uint16_t));
-//    std::memcpy(&vertexAttribute.data.front(), &vertexAttributeData.front(), vertexAttributeData.size() * sizeof(uint16_t));
+    std::vector<uint16_t> vertexAttributeData(attributes.size(), 0u); // Just zero for now
+//    vertexAttribute.data.resize(vertices.size() * sizeof(uint16_t), 0);
+    packUnorm16Array(attributes, vertexAttributeData);
+    vertexAttribute.data.resize(vertexAttributeData.size() * sizeof(uint16_t));
+    std::memcpy(&vertexAttribute.data.front(), &vertexAttributeData.front(), vertexAttributeData.size() * sizeof(uint16_t));
     binarySubmesh.attributes.push_back(vertexAttribute);
 
-    sgl::Logfile::get()->writeInfo(std::string() + "Free memory...");
-    vertices.clear(); vertices.shrink_to_fit();
-//    indices.clear(); indices.shrink_to_fit();
-    indices32.clear(); indices32.shrink_to_fit();
-//    vertexAttributeData.clear(); vertexAttributeData.shrink_to_fit();
+    attributes.clear(); attributes.shrink_to_fit();
+    vertexAttributeData.clear(); vertexAttributeData.shrink_to_fit();
 
     sgl::Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);

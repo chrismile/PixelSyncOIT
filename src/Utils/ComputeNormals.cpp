@@ -40,7 +40,8 @@
 void computeNormals(
         const std::vector<glm::vec3> &vertices,
         const std::vector<uint32_t> &indices,
-        std::vector<glm::vec3> &normals)
+        std::vector<glm::vec3> &normals,
+        std::vector<float> &attributes)
 {
     // For finding all triangles with a specific index. Maps vertex index -> first triangle index.
     sgl::Logfile::get()->writeInfo(std::string() + "Creating index map for "
@@ -135,6 +136,50 @@ void computeNormals(
         normal = glm::normalize(normal);
         normals[i] = normal;
     }
+
+    sgl::Logfile::get()->writeInfo(std::string() + "Computing curvature for "
+                                   + sgl::toString(vertices.size()) + " vertices...");
+    attributes.resize(vertices.size());
+
+#pragma omp parallel for
+    for (size_t i = 0; i < vertices.size(); i++)
+    {
+        // min curvature
+        float k1 = std::numeric_limits<float>::max();
+        float k2 = -std::numeric_limits<float>::min();
+
+        const auto& faceIndices = indexMap[i];
+        const glm::vec3& n0 = normals[i];
+        const glm::vec3& v0 = vertices[i];
+
+        for (const auto& face : faceIndices)
+        {
+            size_t vertIndex = face * 3;
+//            size_t i1 = indices.at(vertIndex), i2 = indices.at(vertIndex+1), i3 = indices.at(vertIndex+2);
+            std::vector<uint32_t> idx = { indices[vertIndex], indices[vertIndex+1], indices[vertIndex+2] };
+
+            for (auto j = 0; j < 3; ++j)
+            {
+                auto vID = idx[j];
+                if (vID == i) { continue; }
+
+                // compute curvature
+                const glm::vec3& v1 = vertices[vID];
+                const glm::vec3& n1 = normals[vID];
+
+                auto pD = v1 - v0;
+
+                float k = glm::dot((n1 - n0), pD / glm::dot(pD, pD));
+
+                k1 = std::min(k, k1);
+                k2 = std::max(k, k2);
+            }
+        }
+
+        float meanCurvature = (k1 + k2) / 2;
+        attributes[i] = meanCurvature;
+    }
+
 
     // try to free memory for large data
     std::cout << "Free memory" << std::endl << std::flush;

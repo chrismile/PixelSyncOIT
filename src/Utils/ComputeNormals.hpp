@@ -40,6 +40,7 @@
 void computeNormals(
         const std::vector<glm::vec3> &vertices,
         const std::vector<uint32_t> &indices,
-        std::vector<glm::vec3> &normals);
+        std::vector<glm::vec3> &normals,
+        std::vector<float> &attributes);
 
 #endif //PIXELSYNCOIT_COMPUTENORMALS_HPP
