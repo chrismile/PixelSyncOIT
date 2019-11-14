@@ -229,9 +229,9 @@ void main()
     const vec3 ambientColor = colorAttribute.rgb;
     const vec3 diffuseColor = colorAttribute.rgb;
 
-    const float kA = 0.2 * occlusionFactor * shadowFactor;
+    const float kA = 0.4 * occlusionFactor * shadowFactor;
     const vec3 Ia = kA * ambientColor;
-    const float kD = 0.7;
+    const float kD = 0.5;
     const float kS = 0.1;
     const float s = 10;
 

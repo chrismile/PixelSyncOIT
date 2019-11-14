@@ -57,6 +57,7 @@ uniform float shadowFactorGlobal = 1.0f;
 uniform float minCriterionValue = 0.0;
 uniform float maxCriterionValue = 1.0;
 uniform bool transparencyMapping = true;
+uniform bool colorByPosition = false;
 
 // Color of the object
 uniform vec4 colorGlobal;
@@ -87,6 +88,18 @@ void main()
 
     vec4 colorAttribute = transferFunction(fragmentAttribute);
 //    float curvature = fragmentAttribute;
+
+    if (!transparencyMapping) {
+        if (colorByPosition)
+        {
+            colorAttribute = vec4(0.5, fragmentPositonWorld.g, fragmentPositonWorld.b, colorGlobal.a);
+        }
+        else
+        {
+            colorAttribute = colorGlobal;
+        }
+
+    }
 
     // Blinn-Phong Shading
     const vec3 lightColor = vec3(1,1,1);

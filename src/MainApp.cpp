@@ -1568,6 +1568,9 @@ void PixelSyncApp::renderSceneSettingsGUI()
         if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
             reRender = true;
         }
+        if (ImGui::Checkbox("Color By Position", &colorByPosition)) {
+            reRender = true;
+        }
         ImGui::Checkbox("Show Transfer Function Window", &transferFunctionWindow.getShowTransferFunctionWindow());
 
         if (ImGui::Checkbox("Use Linear RGB", &useLinearRGB)) {
@@ -1747,6 +1750,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                 }
             }
             transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+            if (transparencyShader->hasUniform("colorByPosition"))
+            {
+                transparencyShader->setUniform("colorByPosition", colorByPosition);
+            }
+
             transparencyShader->setUniform("transferFunctionTexture",
                     transferFunctionWindow.getTransferFunctionMapTexture(), 5);
             //transparencyShader->setUniformBuffer(2, "TransferFunctionBlock",
@@ -1790,6 +1798,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                     transparencyShader->setUniform("radius", lineRadius);
                 }
                 transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+                if (transparencyShader->hasUniform("colorByPosition"))
+                {
+                    transparencyShader->setUniform("colorByPosition", colorByPosition);
+                }
+
                 transparencyShader->setUniform("transferFunctionTexture",
                                                transferFunctionWindow.getTransferFunctionMapTexture(), 5);
             }

@@ -156,6 +156,7 @@ private:
     bool cullBackface = true;
     bool useBillboardLines = false;
     bool transparencyMapping = true;
+    bool colorByPosition = false;
     bool useLinearRGB = true;
     float lineRadius = 0.001f;
     float pointRadius = 0.0002f;
