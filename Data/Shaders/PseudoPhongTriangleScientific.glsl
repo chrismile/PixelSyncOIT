@@ -92,7 +92,7 @@ void main()
     if (!transparencyMapping) {
         if (colorByPosition)
         {
-            colorAttribute = vec4(0.5, fragmentPositonWorld.g, fragmentPositonWorld.b, colorGlobal.a);
+            colorAttribute = vec4(0.5, fragmentPositonWorld.y / 1.5, fragmentPositonWorld.z / 3, colorGlobal.a);
         }
         else
         {
