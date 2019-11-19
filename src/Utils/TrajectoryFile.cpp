@@ -81,7 +81,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                                         + filename + "\" does not exist.");
         return trajectories;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     _fseeki64(file, 0, SEEK_END);
     size_t length = _ftelli64(file);
     _fseeki64(file, 0, SEEK_SET);
