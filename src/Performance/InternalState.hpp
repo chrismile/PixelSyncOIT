@@ -33,6 +33,7 @@ enum RenderModeOIT {
 const char *const MODEL_FILENAMES[] = {
         "Data/UCLA/UCLA_10000.obj",
         "Data/UCLA/UCLA_100000.obj",
+        "Data/UCLA/UCLA_150000.obj",
         "Data/IsoSurfaces/rm-140-isosurface.bobj",
         "Data/IsoSurfaces/rm-80-isosurface.bobj",
         "Data/PointDatasets/0.000xv000.dat",
@@ -81,6 +82,7 @@ const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)))
 const char *const MODEL_DISPLAYNAMES[] = {
         "UCLA (10k)",
         "UCLA (100k)",
+        "UCLA (150k)",
         "Meshkov (140)",
         "Meshkov (80)",
         "Cosmic Web 0",

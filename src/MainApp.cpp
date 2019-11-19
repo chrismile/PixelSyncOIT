@@ -469,7 +469,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             lineRadius = 0.001;
         } else if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
-            lineRadius = 0.00025;
+            lineRadius = 0.001;
         } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             lineRadius = 0.0005;
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
@@ -608,10 +608,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
                 convertTrajectoryDataToBinaryLineMesh(trajectoryType, filename, modelFilenameOptimized);
             } else {
-                //convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj,
-                //        modelFilenameOptimized, lineRadius);
-                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
+                convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, filename,
                         modelFilenameOptimized, lineRadius);
+//                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
+//                        modelFilenameOptimized, lineRadius);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             convertHairDataToBinaryTriangleMesh(filename, modelFilenameOptimized);
