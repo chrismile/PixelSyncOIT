@@ -510,6 +510,11 @@ void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalSta
     states.push_back(state);
 }
 
+void getTestModesPaperForDepthComplexity(std::vector<InternalState> &states, InternalState state)
+{
+    getTestModesDepthComplexity(states, state);
+}
+
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
@@ -553,14 +558,15 @@ std::vector<InternalState> getTestModesPaper()
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
-    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
+    std::vector<std::string> modelNames = { "Aneurysm", "Turbulence", "Convection Rolls" };
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {
         state.windowResolution = windowResolutions.at(i);
         for (size_t j = 0; j < modelNames.size(); j++) {
             state.modelName = modelNames.at(j);
-            getTestModesPaperForRTPerformance(states, state);
+//            getTestModesPaperForRTPerformance(states, state);
+            getTestModesPaperForDepthComplexity(states, state);
         }
     }
 

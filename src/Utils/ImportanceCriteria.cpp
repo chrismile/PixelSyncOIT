@@ -95,7 +95,7 @@ std::vector<float> computeCurvature(std::vector<glm::vec3> &vertexPositions)
             // Node with two neighbors
             tangent = vertexPositions.at(i+1) - vertexPositions.at(i);
         }
-        if (glm::length(tangent) < 0.0001f) {
+        if (glm::length(tangent) < 1E-08f) {
             // In case the two vertices are almost identical, just skip this path line segment
             curvatures.push_back(0.0f);
             continue;
@@ -280,5 +280,12 @@ void computeTrajectoryAttributes(
 //        importanceCriteria.push_back(computeCurvature(vertexPositions));
 //
 //        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
+    } else if (trajectoryType == TRAJECTORY_TYPE_UCLA) {
+        // 0. Vorticity/Attrsibute
+//        importanceCriteria.push_back(vertexAttributes);
+        //
+        importanceCriteria.push_back(computeCurvature(vertexPositions));
+        //
+        //        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
     }
 }

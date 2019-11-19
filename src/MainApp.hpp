@@ -148,7 +148,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Meshkov";
+    std::string startupModelName = "UCLA (100k)";
     LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     Color bandingColor;
     Color clearColor;
@@ -185,6 +185,8 @@ private:
             = IMPORTANCE_CRITERION_CONVECTION_ROLLS_VORTICITY;
     ImportanceCriterionTypeCFD importanceCriterionTypeCFD
             = IMPORTANCE_CRITERION_CFD_CURL;
+    ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
+            = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     bool useGeometryShader = false;

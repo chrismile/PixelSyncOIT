@@ -77,7 +77,7 @@ void main() {
             tangent = inputLinePoints[lineOffset + i+1].linePoint - center;
             //tangent += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
-        if (length(tangent) < 0.0001) {
+        if (length(tangent) < 1E-11f) {
             // In case the two vertices are almost identical, just skip this path line segment.
             outputLinePoints[lineOffset + i].valid = 0;
             continue;
