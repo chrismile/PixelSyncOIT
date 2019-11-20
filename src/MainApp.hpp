@@ -148,7 +148,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "UCLA (100k)";
+    std::string startupModelName = "UCLA (500k)";
     LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     Color bandingColor;
     Color clearColor;

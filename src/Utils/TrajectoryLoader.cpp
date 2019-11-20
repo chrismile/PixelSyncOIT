@@ -653,12 +653,12 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     submesh.vertexMode = VERTEX_MODE_TRIANGLES;
 
     std::vector<uint32_t> lineOffsetsInput;
-    uint32_t numLinesInput = 0;
-    uint32_t numLinePointsInput = 0;
+    uint64_t numLinesInput = 0;
+    uint64_t numLinePointsInput = 0;
 
     std::vector<uint32_t> lineOffsetsOutput;
-    uint32_t numLinesOutput = 0;
-    uint32_t numLinePointsOutput = 0;
+    uint64_t numLinesOutput = 0;
+    uint64_t numLinePointsOutput = 0;
 
     std::vector<InputLinePoint> inputLinePoints;
     std::vector<OutputLinePoint> outputLinePoints;
@@ -696,7 +696,8 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
 
     const unsigned int WORK_GROUP_SIZE_1D = 256;
     sgl::ShaderManager->addPreprocessorDefine("WORK_GROUP_SIZE_1D", WORK_GROUP_SIZE_1D);
-    unsigned int numWorkGroups;
+    unsigned int numWorkGroupsOld;
+    uint32_t numWorkGroups;
     void *bufferMemory;
 
     // PART 1: Create line normals & mask invalid line points
@@ -715,8 +716,10 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     sgl::ShaderManager->bindShaderStorageBuffer(2, lineOffsetBufferInput);
     sgl::ShaderManager->bindShaderStorageBuffer(3, inputLinePointBuffer);
     sgl::ShaderManager->bindShaderStorageBuffer(4, outputLinePointBuffer);
-    createLineNormalsShader->setUniform("numLines", numLinesInput);
-    numWorkGroups = iceil(numLinesInput, WORK_GROUP_SIZE_1D); // last vector: local work group size
+    createLineNormalsShader->setUniform("numLines", static_cast<uint32_t>(numLinesInput));
+    numWorkGroupsOld = iceil(numLinesInput, WORK_GROUP_SIZE_1D); // last vector: local work group size
+    numWorkGroups = (numLinesInput - 1) / WORK_GROUP_SIZE_1D + 1;
+
     createLineNormalsShader->dispatchCompute(numWorkGroups);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -783,7 +786,7 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     sgl::ShaderProgramPtr createTubePointsShader = sgl::ShaderManager->getShaderProgram({"CreateTubePoints.Compute"});
     sgl::ShaderManager->bindShaderStorageBuffer(2, pathLinePointsBuffer);
     sgl::ShaderManager->bindShaderStorageBuffer(3, tubeVertexBuffer);
-    createTubePointsShader->setUniform("numLinePoints", numLinePointsOutput);
+    createTubePointsShader->setUniform("numLinePoints", static_cast<uint32_t>(numLinePointsOutput));
     numWorkGroups = iceil(pathLinePoints.size(), WORK_GROUP_SIZE_1D);
     if (numWorkGroups > maxNumWorkGroupsSupported) {
         sgl::Logfile::get()->writeInfo("Info: numWorkGroups > MAX_COMPUTE_WORK_GROUP_COUNT. Switching to CPU fallback.");
@@ -834,7 +837,7 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     sgl::ShaderProgramPtr createTubeIndicesShader = sgl::ShaderManager->getShaderProgram({"CreateTubeIndices.Compute"});
     sgl::ShaderManager->bindShaderStorageBuffer(2, lineOffsetBufferOutput);
     sgl::ShaderManager->bindShaderStorageBuffer(3, tubeIndexBuffer);
-    createTubeIndicesShader->setUniform("numLines", numLinesOutput);
+    createTubeIndicesShader->setUniform("numLines", static_cast<uint32_t>(numLinesOutput));
     numWorkGroups = iceil(numLinesOutput, WORK_GROUP_SIZE_1D); // last vector: local work group size
     createTubeIndicesShader->dispatchCompute(numWorkGroups);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -858,22 +861,33 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     submesh.material.opacity = 120 / 255.0f;
     submesh.indices = tubeIndices;
 
+    const size_t numIndicesTubes = tubeIndices.size();
+    const size_t numVertices = globalVertexPositions.size();
+    const size_t numNormals = globalNormals.size();
+    // free memory
+    tubeIndices.clear(); tubeIndices.shrink_to_fit();
+
     BinaryMeshAttribute positionAttribute;
     positionAttribute.name = "vertexPosition";
     positionAttribute.attributeFormat = ATTRIB_FLOAT;
     positionAttribute.numComponents = 3;
-    positionAttribute.data.resize(globalVertexPositions.size() * sizeof(glm::vec3));
-    memcpy(&positionAttribute.data.front(), &globalVertexPositions.front(), globalVertexPositions.size() * sizeof(glm::vec3));
+    positionAttribute.data.resize(numVertices * sizeof(glm::vec3));
+    memcpy(&positionAttribute.data.front(), &globalVertexPositions.front(), numVertices * sizeof(glm::vec3));
     submesh.attributes.push_back(positionAttribute);
+
+    // free memory
+    globalVertexPositions.clear(); globalVertexPositions.shrink_to_fit();
 
     BinaryMeshAttribute lineNormalsAttribute;
     lineNormalsAttribute.name = "vertexNormal";
     lineNormalsAttribute.attributeFormat = ATTRIB_FLOAT;
     lineNormalsAttribute.numComponents = 3;
-    lineNormalsAttribute.data.resize(globalNormals.size() * sizeof(glm::vec3));
-    memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), globalNormals.size() * sizeof(glm::vec3));
+    lineNormalsAttribute.data.resize(numNormals * sizeof(glm::vec3));
+    memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), numNormals * sizeof(glm::vec3));
     submesh.attributes.push_back(lineNormalsAttribute);
 
+    // free memory
+    globalNormals.clear(); globalNormals.shrink_to_fit();
 
     std::vector<std::vector<uint16_t>> globalImportanceCriteriaUnorm;
     packUnorm16ArrayOfArrays(globalImportanceCriteria, globalImportanceCriteriaUnorm);
@@ -892,12 +906,15 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     auto elapsedPost = std::chrono::duration_cast<std::chrono::milliseconds>(endPost - startPost);
     Logfile::get()->writeInfo(std::string() + "Computational time post-process: " + std::to_string(elapsedPost.count()));
 
+    // free memory
+    submesh.attributes.clear(); submesh.attributes.shrink_to_fit();
 
     auto end = std::chrono::system_clock::now();
 
     Logfile::get()->writeInfo(std::string() + "Summary: "
-                              + sgl::toString(globalVertexPositions.size()) + " vertices, "
-                              + sgl::toString(tubeIndices.size()) + " indices.");
+                              + sgl::toString(numVertices) + " vertices, "
+                              + sgl::toString(numIndicesTubes / 3) + " faces, "
+                              + sgl::toString(numIndicesTubes) + " indices.");
     Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);
 

@@ -32,14 +32,33 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
     }
 
     bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
+    bool isUCLA = trajectoryType == TRAJECTORY_TYPE_UCLA;
     bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
     bool isCfdData = trajectoryType == TRAJECTORY_TYPE_CFD;
 
     glm::vec3 minVec(boundingBox.getMinimum());
     glm::vec3 maxVec(boundingBox.getMaximum());
+
+    float minAttr = std::numeric_limits<float>::max();
+    float maxAttr = std::numeric_limits<float>::lowest();
+
     if (isConvectionRolls) {
         minVec = glm::vec3(0);
         maxVec = glm::vec3(0.5);
+    } else if (isUCLA)
+    {
+        minVec = glm::vec3(glm::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z)));
+        maxVec = glm::vec3(glm::max(boundingBox.getMaximum().x, std::max(boundingBox.getMaximum().y, boundingBox.getMaximum().z)));
+
+        for(const Trajectory& traj : trajectories)
+        {
+            for (const float& attr : traj.attributes[0])
+            {
+                minAttr = std::min(minAttr, attr);
+                maxAttr = std::max(maxAttr, attr);
+            }
+        }
+
     } else {
         // Normalize data for rings
         float minValue = glm::min(boundingBox.getMinimum().x, std::min(boundingBox.getMinimum().y, boundingBox.getMinimum().z));
@@ -48,7 +67,7 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
         maxVec = glm::vec3(maxValue);
     }
 
-    if (isRings || isConvectionRolls || isCfdData) {
+    if (isRings || isConvectionRolls || isCfdData || isUCLA) {
         for (Trajectory &trajectory : trajectories) {
             for (glm::vec3 &position : trajectory.positions) {
                 position = (position - minVec) / (maxVec - minVec);
@@ -60,6 +79,19 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
             }
         }
     }
+
+    // if UCLA --> normalize attributes
+    if (isUCLA)
+    {
+        for(Trajectory& traj : trajectories)
+        {
+            for (float& attr : traj.attributes[0])
+            {
+                attr = (attr - minAttr) / (maxAttr - minAttr);
+            }
+        }
+    }
+
     return trajectories;
 }
 

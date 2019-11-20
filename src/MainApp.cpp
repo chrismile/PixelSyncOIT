@@ -469,7 +469,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             lineRadius = 0.001;
         } else if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
-            lineRadius = 0.001;
+            lineRadius = 0.0025;
         } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             lineRadius = 0.0005;
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
