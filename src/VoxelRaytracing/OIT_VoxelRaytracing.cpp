@@ -123,6 +123,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
     isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
     bool isRings = boost::starts_with(modelFilenamePure, "Data/Rings");
     bool isAneurysm = boost::starts_with(modelFilenamePure, "Data/Trajectories");
+    bool isUCLA = boost::starts_with(modelFilenamePure, "Data/UCLA");
     bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output");
 
     uint16_t voxelRes = 256;
@@ -130,6 +131,10 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
     if (isRings) {
         voxelRes = 128;
         //quantizationRes = 16;
+    }
+    if (isUCLA)
+    {
+        voxelRes = 512;
     }
     if (isAneurysm)
     {
@@ -149,7 +154,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
 
     int maxNumLinesPerVoxel = 32;
     bool useGPU = true;
-    if (voxelRes >= 1024) {
+    if (voxelRes >= 256) {
         useGPU = false;
     }
 

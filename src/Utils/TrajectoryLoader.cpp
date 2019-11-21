@@ -83,7 +83,7 @@ void insertOrientedCirclePoints(std::vector<glm::vec3> &vertices, std::vector<gl
             normal.x,   normal.y,   normal.z,   0.0f,
             0.0f,       0.0f,       0.0f,       1.0f);
     glm::mat4 translation(
-            1.0f,     0.0f,     0.0f,     0.0f,
+            1.0f,     0.0f,   .0f,     0.0f,
             0.0f,     1.0f,     0.0f,     0.0f,
             0.0f,     0.0f,     1.0f,     0.0f,
             center.x, center.y, center.z, 1.0f);
