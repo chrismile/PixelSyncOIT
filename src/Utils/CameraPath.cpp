@@ -17,8 +17,8 @@
 #include "CameraPath.hpp"
 #include "Math/Math.hpp"
 
-#define ROTATION_AND_ZOOMING_MODE
-//#define ROTATION_MODE
+//#define ROTATION_AND_ZOOMING_MODE
+#define ROTATION_MODE
 //#define ZOOMING_MODE
 //#define VIDEO_MODE
 
@@ -66,6 +66,7 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
     bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output");
     bool isRings = boost::starts_with(modelFilenamePure, "Data/Rings");
     bool isHair = boost::starts_with(modelFilenamePure, "Data/Hair");
+    bool isUCLA = boost::starts_with(modelFilenamePure, "Data/UCLA");
 
     if (isConvectionRolls)
     {
@@ -182,6 +183,11 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
 
         // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
         // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
+    }
+    else if (isUCLA)
+    {
+        standardZoom = 1.0f;
+        yaw = -0.20;
     }
 
     else if (isRings)

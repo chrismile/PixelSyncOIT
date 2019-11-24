@@ -222,8 +222,8 @@ private:
     float recordingTimeLast = 0.0f;
 
     float outputTime = 0.0f;
-    bool testCameraFlight = false;
-    bool realTimeCameraFlight = false;
+    bool testCameraFlight = true;
+    bool realTimeCameraFlight = true;
     bool recordingUseGlobalIlumination = false;
     bool recording = false;
     VideoWriter *videoWriter;
