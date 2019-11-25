@@ -38,7 +38,15 @@ using namespace sgl;
 //#define PROFILING_MODE
 
 enum ShaderMode {
-    SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_VORTICITY, SHADER_MODE_AMBIENT_OCCLUSION
+    SHADER_MODE_PSEUDO_PHONG, SHADER_MODE_SCIENTIFIC_ATTRIBUTE, SHADER_MODE_AMBIENT_OCCLUSION
+};
+
+enum ModelType {
+    MODEL_TYPE_TRIANGLE_MESH_NORMAL, // Triangle mesh with normal shading
+    MODEL_TYPE_TRAJECTORIES, // Trajectory data set (i.e., lines)
+    MODEL_TYPE_HAIR, // Hair data set (i.e., lines, but without scalar attribute and transfer function)
+    MODEL_TYPE_TRIANGLE_MESH_SCIENTIFIC, // Triangle mesh with color determined by transfer function
+    MODEL_TYPE_POINTS // Point data set
 };
 
 struct CameraSetting
@@ -150,6 +158,7 @@ private:
     bool transparencyMapping = true;
     bool useLinearRGB = true;
     float lineRadius = 0.001f;
+    float pointRadius = 0.0002f;
     std::vector<float> fpsArray;
     size_t fpsArrayOffset = 0;
     glm::vec3 lightDirection = glm::vec3(1.0, 0.0, 0.0);
@@ -162,8 +171,9 @@ private:
     TransferFunctionWindow transferFunctionWindow;
 
     // Trajectory rendering
-    bool modelContainsTrajectories;
-    bool modelContainsHair;
+    //bool modelContainsTrajectories;
+    //bool modelContainsHair;
+    ModelType modelType = MODEL_TYPE_TRAJECTORIES;
     std::string transferFunctionName;
     TrajectoryType trajectoryType;
     ImportanceCriterionTypeAneurysm importanceCriterionTypeAneurysm

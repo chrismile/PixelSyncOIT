@@ -53,8 +53,11 @@ const char *const IMPORTANCE_CRITERION_CFD_DISPLAYNAMES[] = {
 
 
 /// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/packUnorm.xhtml
+void packUnorm16Array(const std::vector<float> &floatVector, std::vector<uint16_t> &unormVector);
+
+/// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/packUnorm.xhtml
 void packUnorm16ArrayOfArrays(
-        std::vector<std::vector<float>> &floatVector,
+        const std::vector<std::vector<float>> &floatVector,
         std::vector<std::vector<uint16_t>> &unormVector);
 
 /// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/unpackUnorm.xhtml

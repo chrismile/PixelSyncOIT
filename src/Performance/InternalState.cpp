@@ -548,7 +548,8 @@ void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, Interna
 
 void getTestModesPaperForRTPerformance(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesRayTracing(states, state);
+    getTestModesDepthPeeling(states, state);
+    getTestModesVoxelRaytracing(states, state);
 }
 
 std::vector<InternalState> getTestModesPaper()
@@ -601,25 +602,26 @@ std::vector<InternalState> getTestModesPaper()
 
 
     // Use different transfer functions?
-    std::vector<std::string> transferFunctionNameSuffices = { "Semi", "Full", "High" };
-    size_t n = states.size();
-    oldStates = states;
-    states.clear();
-    for (size_t i = 0; i < oldStates.size(); i++) {
-        for (int j = 0; j < transferFunctionNameSuffices.size(); j++) {
-            InternalState state = oldStates.at(i);
-            std::string modelFilename;
-            for (int i = 0; i < NUM_MODELS; i++) {
-                if (MODEL_DISPLAYNAMES[i] == state.modelName) {
-                    modelFilename = MODEL_FILENAMES[i];
+    std::vector<std::string> transferFunctionNameSuffices = { /*"Semi", "Full", "High"*/ };
+    if (transferFunctionNameSuffices.size() > 0) {
+        oldStates = states;
+        states.clear();
+        for (size_t i = 0; i < oldStates.size(); i++) {
+            for (int j = 0; j < transferFunctionNameSuffices.size(); j++) {
+                InternalState state = oldStates.at(i);
+                std::string modelFilename;
+                for (int i = 0; i < NUM_MODELS; i++) {
+                    if (MODEL_DISPLAYNAMES[i] == state.modelName) {
+                        modelFilename = MODEL_FILENAMES[i];
+                    }
                 }
+                std::string modelNamePure =
+                        sgl::FileUtils::get()->getPureFilename(sgl::FileUtils::get()->removeExtension(modelFilename));
+                std::string tfSuffix = transferFunctionNameSuffices.at(j);
+                state.name = state.name + "(TF: " + tfSuffix + ")";
+                state.transferFunctionName = std::string() + "tests/" + modelNamePure + "_" + tfSuffix + ".xml";
+                states.push_back(state);
             }
-            std::string modelNamePure =
-                    sgl::FileUtils::get()->getPureFilename(sgl::FileUtils::get()->removeExtension(modelFilename));
-            std::string tfSuffix = transferFunctionNameSuffices.at(j);
-            state.name = state.name + "(TF: " + tfSuffix + ")";
-            state.transferFunctionName = std::string() + "tests/" + modelNamePure + "_" + tfSuffix + ".xml";
-            states.push_back(state);
         }
     }
 

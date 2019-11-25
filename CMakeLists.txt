@@ -10,7 +10,7 @@ include_directories(src)
 
 #make VERBOSE=1
 
-option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" on)
+option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" OFF)
 
 if(USE_RAYTRACING)
 	find_package(ospray REQUIRED)

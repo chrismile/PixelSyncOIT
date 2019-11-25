@@ -1,0 +1,86 @@
+/*
+ * BSD 2-Clause License
+ *
+ * Copyright (c) 2019, Christoph Neuhauser
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <map>
+#include <Utils/Convert.hpp>
+#include <Utils/File/Logfile.hpp>
+#include "ComputeNormals.hpp"
+
+/**
+ * Creates normals for the specified indexed vertex set.
+ * NOTE: If a vertex is indexed by more than one triangle, then the average normal is stored per vertex.
+ * If you want to have non-smooth normals, then make sure each vertex is only referenced by one face.
+ */
+void computeNormals(
+        const std::vector<glm::vec3> &vertices,
+        const std::vector<uint32_t> &indices,
+        std::vector<glm::vec3> &normals)
+{
+    // For finding all triangles with a specific index. Maps vertex index -> first triangle index.
+    sgl::Logfile::get()->writeInfo(std::string() + "Creating index map for "
+            + sgl::toString(indices.size()) + " indices...");
+    std::multimap<size_t, size_t> indexMap;
+    for (size_t j = 0; j < indices.size(); j++) {
+        indexMap.insert(std::make_pair(indices.at(j), (j/3)*3));
+    }
+
+    sgl::Logfile::get()->writeInfo(std::string() + "Computing normals for "
+            + sgl::toString(vertices.size()) + " vertices...");
+    normals.reserve(vertices.size());
+    for (size_t i = 0; i < vertices.size(); i++) {
+        glm::vec3 normal(0.0f, 0.0f, 0.0f);
+        int numTrianglesSharedBy = 0;
+        auto triangleRange = indexMap.equal_range(i);
+        for (auto it = triangleRange.first; it != triangleRange.second; it++) {
+            size_t j = it->second;
+            size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+            glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+            faceNormal = glm::normalize(faceNormal);
+            normal += faceNormal;
+            numTrianglesSharedBy++;
+        }
+        // Naive code, O(n^2)
+        /*for (size_t j = 0; j < indices.size(); j += 3) {
+            // Does this triangle contain vertex #i?
+            if (indices.at(j) == i || indices.at(j+1) == i || indices.at(j+2) == i) {
+                size_t i1 = indices.at(j), i2 = indices.at(j+1), i3 = indices.at(j+2);
+                glm::vec3 faceNormal = glm::cross(vertices.at(i1) - vertices.at(i2), vertices.at(i1) - vertices.at(i3));
+                faceNormal = glm::normalize(faceNormal);
+                normal += faceNormal;
+                numTrianglesSharedBy++;
+            }
+        }*/
+
+        if (numTrianglesSharedBy == 0) {
+            sgl::Logfile::get()->writeError("Error in createNormals: numTrianglesSharedBy == 0");
+            exit(1);
+        }
+        normal /= (float)numTrianglesSharedBy;
+        normals.push_back(normal);
+    }
+}

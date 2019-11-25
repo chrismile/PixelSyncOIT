@@ -107,7 +107,7 @@ bool boxContainsPoint(vec3 point, vec3 lower, vec3 upper)
  * For more details see: https://www.siggraph.org//education/materials/HyperGraph/raytrace/rtinter1.htm
  */
 bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter, float sphereRadius,
-        out vec3 intersectionPosition, in vec3 centerVoxelPosMin, in vec3 centerVoxelPosMax)
+        out vec3 intersectionPosition, in vec3 centerVoxelPosMin, in vec3 centerVoxelPosMax, bool isClose)
 {
     float A = SQR(rayDirection.x) + SQR(rayDirection.y) + SQR(rayDirection.z);
     float B = 2.0 * (rayDirection.x * (rayOrigin.x - sphereCenter.x) + rayDirection.y * (rayOrigin.y - sphereCenter.y)
@@ -127,8 +127,15 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
     if (t0 >= 0.0
             && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
             && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))) {
+        #if !defined(VOXEL_RAY_CASTING_FAST)
+        if (!isClose || (all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
+                && all(lessThanEqual(intersectionPosition, centerVoxelPosMax)))) {
+            return true;
+        }
+        #else
         return true;
-    } else {
+        #endif
+    }/* else {
         float t1 = (-B + discriminantSqrt) / (2.0 * A);
         intersectionPosition = rayOrigin + t1 * rayDirection;
         if (t1 >= 0.0
@@ -136,7 +143,7 @@ bool raySphereIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 sphereCenter,
                 && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))) {
             return true;
         }
-    }
+    }*/
 
     return false;
 }
@@ -172,23 +179,25 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
     if (t0 >= 0.0) {
         intersectionPosition = rayOrigin + t0 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
-                && dot(tubeDirection, intersectionPosition - tubeEnd) < 0
-        #ifdef FAST_NEIGHBOR_SEARCH
-                && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
-                && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
-        #endif
-        ) {
+                && dot(tubeDirection, intersectionPosition - tubeEnd) < 0) {
             // Inside of finite cylinder
+            #if !defined(VOXEL_RAY_CASTING_FAST)
+            if (!isClose || (all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
+                    && all(lessThanEqual(intersectionPosition, centerVoxelPosMax)))) {
+                return true;
+            }
+            #else
             return true;
+            #endif
         }
     }
 
-    float t1 = (-B + discriminantSqrt) / (2.0 * A);
+    /*float t1 = (-B + discriminantSqrt) / (2.0 * A);
     if (t1 >= 0.0) {
         intersectionPosition = rayOrigin + t1 * rayDirection;
         if (dot(tubeDirection, intersectionPosition - tubeStart) > 0
                 && dot(tubeDirection, intersectionPosition - tubeEnd) < 0
-        #ifdef FAST_NEIGHBOR_SEARCH
+        #if defined(FAST_NEIGHBOR_SEARCH) || !defined(VOXEL_RAY_CASTING_FAST)
                 && all(greaterThanEqual(intersectionPosition, centerVoxelPosMin))
                 && all(lessThanEqual(intersectionPosition, centerVoxelPosMax))
         #endif
@@ -196,7 +205,7 @@ bool rayTubeIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 tubeStart, vec3
             // Inside of finite cylinder
             return true; // TODO
         }
-    }
+    }*/
 
     return false;
 }

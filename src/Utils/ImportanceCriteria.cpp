@@ -6,7 +6,7 @@
 #include "ImportanceCriteria.hpp"
 
 /// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/packUnorm.xhtml
-void packUnorm16Array(std::vector<float> &floatVector, std::vector<uint16_t> &unormVector)
+void packUnorm16Array(const std::vector<float> &floatVector, std::vector<uint16_t> &unormVector)
 {
     float minValue = FLT_MAX;
     float maxValue = -FLT_MAX;
@@ -26,7 +26,7 @@ void packUnorm16Array(std::vector<float> &floatVector, std::vector<uint16_t> &un
 
 /// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/packUnorm.xhtml
 void packUnorm16ArrayOfArrays(
-        std::vector<std::vector<float>> &floatVector,
+        const std::vector<std::vector<float>> &floatVector,
         std::vector<std::vector<uint16_t>> &unormVector)
 {
     unormVector.resize(floatVector.size());

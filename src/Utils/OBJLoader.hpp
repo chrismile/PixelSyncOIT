@@ -16,8 +16,7 @@
  * Stores the parsed .obj mesh to "binaryFilename" using "writeMesh3D" (see MeshSerializer.hpp).
  *
  * @param objFilename: The input .obj file.
- * @param binaryFilename: The filename of the binary output file output.
- * @return: The loaded mesh stores in a ShaderAttributes object.
+ * @param binaryFilename: The filename of the binary output file.
  */
 void convertObjMeshToBinary(
         const std::string &objFilename,
