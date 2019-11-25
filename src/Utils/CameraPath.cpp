@@ -186,9 +186,9 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
     }
     else if (isUCLA)
     {
-        standardZoom = 1.1f;
+        standardZoom = 1.0f;
         yaw = -0.50;
-        centerOffset.y += 0.22f;
+        centerOffset.y += 0.205f;
     }
 
     else if (isRings)

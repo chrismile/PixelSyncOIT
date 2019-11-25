@@ -100,31 +100,31 @@ void AutoPerfMeasurer::writeCurrentModeData()
     file.writeCell(sgl::toString(currentAlgorithmsBufferSizeBytes*1e-9f));
 
     // Save normalized difference map
-    if (referenceImage != nullptr) {
-        std::string differenceMapFilename =
-                std::string() + "images/" + currentState.name + " Difference" + ".png";
-        sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(referenceImage, image);
-        differenceMap->savePNG(differenceMapFilename.c_str());
-
-        std::string ssimDifferenceMapFilename =
-                std::string() + "images/" + currentState.name + " SSIM Difference (4x4)" + ".png";
-        sgl::BitmapPtr ssimDifferenceMap = ssimDifferenceImage(referenceImage, image, 4);
-        ssimDifferenceMap->savePNG(ssimDifferenceMapFilename.c_str());
-
-        // If a reference image is saved: Compute reference metrics (SSIM, RMSE, PSNR)
-        if (referenceImage) {
-            double ssimMetric = ssim(referenceImage, image);
-            double rmseMetric = rmse(referenceImage, image);
-            double psnrMetric = psnr(referenceImage, image);
-            file.writeCell(sgl::toString(ssimMetric));
-            file.writeCell(sgl::toString(rmseMetric));
-            file.writeCell(sgl::toString(psnrMetric));
-        }
-    } else{
+//    if (referenceImage != nullptr) {
+//        std::string differenceMapFilename =
+//                std::string() + "images/" + currentState.name + " Difference" + ".png";
+//        sgl::BitmapPtr differenceMap = computeNormalizedDifferenceMap(referenceImage, image);
+//        differenceMap->savePNG(differenceMapFilename.c_str());
+//
+//        std::string ssimDifferenceMapFilename =
+//                std::string() + "images/" + currentState.name + " SSIM Difference (4x4)" + ".png";
+//        sgl::BitmapPtr ssimDifferenceMap = ssimDifferenceImage(referenceImage, image, 4);
+//        ssimDifferenceMap->savePNG(ssimDifferenceMapFilename.c_str());
+//
+//        // If a reference image is saved: Compute reference metrics (SSIM, RMSE, PSNR)
+//        if (referenceImage) {
+//            double ssimMetric = ssim(referenceImage, image);
+//            double rmseMetric = rmse(referenceImage, image);
+//            double psnrMetric = psnr(referenceImage, image);
+//            file.writeCell(sgl::toString(ssimMetric));
+//            file.writeCell(sgl::toString(rmseMetric));
+//            file.writeCell(sgl::toString(psnrMetric));
+//        }
+//    } else{
         file.writeCell(sgl::toString(0));
         file.writeCell(sgl::toString(0));
         file.writeCell(sgl::toString(0));
-    }
+//    }
 
     auto performanceProfile = timerGL.getCurrentFrameTimeList();
     for (auto &perfPair : performanceProfile) {
@@ -221,7 +221,7 @@ void AutoPerfMeasurer::setNextState(bool first)
         if (currentState.oitAlgorithm != RENDER_MODE_OIT_DEPTH_COMPLEXITY)
         {
             if (timeCoherence) {
-                writeCurrentErrorMetricData();
+//                writeCurrentErrorMetricData();
             }
                 writeCurrentModeData();
         }

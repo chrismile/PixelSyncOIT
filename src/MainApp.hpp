@@ -148,7 +148,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "UCLA (500k)";
+    std::string startupModelName = "UCLA (400k)";
     LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     Color bandingColor;
     Color clearColor;
@@ -204,7 +204,7 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = false;
+    bool perfMeasurementMode = true;
     bool timeCoherence = false;
     InternalState lastState;
     bool firstState = true;
@@ -222,8 +222,8 @@ private:
     float recordingTimeLast = 0.0f;
 
     float outputTime = 0.0f;
-    bool testCameraFlight = true;
-    bool realTimeCameraFlight = true;
+    bool testCameraFlight = false;
+    bool realTimeCameraFlight = false;
     bool recordingUseGlobalIlumination = false;
     bool recording = false;
     VideoWriter *videoWriter;

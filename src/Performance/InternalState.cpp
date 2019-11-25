@@ -148,6 +148,11 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
         maxNumFragmentsSorting = 1024;
         expectedDepthComplexity = 500;
     }
+    if (state.modelName == "UCLA (400k)") {
+        // Highest depth complexity measured for this dataset
+        maxNumFragmentsSorting = 1024;
+        expectedDepthComplexity = 500;
+    }
     if (state.modelName == "Convection Rolls") {
         // Highest depth complexity measured for this dataset
         maxNumFragmentsSorting = 512;
@@ -159,7 +164,7 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
         expectedDepthComplexity = 300;
     }
 
-    for (int sortingModeIdx = 0; sortingModeIdx < IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
+    for (int sortingModeIdx = 0; sortingModeIdx < 1; sortingModeIdx++) {//IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
         std::string sortingMode = sortingModeStrings[sortingModeIdx];
         state.name = std::string() + "Linked List " + sortingMode + + " "
                      + sgl::toString(maxNumFragmentsSorting) + " Layers, "
@@ -446,7 +451,7 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
-    for (int nodesPerBucket = 4; nodesPerBucket <= 8; nodesPerBucket *= 2) {
+    for (int nodesPerBucket = 4; nodesPerBucket <= 4; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
@@ -466,8 +471,9 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 
     int gridResolution = 128;
 
-    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 64; }
+    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 128; }
     if (boost::starts_with(state.modelName, "Data/ConvectionRolls/output")) { gridResolution = 256; }
+    if (boost::starts_with(state.modelName, "Data/UCLA")) { gridResolution = 512; }
 
 //    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
     state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";
@@ -518,14 +524,12 @@ void getTestModesPaperForDepthComplexity(std::vector<InternalState> &states, Int
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
-    getTestModesDepthPeeling(states, state);
-//    getTestModesNoOIT(states, state);
-    getTestModesMLAB(states, state);
-    getTestModesMBOIT(states, state);
+//    getTestModesDepthPeeling(states, state);
     getTestModesLinkedList(states, state);
+    getTestModesMBOIT(states, state);
     getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
-//    getTestModesDepthComplexity(states, state);
+    getTestModesDepthComplexity(states, state);
 }
 
 void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
@@ -558,7 +562,8 @@ std::vector<InternalState> getTestModesPaper()
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
-    std::vector<std::string> modelNames = { "Aneurysm", "Turbulence", "Convection Rolls" };
+//    std::vector<std::string> modelNames = { "Aneurysm", "Turbulence", "Convection Rolls" };
+    std::vector<std::string> modelNames = { "UCLA (400k)" };
     InternalState state;
 
     for (size_t i = 0; i < windowResolutions.size(); i++) {
@@ -566,16 +571,18 @@ std::vector<InternalState> getTestModesPaper()
         for (size_t j = 0; j < modelNames.size(); j++) {
             state.modelName = modelNames.at(j);
 //            getTestModesPaperForRTPerformance(states, state);
-            getTestModesPaperForDepthComplexity(states, state);
+//            getTestModesPaperForDepthComplexity(states, state);
+            getTestModesPaperForMesh(states, state);
         }
     }
 
-    for (InternalState &state : states) {
-        state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
-    }
+    //! TODO only for quality tests
+//    for (InternalState &state : states) {
+//        state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+//    }
 
     // Append model name to state name if more than one model is loaded
-    if (modelNames.size() > 1 || windowResolutions.size() > 1) {
+    if (modelNames.size() >= 1 || windowResolutions.size() > 1) {
         for (InternalState &state : states) {
             state.name = sgl::toString(state.windowResolution.x) + "x" + sgl::toString(state.windowResolution.y)
                     + " " + state.modelName + " " + state.name;
@@ -607,7 +614,7 @@ std::vector<InternalState> getTestModesPaper()
 
 
     // Use different transfer functions?
-    std::vector<std::string> transferFunctionNameSuffices = { /*"Semi", "Full", "High"*/ };
+    std::vector<std::string> transferFunctionNameSuffices = { "full", "semi", "high" };
     if (transferFunctionNameSuffices.size() > 0) {
         oldStates = states;
         states.clear();
@@ -624,7 +631,7 @@ std::vector<InternalState> getTestModesPaper()
                         sgl::FileUtils::get()->getPureFilename(sgl::FileUtils::get()->removeExtension(modelFilename));
                 std::string tfSuffix = transferFunctionNameSuffices.at(j);
                 state.name = state.name + "(TF: " + tfSuffix + ")";
-                state.transferFunctionName = std::string() + "tests/" + modelNamePure + "_" + tfSuffix + ".xml";
+                state.transferFunctionName = std::string() + "quality/" + modelNamePure + "_" + tfSuffix + ".xml";
                 states.push_back(state);
             }
         }
