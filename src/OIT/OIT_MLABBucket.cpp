@@ -33,6 +33,12 @@ static int nodesPerBucket = 4;
 // How to assign pixels to buffers
 static int bucketMode = 4;
 
+// Opacity threshold for lower back buffer boundary
+static float lowerBackBufferOpacity = 0.25;
+
+// Opacity threshold for upper back buffer boundary
+static float upperBackBufferOpacity = 0.98;
+
 
 OIT_MLABBucket::OIT_MLABBucket()
 {
@@ -144,6 +150,16 @@ void OIT_MLABBucket::renderGUI()
         reRender = true;
     }
 
+    if (ImGui::SliderFloat("Back Bucket Lower Opacity", &lowerBackBufferOpacity, 0.0f, 1.0f)) {
+        updateLayerMode();
+        reRender = true;
+    }
+
+    if (ImGui::SliderFloat("Back Bucket Upper Opacity", &upperBackBufferOpacity, 0.0f, 1.0f)) {
+        updateLayerMode();
+        reRender = true;
+    }
+
     if (ImGui::SliderInt("Nodes per Bucket", &nodesPerBucket, 1, 8)) {
         updateLayerMode();
         reRender = true;
@@ -157,11 +173,13 @@ void OIT_MLABBucket::renderGUI()
         reRender = true;
     }
 
-    if (selectTilingModeUI()) {
+    if (selectTilingModeUI())
+    {
         reloadShaders();
         clearBitSet = true;
         reRender = true;
     }
+
 }
 
 void OIT_MLABBucket::updateLayerMode()
@@ -290,6 +308,10 @@ void OIT_MLABBucket::setUniformData()
     if (bucketMode == 4) {
         minDepthPassShader->setUniform("viewportW", width);
         minDepthPassShader->setShaderStorageBuffer(1, "MinDepthBuffer", minDepthBuffer);
+
+        // depth bucket mode (num buckets = 2)
+        minDepthPassShader->setUniform("lowerBackBufferOpacity", lowerBackBufferOpacity);
+        minDepthPassShader->setUniform("upperBackBufferOpacity", upperBackBufferOpacity);
     }
 
     //mboitPass1Shader->setUniformImageTexture(0, b0, textureSettingsB0.internalFormat, GL_READ_WRITE, 0, true, 0);

@@ -9,6 +9,7 @@
 #include <Graphics/Renderer.hpp>
 
 #include <chrono>
+#include <iostream>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <GL/glew.h>
@@ -432,22 +433,33 @@ void convertTrajectoryDataToBinaryTriangleMesh(
     submesh.material.opacity = 120 / 255.0f;
     submesh.indices = globalIndices;
 
+    const size_t numIndices = globalIndices.size();
+    const size_t numVertices = globalVertexPositions.size();
+    const size_t numNormals = globalNormals.size();
+    // free memory
+    globalIndices.clear(); globalIndices.shrink_to_fit();
+
     BinaryMeshAttribute positionAttribute;
     positionAttribute.name = "vertexPosition";
     positionAttribute.attributeFormat = ATTRIB_FLOAT;
     positionAttribute.numComponents = 3;
-    positionAttribute.data.resize(globalVertexPositions.size() * sizeof(glm::vec3));
-    memcpy(&positionAttribute.data.front(), &globalVertexPositions.front(), globalVertexPositions.size() * sizeof(glm::vec3));
+    positionAttribute.data.resize(numVertices * sizeof(glm::vec3));
+    memcpy(&positionAttribute.data.front(), &globalVertexPositions.front(), numVertices * sizeof(glm::vec3));
     submesh.attributes.push_back(positionAttribute);
+
+    // free memory
+    globalVertexPositions.clear(); globalVertexPositions.shrink_to_fit();
 
     BinaryMeshAttribute lineNormalsAttribute;
     lineNormalsAttribute.name = "vertexNormal";
     lineNormalsAttribute.attributeFormat = ATTRIB_FLOAT;
     lineNormalsAttribute.numComponents = 3;
-    lineNormalsAttribute.data.resize(globalNormals.size() * sizeof(glm::vec3));
-    memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), globalNormals.size() * sizeof(glm::vec3));
+    lineNormalsAttribute.data.resize(numNormals * sizeof(glm::vec3));
+    memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), numNormals * sizeof(glm::vec3));
     submesh.attributes.push_back(lineNormalsAttribute);
 
+    // free memory
+    globalNormals.clear(); globalNormals.shrink_to_fit();
 
     std::vector<std::vector<uint16_t>> globalImportanceCriteriaUnorm;
     packUnorm16ArrayOfArrays(globalImportanceCriteria, globalImportanceCriteriaUnorm);
@@ -463,12 +475,15 @@ void convertTrajectoryDataToBinaryTriangleMesh(
         submesh.attributes.push_back(vertexAttribute);
     }
 
+    // free memory
+    globalImportanceCriteriaUnorm.clear(); globalImportanceCriteriaUnorm.shrink_to_fit();
 
     auto end = std::chrono::system_clock::now();
 
     Logfile::get()->writeInfo(std::string() + "Summary: "
-                              + sgl::toString(globalVertexPositions.size()) + " vertices, "
-                              + sgl::toString(globalIndices.size()) + " indices.");
+                              + sgl::toString(numVertices) + " vertices, "
+                              + sgl::toString(numIndices / 3) + " faces, "
+                              + sgl::toString(numIndices) + " indices.");
     Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);
 
@@ -962,30 +977,45 @@ void convertTrajectoryDataToBinaryLineMesh(
     submesh.material.opacity = 120 / 255.0f;
     submesh.indices = globalIndices;
 
+    const size_t numIndices = globalIndices.size();
+    const size_t numVertices = globalVertexPositions.size();
+    const size_t numNormals = globalNormals.size();
+    const size_t numTangents = globalTangents.size();
+    // free memory
+    globalIndices.clear(); globalIndices.shrink_to_fit();
+
     BinaryMeshAttribute positionAttribute;
     positionAttribute.name = "vertexPosition";
     positionAttribute.attributeFormat = ATTRIB_FLOAT;
     positionAttribute.numComponents = 3;
-    positionAttribute.data.resize(globalVertexPositions.size() * sizeof(glm::vec3));
-    memcpy(&positionAttribute.data.front(), &globalVertexPositions.front(), globalVertexPositions.size() * sizeof(glm::vec3));
+    positionAttribute.data.resize(numVertices * sizeof(glm::vec3));
+    memcpy(&positionAttribute.data.front(), &globalVertexPositions.front(), numVertices * sizeof(glm::vec3));
     submesh.attributes.push_back(positionAttribute);
+
+    // free memory
+    globalVertexPositions.clear(); globalVertexPositions.shrink_to_fit();
 
     BinaryMeshAttribute lineNormalsAttribute;
     lineNormalsAttribute.name = "vertexLineNormal";
     lineNormalsAttribute.attributeFormat = ATTRIB_FLOAT;
     lineNormalsAttribute.numComponents = 3;
-    lineNormalsAttribute.data.resize(globalNormals.size() * sizeof(glm::vec3));
-    memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), globalNormals.size() * sizeof(glm::vec3));
+    lineNormalsAttribute.data.resize(numNormals * sizeof(glm::vec3));
+    memcpy(&lineNormalsAttribute.data.front(), &globalNormals.front(), numNormals * sizeof(glm::vec3));
     submesh.attributes.push_back(lineNormalsAttribute);
+
+    // free memory
+    globalNormals.clear(); globalNormals.shrink_to_fit();
 
     BinaryMeshAttribute lineTangentAttribute;
     lineTangentAttribute.name = "vertexLineTangent";
     lineTangentAttribute.attributeFormat = ATTRIB_FLOAT;
     lineTangentAttribute.numComponents = 3;
-    lineTangentAttribute.data.resize(globalTangents.size() * sizeof(glm::vec3));
-    memcpy(&lineTangentAttribute.data.front(), &globalTangents.front(), globalTangents.size() * sizeof(glm::vec3));
+    lineTangentAttribute.data.resize(numTangents * sizeof(glm::vec3));
+    memcpy(&lineTangentAttribute.data.front(), &globalTangents.front(), numTangents * sizeof(glm::vec3));
     submesh.attributes.push_back(lineTangentAttribute);
 
+    // free memory
+    globalTangents.clear(); globalTangents.shrink_to_fit();
 
     std::vector<std::vector<uint16_t>> globalImportanceCriteriaUnorm;
     packUnorm16ArrayOfArrays(globalImportanceCriteria, globalImportanceCriteriaUnorm);
@@ -1001,11 +1031,15 @@ void convertTrajectoryDataToBinaryLineMesh(
         submesh.attributes.push_back(vertexAttribute);
     }
 
+    // free memory
+    globalImportanceCriteriaUnorm.clear(); globalImportanceCriteriaUnorm.shrink_to_fit();
+
     auto end = std::chrono::system_clock::now();
 
     Logfile::get()->writeInfo(std::string() + "Summary: "
-                              + sgl::toString(globalVertexPositions.size()) + " vertices, "
-                              + sgl::toString(globalIndices.size()) + " indices.");
+                              + sgl::toString(numVertices) + " vertices, "
+                              + sgl::toString(numIndices / 3) + " faces, "
+                              + sgl::toString(numIndices) + " indices.");
     Logfile::get()->writeInfo(std::string() + "Writing binary mesh...");
     writeMesh3D(binaryFilename, binaryMesh);
 

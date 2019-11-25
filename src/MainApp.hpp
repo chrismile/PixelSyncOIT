@@ -148,14 +148,15 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Rings";
-    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+    std::string startupModelName = "UCLA (100k)";
+    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
     bool cullBackface = true;
     bool useBillboardLines = false;
     bool transparencyMapping = true;
+    bool colorByPosition = false;
     bool useLinearRGB = true;
     float lineRadius = 0.001f;
     float pointRadius = 0.0002f;
@@ -184,6 +185,8 @@ private:
             = IMPORTANCE_CRITERION_CONVECTION_ROLLS_VORTICITY;
     ImportanceCriterionTypeCFD importanceCriterionTypeCFD
             = IMPORTANCE_CRITERION_CFD_CURL;
+    ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
+            = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     bool useGeometryShader = false;

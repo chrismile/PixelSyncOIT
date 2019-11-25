@@ -41,7 +41,11 @@ layout (std430, binding = 1) coherent buffer MinDepthBuffer
 #include "TiledAddress.glsl"
 
 #define REQUIRE_INVOCATION_INTERLOCK
-#define OPACITY_THRESHOLD 0.3
+//#define OPACITY_THRESHOLD 0.3
+//#define OPACITY_OPAQUE_THRESHOLD 0.98
+uniform float lowerBackBufferOpacity; // default 0.25
+uniform float upperBackBufferOpacity; // default 0.98
+
 
 void gatherFragment(vec4 color)
 {
@@ -56,12 +60,14 @@ void gatherFragment(vec4 color)
     newDepthInfo.minDepth = depthInfo.minDepth;
     newDepthInfo.minOpaqueDepth = depthInfo.minOpaqueDepth;
 
-    if (color.a > OPACITY_THRESHOLD && depth < depthInfo.minDepth) {
+    // estimate boundary of front buffer
+    if (color.a > lowerBackBufferOpacity && depth < depthInfo.minDepth) {
         newDepthInfo.minDepth = depth;
         depthBuffer[pixelIndex] = newDepthInfo;
     }
 
-    if (color.a >= 0.99 && depth < depthInfo.minOpaqueDepth) {
+    // estimate boundary of back buffer
+    if (color.a >= upperBackBufferOpacity && depth < depthInfo.minOpaqueDepth) {
         newDepthInfo.minOpaqueDepth = depth;
         depthBuffer[pixelIndex] = newDepthInfo;
     }

@@ -62,7 +62,6 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
             }
         }
     }
-
     return trajectories;
 }
 
@@ -70,6 +69,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 {
     bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
     bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
+    bool isUCLA = trajectoryType == TRAJECTORY_TYPE_UCLA;
     Trajectories trajectories;
 
     std::vector<glm::vec3> globalLineVertices;
@@ -135,7 +135,11 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
         } else if (command == 'v') {
             // Path line vertex position
             glm::vec3 position;
-            if (isConvectionRolls) {
+            if (isUCLA)
+            {
+                sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.y, &position.z);
+            }
+            else if (isConvectionRolls) {
                 sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.z, &position.y);
             } else {
                 sscanf(lineBuffer.c_str()+2, "%f %f %f", &position.x, &position.y, &position.z);

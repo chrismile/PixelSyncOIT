@@ -81,12 +81,12 @@ void main()
     const float kA = 0.1 * occlusionFactor * shadowFactor;
     const vec3 Ia = kA * diffuseColor; //ambientColor
     const float kD = 0.7;
-    const float kS = 0.2;
+    const float kS = 0.1;
     const float s = 10;
 
-    const vec3 l = normalize(lightDirection);
     const vec3 n = normalize(fragmentNormal);
     const vec3 v = normalize(cameraPosition - fragmentPositonWorld);
+    const vec3 l = v;//normalize(lightDirection);
     const vec3 h = normalize(v + l);
 
     vec3 Id = kD * clamp(abs(dot(n, l)), 0.0, 1.0) * diffuseColor;

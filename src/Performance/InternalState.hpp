@@ -31,6 +31,14 @@ enum RenderModeOIT {
 };
 
 const char *const MODEL_FILENAMES[] = {
+        "Data/UCLA/UCLA_10000.obj",
+        "Data/UCLA/UCLA_100000.obj",
+        "Data/UCLA/UCLA_150000.obj",
+        "Data/IsoSurfaces/rm-140-isosurface.bobj",
+        "Data/IsoSurfaces/rm-80-isosurface.bobj",
+        "Data/PointDatasets/0.000xv000.dat",
+        "Data/PointDatasets/0.000xv001.dat",
+        "Data/PointDatasets/OFC-wasatch-50Mpps.uda.001/t06002/timestep.xml",
         "Data/Rings/rings.obj",
         "Data/Trajectories/9213_streamlines.obj",
         "Data/ConvectionRolls/output.obj",
@@ -41,11 +49,6 @@ const char *const MODEL_FILENAMES[] = {
         "Data/Trajectories/torus.obj",
         "Data/CFD/driven_cavity-streamlines.binlines",
         "Data/CFD/rayleigh_benard_convection_8-2-1-streamlines.binlines",
-        "Data/IsoSurfaces/rm-80-isosurface.bobj",
-        "Data/IsoSurfaces/rm-140-isosurface.bobj",
-        "Data/PointDatasets/0.000xv000.dat",
-        "Data/PointDatasets/0.000xv001.dat",
-        "Data/PointDatasets/OFC-wasatch-50Mpps.uda.001/t06002/timestep.xml",
         "Data/Models/Ship_04.obj",
 
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06pressureDiff.nc",
@@ -77,6 +80,14 @@ const char *const MODEL_FILENAMES[] = {
 };
 const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)));
 const char *const MODEL_DISPLAYNAMES[] = {
+        "UCLA (10k)",
+        "UCLA (100k)",
+        "UCLA (150k)",
+        "Meshkov (140)",
+        "Meshkov (80)",
+        "Cosmic Web 0",
+        "Cosmic Web 1",
+        "Uintah Particle Data Set",
         "Rings",
         "Aneurysm",
         "Convection Rolls",
@@ -87,11 +98,6 @@ const char *const MODEL_DISPLAYNAMES[] = {
         "Torus",
         "Driven Cavity",
         "Rayleigh-Benard Convection",
-        "Iso Surface (rm-80)",
-        "Iso Surface (rm-140)",
-        "Cosmic Web 0",
-        "Cosmic Web 1",
-        "Uintah Particle Data Set",
         "Ship",
 
 //        "Ponytail",

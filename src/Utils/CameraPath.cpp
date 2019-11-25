@@ -17,10 +17,10 @@
 #include "CameraPath.hpp"
 #include "Math/Math.hpp"
 
-//#define ROTATION_AND_ZOOMING_MODE
+#define ROTATION_AND_ZOOMING_MODE
 //#define ROTATION_MODE
 //#define ZOOMING_MODE
-#define VIDEO_MODE
+//#define VIDEO_MODE
 
 ControlPoint::ControlPoint(float time, float tx, float ty, float tz, float yaw, float pitch)
 {
@@ -124,8 +124,8 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
     // Zooming and pulsing
     if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
         startAngle += 1.2f;
-        standardZoom = 1.5f;
-        pulseFactor = 4.f;
+        standardZoom = 1.0f;
+        pulseFactor = 1.1f;
         centerOffset.x -= 0.1f;
     }
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
@@ -133,13 +133,13 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
         standardZoom = 1.8f;
     }
     if (isConvectionRolls) {
-        pulseFactor = 2.0f;
-        standardZoom = 1.0f;
-        startAngle += 1.58f;
-        centerOffset.y += 0.3f;
+        pulseFactor = 1.5f;
+        standardZoom = 0.8f;
+        startAngle += 0.0f;
+        centerOffset.y += 0.15f;
 //        centerOffset.z -= 1.5;
 //        centerOffset.x += 0.3;
-        yaw = -0.60769;
+        yaw = -0.50769;
 
         // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
         // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769

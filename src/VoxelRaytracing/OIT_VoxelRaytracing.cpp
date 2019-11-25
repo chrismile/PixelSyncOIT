@@ -149,7 +149,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
 
     int maxNumLinesPerVoxel = 32;
     bool useGPU = true;
-    if (voxelRes >= 256) {
+    if (voxelRes >= 1024) {
         useGPU = false;
     }
 

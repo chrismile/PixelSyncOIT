@@ -61,7 +61,12 @@ void convertPointDataSetToBinmesh(
     // Compute the bounding box.
     sgl::AABB3 aabb;
     for (size_t i = 0; i < numPoints; i++) {
-        aabb.combine(positionValues[i]);
+        glm::vec3& position = positionValues[i];
+
+        float tempZ = position.x;
+        position.x = position.y;
+        position.y = tempZ;
+        aabb.combine(position);
     }
 
     // Find the maximum axis of the box.
