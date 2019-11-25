@@ -2,19 +2,24 @@
 
 #version 430 core
 
+#include "VertexAttributeNames.glsl"
+
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
+layout(location = 3) in float VERTEX_ATTRIBUTE;
 
 out vec3 fragmentNormal;
 out vec3 fragmentPositonLocal;
 out vec3 fragmentPositonWorld;
 out vec3 screenSpacePosition;
+out float fragmentAttribute;
 
 void main()
 {
     fragmentNormal = vertexNormal;
     fragmentPositonLocal = (vec4(vertexPosition, 1.0)).xyz;
     fragmentPositonWorld = (mMatrix * vec4(vertexPosition, 1.0)).xyz;
+    fragmentAttribute = VERTEX_ATTRIBUTE;
     screenSpacePosition = (vMatrix * mMatrix * vec4(vertexPosition, 1.0)).xyz;
     gl_Position = mvpMatrix * vec4(vertexPosition, 1.0);
 }
@@ -33,6 +38,7 @@ in vec3 screenSpacePosition;
 in vec3 fragmentNormal;
 in vec3 fragmentPositonLocal;
 in vec3 fragmentPositonWorld;
+in float fragmentAttribute;
 
 #if defined(DIRECT_BLIT_GATHER) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
 out vec4 fragColor;
@@ -51,6 +57,7 @@ uniform float shadowFactorGlobal = 1.0f;
 uniform float minCriterionValue = 0.0;
 uniform float maxCriterionValue = 1.0;
 uniform bool transparencyMapping = true;
+uniform bool colorByPosition = false;
 
 // Color of the object
 uniform vec4 colorGlobal;
@@ -80,22 +87,35 @@ void main()
 #endif
 
     vec4 colorAttribute = transferFunction(fragmentAttribute);
+//    float curvature = fragmentAttribute;
+
+    if (!transparencyMapping) {
+        if (colorByPosition)
+        {
+            colorAttribute = vec4(0.5, fragmentPositonWorld.y / 1.5, fragmentPositonWorld.z / 3, colorGlobal.a);
+        }
+        else
+        {
+            colorAttribute = colorGlobal;
+        }
+
+    }
 
     // Blinn-Phong Shading
     const vec3 lightColor = vec3(1,1,1);
-    const vec3 ambientColor = lightColor;
-    const vec3 diffuseColor = colorAttribute.rgb;
+    const vec3 ambientColor = colorAttribute.rgb;//vec3(0.5, fragmentPositonWorld.g, fragmentPositonWorld.b);
+    const vec3 diffuseColor = ambientColor;
     vec3 phongColor = vec3(0);
 
-    const float kA = 0.1 * occlusionFactor * shadowFactor;
+    const float kA = 0.2 * occlusionFactor * shadowFactor;
     const vec3 Ia = kA * ambientColor;
     const float kD = 0.7;
-    const float kS = 0.2;
+    const float kS = 0.1;
     const float s = 10;
 
-    const vec3 l = normalize(lightDirection);
     const vec3 n = normalize(fragmentNormal);
     const vec3 v = normalize(cameraPosition - fragmentPositonWorld);
+    const vec3 l = v;//normalize(lightDirection);
     const vec3 h = normalize(v + l);
 
     vec3 Id = kD * clamp(abs(dot(n, l)), 0.0, 1.0) * diffuseColor;
@@ -103,8 +123,8 @@ void main()
 
     phongColor = Ia + Id + Is;
 
-    vec4 color = vec4(phongColor, colorAttribute.a);
-    color = vec4(1,0,0,1);
+    float tempAlpha = colorAttribute.a;
+    vec4 color = vec4(phongColor, tempAlpha);
 
     #if REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     color.rgb = vec3(occlusionFactor * shadowFactor);

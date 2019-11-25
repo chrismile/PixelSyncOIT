@@ -191,6 +191,17 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
                                         [this](const InternalState &newState) { this->setNewState(newState); }, timeCoherence);
         measurer->setInitialFreeMemKilobytes(freeMemKilobytes);
         measurer->resolutionChanged(sceneFramebuffer);
+
+        if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+            OIT_DepthComplexity *depthComplexityOIT = (OIT_DepthComplexity*)oitRenderer.get();
+
+            if (depthComplexityOIT)
+            {
+                depthComplexityOIT->setPerfMeasurer(measurer);
+            }
+        }
+
+
         continuousRendering = true; // Always use continuous rendering in performance measurement mode
     } else {
         measurer = NULL;
@@ -457,6 +468,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             lineRadius = 0.002;
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             lineRadius = 0.001;
+        } else if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+            lineRadius = 0.001;
         } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             lineRadius = 0.0005;
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
@@ -480,6 +493,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
             transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
+        } else if (boost::starts_with(modelFilenamePure, "Data/UCLA") && !perfMeasurementMode) {
+            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/UCLA.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
             transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
@@ -514,6 +529,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             || boost::starts_with(modelFilenamePure, "Data/Turbulence")
             || boost::starts_with(modelFilenamePure, "Data/WCB")
             || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")
+            || boost::starts_with(modelFilenamePure, "Data/UCLA")
             || boost::starts_with(modelFilenamePure, "Data/CFD");
     if (modelContainsTrajectories) {
         modelType = MODEL_TYPE_TRAJECTORIES;
@@ -528,9 +544,9 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         modelType = MODEL_TYPE_TRIANGLE_MESH_NORMAL;
     }
 
-    /*if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+    if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
         modelType = MODEL_TYPE_TRIANGLE_MESH_SCIENTIFIC;
-    }*/
+    }
 
     if (boost::starts_with(modelFilenamePure, "Data/PointDatasets")) {
         modelType = MODEL_TYPE_POINTS;
@@ -544,6 +560,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             trajectoryType = TRAJECTORY_TYPE_WCB;
         } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
             trajectoryType = TRAJECTORY_TYPE_RINGS;
+        } else if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+            trajectoryType = TRAJECTORY_TYPE_UCLA;
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD")) {
@@ -590,10 +608,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
                 convertTrajectoryDataToBinaryLineMesh(trajectoryType, filename, modelFilenameOptimized);
             } else {
-                //convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, modelFilenameObj,
-                //        modelFilenameOptimized, lineRadius);
-                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
+                convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, filename,
                         modelFilenameOptimized, lineRadius);
+//                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
+//                        modelFilenameOptimized, lineRadius);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             convertHairDataToBinaryTriangleMesh(filename, modelFilenameOptimized);
@@ -771,6 +789,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
                 camera->setPosition(glm::vec3(0.154441f, 0.0162448f, 0.483843f));
+            } else if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+                // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
+//                camera->setPosition(glm::vec3(1023, 1023, 977));
+                camera->setPosition(glm::vec3(0, 0.5, 0));
             } else {
                 camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
             }
@@ -809,6 +831,8 @@ void PixelSyncApp::changeImportanceCriterionType()
         importanceCriterionIndex = (int)importanceCriterionTypeWCB;
     } else if (trajectoryType == TRAJECTORY_TYPE_CFD) {
         importanceCriterionIndex = (int)importanceCriterionTypeCFD;
+    } else if (trajectoryType == TRAJECTORY_TYPE_UCLA) {
+        importanceCriterionIndex = (int)importanceCriterionTypeUCLA;
     } else {
         importanceCriterionIndex = (int)importanceCriterionTypeConvectionRolls;
     }
@@ -959,7 +983,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         if (recording) {
             depthComplexityOIT->setRecordingMode(true);
         }
-        if (perfMeasurementMode) {
+        if (perfMeasurementMode && measurer != nullptr) {
             depthComplexityOIT->setPerfMeasurer(measurer);
         }
 
@@ -1094,7 +1118,11 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     if (modelType == MODEL_TYPE_TRAJECTORIES && importanceCriterionIndex != newState.importanceCriterionIndex) {
         if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
             importanceCriterionTypeAneurysm = (ImportanceCriterionTypeAneurysm)newState.importanceCriterionIndex;
-        } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
+        }
+        else if (trajectoryType == TRAJECTORY_TYPE_UCLA) {
+            importanceCriterionTypeUCLA = (ImportanceCriterionTypeUCLA)newState.importanceCriterionIndex;
+        }
+        else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
             importanceCriterionTypeWCB = (ImportanceCriterionTypeWCB)newState.importanceCriterionIndex;
         } else if (trajectoryType == TRAJECTORY_TYPE_CFD) {
             importanceCriterionTypeCFD = (ImportanceCriterionTypeCFD)newState.importanceCriterionIndex;
@@ -1228,7 +1256,10 @@ void PixelSyncApp::render()
     reRender = reRender || oitRenderer->needsReRender() || oitRenderer->isTestingMode();
     // reRender = true;
 
+    GLsync fence;
+
     if (continuousRendering || reRender) {
+        fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         renderOIT();
         reRender = false;
         Renderer->unbindFBO();
@@ -1260,6 +1291,11 @@ void PixelSyncApp::render()
         }
 
         if (timeCoherence) {
+            while(glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0) != GL_ALREADY_SIGNALED)
+            {
+                std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+            }
+
             measurer->makeScreenshot(frameNum);
         }
 
@@ -1564,6 +1600,9 @@ void PixelSyncApp::renderSceneSettingsGUI()
         if (ImGui::Checkbox("Transparency", &transparencyMapping)) {
             reRender = true;
         }
+        if (ImGui::Checkbox("Color By Position", &colorByPosition)) {
+            reRender = true;
+        }
         ImGui::Checkbox("Show Transfer Function Window", &transferFunctionWindow.getShowTransferFunctionWindow());
 
         if (ImGui::Checkbox("Use Linear RGB", &useLinearRGB)) {
@@ -1616,7 +1655,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
             reRender = true;
         }
         if (modelType == MODEL_TYPE_POINTS
-            && ImGui::SliderFloat("Point radius", &pointRadius, 0.00005f, 0.0005f, "%.5f")) {
+            && ImGui::SliderFloat("Point radius", &pointRadius, 0.00005f, 0.005f, "%.5f")) {
             reRender = true;
         }
     }
@@ -1743,6 +1782,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                 }
             }
             transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+            if (transparencyShader->hasUniform("colorByPosition"))
+            {
+                transparencyShader->setUniform("colorByPosition", colorByPosition);
+            }
+
             transparencyShader->setUniform("transferFunctionTexture",
                     transferFunctionWindow.getTransferFunctionMapTexture(), 5);
             //transparencyShader->setUniformBuffer(2, "TransferFunctionBlock",
@@ -1758,7 +1802,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             // Hack for supporting multiple passes...
             if (modelFilenamePure == "Data/Models/Ship_04") {
                 transparencyShader->setUniform("bandedColorShading", 0);
-            } else if (!isHairDataset) {
+            } else if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces"))
+            {
+                transparencyShader->setUniform("bandedColorShading", 0);
+            }
+            else if (!isHairDataset) {
                 transparencyShader->setUniform("bandedColorShading", 1);
             }
         }
@@ -1782,6 +1830,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                     transparencyShader->setUniform("radius", lineRadius);
                 }
                 transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+                if (transparencyShader->hasUniform("colorByPosition"))
+                {
+                    transparencyShader->setUniform("colorByPosition", colorByPosition);
+                }
+
                 transparencyShader->setUniform("transferFunctionTexture",
                                                transferFunctionWindow.getTransferFunctionMapTexture(), 5);
             }

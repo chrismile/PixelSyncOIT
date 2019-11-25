@@ -101,12 +101,19 @@ void gatherFragment(vec4 color)
     frag.depth = gl_FragCoord.z;
     frag.premulColor = packUnorm4x8(vec4(color.rgb * color.a, 1.0 - color.a));
 
+//    MinDepthNode depthInfo = depthBuffer[pixelIndex];
+
 #if defined(MLAB_DEPTH_BUCKETS) || defined(MLAB_OPACITY_BUCKETS)
 
 #if defined(MLAB_DEPTH_BUCKETS)
     float depth = logDepthWarp(-screenSpacePosition.z);
     int bucketIndex = int(floor(depth * float(NUM_BUCKETS)));
 #elif defined(MLAB_OPACITY_BUCKETS)
+    // compute range of front / back buckets
+//    float minDepth = depthInfo.minDepth;
+//    float minOpaqueDepth = depthInfo.minOpaqueDepth;
+//    float depthLocation = clamp((color.a - minDepth) / (minOpaqueDepth - minDepth), 0.0, 1.0);
+//    int bucketIndex = int(floor(depthLocation * float(NUM_BUCKETS)));
     int bucketIndex = int(floor(color.a * float(NUM_BUCKETS)));
 #endif
 

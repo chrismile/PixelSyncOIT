@@ -218,10 +218,13 @@ void AutoPerfMeasurer::writeCurrentErrorMetricData()
 void AutoPerfMeasurer::setNextState(bool first)
 {
     if (!first) {
-        if (timeCoherence) {
-            writeCurrentErrorMetricData();
+        if (currentState.oitAlgorithm != RENDER_MODE_OIT_DEPTH_COMPLEXITY)
+        {
+            if (timeCoherence) {
+                writeCurrentErrorMetricData();
+            }
+                writeCurrentModeData();
         }
-        writeCurrentModeData();
 
         currentStateIndex++;
     }
