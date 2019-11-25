@@ -463,16 +463,26 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
+    if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+        lineRadius = 0.002;
+    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+        lineRadius = 0.001;
+    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+        lineRadius = 0.0005;
+    } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+        lineRadius = 0.0008;
+    }
+
     if (recording || testCameraFlight) {
-        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
-            lineRadius = 0.002;
-        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-            lineRadius = 0.001;
-        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-            lineRadius = 0.0005;
-        } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
-            lineRadius = 0.0006;
-        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
+//        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+//            lineRadius = 0.002;
+//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+//            lineRadius = 0.001;
+//        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+//            lineRadius = 0.0005;
+//        } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+            lineRadius = 0.0008;
+        if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
             lineRadius = 0.0045;
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
             lineRadius = 0.002;
@@ -480,14 +490,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             lineRadius = 0.0007;
         }
     } else {
-        if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
-            lineRadius = 0.0006;
-        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
+        if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
             lineRadius = 0.0045;
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
             lineRadius = 0.002;
-        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-            lineRadius = 0.0005;
         }
     }
 
@@ -797,6 +803,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
 //                camera->setPosition(glm::vec3(1023, 1023, 977));
                 camera->setPosition(glm::vec3(0, 0.5, 0));
+            } else if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+                // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
+//                camera->setPosition(glm::vec3(1023, 1023, 977));
+                camera->setPosition(glm::vec3(0.5, 0.5, 1.6));
             } else {
                 camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
             }
@@ -1973,12 +1983,12 @@ void PixelSyncApp::update(float dt)
         outputTime += 1.0f;
     }
 
-    if (Keyboard->keyPressed(SDLK_l)) {
-
-        loadCameraPositionFromFile(saveDirectory + saveFilename + ".camera");
-
-        reRender = true;
-    }
+//    if (Keyboard->keyPressed(SDLK_l)) {
+//
+//        loadCameraPositionFromFile(saveDirectory + saveFilename + ".camera");
+//
+//        reRender = true;
+//    }
 
 
     transferFunctionWindow.update(dt);
