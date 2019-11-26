@@ -505,9 +505,9 @@ void getTestModesRayTracing(std::vector<InternalState> &states, InternalState st
     });
     states.push_back(state);
 
-    state.name = std::string() + "Ray Tracing (Triangles)";
-    state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
-    states.push_back(state);
+    //state.name = std::string() + "Ray Tracing (Triangles)";
+    //state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
+    //states.push_back(state);
 }
 
 void getTestModesDepthComplexity(std::vector<InternalState> &states, InternalState state)
