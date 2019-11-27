@@ -149,7 +149,7 @@ private:
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
     std::string startupModelName = "UCLA (400k)";
-    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
+    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -204,7 +204,7 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = true;
+    bool perfMeasurementMode = false;
     bool timeCoherence = false;
     InternalState lastState;
     bool firstState = true;

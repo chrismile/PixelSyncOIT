@@ -470,8 +470,11 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
         lineRadius = 0.0005;
     } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
-        lineRadius = 0.0008;
+        if (timeCoherence) { lineRadius = 0.0005; }
+        else { lineRadius = 0.0008; }
     }
+
+    std::cout << "Line radius = " << lineRadius << std::endl << std::flush;
 
     if (recording || testCameraFlight) {
 //        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
@@ -1273,10 +1276,11 @@ void PixelSyncApp::render()
     GLsync fence;
 
     if (continuousRendering || reRender) {
-        fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         renderOIT();
         reRender = false;
         Renderer->unbindFBO();
+        fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+        glFlush();
     }
 
 
@@ -1300,17 +1304,39 @@ void PixelSyncApp::render()
     }
 
     if (perfMeasurementMode) {// && frameNum == 0) {
-        if (frameNum == 0) {
-            measurer->makeScreenshot();
-        }
 
         if (timeCoherence) {
-            while(glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0) != GL_ALREADY_SIGNALED)
-            {
-                std::this_thread::sleep_for(std::chrono::nanoseconds(1));
-            }
+            bool renderingComplete = false;
+            while(!renderingComplete) {
+                auto signal = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
 
+                if (signal == GL_ALREADY_SIGNALED || signal == GL_CONDITION_SATISFIED) {
+                    std::cout << "[INFO]: Frame rendering complete" << std::endl << std::flush;
+                    renderingComplete = true;
+                }
+                else
+                {
+                    if (signal == GL_WAIT_FAILED)
+                    {
+                        std::cerr << "[ERROR]: wait for rendering failed" << std::endl << std::flush;
+                        exit(-1);
+                    }
+                    if (signal == GL_TIMEOUT_EXPIRED)
+                    {
+                        std::cerr << "[WARNING]: timeout has expired" << std::endl << std::flush;
+                        continue;
+                    }
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            // Delete fence
+            glDeleteSync(fence);
             measurer->makeScreenshot(frameNum);
+        }
+
+        if (frameNum == 0) {
+            measurer->makeScreenshot();
         }
 
         frameNum++;

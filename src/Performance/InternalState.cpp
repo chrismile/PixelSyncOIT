@@ -451,12 +451,22 @@ void getTestModesMLABBuckets(std::vector<InternalState> &states, InternalState s
 {
     state.oitAlgorithm = RENDER_MODE_OIT_MLAB_BUCKET;
 
+    float lowerOpacity = 0.2;
+    float upperOpacity = 0.98;
+
+    if (boost::starts_with(state.modelName, "UCLA"))
+    {
+        lowerOpacity = 0.06;
+    }
+
     for (int nodesPerBucket = 4; nodesPerBucket <= 4; nodesPerBucket *= 2) {
         state.name = std::string() + "MLAB Min Depth Buckets " + sgl::toString(nodesPerBucket) + " Layers";
         state.oitAlgorithmSettings.set(std::map<std::string, std::string>{
                 { "numBuckets", sgl::toString(1) },
                 { "nodesPerBucket", sgl::toString(nodesPerBucket) },
                 { "bucketMode", sgl::toString(4) },
+                { "lowerOpacity", sgl::toString(lowerOpacity) },
+                { "upperOpacity", sgl::toString(upperOpacity) },
         });
         states.push_back(state);
     }
@@ -524,12 +534,12 @@ void getTestModesPaperForDepthComplexity(std::vector<InternalState> &states, Int
 
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
-//    getTestModesDepthPeeling(states, state);
-    getTestModesLinkedList(states, state);
-    getTestModesMBOIT(states, state);
-    getTestModesMLABBuckets(states, state);
-    getTestModesVoxelRaytracing(states, state);
-    getTestModesDepthComplexity(states, state);
+    getTestModesDepthPeeling(states, state);
+//    getTestModesLinkedList(states, state);
+//    getTestModesMBOIT(states, state);
+//    getTestModesMLABBuckets(states, state);
+//    getTestModesVoxelRaytracing(states, state);
+//    getTestModesDepthComplexity(states, state);
 }
 
 void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
@@ -577,9 +587,9 @@ std::vector<InternalState> getTestModesPaper()
     }
 
     //! TODO only for quality tests
-//    for (InternalState &state : states) {
-//        state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
-//    }
+    for (InternalState &state : states) {
+        state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+    }
 
     // Append model name to state name if more than one model is loaded
     if (modelNames.size() >= 1 || windowResolutions.size() > 1) {
