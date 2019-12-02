@@ -692,8 +692,6 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     auto elapsedLoad = std::chrono::duration_cast<std::chrono::milliseconds>(endLoad - startLoad);
     Logfile::get()->writeInfo(std::string() + "Computational time to load: " + std::to_string(elapsedLoad.count()));
 
-
-
     const unsigned int WORK_GROUP_SIZE_1D = 256;
     sgl::ShaderManager->addPreprocessorDefine("WORK_GROUP_SIZE_1D", WORK_GROUP_SIZE_1D);
     unsigned int numWorkGroupsOld;
@@ -906,9 +904,6 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
     auto elapsedPost = std::chrono::duration_cast<std::chrono::milliseconds>(endPost - startPost);
     Logfile::get()->writeInfo(std::string() + "Computational time post-process: " + std::to_string(elapsedPost.count()));
 
-    // free memory
-    submesh.attributes.clear(); submesh.attributes.shrink_to_fit();
-
     auto end = std::chrono::system_clock::now();
 
     Logfile::get()->writeInfo(std::string() + "Summary: "
@@ -923,6 +918,9 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
                      + submesh.attributes[0].data.size() * sizeof(uint8_t) + submesh.indices.size() * sizeof(uint32_t);
 
     float MBSize = byteSize / 1024. / 1024.;
+
+    // free memory
+    submesh.attributes.clear(); submesh.attributes.shrink_to_fit();
 
     Logfile::get()->writeInfo(std::string() +  "Byte Size Mesh Structure: " + std::to_string(MBSize) + " MB");
     Logfile::get()->writeInfo(std::string() +  "Num Lines: " + std::to_string(numLinesOutput / 1000.) + " Tsd.") ;

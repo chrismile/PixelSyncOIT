@@ -155,7 +155,7 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
     int maxNumLinesPerVoxel = 32;
     bool useGPU = true;
     if (voxelRes >= 256) {
-        useGPU = false;
+        useGPU = true;
     }
 
     /*if (boost::starts_with(filename, "Data/WCB")) {

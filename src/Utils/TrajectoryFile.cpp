@@ -10,6 +10,7 @@
 #include <Utils/Events/Stream/Stream.hpp>
 #include "NetCDFConverter.hpp"
 #include "TrajectoryFile.hpp"
+#include <iostream>
 
 Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryType trajectoryType)
 {
@@ -224,6 +225,17 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 
         lineBuffer.clear();
     }
+
+    // compute byte size of raw representation with 1 attribute for paper
+    uint64_t byteSize = 0;
+    for (const auto& traj : trajectories)
+    {
+        byteSize += traj.positions.size() * sizeof(float) * 3;
+        byteSize += traj.attributes[0].size() * sizeof(float);
+    }
+
+    byteSize = byteSize / 1024 / 1024;
+    std::cout << "Raw byte size of obj file: " << byteSize << "MB" << std::endl << std::flush;
 
     return trajectories;
 }

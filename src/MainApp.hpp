@@ -126,7 +126,7 @@ private:
 
     // Mode
     // RENDER_MODE_VOXEL_RAYTRACING_LINES RENDER_MODE_OIT_MBOIT RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE RENDER_MODE_OIT_MLAB_BUCKET
-    RenderModeOIT mode = RENDER_MODE_OIT_MLAB_BUCKET; // RENDER_MODE_OIT_MLAB RENDER_MODE_OIT_MLAB_BUCKET RENDER_MODE_OIT_LINKED_LIST
+    RenderModeOIT mode = RENDER_MODE_OIT_LINKED_LIST; // RENDER_MODE_OIT_MLAB RENDER_MODE_OIT_MLAB_BUCKET RENDER_MODE_OIT_LINKED_LIST
     RenderModeOIT oldMode = mode;
     ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
     std::string modelFilenamePure;
@@ -148,8 +148,8 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Convection Rolls";
-    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+    std::string startupModelName = "Aneurysm";
+    LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_TRIANGLES;
     Color bandingColor;
     Color clearColor;
     ImVec4 clearColorSelection = ImColor(0, 0, 0, 255);
@@ -204,8 +204,8 @@ private:
 
     // Profiling events
     AutoPerfMeasurer *measurer;
-    bool perfMeasurementMode = true;
-    bool timeCoherence = true;
+    bool perfMeasurementMode = false;
+    bool timeCoherence = false;
     InternalState lastState;
     bool firstState = true;
     bool usesNewState = true;

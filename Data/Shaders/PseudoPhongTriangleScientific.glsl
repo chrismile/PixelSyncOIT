@@ -92,7 +92,13 @@ void main()
     if (!transparencyMapping) {
         if (colorByPosition)
         {
-            colorAttribute = vec4(0.5, fragmentPositonWorld.y / 1.5, fragmentPositonWorld.z / 3, colorGlobal.a);
+            float tY = (-fragmentPositonWorld.y * 5 + 1) / 2.0;
+            float tZ = (fragmentPositonWorld.z * 1.5 + 1) / 2.0;
+            float t = (tY + tZ / 2);
+//            float t = min(1.0, max(0.0,(fragmentPositonWorld.y * 1.5 + fragmentPositonWorld.z * 1.5) / 2.0));
+            colorAttribute.rgb = mix(vec3(165,15,21) / 255.0, vec3(250,185,132) / 255.0, t);
+            colorAttribute.a = colorGlobal.a;
+//            colorAttribute = vec4(0.5, fragmentPositonWorld.y / 1.5, fragmentPositonWorld.z / 3, colorGlobal.a);
         }
         else
         {
