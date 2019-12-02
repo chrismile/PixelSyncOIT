@@ -41,12 +41,13 @@ void main()
 
     vec4 intermediateColor = vec4(0);
     bool isFinished = false;
+    uint totalNumFrags = 0;
 
     while (!isFinished)
     {
-        int numFrags = 0;
+        uint numFrags = 0;
 
-        for (int i = 0; i < MAX_NUM_FRAGS; i++)
+        for (uint i = 0; i < MAX_NUM_FRAGS; i++)
         {
             if (fragOffset == -1) {
                 // End of list reached
@@ -63,9 +64,10 @@ void main()
             numFrags++;
         }
 
+        totalNumFrags += numFrags;
+
         if (numFrags == 0) {
             isFinished = true;
-            discard;
             break;
         }
         else
@@ -79,11 +81,17 @@ void main()
 
             if (intermediateColor.a > 0.99)
             {
-                isFinished;
+                isFinished = true;
                 break;
             }
         }
     }
 
-    fragColor = intermediateColor;
+    if (totalNumFrags == 0)
+    {
+        discard;
+    }
+
+    fragColor = vec4(intermediateColor.rgb / intermediateColor.a, intermediateColor.a);
+//    fragColor = vec4(0,0,float(totalNumFrags) / 45.0f,1);
 }
