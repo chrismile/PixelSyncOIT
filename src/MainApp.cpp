@@ -463,18 +463,16 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
-        lineRadius = 0.002;
-    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-        lineRadius = 0.001;
-    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
-        lineRadius = 0.0005;
-    } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
-        if (timeCoherence) { lineRadius = 0.0005; }
-        else { lineRadius = 0.0008; }
-    }
-
-    std::cout << "Line radius = " << lineRadius << std::endl << std::flush;
+//    if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+//        lineRadius = 0.002;
+//    } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+//        lineRadius = 0.001;
+//    } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+//        lineRadius = 0.0005;
+//    } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+//        if (timeCoherence) { lineRadius = 0.0005; }
+//        else { lineRadius = 0.0008; }
+//    }
 
     if (recording || testCameraFlight) {
 //        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
@@ -499,6 +497,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             lineRadius = 0.002;
         }
     }
+
+    lineRadius = 0.001;
+
+    std::cout << "Line radius = " << lineRadius << std::endl << std::flush;
 
     // Only load new TF if loading dataset-specific transfer functions isn't overwritten.
     if (transferFunctionName.empty()) {
@@ -621,10 +623,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
                 convertTrajectoryDataToBinaryLineMesh(trajectoryType, filename, modelFilenameOptimized);
             } else {
-//                convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, filename,
-//                        modelFilenameOptimized, lineRadius);
-                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
+                convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, filename,
                         modelFilenameOptimized, lineRadius);
+//                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
+//                        modelFilenameOptimized, lineRadius);
             }
         } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
             convertHairDataToBinaryTriangleMesh(filename, modelFilenameOptimized);

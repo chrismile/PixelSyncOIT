@@ -98,7 +98,7 @@ void OIT_LinkedList::setUniformData()
 
     size_t fragmentBufferSize = expectedDepthComplexity * width * height;
     size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
-    std::cout << "LL: buffer size: " << (fragmentBufferSizeBytes / 1024.0 / 1024.0) << " MB" << std::endl << std::flush;
+//    std::cout << "LL: buffer size: " << (fragmentBufferSizeBytes / 1024.0 / 1024.0) << " MB" << std::endl << std::flush;
 
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);

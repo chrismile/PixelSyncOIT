@@ -146,12 +146,12 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
     if (state.modelName == "Turbulence") {
         // Highest depth complexity measured for this dataset
         maxNumFragmentsSorting = 1024;
-        expectedDepthComplexity = 500;
+        expectedDepthComplexity = 512;
     }
     if (state.modelName == "UCLA (400k)") {
         // Highest depth complexity measured for this dataset
         maxNumFragmentsSorting = 1024;
-        expectedDepthComplexity = 500;
+        expectedDepthComplexity = 512;
     }
     if (state.modelName == "Convection Rolls") {
         // Highest depth complexity measured for this dataset
@@ -161,7 +161,7 @@ void getTestModesLinkedList(std::vector<InternalState> &states, InternalState st
 
     if (state.modelName == "Warm Conveyor Belts") {
         // Highest depth complexity measured for this dataset
-        expectedDepthComplexity = 300;
+        expectedDepthComplexity = 500;
     }
 
     for (int sortingModeIdx = 0; sortingModeIdx < 1; sortingModeIdx++) {//IM_ARRAYSIZE(sortingModeStrings); sortingModeIdx++) {
@@ -535,9 +535,9 @@ void getTestModesPaperForDepthComplexity(std::vector<InternalState> &states, Int
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
 //    getTestModesDepthPeeling(states, state);
-//    getTestModesLinkedList(states, state);
-//    getTestModesMBOIT(states, state);
-//    getTestModesMLABBuckets(states, state);
+    getTestModesLinkedList(states, state);
+    getTestModesMBOIT(states, state);
+    getTestModesMLABBuckets(states, state);
     getTestModesVoxelRaytracing(states, state);
 //    getTestModesDepthComplexity(states, state);
 }
@@ -568,11 +568,11 @@ std::vector<InternalState> getTestModesPaper()
 {
     std::vector<InternalState> states;
 //    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720), glm::ivec2(1920, 1080), glm::ivec2(2560, 1440) };
-//    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
-    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
+    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1920, 1080) };
+//    std::vector<glm::ivec2> windowResolutions = { glm::ivec2(1280, 720) };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls", "Hair" };
 //    std::vector<std::string> modelNames = { "Rings", "Aneurysm", "Turbulence", "Convection Rolls" };
-    std::vector<std::string> modelNames = { "Aneurysm", "Turbulence", "Convection Rolls" };
+    std::vector<std::string> modelNames = { "Aneurysm", "Turbulence", "Convection Rolls", "UCLA (400k)" };
 //    std::vector<std::string> modelNames = { "Convection Rolls" };
     InternalState state;
 
@@ -587,9 +587,9 @@ std::vector<InternalState> getTestModesPaper()
     }
 
     //! TODO only for quality tests
-    for (InternalState &state : states) {
-        state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
-    }
+//    for (InternalState &state : states) {
+//        state.lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
+//    }
 
     // Append model name to state name if more than one model is loaded
     if (modelNames.size() >= 1 || windowResolutions.size() > 1) {
