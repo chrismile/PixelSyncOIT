@@ -73,6 +73,8 @@ void OIT_LinkedList::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     size_t fragmentBufferSize = expectedDepthComplexity * width * height;
     size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
 
+    std::cout << "LL: buffer size: " << (fragmentBufferSizeBytes / 1024.0 / 1024.0) << " MB" << std::endl << std::flush;
+
     fragmentBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentBuffer = Renderer->createGeometryBuffer(fragmentBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 

@@ -80,6 +80,7 @@ void main()
             float alphaSrc = colorSrc.a;
             intermediateColor.rgb = intermediateColor.rgb + (1.0 - intermediateColor.a) * alphaSrc * colorSrc.rgb;
             intermediateColor.a = intermediateColor.a + (1.0 - intermediateColor.a) * alphaSrc;
+//            break;
 
 //            if (intermediateColor.a > 0.99)
 //            {
@@ -96,36 +97,36 @@ void main()
 
 //    fragColor = vec4(intermediateColor.rgb / intermediateColor.a, intermediateColor.a);
 
-    if (totalNumFrags >= 10000)
-    {
-        fragColor = vec4(1, 0, 0, 1);
-    }
-    else if (totalNumFrags >= 5000)
-    {
-        fragColor = vec4(1, 0.3, 0, 1);
-    }
-    else if (totalNumFrags >= 1000)
-    {
-        fragColor = vec4(1, 0.7, 0, 1);
-    }
-    else if (totalNumFrags >= 500)
-    {
-        fragColor = vec4(1, 1, 0, 1);
-    }
-    else if (totalNumFrags >= 250)
-    {
-        fragColor = vec4(0.7, 1, 0, 1);
-    }
-    else if (totalNumFrags >= 100)
-    {
-        fragColor = vec4(0.3, 1, 0, 1);
-    }
-    else
-    {
-        fragColor = vec4(0, 1, 0, 1);
-    }
+//    if (totalNumFrags >= 10000)
+//    {
+//        fragColor = vec4(1, 0, 0, 1);
+//    }
+//    else if (totalNumFrags >= 5000)
+//    {
+//        fragColor = vec4(1, 0.3, 0, 1);
+//    }
+//    else if (totalNumFrags >= 1000)
+//    {
+//        fragColor = vec4(1, 0.7, 0, 1);
+//    }
+//    else if (totalNumFrags >= 500)
+//    {
+//        fragColor = vec4(1, 1, 0, 1);
+//    }
+//    else if (totalNumFrags >= 250)
+//    {
+//        fragColor = vec4(0.7, 1, 0, 1);
+//    }
+//    else if (totalNumFrags >= 100)
+//    {
+//        fragColor = vec4(0.3, 1, 0, 1);
+//    }
+//    else
+//    {
+//        fragColor = vec4(0, 1, 0, 1);
+//    }
 
-//    fragColor = vec4(intermediateColor.rgb / intermediateColor.a, intermediateColor.a);
+    fragColor = vec4(intermediateColor.rgb / intermediateColor.a, intermediateColor.a);
 
 //    fragColor = vec4(0,0,float(totalNumFrags) / 45.0f,1);
 }
