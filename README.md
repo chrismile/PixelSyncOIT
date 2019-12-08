@@ -40,9 +40,23 @@ On Windows, using MSYS2 and Mingw-w64 (http://www.msys2.org/), it is best to use
 cmake .. -G"MSYS Makefiles"
 ```
 
-
 To run the program, execute:
 ```
 export LD_LIBRARY_PATH=/usr/local/lib
 ./PixelSyncOIT
 ```
+
+# Supplemental Material
+## Data Sets
+https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cmodels
+
+## Benchmark Results
+1) Performance Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cperformance
+2) Image Quality Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cimages_quality
+3) Depth Complexity: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cdepth_complexity
+
+## RTX Program
+3) RTX Program: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5CRTX
+
+## Videos
+https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cvideos
