@@ -28,9 +28,18 @@ Prerequisites (build currently only supported on Linux):
     * Convection Rolls: Data/ConvectionRolls/output.obj
     * Turbulence: Data/ConvectionRolls/turbulence80000.obj
     * Convection Rolls (Small): Data/ConvectionRolls/turbulence20000.obj
-    * ... (TODO)
+    * ...
 
-For internal use, these data sets are converted to .binmesh files (.binmesh_lines files for line data sets not converted to triangle hulls).
+The data sets can be downloaded in the supplemental material section. For internal use, these data sets are converted to .binmesh files (.binmesh_lines files for line data sets not converted to triangle hulls).
+
+## How to add new data sets
+
+In src/Performance/InternalState.hpp, add the file name of the data set to MODEL_FILENAMES and the display name to MODEL_DISPLAYNAMES.
+In src/MainApp.cpp, the name of the data set that should be loaded at start-up can be set in startupModelName.
+
+Currently, the program supports line and triangle data sets stored in .obj files and triangle data sets stored in .bobj files.
+Additionally, it has loaders for data set specific NetCDF .nc formats for lines and .xml and .bin formats for point data sets.
+Internally, these data sets are converted to .binmesh files (.binmesh_lines for line data sets not converted to triangle hulls).
 
 ## Building and running the programm
 
@@ -62,7 +71,6 @@ On Windows, using MSYS2 and Mingw-w64 (http://www.msys2.org/), it is best to use
 cmake .. -G"MSYS Makefiles"
 ```
 
-
 To run the program, execute:
 ```
 export LD_LIBRARY_PATH=/usr/local/lib
@@ -74,11 +82,17 @@ export LD_LIBRARY_PATH=/usr/local/lib
 If the user wants to build the program with support for ray tracing with OSPRay, USE_RAYTRACING must be set to ON when using cmake.
 Additonally, the user also needs to compile OSPRay with support for generalized tube primitives (see https://github.com/MengjiaoH/ospray-module-tubes).
 
-## How to add new data sets
+# Supplemental Material
+## Data Sets
+https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cmodels
 
-In src/Performance/InternalState.hpp, add the file name of the data set to MODEL_FILENAMES and the display name to MODEL_DISPLAYNAMES.
-In src/MainApp.cpp, the name of the data set that should be loaded at start-up can be set in startupModelName.
+## Benchmark Results
+1) Performance Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cperformance
+2) Image Quality Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cimages_quality
+3) Depth Complexity: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cdepth_complexity
 
-Currently, the program supports line and triangle data sets stored in .obj files and triangle data sets stored in .bobj files.
-Additionally, it has loaders for data set specific NetCDF .nc formats for lines and .xml and .bin formats for point data sets.
-Internally, these data sets are converted to .binmesh files (.binmesh_lines for line data sets not converted to triangle hulls).
+## RTX Program
+3) RTX Program: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5CRTX
+
+## Videos
+https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cvideos
