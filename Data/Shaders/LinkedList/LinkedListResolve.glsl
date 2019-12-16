@@ -36,97 +36,27 @@ void main()
     uint fragOffset = startOffset[pixelIndex];
 
     // Collect all fragments for this pixel
-
+    int numFrags = 0;
     LinkedListFragmentNode fragment;
-
-    vec4 intermediateColor = vec4(0, 0, 0, 0);
-    bool isFinished = false;
-    int totalNumFrags = 0;
-
-    while (!isFinished || intermediateColor.a <= 0.99)
+    for (int i = 0; i < MAX_NUM_FRAGS; i++)
     {
-        int numFrags = 0;
-
-        for (uint i = 0; i < MAX_NUM_FRAGS; i++)
-        {
-            if (fragOffset == -1) {
-                // End of list reached
-                isFinished = true;
-                break;
-            }
-
-            fragment = fragmentBuffer[fragOffset];
-            fragOffset = fragment.next;
-
-            colorList[i] = fragment.color;
-            depthList[i] = fragment.depth;
-
-            numFrags++;
-        }
-
-        totalNumFrags += numFrags;
-
-        if (numFrags == 0)
-        {
-//            isFinished = true;
+        if (fragOffset == -1) {
+            // End of list reached
             break;
         }
-        else
-        {
-            isFinished = false;
-            vec4 curColor = sortingAlgorithm(numFrags);
-            // blend colors front-to-back
-            vec4 colorSrc = curColor;
-            float alphaSrc = colorSrc.a;
-            intermediateColor.rgb = intermediateColor.rgb + (1.0 - intermediateColor.a) * alphaSrc * colorSrc.rgb;
-            intermediateColor.a = intermediateColor.a + (1.0 - intermediateColor.a) * alphaSrc;
-//            break;
 
-//            if (intermediateColor.a > 0.99)
-//            {
-//                isFinished = true;
-//                break;
-//            }
-        }
+        fragment = fragmentBuffer[fragOffset];
+        fragOffset = fragment.next;
+
+        colorList[i] = fragment.color;
+        depthList[i] = fragment.depth;
+
+        numFrags++;
     }
 
-    if (totalNumFrags == 0)
-    {
+    if (numFrags == 0) {
         discard;
     }
 
-//    fragColor = vec4(intermediateColor.rgb / intermediateColor.a, intermediateColor.a);
-
-//    if (totalNumFrags >= 10000)
-//    {
-//        fragColor = vec4(1, 0, 0, 1);
-//    }
-//    else if (totalNumFrags >= 5000)
-//    {
-//        fragColor = vec4(1, 0.3, 0, 1);
-//    }
-//    else if (totalNumFrags >= 1000)
-//    {
-//        fragColor = vec4(1, 0.7, 0, 1);
-//    }
-//    else if (totalNumFrags >= 500)
-//    {
-//        fragColor = vec4(1, 1, 0, 1);
-//    }
-//    else if (totalNumFrags >= 250)
-//    {
-//        fragColor = vec4(0.7, 1, 0, 1);
-//    }
-//    else if (totalNumFrags >= 100)
-//    {
-//        fragColor = vec4(0.3, 1, 0, 1);
-//    }
-//    else
-//    {
-//        fragColor = vec4(0, 1, 0, 1);
-//    }
-
-    fragColor = vec4(intermediateColor.rgb / intermediateColor.a, intermediateColor.a);
-
-//    fragColor = vec4(0,0,float(totalNumFrags) / 45.0f,1);
+    fragColor = sortingAlgorithm(numFrags);
 }

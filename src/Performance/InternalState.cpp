@@ -535,11 +535,11 @@ void getTestModesPaperForDepthComplexity(std::vector<InternalState> &states, Int
 void getTestModesPaperForMesh(std::vector<InternalState> &states, InternalState state)
 {
 //    getTestModesDepthPeeling(states, state);
-    getTestModesLinkedList(states, state);
-    getTestModesMBOIT(states, state);
-    getTestModesMLABBuckets(states, state);
-    getTestModesVoxelRaytracing(states, state);
-//    getTestModesDepthComplexity(states, state);
+//    getTestModesLinkedList(states, state);
+//    getTestModesMBOIT(states, state);
+//    getTestModesMLABBuckets(states, state);
+//    getTestModesVoxelRaytracing(states, state);
+    getTestModesDepthComplexity(states, state);
 }
 
 void getTestModesPaperForMeshQuality(std::vector<InternalState> &states, InternalState state)
@@ -624,7 +624,7 @@ std::vector<InternalState> getTestModesPaper()
 
 
     // Use different transfer functions?
-    std::vector<std::string> transferFunctionNameSuffices = { "full", "semi", "high" };
+    std::vector<std::string> transferFunctionNameSuffices = { /*"full", "semi", "high"*/ };
     if (transferFunctionNameSuffices.size() > 0) {
         oldStates = states;
         states.clear();

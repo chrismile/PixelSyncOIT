@@ -18,9 +18,9 @@
 #include "Math/Math.hpp"
 
 //#define ROTATION_AND_ZOOMING_MODE
-#define ROTATION_MODE
+//#define ROTATION_MODE
 //#define ZOOMING_MODE
-//#define VIDEO_MODE
+#define VIDEO_MODE
 
 ControlPoint::ControlPoint(float time, float tx, float ty, float tz, float yaw, float pitch)
 {
@@ -76,35 +76,71 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
     }
 
 #ifdef VIDEO_MODE
-    float pulseFactor = 0.0f;
+    float pulseFactor = 2.0f;
 
+    // Zooming and pulsing
     if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
         startAngle += 1.2f;
-        standardZoom = 1.15f;
+        standardZoom = 1.0f;
+        pulseFactor = 1.4f;
+//        pulseFactor = 2.0f; // for depth complexity
         centerOffset.x -= 0.1f;
     }
-    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
-        standardZoom = 1.5f;
+    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
+        pulseFactor = 4.0f;
+//        pulseFactor = 5.0f; // for depth complexity
+        standardZoom = 1.8f;
     }
-    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence2000")) {
-        standardZoom = 2.0f;
-        startAngle += 1.58f;
-    }
-    else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
-        centerOffset.y -= 0.05f;
-        standardZoom = 1.3f;
-    }
-    else if (isConvectionRolls) {
-        standardZoom = 0.9f;
-        startAngle += 1.58f;
-        centerOffset.y += 0.5f;
+    if (isConvectionRolls) {
+        pulseFactor = 1.5f;
+        standardZoom = 0.8f;
+        startAngle += 0.0f;
+        centerOffset.y += 0.15f;
 //        centerOffset.z -= 1.5;
 //        centerOffset.x += 0.3;
-        yaw = -0.62769;
+        yaw = -0.50769;
 
         // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
         // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
     }
+    if (isUCLA)
+    {
+        standardZoom = 1.5f;
+        pulseFactor = 3.0f;
+        yaw = -0.25;
+        centerOffset.y += 0.115f;
+        startAngle += 0.0f;
+    }
+
+//    float pulseFactor = 0.0f;
+//
+//    if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
+//        startAngle += 1.2f;
+//        standardZoom = 1.15f;
+//        centerOffset.x -= 0.1f;
+//    }
+//    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
+//        standardZoom = 1.5f;
+//    }
+//    else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence2000")) {
+//        standardZoom = 2.0f;
+//        startAngle += 1.58f;
+//    }
+//    else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+//        centerOffset.y -= 0.05f;
+//        standardZoom = 1.3f;
+//    }
+//    else if (isConvectionRolls) {
+//        standardZoom = 0.9f;
+//        startAngle += 1.58f;
+//        centerOffset.y += 0.5f;
+////        centerOffset.z -= 1.5;
+////        centerOffset.x += 0.3;
+//        yaw = -0.62769;
+//
+//        // for zooming: 0, 1.04763, 1.76833, 0.806672, -1.56452, -1.61031
+//        // for rotation: 1, 1.1138, 0.395518, 2.17143, -1.62076, -0.60769
+//    }
 
     else if (isRings)
     {
@@ -120,17 +156,17 @@ void CameraPath::fromCirclePath(sgl::AABB3 &sceneBoundingBox, const std::string 
 #ifdef ROTATION_AND_ZOOMING_MODE
     float pulseFactor = 2.0f;
 
-
-
     // Zooming and pulsing
     if (boost::starts_with(modelFilenamePure, "Data/Trajectories/9213_streamlines")) {
         startAngle += 1.2f;
         standardZoom = 1.0f;
         pulseFactor = 1.1f;
+//        pulseFactor = 2.0f; // for depth complexity
         centerOffset.x -= 0.1f;
     }
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence8000")) {
         pulseFactor = 4.0f;
+//        pulseFactor = 5.0f; // for depth complexity
         standardZoom = 1.8f;
     }
     if (isConvectionRolls) {
