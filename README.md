@@ -82,14 +82,25 @@ export LD_LIBRARY_PATH=/usr/local/lib
 If the user wants to build the program with support for ray tracing with OSPRay, USE_RAYTRACING must be set to ON when using cmake.
 Additonally, the user also needs to compile OSPRay with support for generalized tube primitives (see https://github.com/MengjiaoH/ospray-module-tubes).
 
+## Ray tracing with RTX
+
+RTX ray tracing is build upon a test environment separated from the main program.
+Users need to compile our RTX program with CMake and Visual Studio 2017, first. Note that we currently support Windows 10 only for RTX since SIMD operations are Microsoft-specific. In the future, we plan to adapt the code to support Linux systems, as well.
+
+To set-up RTX, make sure you have the latest NVidia driver (415 or later / 440 recommended) installed and a ray-tracing capable NVidia graphics card (GTX 10xx / RTX 20xx).
+Load the source code (see link below) and build the project file using CMake. Vulkan headers are provided in the source code.
+Build the project "RTX" with Visual Studio 2017 in Release Mode and execute the program.
+
 # Supplemental Material
 ## Data Sets
-https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cmodels
+Triangle Models: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cmodels
+
 
 ## Benchmark Results
 1) Performance Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cperformance
 2) Image Quality Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cimages_quality
 3) Depth Complexity: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cdepth_complexity
+4) Transfer Functions: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Ctransfer_functions
 
 ## RTX Program
 3) RTX Program: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5CRTX
