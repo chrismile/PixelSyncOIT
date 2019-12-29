@@ -30,7 +30,6 @@
 #define PIXELSYNCOIT_KDTREE_HPP
 
 #include <algorithm>
-#include <memory>
 #include <vector>
 #include <glm/glm.hpp>
 

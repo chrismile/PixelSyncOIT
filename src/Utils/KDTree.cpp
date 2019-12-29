@@ -170,7 +170,7 @@ IndexedPoint *KDTree::findClosestIndexedPoint(IndexedPoint *centerPoint, float m
 
     std::vector<IndexedPoint*> rectPoints = findPointsInAxisAlignedBox(rect);
 
-    IndexedPoint *closestPoint = NULL;
+    IndexedPoint *closestPoint = nullptr;
     float closestDistance = FLT_MAX;
     for (IndexedPoint *point : rectPoints) {
         float currDistance = (centerPoint->position - point->position).length();
