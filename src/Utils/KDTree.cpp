@@ -52,11 +52,11 @@ void KDTree::_deleteAllData() {
 }
 
 void KDTree::build(const std::vector<IndexedPoint*> &points) {
+    _deleteAllData();
     root = _build(points, 0);
 }
 
 KDNode *KDTree::_build(std::vector<IndexedPoint*> points, int depth) {
-    _deleteAllData();
     const int k = 3; // Number of dimensions
 
     if (points.size() == 0) {
@@ -139,6 +139,10 @@ std::vector<IndexedPoint*> KDTree::findAllPointsWithinRadius(IndexedPoint *cente
 }
 
 void KDTree::_findPointsInAxisAlignedBox(const AxisAlignedBox &rect, std::vector<IndexedPoint*> &points, KDNode *node) {
+    if (node == nullptr) {
+        return;
+    }
+
     if (rect.contains(node->point->position)) {
         points.push_back(node->point);
     }
