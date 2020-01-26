@@ -23,7 +23,7 @@ struct LinkedListFragmentNode
     uint32_t next;
 };
 
-const char * const sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
+const char *const sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
 
 /**
  * An order independent transparency renderer using a per-pixel linked list.

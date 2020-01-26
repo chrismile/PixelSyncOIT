@@ -72,7 +72,6 @@ public:
     void resolutionChanged(EventPtr event);
     void processSDLEvent(const SDL_Event &event);
 
-
 protected:
     // State changes
     void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
