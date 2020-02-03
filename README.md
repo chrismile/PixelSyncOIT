@@ -1,4 +1,6 @@
 # OIT Rendering Tool (PixelSyncOIT)
+[![DOI](https://zenodo.org/badge/133340475.svg)](https://zenodo.org/badge/latestdoi/133340475)
+
 A visualization tool for rendering triangle, line and point data sets using order independent transparency (OIT).
 
 This tool uses OpenGL 4.5 together with pixel synchronization (GL_ARB_fragment_shader_interlock) to render these data sets.
