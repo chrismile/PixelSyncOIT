@@ -282,9 +282,9 @@ void computeTrajectoryAttributes(
 //        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
     } else if (trajectoryType == TRAJECTORY_TYPE_UCLA) {
         // 0. Vorticity/Attrsibute
-//        importanceCriteria.push_back(vertexAttributes);
+        importanceCriteria.push_back(vertexAttributes);
         //
-        importanceCriteria.push_back(computeCurvature(vertexPositions));
+//        importanceCriteria.push_back(computeCurvature(vertexPositions));
         //
         //        importanceCriteria.push_back(computeSegmentLengths(vertexPositions));
     }

@@ -169,7 +169,8 @@ void OIT_DepthPeeling::renderScene()
         SWAP_INTERVAL = 200;
     }
 
-    for (int i = 0; i < std::min(maxDepthComplexity, 1000ul); i++) {
+    //! TODO set layers to higher numbers for quality
+    for (int i = 0; i < std::min(maxDepthComplexity, 2000ul); i++) {
         // 1. Peel one layer of the scene
         glDisable(GL_BLEND); // Replace with current surface
         glEnable(GL_DEPTH_TEST);

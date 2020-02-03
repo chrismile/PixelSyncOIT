@@ -210,4 +210,3 @@ vec4 frontToBackPQ(uint fragsCount)
     rayColor.rgb = rayColor.rgb / rayColor.a; // Correct rgb with alpha
     return rayColor;
 }
-

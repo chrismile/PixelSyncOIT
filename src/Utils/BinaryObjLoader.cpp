@@ -69,6 +69,7 @@ void convertBinaryObjMeshToBinmesh(
 
         bbox.combine(vertex);
     }
+
     // 2) Normalize values to range (-1, 1)
     glm::vec3 center = bbox.getCenter();
     glm::vec3 extent = bbox.getExtent();
@@ -77,6 +78,13 @@ void convertBinaryObjMeshToBinmesh(
     for (auto& vertex : vertices)
     {
         vertex = (vertex - center) / maxExtent;
+    }
+
+    // 2.5) Flip y-axis
+    for (auto& vertex : vertices)
+    {
+//        vertex.y = bbox.max.y - vertex.y + bbox.min.y;
+        vertex.y = -vertex.y;
     }
 
     // The indices are 64-bit, however, OpenGL currently only supports 32-bit indices. Check if 32-bit is enough.

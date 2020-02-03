@@ -34,7 +34,7 @@ static int nodesPerBucket = 4;
 static int bucketMode = 4;
 
 // Opacity threshold for lower back buffer boundary
-static float lowerBackBufferOpacity = 0.25;
+static float lowerBackBufferOpacity = 0.2;
 
 // Opacity threshold for upper back buffer boundary
 static float upperBackBufferOpacity = 0.98;
@@ -280,6 +280,8 @@ void OIT_MLABBucket::setNewState(const InternalState &newState)
     numBuckets = newState.oitAlgorithmSettings.getIntValue("numBuckets");
     nodesPerBucket = newState.oitAlgorithmSettings.getIntValue("nodesPerBucket");
     bucketMode = newState.oitAlgorithmSettings.getIntValue("bucketMode");
+    lowerBackBufferOpacity = newState.oitAlgorithmSettings.getFloatValue("lowerOpacity");
+    upperBackBufferOpacity = newState.oitAlgorithmSettings.getFloatValue("upperOpacity");
     useStencilBuffer = newState.useStencilBuffer;
     updateLayerMode();
 }

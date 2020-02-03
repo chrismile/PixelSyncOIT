@@ -25,9 +25,9 @@ using namespace sgl;
 static bool useStencilBuffer = true;
 
 /// Expected (average) depth complexity, i.e. width*height* this value = number of fragments that can be stored
-static int expectedDepthComplexity = 128;
+static int expectedDepthComplexity = 500;
 /// Maximum number of fragments to sort in second pass
-static int maxNumFragmentsSorting = 512;
+static int maxNumFragmentsSorting = 1024;
 
 // Choice of sorting algorithm
 static int algorithmMode = 0;
@@ -73,6 +73,8 @@ void OIT_LinkedList::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
     size_t fragmentBufferSize = expectedDepthComplexity * width * height;
     size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
 
+    std::cout << "LL: buffer size: " << (fragmentBufferSizeBytes / 1024.0 / 1024.0) << " MB" << std::endl << std::flush;
+
     fragmentBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
     fragmentBuffer = Renderer->createGeometryBuffer(fragmentBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
@@ -98,6 +100,7 @@ void OIT_LinkedList::setUniformData()
 
     size_t fragmentBufferSize = expectedDepthComplexity * width * height;
     size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
+//    std::cout << "LL: buffer size: " << (fragmentBufferSizeBytes / 1024.0 / 1024.0) << " MB" << std::endl << std::flush;
 
     gatherShader->setUniform("viewportW", width);
     gatherShader->setShaderStorageBuffer(0, "FragmentBuffer", fragmentBuffer);
@@ -123,12 +126,13 @@ void OIT_LinkedList::renderGUI()
 {
     ImGui::Separator();
 
-    if (ImGui::SliderInt("Avg. Depth", &expectedDepthComplexity, 1, 512)) {
+    if (ImGui::SliderInt("Avg. Depth", &expectedDepthComplexity, 1, 4096)) {
         Window *window = AppSettings::get()->getMainWindow();
         int width = window->getWidth();
         int height = window->getHeight();
         size_t fragmentBufferSize = expectedDepthComplexity * width * height;
         size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
+        std::cout << "LL: new buffer size: " << (fragmentBufferSizeBytes / 1024.0 / 1024.0) << " MB" << std::endl << std::flush;
         fragmentBuffer = sgl::GeometryBufferPtr(); // Delete old data first (-> refcount 0)
         fragmentBuffer = Renderer->createGeometryBuffer(fragmentBufferSizeBytes, NULL, SHADER_STORAGE_BUFFER);
 
@@ -142,7 +146,7 @@ void OIT_LinkedList::renderGUI()
     // If something changes about fragment collection & sorting
     bool needNewResolveShader = false;
 
-    if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 64, 2048)) {
+    if (ImGui::SliderInt("Num Sort", &maxNumFragmentsSorting, 64, 20000)) {
         ShaderManager->invalidateShaderCache();
         ShaderManager->addPreprocessorDefine("MAX_NUM_FRAGS", toString(maxNumFragmentsSorting));
         needNewResolveShader = true;
