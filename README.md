@@ -86,6 +86,8 @@ Additonally, the user also needs to compile OSPRay with support for generalized 
 
 ## Ray tracing with RTX
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637621.svg)](https://doi.org/10.5281/zenodo.3637621)
+
 RTX ray tracing is build upon a test environment separated from the main program.
 Users need to compile our RTX program with CMake and Visual Studio 2017, first. Note that we currently support Windows 10 only for RTX since SIMD operations are Microsoft-specific. In the future, we plan to adapt the code to support Linux systems, as well.
 
