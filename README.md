@@ -97,7 +97,7 @@ Build the project "RTX" with Visual Studio 2017 in Release Mode and execute the 
 
 # Supplemental Material
 ## Data Sets
-Triangle Models: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cmodels
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637625.svg)](https://doi.org/10.5281/zenodo.3637625)
 
 
 ## Benchmark Results
