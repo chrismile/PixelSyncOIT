@@ -86,6 +86,7 @@ Additonally, the user also needs to compile OSPRay with support for generalized 
 
 ## Ray tracing with RTX
 
+Click on the DOI link to obtain the RTX program.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637621.svg)](https://doi.org/10.5281/zenodo.3637621)
 
 RTX ray tracing is build upon a test environment separated from the main program.
@@ -99,15 +100,11 @@ Build the project "RTX" with Visual Studio 2017 in Release Mode and execute the 
 ## Data Sets
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637625.svg)](https://doi.org/10.5281/zenodo.3637625)
 
-
 ## Benchmark Results
 1) Performance Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cperformance
 2) Image Quality Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cimages_quality
 3) Depth Complexity: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cdepth_complexity
 4) Transfer Functions: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Ctransfer_functions
-
-## RTX Program
-3) RTX Program: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5CRTX
 
 ## Videos
 https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cvideos
