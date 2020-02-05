@@ -4,7 +4,7 @@
 A visualization tool for rendering triangle, line and point data sets using order independent transparency (OIT).
 
 This tool uses OpenGL 4.5 together with pixel synchronization (GL_ARB_fragment_shader_interlock) to render these data sets.
-It was created for the paper "A Comparison of Rendering Techniques for Large 3D Line Sets with Transparency" (submitted to TVCG).
+It was created for the paper "A Comparison of Rendering Techniques for 3D Line Sets with Transparency" (submitted to TVCG).
 
 IMPORTANT NOTICE: This tool was created as a testing tool for comparing the performance, quality and memory consumption of different OIT rendering algorithms.
 It is not meant to be a stable and full-fledged visualization tool like ParaView. Use at your own risk!
