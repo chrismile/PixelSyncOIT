@@ -86,7 +86,8 @@ Additonally, the user also needs to compile OSPRay with support for generalized 
 
 ## Ray tracing with RTX
 
-Click on the DOI link to obtain the RTX program.
+Click on the DOI link to obtain the RTX program:
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637621.svg)](https://doi.org/10.5281/zenodo.3637621)
 
 RTX ray tracing is build upon a test environment separated from the main program.
@@ -98,6 +99,8 @@ Build the project "RTX" with Visual Studio 2017 in Release Mode and execute the 
 
 # Supplemental Material
 ## Data Sets
+Click on the DOI link to obtain all line data sets:
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637625.svg)](https://doi.org/10.5281/zenodo.3637625)
 
 ## Benchmark Results
