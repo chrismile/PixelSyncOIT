@@ -571,8 +571,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             || boost::starts_with(modelFilenamePure, "Data/WCB")
             || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")
             || boost::starts_with(modelFilenamePure, "Data/UCLA")
-            || boost::starts_with(modelFilenamePure, "Data/CFD"
-            || boost::starts_with(modelFilenamePure, "Data/MultiVar"));
+            || boost::starts_with(modelFilenamePure, "Data/CFD")
+            || boost::starts_with(modelFilenamePure, "Data/MultiVar");
     if (modelContainsTrajectories) {
         modelType = MODEL_TYPE_TRAJECTORIES;
     }

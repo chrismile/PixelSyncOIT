@@ -247,7 +247,7 @@ void computeTrajectoryAttributes(
 //        // 1. Curvature
 //        importanceCriteria.push_back(computeCurvature(vertexPositions));
     } else if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR) {
-        const uint8_t NUM_MULTI_VARIABLES = 10;
+        const uint8_t NUM_MULTI_VARIABLES = 6;
 
         for (auto v = 0; v < NUM_MULTI_VARIABLES; ++v)
         {
@@ -255,7 +255,7 @@ void computeTrajectoryAttributes(
 
             for (auto i = 0; i < attributes.size(); ++i)
             {
-                attributes[i] = vertexAttributes[i * NUM_MULTI_VARIABLES + v]
+                attributes[i] = vertexAttributes[i * NUM_MULTI_VARIABLES + v];
             }
 
             importanceCriteria.push_back(attributes);

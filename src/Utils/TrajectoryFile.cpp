@@ -103,7 +103,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     bool isUCLA = trajectoryType == TRAJECTORY_TYPE_UCLA;
 
     bool isMultiVar = trajectoryType == TRAJECTORY_TYPE_MULTIVAR;
-    const uint8_t NUM_MULTI_VARIABLES = 10;
+    const uint8_t NUM_MULTI_VARIABLES = 6;
 
     Trajectories trajectories;
 
@@ -156,11 +156,16 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
         } else if (command == 'v' && command2 == 't') {
             if (isMultiVar)
             {
+                float attrs[NUM_MULTI_VARIABLES];
+
+                sscanf(lineBuffer.c_str() + 2, "%f %f %f %f %f %f", &attrs[0], &attrs[1], &attrs[2],
+                       &attrs[3], &attrs[4], &attrs[5]);
+
                 for (auto j = 0; j < NUM_MULTI_VARIABLES; ++j)
                 {
-                    float attr = 0;
-                    sscanf(lineBuffer.c_str() + 2 + 2 * j, "%f", &attr);
-                    globalLineVertexAttributes.push_back(attr);
+//                    float attr = 0;
+//                    sscanf(lineBuffer.c_str() + 2 + 2 * j, "%f", &attr);
+                    globalLineVertexAttributes.push_back(attrs[j]);
                 }
             }
             else
@@ -219,13 +224,15 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                     continue;
                 }
 
-                trajectory.positions.push_back(globalLineVertices.at(currentLineIndices.at(i)));
+                const uint32_t currentLineIndex = currentLineIndices.at(i);
+
+                trajectory.positions.push_back(globalLineVertices.at(currentLineIndex));
 
                 uint8_t numVariables = (isMultiVar) ? NUM_MULTI_VARIABLES : 1;
                 for (auto v = 0; v < numVariables; ++v)
                 {
                     pathLineVorticities.push_back(
-                            globalLineVertexAttributes.at(currentLineIndices.at(i * numVariables + v)));
+                            globalLineVertexAttributes.at(currentLineIndex * numVariables + v));
                 }
 
             }

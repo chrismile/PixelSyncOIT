@@ -31,6 +31,7 @@ enum RenderModeOIT {
 };
 
 const char *const MODEL_FILENAMES[] = {
+        "Data/MultiVar/test.obj",
         "Data/UCLA/UCLA_400k_100v.obj",
         "Data/IsoSurfaces/rm-140-isosurface.bobj",
         "Data/IsoSurfaces/rm-80-isosurface.bobj",
@@ -78,6 +79,7 @@ const char *const MODEL_FILENAMES[] = {
 };
 const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)));
 const char *const MODEL_DISPLAYNAMES[] = {
+        "Multi-Var",
         "UCLA (400k)",
         "Meshkov (140)",
         "Meshkov (80)",
