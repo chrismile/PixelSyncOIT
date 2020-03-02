@@ -101,6 +101,10 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
     bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
     bool isUCLA = trajectoryType == TRAJECTORY_TYPE_UCLA;
+
+    bool isMultiVar = trajectoryType == TRAJECTORY_TYPE_MULTIVAR;
+    const uint8_t NUM_MULTI_VARIABLES = 10;
+
     Trajectories trajectories;
 
     std::vector<glm::vec3> globalLineVertices;
@@ -150,10 +154,24 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             }
             ctr = (ctr + 1) % 1000;*/
         } else if (command == 'v' && command2 == 't') {
-            // Path line vertex attribute
-            float attr = 0.0f;
-            sscanf(lineBuffer.c_str()+2, "%f", &attr);
-            globalLineVertexAttributes.push_back(attr);
+            if (isMultiVar)
+            {
+                for (auto j = 0; j < NUM_MULTI_VARIABLES; ++j)
+                {
+                    float attr = 0;
+                    sscanf(lineBuffer.c_str() + 2 + 2 * j, "%f", &attr);
+                    globalLineVertexAttributes.push_back(attr);
+                }
+            }
+            else
+            {
+                // Path line vertex attribute
+                float attr = 0.0f;
+
+                sscanf(lineBuffer.c_str()+2, "%f", &attr);
+                globalLineVertexAttributes.push_back(attr);
+            }
+
         } else if (command == 'v' && command2 == 'n') {
             // Not supported so far
         } else if (command == 'v') {
@@ -202,7 +220,14 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                 }
 
                 trajectory.positions.push_back(globalLineVertices.at(currentLineIndices.at(i)));
-                pathLineVorticities.push_back(globalLineVertexAttributes.at(currentLineIndices.at(i)));
+
+                uint8_t numVariables = (isMultiVar) ? NUM_MULTI_VARIABLES : 1;
+                for (auto v = 0; v < numVariables; ++v)
+                {
+                    pathLineVorticities.push_back(
+                            globalLineVertexAttributes.at(currentLineIndices.at(i * numVariables + v)));
+                }
+
             }
 
             // Compute importance criteria

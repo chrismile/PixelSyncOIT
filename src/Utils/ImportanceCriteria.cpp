@@ -240,11 +240,26 @@ void computeTrajectoryAttributes(
         std::vector<float> &vertexAttributes,
         std::vector<std::vector<float>> &importanceCriteria)
 {
-    if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM) {
+    if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM)
+    {
         // 0. Vorticity/Attribute
         importanceCriteria.push_back(vertexAttributes);
 //        // 1. Curvature
 //        importanceCriteria.push_back(computeCurvature(vertexPositions));
+    } else if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR) {
+        const uint8_t NUM_MULTI_VARIABLES = 10;
+
+        for (auto v = 0; v < NUM_MULTI_VARIABLES; ++v)
+        {
+            std::vector<float> attributes(vertexPositions.size());
+
+            for (auto i = 0; i < attributes.size(); ++i)
+            {
+                attributes[i] = vertexAttributes[i * NUM_MULTI_VARIABLES + v]
+            }
+
+            importanceCriteria.push_back(attributes);
+        }
     } else if (trajectoryType == TRAJECTORY_TYPE_WCB) {
         // 0. Pressure mapped to [0, 1]
         importanceCriteria.push_back(vertexAttributes);

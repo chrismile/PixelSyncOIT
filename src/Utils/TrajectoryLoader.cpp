@@ -932,6 +932,26 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
 }
 
 
+void convertTrajectoryMultiVarToBinaryLineMesh(
+        TrajectoryType trajectoryType,
+        const std::string &trajectoriesFilename,
+        const std::string &binaryFilename)
+{
+    BinaryMesh binaryMesh;
+    binaryMesh.submeshes.push_back(BinarySubMesh());
+    BinarySubMesh &submesh = binaryMesh.submeshes.front();
+    submesh.vertexMode = VERTEX_MODE_LINES;
+
+    std::vector<glm::vec3> globalVertexPositions;
+    std::vector<glm::vec3> globalNormals;
+    std::vector<glm::vec3> globalTangents;
+    std::vector<uint32_t> globalIndices;
+    std::vector<std::vector<float>> globalVariables;
+    std::vector<std::string> globalVariableNames;
+
+    Trajectories trajectories = loadTrajectoriesFromFile(trajectoriesFilename, trajectoryType);
+}
+
 
 void convertTrajectoryDataToBinaryLineMesh(
         TrajectoryType trajectoryType,
@@ -939,6 +959,8 @@ void convertTrajectoryDataToBinaryLineMesh(
         const std::string &binaryFilename)
 {
     auto start = std::chrono::system_clock::now();
+
+    bool isMultiVar = trajectoryType == TRAJECTORY_TYPE_MULTIVAR;
 
     BinaryMesh binaryMesh;
     binaryMesh.submeshes.push_back(BinarySubMesh());
@@ -1032,22 +1054,38 @@ void convertTrajectoryDataToBinaryLineMesh(
     // free memory
     globalTangents.clear(); globalTangents.shrink_to_fit();
 
-    std::vector<std::vector<uint16_t>> globalImportanceCriteriaUnorm;
-    packUnorm16ArrayOfArrays(globalImportanceCriteria, globalImportanceCriteriaUnorm);
+    if (!isMultiVar)
+    {
+        std::vector<std::vector<uint16_t>> globalImportanceCriteriaUnorm;
+        packUnorm16ArrayOfArrays(globalImportanceCriteria, globalImportanceCriteriaUnorm);
 
-    for (size_t i = 0; i < globalImportanceCriteriaUnorm.size(); i++) {
-        std::vector<uint16_t> &currentAttr = globalImportanceCriteriaUnorm.at(i);
-        BinaryMeshAttribute vertexAttribute;
-        vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
-        vertexAttribute.attributeFormat = ATTRIB_UNSIGNED_SHORT;
-        vertexAttribute.numComponents = 1;
-        vertexAttribute.data.resize(currentAttr.size() * sizeof(uint16_t));
-        memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(uint16_t));
-        submesh.attributes.push_back(vertexAttribute);
+        for (size_t i = 0; i < globalImportanceCriteriaUnorm.size(); i++) {
+            std::vector<uint16_t> &currentAttr = globalImportanceCriteriaUnorm.at(i);
+            BinaryMeshAttribute vertexAttribute;
+            vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
+            vertexAttribute.attributeFormat = ATTRIB_UNSIGNED_SHORT;
+            vertexAttribute.numComponents = 1;
+            vertexAttribute.data.resize(currentAttr.size() * sizeof(uint16_t));
+            memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(uint16_t));
+            submesh.attributes.push_back(vertexAttribute);
+        }
+
+        // free memory
+        globalImportanceCriteriaUnorm.clear(); globalImportanceCriteriaUnorm.shrink_to_fit();
     }
-
-    // free memory
-    globalImportanceCriteriaUnorm.clear(); globalImportanceCriteriaUnorm.shrink_to_fit();
+    else
+    {
+        for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
+            std::vector<float> &currentAttr = globalImportanceCriteria.at(i);
+            BinaryMeshAttribute vertexAttribute;
+            vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
+            vertexAttribute.attributeFormat = ATTRIB_FLOAT;
+            vertexAttribute.numComponents = 1;
+            vertexAttribute.data.resize(currentAttr.size() * sizeof(uint16_t));
+            memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(uint16_t));
+            submesh.attributes.push_back(vertexAttribute);
+        }
+    }
 
     auto end = std::chrono::system_clock::now();
 

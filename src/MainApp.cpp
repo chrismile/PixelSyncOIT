@@ -571,7 +571,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             || boost::starts_with(modelFilenamePure, "Data/WCB")
             || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")
             || boost::starts_with(modelFilenamePure, "Data/UCLA")
-            || boost::starts_with(modelFilenamePure, "Data/CFD");
+            || boost::starts_with(modelFilenamePure, "Data/CFD"
+            || boost::starts_with(modelFilenamePure, "Data/MultiVar"));
     if (modelContainsTrajectories) {
         modelType = MODEL_TYPE_TRAJECTORIES;
     }
@@ -607,6 +608,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
         } else if (boost::starts_with(modelFilenamePure, "Data/CFD")) {
             trajectoryType = TRAJECTORY_TYPE_CFD;
+        } else if (boost::starts_with(modelFilenamePure, "Data/MultiVar")) {
+            trajectoryType = TRAJECTORY_TYPE_MULTIVAR;
         } else {
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS;
         }
@@ -615,7 +618,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
     // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
-    if (modelType == MODEL_TYPE_TRAJECTORIES && lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_LINES) {
+    if (modelType == MODEL_TYPE_TRAJECTORIES && (lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_LINES || trajectoryType == TRAJECTORY_TYPE_MULTIVAR)) {
         modelFilenameOptimized += "_lines";
         if (useBillboardLines) {
             sgl::ShaderManager->addPreprocessorDefine("BILLBOARD_LINES", "");

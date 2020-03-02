@@ -135,7 +135,7 @@ public:
     MeshRenderer(bool useProgrammableFetch) : useProgrammableFetch(useProgrammableFetch) {}
 
     // attributeIndex: For programmable vertex fetching/pulling. We need to bind the correct line attribute SSBO!
-    void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass, int attributeIndex);
+    virtual void render(sgl::ShaderProgramPtr passShader, bool isGBufferPass, int attributeIndex);
     void setNewShader(sgl::ShaderProgramPtr newShader);
     bool isLoaded() { return shaderAttributes.size() > 0; }
     bool hasAttributeWithName(const std::string &name) {
@@ -150,6 +150,16 @@ public:
     sgl::AABB3 boundingBox;
     sgl::Sphere boundingSphere;
     std::vector<ImportanceCriterionAttribute> importanceCriterionAttributes;
+};
+
+
+class LineMultiVarRenderer : public MeshRenderer
+{
+    explicit LineMultiVarRenderer() : MeshRenderer(false) {}
+
+    void render(sgl::ShaderProgramPtr passShader,
+            bool isGBufferPass,
+            int attributeIndex) override;
 };
 
 

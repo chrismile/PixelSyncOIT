@@ -210,6 +210,34 @@ void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass, 
     }
 }
 
+void LineMultiVarRenderer::render(sgl::ShaderProgramPtr passShader,
+            bool isGBufferPass,
+            int attributeIndex)
+{
+    for (size_t i = 0; i < shaderAttributes.size(); i++) {
+        if (!isGBufferPass)
+        {
+            if (passShader->hasUniform("ambientColor")) {
+                passShader->setUniform("ambientColor", materials.at(i).ambientColor);
+            }
+            if (passShader->hasUniform("diffuseColor")) {
+                passShader->setUniform("diffuseColor", materials.at(i).diffuseColor);
+            }
+            if (passShader->hasUniform("specularColor")) {
+                passShader->setUniform("specularColor", materials.at(i).specularColor);
+            }
+            if (passShader->hasUniform("specularExponent")) {
+                passShader->setUniform("specularExponent", materials.at(i).specularExponent);
+            }
+            if (passShader->hasUniform("opacity")) {
+                passShader->setUniform("opacity", materials.at(i).opacity);
+            }
+        }
+
+        Renderer->render(shaderAttributes.at(i), passShader);
+    }
+}
+
 void MeshRenderer::setNewShader(sgl::ShaderProgramPtr newShader)
 {
     for (size_t i = 0; i < shaderAttributes.size(); i++) {
@@ -421,10 +449,26 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 ImportanceCriterionAttribute importanceCriterionAttribute;
                 importanceCriterionAttribute.name = meshAttribute.name;
 
+                size_t numAttributeValues = 0;
                 // Copy values to mesh renderer data structure
-                uint16_t *attributeValuesUnorm = (uint16_t*)&meshAttribute.data.front();
-                size_t numAttributeValues = meshAttribute.data.size() / sizeof(uint16_t);
-                unpackUnorm16Array(attributeValuesUnorm, numAttributeValues, importanceCriterionAttribute.attributes);
+                if (meshAttribute.attributeFormat == ATTRIB_UNSIGNED_SHORT)
+                {
+                    uint16_t *attributeValuesUnorm = (uint16_t*)&meshAttribute.data.front();
+                    numAttributeValues = meshAttribute.data.size() / sizeof(uint16_t);
+                    unpackUnorm16Array(attributeValuesUnorm, numAttributeValues, importanceCriterionAttribute.attributes);
+                }
+                else
+                {
+                    float *attributeValuesUnorm = reinterpret_cast<float*>(&meshAttribute.data.front());
+                    numAttributeValues = meshAttribute.data.size() / sizeof(float);
+
+                    importanceCriterionAttribute.attributes.resize(numAttributeValues);
+
+                    for (auto a = 0; a < numAttributeValues; ++a)
+                    {
+                        importanceCriterionAttribute.attributes[a] = attributeValuesUnorm[a];
+                    }
+                }
 
                 // Compute minimum and maximum value
                 float minValue = FLT_MAX, maxValue = 0.0f;
