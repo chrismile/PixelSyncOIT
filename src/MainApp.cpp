@@ -685,7 +685,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             if (!useProgrammableFetch) {
                 if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
                 {
-                    gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex", "PseudoPhongTrajectoriesMultiVar.Geometry",
+                    gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+                                       "PseudoPhongTrajectoriesMultiVar.RibbonGeometry",
                                        "PseudoPhongTrajectoriesMultiVar.Fragment"};
                 }
                 else
@@ -913,10 +914,18 @@ void PixelSyncApp::recomputeHistogramForMesh()
     if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
         criterionsMinMaxValues.resize(transparentObject.importanceCriterionAttributes.size());
+        std::vector<glm::vec2> minMaxs = { glm::vec2(200, 300),
+                                           glm::vec2(50000, 60000),
+                                           glm::vec2(0.0, 1.0),
+                                           glm::vec2(0.0, 1.0),
+                                           glm::vec2(0.0, 6000.0),
+                                           glm::vec2(0.0, 1.0)};
+
         for (auto c = 0; c < criterionsMinMaxValues.size(); ++ c)
         {
             const auto& attribute = transparentObject.importanceCriterionAttributes[c];
-            criterionsMinMaxValues[c] = glm::vec2(attribute.minAttribute, attribute.maxAttribute);
+//            criterionsMinMaxValues[c] = glm::vec2(attribute.minAttribute, attribute.maxAttribute);
+            criterionsMinMaxValues[c] = minMaxs[c];
         }
     }
 }
@@ -1897,8 +1906,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             && (currentShadowTechnique == NO_SHADOW_MAPPING || !shadowTechnique->isShadowMapCreatePass())) {
         transparencyShader = oitRenderer->getGatherShader();
         if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
-            transparencyShader->setUniform("minCriterionValue", minCriterionValue);
-            transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
+            if (transparencyShader->hasUniform("minCriterionValue"))
+            {
+                transparencyShader->setUniform("minCriterionValue", minCriterionValue);
+                transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
+            }
 
             if (transparencyShader->hasUniform("minMaxCriterionValues"))
             {
