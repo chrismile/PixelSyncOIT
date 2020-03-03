@@ -794,8 +794,13 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/torus")) {
                 // ControlPoint(1, 1.94571, 0.761162, 2.9094, -1.61776, -0.0535428)
                 camera->setPosition(glm::vec3(1.94571f, 0.761162f, 2.9094f));
-                camera->setYaw(-1.61776f);
-                camera->setPitch(-0.0535428f);
+                camera->setYaw(-4.74008f);
+                camera->setPitch(0.079609f);
+            } else if (boost::starts_with(modelFilenamePure, "Data/MultiVar/")) {
+                // ControlPoint(1, 1.94571, 0.761162, 2.9094, -1.61776, -0.0535428)
+                camera->setPosition(glm::vec3(0.679305f, 0.497715f, 0.758344f));
+                camera->setYaw(-1.52659f);
+                camera->setPitch(-0.0471088f);
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
