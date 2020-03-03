@@ -189,6 +189,7 @@ private:
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
+    std::vector<glm::vec2> criterionsMinMaxValues;
     bool useGeometryShader = false;
     bool useProgrammableFetch = false;
     bool programmableFetchUseAoS = true; // Array of structs

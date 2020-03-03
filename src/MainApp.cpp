@@ -683,8 +683,17 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     } else if (modelType == MODEL_TYPE_TRAJECTORIES) {
         if (boost::ends_with(modelFilenameOptimized, "_lines")) {
             if (!useProgrammableFetch) {
-                gatherShaderIDs = {"PseudoPhongTrajectories.Vertex", "PseudoPhongTrajectories.Geometry",
-                                   "PseudoPhongTrajectories.Fragment"};
+                if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+                {
+                    gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex", "PseudoPhongTrajectoriesMultiVar.Geometry",
+                                       "PseudoPhongTrajectoriesMultiVar.Fragment"};
+                }
+                else
+                {
+                    gatherShaderIDs = {"PseudoPhongTrajectories.Vertex", "PseudoPhongTrajectories.Geometry",
+                                       "PseudoPhongTrajectories.Fragment"};
+                }
+
             } else {
                 gatherShaderIDs = {"PseudoPhongTrajectories.FetchVertex", "PseudoPhongTrajectories.Fragment"};
             }
@@ -900,6 +909,16 @@ void PixelSyncApp::recomputeHistogramForMesh()
     maxCriterionValue = importanceCriterionAttribute.maxAttribute;
     transferFunctionWindow.computeHistogram(importanceCriterionAttribute.attributes,
             minCriterionValue, maxCriterionValue);
+
+    if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+    {
+        criterionsMinMaxValues.resize(transparentObject.importanceCriterionAttributes.size());
+        for (auto c = 0; c < criterionsMinMaxValues.size(); ++ c)
+        {
+            const auto& attribute = transparentObject.importanceCriterionAttributes[c];
+            criterionsMinMaxValues[c] = glm::vec2(attribute.minAttribute, attribute.maxAttribute);
+        }
+    }
 }
 
 void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
@@ -1880,6 +1899,12 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
         if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
             transparencyShader->setUniform("minCriterionValue", minCriterionValue);
             transparencyShader->setUniform("maxCriterionValue", maxCriterionValue);
+
+            if (transparencyShader->hasUniform("minMaxCriterionValues"))
+            {
+                transparencyShader->setUniformArray("minMaxCriterionValues", &criterionsMinMaxValues.front(),
+                        criterionsMinMaxValues.size());
+            }
             if (transparencyShader->hasUniform("radius")) {
                 if (modelType == MODEL_TYPE_POINTS) {
                     transparencyShader->setUniform("radius", pointRadius);
