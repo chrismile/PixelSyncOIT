@@ -914,18 +914,20 @@ void PixelSyncApp::recomputeHistogramForMesh()
     if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
         criterionsMinMaxValues.resize(transparentObject.importanceCriterionAttributes.size());
-        std::vector<glm::vec2> minMaxs = { glm::vec2(200, 300),
-                                           glm::vec2(50000, 60000),
-                                           glm::vec2(0.0, 1.0),
-                                           glm::vec2(0.0, 1.0),
-                                           glm::vec2(0.0, 6000.0),
-                                           glm::vec2(0.0, 1.0)};
+        std::vector<glm::vec2> minMaxs = { glm::vec2(204.41896, 298.59796),
+                                           glm::vec2(14579.305, 100395.76),
+                                           glm::vec2(0.0, 0.0046437355),
+                                           glm::vec2(0.0, 0.0066332296),
+                                           glm::vec2(0.0, 0.0008263761),
+                                           glm::vec2(0.0, 0.0056324285),
+                                           glm::vec2(0.0, 0.00069549587),
+                                           glm::vec2(0.0, 0.0101735)};
 
         for (auto c = 0; c < criterionsMinMaxValues.size(); ++ c)
         {
             const auto& attribute = transparentObject.importanceCriterionAttributes[c];
-//            criterionsMinMaxValues[c] = glm::vec2(attribute.minAttribute, attribute.maxAttribute);
-            criterionsMinMaxValues[c] = minMaxs[c];
+            criterionsMinMaxValues[c] = glm::vec2(attribute.minAttribute, attribute.maxAttribute);
+//            criterionsMinMaxValues[c] = minMaxs[c];
         }
     }
 }

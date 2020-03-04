@@ -44,6 +44,7 @@ uniform float radius = 0.001f;
 
 const uint NUM_MULTI_ATTRIBUTES = 6;
 const uint CUR_ATTRIBUTE = 1;
+const float MIN_RIBBON_WIDTH_PERCENTAGE = 0.1;
 uniform vec2 minMaxCriterionValues[NUM_MULTI_ATTRIBUTES];
 
 in VertexData
@@ -62,7 +63,7 @@ flat out float fragmentAttribute;
 
 float computeRibbonWidth(in float maxWidth, in uint attributeIndex, in float attributeValue)
 {
-    return maxWidth * max(0.01, min(1.0,(attributeValue - minMaxCriterionValues[attributeIndex].x)
+    return maxWidth * max(MIN_RIBBON_WIDTH_PERCENTAGE, min(1.0,(attributeValue - minMaxCriterionValues[attributeIndex].x)
     / (minMaxCriterionValues[attributeIndex].y - minMaxCriterionValues[attributeIndex].x)));
 }
 

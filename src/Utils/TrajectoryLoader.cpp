@@ -932,27 +932,6 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
 }
 
 
-void convertTrajectoryMultiVarToBinaryLineMesh(
-        TrajectoryType trajectoryType,
-        const std::string &trajectoriesFilename,
-        const std::string &binaryFilename)
-{
-    BinaryMesh binaryMesh;
-    binaryMesh.submeshes.push_back(BinarySubMesh());
-    BinarySubMesh &submesh = binaryMesh.submeshes.front();
-    submesh.vertexMode = VERTEX_MODE_LINES;
-
-    std::vector<glm::vec3> globalVertexPositions;
-    std::vector<glm::vec3> globalNormals;
-    std::vector<glm::vec3> globalTangents;
-    std::vector<uint32_t> globalIndices;
-    std::vector<std::vector<float>> globalVariables;
-    std::vector<std::string> globalVariableNames;
-
-    Trajectories trajectories = loadTrajectoriesFromFile(trajectoriesFilename, trajectoryType);
-}
-
-
 void convertTrajectoryDataToBinaryLineMesh(
         TrajectoryType trajectoryType,
         const std::string &trajectoriesFilename,
@@ -1081,8 +1060,8 @@ void convertTrajectoryDataToBinaryLineMesh(
             vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
             vertexAttribute.attributeFormat = ATTRIB_FLOAT;
             vertexAttribute.numComponents = 1;
-            vertexAttribute.data.resize(currentAttr.size() * sizeof(uint16_t));
-            memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(uint16_t));
+            vertexAttribute.data.resize(currentAttr.size() * sizeof(float));
+            memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(float));
             submesh.attributes.push_back(vertexAttribute);
         }
     }
