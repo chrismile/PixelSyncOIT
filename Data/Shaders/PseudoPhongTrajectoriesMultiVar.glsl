@@ -14,7 +14,7 @@ layout(location = 6) in float vertexAttribute3;
 layout(location = 7) in float vertexAttribute4;
 layout(location = 8) in float vertexAttribute5;
 
-const uint NUM_MULTI_ATTRIBUTES = 6;
+const uint NUM_MULTI_ATTRIBUTES = 5;
 
 out VertexData
 {
@@ -30,7 +30,7 @@ void main()
     lineNormal = vertexLineNormal;
     lineTangent = vertexLineTangent;
     lineAttributes = float[NUM_MULTI_ATTRIBUTES](vertexAttribute0, vertexAttribute1, vertexAttribute2,
-                                                 vertexAttribute3, vertexAttribute4, vertexAttribute5);
+                                                 vertexAttribute3, vertexAttribute4);
 }
 
 -- StarGeometry
@@ -42,8 +42,9 @@ layout(triangle_strip, max_vertices = 128) out;
 
 uniform float radius = 0.001f;
 
-const int NUM_MULTI_ATTRIBUTES = 6;
+const int NUM_MULTI_ATTRIBUTES = 5;
 const float PI = 3.1415926;
+const float MIN_RADIUS_PERCENTAGE = 0.2;
 uniform vec2 minMaxCriterionValues[NUM_MULTI_ATTRIBUTES];
 
 in VertexData
@@ -60,6 +61,17 @@ out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 flat out float fragmentAttribute;
 flat out int fragmentAttributeIndex;
+
+float computeRadius(in float maxRadius, in uint attributeIndex, in float attributeValue)
+{
+    float minRadius = MIN_RADIUS_PERCENTAGE * maxRadius;
+    float remainingRadius = maxRadius - minRadius;
+
+    float t = max(0.0, min(1.0,(attributeValue - minMaxCriterionValues[attributeIndex].x)
+    / (minMaxCriterionValues[attributeIndex].y - minMaxCriterionValues[attributeIndex].x)));
+
+    return minRadius + t * remainingRadius;
+}
 
 void main()
 {
@@ -78,33 +90,56 @@ void main()
     mat3 tangentFrameMatrixCurrent = mat3(normalCurrent, binormalCurrent, tangentCurrent);
     mat3 tangentFrameMatrixNext = mat3(normalNext, binormalNext, tangentNext);
 
-    const uint NUM_STAR_SEGMENTS = (NUM_MULTI_ATTRIBUTES) * 2;
+    const uint NUM_STAR_SEGMENTS = (NUM_MULTI_ATTRIBUTES) * 3;
 
-    vec3 circlePointsCurrent[NUM_STAR_SEGMENTS];
-    vec3 circlePointsNext[NUM_STAR_SEGMENTS];
-    vec3 vertexNormalsCurrent[NUM_STAR_SEGMENTS];
-    vec3 vertexNormalsNext[NUM_STAR_SEGMENTS];
+    vec3 circlePointsCurrent[NUM_STAR_SEGMENTS + 1];
+    vec3 circlePointsNext[NUM_STAR_SEGMENTS + 1];
+    vec3 vertexNormalsCurrent[NUM_STAR_SEGMENTS + 1];
+    vec3 vertexNormalsNext[NUM_STAR_SEGMENTS + 1];
 
     float innerRadius = radius * 0.5;
 
-    const float theta = 2.0 * PI / float(NUM_STAR_SEGMENTS);
-    const float tangetialFactor = tan(theta); // opposite / adjacent
-    const float radialFactor = cos(theta); // adjacent / hypotenuse
+    const float thetaAll = 2.0 * PI / float(NUM_MULTI_ATTRIBUTES);
+    const float thetaSmall = thetaAll * 0.25;
+    const float thetaLarge = thetaAll - thetaSmall;
+
+    const float tangetialFactorLarge = tan(thetaLarge / 2.0); // opposite / adjacent
+    const float radialFactorLarge = cos(thetaLarge / 2.0); // adjacent / hypotenuse
+
+    const float tangetialFactorSmall = tan(thetaSmall); // opposite / adjacent
+    const float radialFactorSmall = cos(thetaSmall); // adjacent / hypotenuse
+
+    const float tangetialFactorSmallHalf = tan(thetaSmall / 2.0); // opposite / adjacent
+    const float radialFactorSmallHalf = cos(thetaSmall / 2.0); // adjacent / hypotenuse
 
     vec2 positionOuter = vec2(radius, 0.0);
     vec2 positionInner = vec2(innerRadius, 0.0);
+
+    float radiussesCurrent[NUM_MULTI_ATTRIBUTES];
+    float radiussesNext[NUM_MULTI_ATTRIBUTES];
+
+    for (int a = 0; a < NUM_MULTI_ATTRIBUTES; ++a)
+    {
+        radiussesCurrent[a] = computeRadius(radius, a, v_in[0].lineAttributes[a]);
+        radiussesNext[a] = computeRadius(radius, a, v_in[1].lineAttributes[a]);
+    }
+
     for (int i = 0; i < NUM_STAR_SEGMENTS + 1; i++)
     {
-        vec2 position = (i % 2) == 0 ? positionOuter : positionInner;
+        vec2 position = ((i + 1) % 3) == 0 ? positionInner : positionOuter;
+        if (i == 0)
+        {
+            position = positionOuter;
+        }
 
         vec3 point2DCurrent = tangentFrameMatrixCurrent * vec3(position, 0.0);
         vec3 point2DNext = tangentFrameMatrixNext * vec3(position, 0.0);
 
-        if (i < NUM_STAR_SEGMENTS)
-        {
+//        if (i < NUM_STAR_SEGMENTS)
+//        {
             circlePointsCurrent[i] = point2DCurrent.xyz + currentPoint;
             circlePointsNext[i] = point2DNext.xyz + nextPoint;
-        }
+//        }
 
         // Compute Normal
         if (i == 0)
@@ -131,24 +166,28 @@ void main()
         vec2 circleTangentOuter = vec2(-positionOuter.y, positionOuter.x);
         vec2 circleTangentInner = vec2(-positionInner.y, positionInner.x);
 
-        positionOuter += tangetialFactor * circleTangentOuter;
-        positionOuter *= radialFactor;
-        positionInner += tangetialFactor * circleTangentInner;
-        positionInner *= radialFactor;
-
-//        if (i % 2 == 0)
-//        {
-//            positionOuter = position;
-//        }
-//        else
-//        {
-//            positionInner = position;
-//        }
+        // thetaSmall / 2
+          // thetaSmall
+        if (i % 3 == 0)
+        {
+            positionOuter += tangetialFactorSmall * circleTangentOuter;
+            positionOuter *= radialFactorSmall;
+            positionInner += tangetialFactorSmall * circleTangentInner;
+            positionInner *= radialFactorSmall;
+        }
+        // thetaLarge
+        else
+        {
+            positionOuter += tangetialFactorLarge * circleTangentOuter;
+            positionOuter *= radialFactorLarge;
+            positionInner += tangetialFactorLarge * circleTangentInner;
+            positionInner *= radialFactorLarge;
+        }
     }
 
     // Emit the tube triangle vertices
     for (int i = 0; i < NUM_STAR_SEGMENTS; i++) {
-        fragmentAttributeIndex = int((i + 1) / 2) % NUM_MULTI_ATTRIBUTES;
+        fragmentAttributeIndex = int((i + 1) / 3) % NUM_MULTI_ATTRIBUTES;
 
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[i], 1.0);
         fragmentNormal = vertexNormalsCurrent[i];
@@ -197,7 +236,7 @@ layout(triangle_strip, max_vertices = 128) out;
 
 uniform float radius = 0.001f;
 
-const uint NUM_MULTI_ATTRIBUTES = 6;
+const uint NUM_MULTI_ATTRIBUTES = 5;
 const uint CUR_ATTRIBUTE = 1;
 const float MIN_RIBBON_WIDTH_PERCENTAGE = 0.33;
 uniform vec2 minMaxCriterionValues[NUM_MULTI_ATTRIBUTES];
@@ -335,7 +374,7 @@ layout(triangle_strip, max_vertices = 128) out;
 
 uniform float radius = 0.001f;
 
-const uint NUM_MULTI_ATTRIBUTES = 6;
+const uint NUM_MULTI_ATTRIBUTES = 5;
 const uint CUR_ATTRIBUTE = 1;
 
 in VertexData
@@ -464,7 +503,7 @@ out vec4 fragColor;
 #include "AmbientOcclusion.glsl"
 #include "Shadows.glsl"
 
-const uint NUM_MULTI_ATTRIBUTES = 6;
+const uint NUM_MULTI_ATTRIBUTES = 5;
 const uint CUR_ATTRIBUTE = 1;
 
 #define M_PI 3.14159265358979323846
