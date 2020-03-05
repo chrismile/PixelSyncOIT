@@ -686,7 +686,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
                 {
                     gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
-                                       "PseudoPhongTrajectoriesMultiVar.RibbonGeometry",
+                                       "PseudoPhongTrajectoriesMultiVar.StarGeometry",
                                        "PseudoPhongTrajectoriesMultiVar.Fragment"};
                 }
                 else
