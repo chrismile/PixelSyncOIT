@@ -62,12 +62,12 @@ out vec3 screenSpacePosition;
 flat out float fragmentAttribute;
 flat out int fragmentAttributeIndex;
 
-float computeRadius(in float maxRadius, in uint attributeIndex, in float attributeValue)
+float computeRadius(in float minRadius, in float maxRadius, in uint attributeIndex, in float attributeValue)
 {
-    float minRadius = MIN_RADIUS_PERCENTAGE * maxRadius;
+//    float minRadius = MIN_RADIUS_PERCENTAGE * maxRadius;
     float remainingRadius = maxRadius - minRadius;
 
-    float t = max(0.0, min(1.0,(attributeValue - minMaxCriterionValues[attributeIndex].x)
+    float t = max(0.0, min(1.0 ,(attributeValue - minMaxCriterionValues[attributeIndex].x)
     / (minMaxCriterionValues[attributeIndex].y - minMaxCriterionValues[attributeIndex].x)));
 
     return minRadius + t * remainingRadius;
@@ -114,26 +114,40 @@ void main()
 
     vec2 positionOuter = vec2(radius, 0.0);
     vec2 positionInner = vec2(innerRadius, 0.0);
+    vec2 position = vec2(1.0, 0.0);
 
     float radiussesCurrent[NUM_MULTI_ATTRIBUTES];
     float radiussesNext[NUM_MULTI_ATTRIBUTES];
 
     for (int a = 0; a < NUM_MULTI_ATTRIBUTES; ++a)
     {
-        radiussesCurrent[a] = computeRadius(radius, a, v_in[0].lineAttributes[a]);
-        radiussesNext[a] = computeRadius(radius, a, v_in[1].lineAttributes[a]);
+        radiussesCurrent[a] = computeRadius(innerRadius, radius, a, v_in[0].lineAttributes[a]);
+        radiussesNext[a] = computeRadius(innerRadius, radius, a, v_in[1].lineAttributes[a]);
     }
 
     for (int i = 0; i < NUM_STAR_SEGMENTS + 1; i++)
     {
-        vec2 position = ((i + 1) % 3) == 0 ? positionInner : positionOuter;
-        if (i == 0)
-        {
-            position = positionOuter;
-        }
+        int attrIndex = int(i / 3) % NUM_MULTI_ATTRIBUTES;
 
-        vec3 point2DCurrent = tangentFrameMatrixCurrent * vec3(position, 0.0);
-        vec3 point2DNext = tangentFrameMatrixNext * vec3(position, 0.0);
+//        vec2 position = ((i + 1) % 3) == 0 ? positionInner : positionOuter;
+//        if (i == 0)
+//        {
+//            position = positionOuter;
+//        }
+
+        float radiusCurrent = 1.0;
+        float radiusNext = 1.0;
+
+        if (i == 0 || !((i + 1) % 3 == 0)) {
+            radiusCurrent = radiussesCurrent[attrIndex];
+            radiusNext = radiussesNext[attrIndex];
+        }
+        else {
+            radiusCurrent = innerRadius;
+            radiusNext = innerRadius; }
+
+        vec3 point2DCurrent = tangentFrameMatrixCurrent * vec3(position, 0.0) * radiusCurrent;
+        vec3 point2DNext = tangentFrameMatrixNext * vec3(position, 0.0) * radiusNext;
 
 //        if (i < NUM_STAR_SEGMENTS)
 //        {
@@ -163,25 +177,25 @@ void main()
         }
 
         // Add the tangent vector and correct the position using the radial factor.
-        vec2 circleTangentOuter = vec2(-positionOuter.y, positionOuter.x);
-        vec2 circleTangentInner = vec2(-positionInner.y, positionInner.x);
+        vec2 circleTangentOuter = vec2(-position.y, position.x);
+        vec2 circleTangentInner = vec2(-position.y, position.x);
 
         // thetaSmall / 2
           // thetaSmall
         if (i % 3 == 0)
         {
-            positionOuter += tangetialFactorSmall * circleTangentOuter;
-            positionOuter *= radialFactorSmall;
-            positionInner += tangetialFactorSmall * circleTangentInner;
-            positionInner *= radialFactorSmall;
+            position += tangetialFactorSmall * circleTangentOuter;
+            position *= radialFactorSmall;
+//            positionInner += tangetialFactorSmall * circleTangentInner;
+//            positionInner *= radialFactorSmall;
         }
         // thetaLarge
         else
         {
-            positionOuter += tangetialFactorLarge * circleTangentOuter;
-            positionOuter *= radialFactorLarge;
-            positionInner += tangetialFactorLarge * circleTangentInner;
-            positionInner *= radialFactorLarge;
+            position += tangetialFactorLarge * circleTangentOuter;
+            position *= radialFactorLarge;
+//            positionInner += tangetialFactorLarge * circleTangentInner;
+//            positionInner *= radialFactorLarge;
         }
     }
 
