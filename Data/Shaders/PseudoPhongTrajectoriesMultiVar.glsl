@@ -241,6 +241,137 @@ void main()
 
 }
 
+
+-- FibersGeometry
+
+#version 430 core
+
+layout(lines) in;
+layout(triangle_strip, max_vertices = 128) out;
+
+uniform float radius = 0.001f;
+
+const uint NUM_MULTI_ATTRIBUTES = 5;
+const uint CUR_ATTRIBUTE = 1;
+const float MIN_RIBBON_WIDTH_PERCENTAGE = 0.33;
+uniform vec2 minMaxCriterionValues[NUM_MULTI_ATTRIBUTES];
+
+in VertexData
+{
+    vec3 linePosition;
+    vec3 lineNormal;
+    vec3 lineTangent;
+    float lineAttributes[NUM_MULTI_ATTRIBUTES];
+} v_in[];
+
+out vec3 fragmentNormal;
+out vec3 fragmentTangent;
+out vec3 fragmentPositionWorld;
+out vec3 screenSpacePosition;
+flat out float fragmentAttribute;
+flat out int fragmentAttributeIndex;
+
+float computeFactor(in uint attributeIndex, in float attributeValue)
+{
+    float t = max(0.0, min(1.0,(attributeValue - minMaxCriterionValues[attributeIndex].x)
+    / (minMaxCriterionValues[attributeIndex].y - minMaxCriterionValues[attributeIndex].x)));
+
+    return t;
+}
+
+void main()
+{
+    vec3 currentPoint = (mMatrix * vec4(v_in[0].linePosition, 1.0)).xyz;
+    vec3 nextPoint = (mMatrix * vec4(v_in[1].linePosition, 1.0)).xyz;
+
+    vec3 tangent = nextPoint - currentPoint;
+    vec3 normal = (inverse(vMatrix) * vec4(0, 0, -1, 0)).xyz;
+
+    float diameter = radius * 2;
+    float ribbonWidthPerVar = diameter * 0.25;
+    vec3 up = normalize((inverse(vMatrix) * vec4(0, 1, 0, 0)).xyz);
+
+    vec3 upRadius = up * radius;
+
+    vec2 ribbonOffsets[] = vec2[](vec2(0.0, 1.0), vec2(0.0, -1.0), vec2(1.0, 1.0), vec2(1.0, -1.0));
+
+    vec3 initCurrentPosLowerBottom = currentPoint - upRadius * up;
+    vec3 initNextPosLowerBottom = nextPoint - upRadius * up;
+
+    const float totalWidth = diameter - ribbonWidthPerVar;
+    vec3 upTotalRibbon = up * totalWidth;
+
+    for (int i = 0; i < NUM_MULTI_ATTRIBUTES + 1; ++i)
+    {
+        float currentAttributeValue = -1;
+        float nextAttributeValue = -1;
+
+        vec3 currentPositionsLower;
+        vec3 nextPositionsLower;
+
+        float curWidth = ribbonWidthPerVar;
+
+        if (i < NUM_MULTI_ATTRIBUTES)
+        {
+            currentAttributeValue = v_in[0].lineAttributes[i];
+            nextAttributeValue = v_in[1].lineAttributes[i];
+
+            float curFactor = computeFactor(i, currentAttributeValue);
+            float nextFactor = computeFactor(i, nextAttributeValue);
+
+            const float offset = 0.0001 * (i + 1);
+            currentPositionsLower = initCurrentPosLowerBottom + upTotalRibbon * curFactor - normal * offset;
+            nextPositionsLower = initNextPosLowerBottom + upTotalRibbon * nextFactor - normal * offset;
+        }
+        else
+        {
+            curWidth = diameter;
+            currentPositionsLower = initCurrentPosLowerBottom;
+            nextPositionsLower = initNextPosLowerBottom;
+        }
+
+//        vec3 currentPosLowerBottom = initCurrentPosLowerBottom + currentWidth * up;
+//        //        vec3 currentPosCenter = currentPosLowerBottom + upRibbon / 2 - normal * ribbonWidth / 2.0;
+//        vec3 nextPosLowerBottom = initNextPosLowerBottom + nextWidth * up;
+        //        vec3 nexttPosCenter = nextPosLowerBottom + upRibbon / 2 - normal * ribbonWidth / 2.0;
+        vec3 posOffsets[] = vec3[](currentPositionsLower, currentPositionsLower,
+        nextPositionsLower, nextPositionsLower);
+        float attributes[] = float[](currentAttributeValue, currentAttributeValue,
+        nextAttributeValue, nextAttributeValue);
+        float widths[] = float[](curWidth, curWidth,
+        curWidth, curWidth);
+        //        vec3 posCenters[] = vec3[](currentPosCenter, currentPosCenter, nexttPosCenter, nexttPosCenter);
+        float ribbonOffsets[] = float[](1.0, 0.0, 1.0, 0.0);
+
+        for (int j = 0; j < 4; ++j)
+        {
+            float attributeValue = attributes[j];
+
+            float offset = ribbonOffsets[j];
+            vec3 offsetPos = posOffsets[j];
+            //            vec3 center = posCenters[j];
+
+            float ribbonWidth = widths[j];
+            vec3 upRibbon = up * ribbonWidth;
+
+            vec3 pos = offsetPos + upRibbon * offset;
+            vec3 center = offsetPos + upRibbon / 2.0 - normal * ribbonWidth / 4.0;
+            //            vec3 center = centers[j];
+
+            gl_Position = mvpMatrix * vec4(pos, 1.0);
+            fragmentNormal = normalize(pos - center);
+            fragmentTangent = tangent;
+            fragmentPositionWorld = pos;
+            screenSpacePosition = (vMatrix * mMatrix * vec4(pos, 1.0)).xyz;
+            fragmentAttribute = attributeValue;
+            fragmentAttributeIndex = (i < NUM_MULTI_ATTRIBUTES) ? i : -1;
+            EmitVertex();
+        }
+
+        EndPrimitive();
+    }
+}
+
 -- RibbonGeometry
 
 #version 430 core
@@ -283,17 +414,8 @@ float computeRibbonWidth(in float maxWidth, in uint attributeIndex, in float att
 
 void main()
 {
-//    vec3 currentPoint = (vMatrix * mMatrix * vec4(v_in[0].linePosition, 1.0)).xyz;
-//    vec3 nextPoint = (vMatrix * mMatrix * vec4(v_in[1].linePosition, 1.0)).xyz;
     vec3 currentPoint = (mMatrix * vec4(v_in[0].linePosition, 1.0)).xyz;
     vec3 nextPoint = (mMatrix * vec4(v_in[1].linePosition, 1.0)).xyz;
-
-    //    vec3 normalCurrent = v_in[0].lineNormal;
-    //    vec3 tangentCurrent = v_in[0].lineTangent;
-    //    vec3 binormalCurrent = cross(tangentCurrent, normalCurrent);
-    //    vec3 normalNext = v_in[1].lineNormal;
-    //    vec3 tangentNext = v_in[1].lineTangent;
-    //    vec3 binormalNext = cross(tangentNext, normalNext);
 
     vec3 tangent = nextPoint - currentPoint;
     vec3 normal = (inverse(vMatrix) * vec4(0, 0, -1, 0)).xyz;
@@ -378,6 +500,173 @@ void main()
         nextWidth += nextRibbonWidth;
     }
 }
+
+
+-- TubeRollsGeometry
+
+#version 430 core
+
+layout(lines) in;
+layout(triangle_strip, max_vertices = 128) out;
+
+const uint NUM_MULTI_ATTRIBUTES = 5;
+const uint NUM_SHOWN_ATTRIBUTES = 5;
+
+uniform float radius = 0.001f;
+uniform vec2 minMaxCriterionValues[NUM_MULTI_ATTRIBUTES];
+
+in VertexData
+{
+    vec3 linePosition;
+    vec3 lineNormal;
+    vec3 lineTangent;
+    float lineAttributes[NUM_MULTI_ATTRIBUTES];
+} v_in[];
+
+out vec3 fragmentNormal;
+out vec3 fragmentTangent;
+out vec3 fragmentPositionWorld;
+out vec3 screenSpacePosition;
+flat out float fragmentAttribute;
+flat out int fragmentAttributeIndex;
+
+#define NUM_SEGMENTS 3
+
+float computeRadius(in float minRadius, in float maxRadius, in uint attributeIndex, in float attributeValue)
+{
+    float remainingRadius = maxRadius - minRadius;
+
+    float t = max(0.0, min(1.0,(attributeValue - minMaxCriterionValues[attributeIndex].x)
+    / (minMaxCriterionValues[attributeIndex].y - minMaxCriterionValues[attributeIndex].x)));
+
+    return minRadius + t * remainingRadius;
+}
+
+void main()
+{
+    vec3 currentPoint = (mMatrix * vec4(v_in[0].linePosition, 1.0)).xyz;
+    vec3 nextPoint = (mMatrix * vec4(v_in[1].linePosition, 1.0)).xyz;
+
+    vec3 circlePointsCurrent[NUM_SEGMENTS];
+    vec3 circlePointsNext[NUM_SEGMENTS];
+    vec3 vertexNormalsCurrent[NUM_SEGMENTS];
+    vec3 vertexNormalsNext[NUM_SEGMENTS];
+
+    vec3 normalCurrent = v_in[0].lineNormal;
+    vec3 tangentCurrent = v_in[0].lineTangent;
+    vec3 binormalCurrent = cross(tangentCurrent, normalCurrent);
+    vec3 normalNext = v_in[1].lineNormal;
+    vec3 tangentNext = v_in[1].lineTangent;
+    vec3 binormalNext = cross(tangentNext, normalNext);
+
+    vec3 tangent = normalize(nextPoint - currentPoint);
+    vec3 tangentTube = nextPoint - currentPoint;
+
+    mat3 tangentFrameMatrixCurrent = mat3(normalCurrent, binormalCurrent, tangentCurrent);
+    mat3 tangentFrameMatrixNext = mat3(normalNext, binormalNext, tangentNext);
+
+    const float theta = 2.0 * 3.1415926 / float(NUM_SEGMENTS);
+    const float tangetialFactor = tan(theta); // opposite / adjacent
+    const float radialFactor = cos(theta); // adjacent / hypotenuse
+
+    float maxTubeWidth = length(tangentTube) / float(NUM_SHOWN_ATTRIBUTES);
+    float minTubeWidth = 0.25 * maxTubeWidth;
+    float minRadiusVarTube = radius + 0.05 * radius;
+    float maxRadiusVarTube = radius + 0.5 * radius;
+
+    float curWidthOnTube = 0.0;
+
+    for (int a = 0; a < NUM_SHOWN_ATTRIBUTES + 1; ++a)
+    {
+        float currentAttribute = v_in[0].lineAttributes[a];
+        float nextAttribute = v_in[1].lineAttributes[a];
+
+        float currentRadius = radius;
+        float nextRadius = radius;
+        float currentTubeWidth = 0;
+
+        if (a < NUM_SHOWN_ATTRIBUTES)
+        {
+            currentRadius = computeRadius(minRadiusVarTube, maxRadiusVarTube, a, currentAttribute);
+            nextRadius = computeRadius(minRadiusVarTube, maxRadiusVarTube, a, nextAttribute);
+
+            currentTubeWidth = computeRadius(minTubeWidth, maxTubeWidth, a, currentAttribute);
+        }
+//        float nextTubeWidth = computeRadius(minRadiusVarTube, maxRadiusVarTube, a, nextAttribute);
+
+        vec2 position = vec2(1.0, 0.0);
+
+        for (int i = 0; i < NUM_SEGMENTS; i++) {
+            vec3 tubeCurrentPoint = currentPoint;
+            vec3 tubeNextPoint = nextPoint;
+
+            if (a < NUM_SHOWN_ATTRIBUTES)
+            {
+                tubeCurrentPoint = currentPoint + curWidthOnTube * tangent;
+                tubeNextPoint = tubeCurrentPoint + currentTubeWidth * tangent;
+            }
+
+            vec3 point2DCurrent = tangentFrameMatrixCurrent * vec3(position, 0.0) * currentRadius;
+            vec3 point2DNext = tangentFrameMatrixNext * vec3(position, 0.0) * nextRadius;
+            if (a < NUM_SHOWN_ATTRIBUTES)
+            {
+                point2DNext = tangentFrameMatrixCurrent * vec3(position, 0.0) * nextRadius;
+            }
+            circlePointsCurrent[i] = point2DCurrent.xyz + tubeCurrentPoint;
+            circlePointsNext[i] = point2DNext.xyz + tubeNextPoint;
+            vertexNormalsCurrent[i] = normalize(circlePointsCurrent[i] - tubeCurrentPoint);
+            vertexNormalsNext[i] = normalize(circlePointsNext[i] - tubeNextPoint);
+
+            // Add the tangent vector and correct the position using the radial factor.
+            vec2 circleTangent = vec2(-position.y, position.x);
+            position += tangetialFactor * circleTangent;
+            position *= radialFactor;
+        }
+
+        curWidthOnTube += currentTubeWidth;
+
+        // Emit the tube triangle vertices
+        for (int i = 0; i < NUM_SEGMENTS; i++) {
+            fragmentAttributeIndex = (a < NUM_SHOWN_ATTRIBUTES) ? a : -1;
+
+            gl_Position = mvpMatrix * vec4(circlePointsCurrent[i], 1.0);
+            fragmentNormal = vertexNormalsCurrent[i];
+            fragmentTangent = tangent;
+            fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
+            screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
+            fragmentAttribute = currentAttribute;
+            EmitVertex();
+
+            gl_Position = mvpMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0);
+            fragmentNormal = vertexNormalsCurrent[(i+1)%NUM_SEGMENTS];
+            fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
+            screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
+            fragmentTangent = tangent;
+            fragmentAttribute = currentAttribute;
+            EmitVertex();
+
+            gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
+            fragmentNormal = vertexNormalsNext[i];
+            fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
+            screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
+            fragmentTangent = tangent;
+            fragmentAttribute = nextAttribute;
+            EmitVertex();
+
+            gl_Position = mvpMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0);
+            fragmentNormal = vertexNormalsNext[(i+1)%NUM_SEGMENTS];
+            fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
+            screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
+            fragmentAttribute = nextAttribute;
+            fragmentTangent = tangent;
+            EmitVertex();
+
+            EndPrimitive();
+        }
+    }
+}
+
+
 
 -- Geometry
 
