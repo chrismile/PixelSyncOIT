@@ -97,7 +97,7 @@ void main()
     vec3 vertexNormalsCurrent[NUM_STAR_SEGMENTS + 1];
     vec3 vertexNormalsNext[NUM_STAR_SEGMENTS + 1];
 
-    float innerRadius = radius * 0.5;
+    float innerRadius = radius * 0.2;
 
     const float thetaAll = 2.0 * PI / float(NUM_MULTI_ATTRIBUTES);
     const float thetaSmall = thetaAll * 0.25;

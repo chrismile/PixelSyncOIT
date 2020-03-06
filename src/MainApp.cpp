@@ -914,14 +914,22 @@ void PixelSyncApp::recomputeHistogramForMesh()
     if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
         criterionsMinMaxValues.resize(transparentObject.importanceCriterionAttributes.size());
-        std::vector<glm::vec2> minMaxs = { glm::vec2(204.41896, 298.59796),
-                                           glm::vec2(14579.305, 100395.76),
-                                           glm::vec2(0.0, 0.0046437355),
-                                           glm::vec2(0.0, 0.0066332296),
-                                           glm::vec2(0.0, 0.0008263761),
-                                           glm::vec2(0.0, 0.0056324285),
-                                           glm::vec2(0.0, 0.00069549587),
-                                           glm::vec2(0.0, 0.0101735)};
+//        std::vector<glm::vec2> minMaxs = { glm::vec2(204.41896, 298.59796),
+//                                           glm::vec2(14579.305, 100395.76),
+//                                           glm::vec2(0.0, 0.0046437355),
+//                                           glm::vec2(0.0, 0.0066332296),
+//                                           glm::vec2(0.0, 0.0008263761),
+//                                           glm::vec2(0.0, 0.0056324285),
+//                                           glm::vec2(0.0, 0.00069549587),
+//                                           glm::vec2(0.0, 0.0101735)};
+        std::vector<glm::vec2> minMaxs = { glm::vec2(0, 1.0),
+                                           glm::vec2(0, 1.0),
+                                           glm::vec2(0, 1.0),
+                                           glm::vec2(0, 1.0),
+                                           glm::vec2(0, 1.0),
+                                           glm::vec2(0, 1.0),
+                                           glm::vec2(0, 1.0),
+                                           glm::vec2(0, 1.0)};
 
         for (auto c = 0; c < criterionsMinMaxValues.size(); ++ c)
         {
