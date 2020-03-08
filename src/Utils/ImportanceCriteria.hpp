@@ -41,6 +41,13 @@ enum ImportanceCriterionTypeCFD {
     IMPORTANCE_CRITERION_CFD_VELOCITY,
 };
 
+enum MultiVarRenderModeType {
+    MULTIVAR_RENDERMODE_RIBBONS = 0,
+    MULTIVAR_RENDERMODE_RIBBONS_FIBERS,
+    MULTIVAR_RENDERMODE_STAR_GLYPHS,
+    MULTIVAR_RENDERMODE_TUBE_ROLLS
+};
+
 const char *const IMPORTANCE_CRITERION_ANEURYSM_DISPLAYNAMES[] = {
         "Vorticity", "Line Curvature"
 };
@@ -55,6 +62,10 @@ const char *const IMPORTANCE_CRITERION_CONVECTION_ROLLS_DISPLAYNAMES[] = {
 
 const char *const IMPORTANCE_CRITERION_CFD_DISPLAYNAMES[] = {
         "Vorticity", "Velocity Magnitude"
+};
+
+const char *const MULTIVAR_RENDERTYPE_DISPLAYNAMES[] = {
+        "Ribbons", "Fibers", "Star Glyphs", "Tube Rolls"
 };
 
 

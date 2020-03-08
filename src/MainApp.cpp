@@ -685,9 +685,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             if (!useProgrammableFetch) {
                 if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
                 {
-                    gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
-                                       "PseudoPhongTrajectoriesMultiVar.TubeRollsGeometry",
-                                       "PseudoPhongTrajectoriesMultiVar.Fragment"};
+                    setMultiVarShaders();
                 }
                 else
                 {
@@ -809,6 +807,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             } else if (boost::starts_with(modelFilenamePure, "Data/MultiVar/")) {
                 // ControlPoint(1, 1.94571, 0.761162, 2.9094, -1.61776, -0.0535428)
                 camera->setPosition(glm::vec3(0.679305f, 0.497715f, 0.758344f));
+//                camera->setPosition(glm::vec3(40.0f, 0.497715f, 78.f));
                 camera->setYaw(-1.52659f);
                 camera->setPitch(-0.0471088f);
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
@@ -901,6 +900,36 @@ void PixelSyncApp::changeImportanceCriterionType()
     }
     ShaderManager->addPreprocessorDefine("IMPORTANCE_CRITERION_INDEX", importanceCriterionIndex);
 }
+
+
+void PixelSyncApp::setMultiVarShaders()
+{
+    switch (multiVarRenderMode)
+    {
+    case MULTIVAR_RENDERMODE_RIBBONS:
+        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+                           "PseudoPhongTrajectoriesMultiVar.RibbonGeometry",
+                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+        break;
+    case MULTIVAR_RENDERMODE_RIBBONS_FIBERS:
+        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+                           "PseudoPhongTrajectoriesMultiVar.FibersGeometry",
+                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+        break;
+    case MULTIVAR_RENDERMODE_STAR_GLYPHS:
+        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+                           "PseudoPhongTrajectoriesMultiVar.StarGeometry",
+                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+        break;
+
+    case MULTIVAR_RENDERMODE_TUBE_ROLLS:
+        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+                           "PseudoPhongTrajectoriesMultiVar.TubeRollsGeometry",
+                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+        break;
+    }
+}
+
 
 void PixelSyncApp::recomputeHistogramForMesh()
 {
@@ -1830,6 +1859,27 @@ void PixelSyncApp::renderSceneSettingsGUI()
             transparentObject.setNewShader(transparencyShader);
             reRender = true;
         }
+    }
+
+    if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE)
+    {
+        // Switch importance criterion
+        if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+        {
+            bool success = ImGui::Combo("MultiVar Render Mode", (int*)&multiVarRenderMode,
+                                           MULTIVAR_RENDERTYPE_DISPLAYNAMES,
+                                           IM_ARRAYSIZE(MULTIVAR_RENDERTYPE_DISPLAYNAMES));
+            if (success)
+            {
+                setMultiVarShaders();
+
+                ShaderManager->invalidateShaderCache();
+                updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+                transparentObject.setNewShader(transparencyShader);
+                reRender = true;
+            }
+        }
+
     }
 
     if (ImGui::Combo("AO Mode", (int*)&currentAOTechnique, AO_TECHNIQUE_DISPLAYNAMES,

@@ -187,6 +187,7 @@ private:
             = IMPORTANCE_CRITERION_CFD_CURL;
     ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
+    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_TUBE_ROLLS;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     std::vector<glm::vec2> criterionsMinMaxValues;
@@ -194,6 +195,7 @@ private:
     bool useProgrammableFetch = false;
     bool programmableFetchUseAoS = true; // Array of structs
     void changeImportanceCriterionType();
+    void setMultiVarShaders();
     void recomputeHistogramForMesh();
 
     // Hair rendering

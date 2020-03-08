@@ -571,7 +571,7 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
             tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
             //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
-        if (glm::length(tangent) < 0.0001f) {
+        if (glm::length(tangent) < 1E-7) {
             // In case the two vertices are almost identical, just skip this path line segment
             continue;
         }
