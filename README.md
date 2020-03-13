@@ -1,8 +1,10 @@
 # OIT Rendering Tool (PixelSyncOIT)
+[![DOI](https://zenodo.org/badge/133340475.svg)](https://zenodo.org/badge/latestdoi/133340475)
+
 A visualization tool for rendering triangle, line and point data sets using order independent transparency (OIT).
 
 This tool uses OpenGL 4.5 together with pixel synchronization (GL_ARB_fragment_shader_interlock) to render these data sets.
-It was created for the paper "A Comparison of Rendering Techniques for Large 3D Line Sets with Transparency" (submitted to TVCG).
+It was created for the paper "A Comparison of Rendering Techniques for 3D Line Sets with Transparency" (submitted to TVCG).
 
 IMPORTANT NOTICE: This tool was created as a testing tool for comparing the performance, quality and memory consumption of different OIT rendering algorithms.
 It is not meant to be a stable and full-fledged visualization tool like ParaView. Use at your own risk!
@@ -84,6 +86,10 @@ Additonally, the user also needs to compile OSPRay with support for generalized 
 
 ## Ray tracing with RTX
 
+Click on the DOI link to obtain the RTX program:
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637621.svg)](https://doi.org/10.5281/zenodo.3637621)
+
 RTX ray tracing is build upon a test environment separated from the main program.
 Users need to compile our RTX program with CMake and Visual Studio 2017, first. Note that we currently support Windows 10 only for RTX since SIMD operations are Microsoft-specific. In the future, we plan to adapt the code to support Linux systems, as well.
 
@@ -93,17 +99,15 @@ Build the project "RTX" with Visual Studio 2017 in Release Mode and execute the 
 
 # Supplemental Material
 ## Data Sets
-Triangle Models: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cmodels
+Click on the DOI link to obtain all line data sets:
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637625.svg)](https://doi.org/10.5281/zenodo.3637625)
 
 ## Benchmark Results
 1) Performance Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cperformance
 2) Image Quality Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cimages_quality
 3) Depth Complexity: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cdepth_complexity
 4) Transfer Functions: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Ctransfer_functions
-
-## RTX Program
-3) RTX Program: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5CRTX
 
 ## Videos
 https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cvideos
