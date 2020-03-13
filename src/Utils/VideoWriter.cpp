@@ -90,6 +90,10 @@ void VideoWriter::pushWindowFrame() {
     if (framebuffer == NULL) {
         framebuffer = new uint8_t[frameW * frameH * 3];
     }
+
+    if (frameW % 4 != 0) {
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    }
     glReadPixels(0, 0, frameW, frameH, GL_RGB, GL_UNSIGNED_BYTE, framebuffer);
     pushFrame(framebuffer);
 }
