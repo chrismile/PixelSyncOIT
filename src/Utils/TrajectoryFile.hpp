@@ -10,10 +10,23 @@
 #include <glm/glm.hpp>
 #include "Utils/ImportanceCriteria.hpp"
 
-struct Trajectory {
+class Trajectory {
+public:
+    explicit Trajectory() {}
+
     std::vector<glm::vec3> positions;
     std::vector<std::vector<float>> attributes;
+    std::vector<glm::vec3> tangents;
+    std::vector<uint32_t> segmentID;
 };
+
+//class BezierTrajectory : public Trajectory {
+//public:
+//    explicit BezierTrajectory() : Trajectory() {}
+//
+//    std::vector<glm::vec3> tangents;
+//    std::vector<uint32_t> segmentID;
+//};
 
 typedef std::vector<Trajectory> Trajectories;
 
@@ -30,5 +43,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 Trajectories loadTrajectoriesFromNetCdf(const std::string &filename, TrajectoryType trajectoryType);
 
 Trajectories loadTrajectoriesFromBinLines(const std::string &filename, TrajectoryType trajectoryType);
+
+Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectories);
 
 #endif //PIXELSYNCOIT_TRAJECTORYFILE_HPP

@@ -10,7 +10,130 @@
 #include <Utils/Events/Stream/Stream.hpp>
 #include "NetCDFConverter.hpp"
 #include "TrajectoryFile.hpp"
+#include "BezierCurve.hpp"
 #include <iostream>
+#include <memory>
+
+Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectories)
+{
+    // 1) Determine Bezier segments
+    std::vector<std::vector<BezierCurve>> curves(inTrajectories.size());
+    // Store the arclength of all segments along a curve
+    std::vector<float> curveArcLengths(inTrajectories.size(), 0.0f);
+
+    // Average segment length;
+    float avgSegLength = 0.0f;
+    float numSegments = 0;
+
+    int32_t trajCounter = 0;
+    for (const auto& trajectory : inTrajectories)
+    {
+        std::vector<BezierCurve>& curveSet = curves[trajCounter];
+
+        const int maxVertices = trajectory.positions.size();
+
+        Trajectory BezierTrajectory;
+
+        float minT = 0.0f;
+        float maxT = 1.0f;
+
+        for (int v = 0; v < maxVertices - 1; ++v)
+        {
+            const glm::vec3& pos0 = trajectory.positions[std::max(0, v - 1)];
+            const glm::vec3& pos1 = trajectory.positions[v];
+            const glm::vec3& pos2 = trajectory.positions[v + 1];
+            const glm::vec3& pos3 = trajectory.positions[std::min(v + 2, maxVertices - 1)];
+
+            const glm::vec3 cotangent1 = glm::normalize(pos2 - pos0);
+            const glm::vec3 cotangent2 = glm::normalize(pos3 - pos1);
+            const glm::vec3 tangent = pos2 - pos1;
+            const float lenTangent = glm::length(tangent);
+
+            avgSegLength += lenTangent;
+            numSegments++;
+
+            glm::vec3 C0 = pos1;
+            glm::vec3 C1 = pos1 + cotangent1 * lenTangent * 0.1f;
+            glm::vec3 C2 = pos2 - cotangent2 * lenTangent * 0.1f;
+            glm::vec3 C3 = pos2;
+
+            const std::vector<float>& attributes = trajectory.attributes[v];
+
+//            curveSet.emplace_back({{ C0, C1, C2, C3 }}, minT, maxT);
+            BezierCurve BCurve({{ C0, C1, C2, C3}}, minT, maxT);
+
+            curveSet.push_back(BCurve);
+            curveArcLengths[v] += BCurve.totalArcLength;
+
+            minT += 1.0f;
+            maxT += 1.0f;
+            trajCounter++;
+        }
+    }
+
+    avgSegLength /= numSegments;
+
+    // 2) Compute several equally-distributed / equi-distant points along Bezier curves.
+    // Store these points in a new trajectory
+    float rollSegLength = avgSegLength * 0.25f;
+
+    Trajectories newTrajectories(inTrajectories.size());
+
+    for (int32_t traj = 0; traj < int(inTrajectories.size()); ++traj)
+    {
+        float curArcLength = 0.0f;
+        Trajectory newTrajectory;
+
+        // Obtain set of Bezier Curves
+        std::vector<BezierCurve>& BCurves = curves[traj];
+        // Obtain total arc length
+        const float totalArcLength = curveArcLengths[traj];
+
+        glm::vec3 pos;
+        glm::vec3 tangent;
+        uint32_t lineID = 0;
+        std::vector<float> attributes = inTrajectories[traj].attributes[lineID];
+        // Start with first segment
+        BCurves[0].evaluate(0, pos, tangent);
+
+        newTrajectory.positions.push_back(pos);
+        newTrajectory.attributes.push_back(attributes);
+        newTrajectory.tangents.push_back(tangent);
+        newTrajectory.segmentID.push_back(lineID);
+
+        curArcLength += rollSegLength;
+
+        while(curArcLength <= totalArcLength)
+        {
+            // Obtain current Bezier segment
+            lineID = 0;
+            float sumArcLengths = BCurves[0].totalArcLength;
+            while (sumArcLengths < curArcLength)
+            {
+                lineID++;
+                sumArcLengths += BCurves[lineID].totalArcLength;
+            }
+
+            const auto& BCurve = BCurves[lineID];
+
+            float t = BCurve.solveTForArcLength(curArcLength);
+
+            BCurves[lineID].evaluate(t, pos, tangent);
+            attributes = inTrajectories[traj].attributes[lineID];
+
+            newTrajectory.positions.push_back(pos);
+            newTrajectory.attributes.push_back(attributes);
+            newTrajectory.tangents.push_back(tangent);
+            newTrajectory.segmentID.push_back(lineID);
+
+            curArcLength += rollSegLength;
+        }
+
+        newTrajectories[traj] = newTrajectory;
+    }
+
+    return newTrajectories;
+}
 
 Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryType trajectoryType)
 {
@@ -25,17 +148,24 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
         trajectories = loadTrajectoriesFromBinLines(filename, trajectoryType);
     }
 
+    bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
+    bool isUCLA = trajectoryType == TRAJECTORY_TYPE_UCLA;
+    bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
+    bool isCfdData = trajectoryType == TRAJECTORY_TYPE_CFD;
+    bool isMultiVar = trajectoryType == TRAJECTORY_TYPE_MULTIVAR;
+
+    if (isMultiVar)
+    {
+        // Convert to Bezier curve segments
+    }
+
+
     sgl::AABB3 boundingBox;
     for (Trajectory &trajectory : trajectories) {
         for (glm::vec3 &position : trajectory.positions) {
             boundingBox.combine(position);
         }
     }
-
-    bool isConvectionRolls = trajectoryType == TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
-    bool isUCLA = trajectoryType == TRAJECTORY_TYPE_UCLA;
-    bool isRings = trajectoryType == TRAJECTORY_TYPE_RINGS;
-    bool isCfdData = trajectoryType == TRAJECTORY_TYPE_CFD;
 
     glm::vec3 minVec(boundingBox.getMinimum());
     glm::vec3 maxVec(boundingBox.getMaximum());
@@ -157,7 +287,8 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             if (isMultiVar)
             {
                 float attrs[NUM_MULTI_VARIABLES];
-
+                // Replace with string stream to dynamically parse a number of attributes
+                // Use different attribute names to store multiple variables at each vertex (for statistics computation)
                 sscanf(lineBuffer.c_str() + 2, "%f %f %f %f %f %f", &attrs[0], &attrs[1], &attrs[2],
                        &attrs[3], &attrs[4], &attrs[5]);
 
