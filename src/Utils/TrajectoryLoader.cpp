@@ -526,11 +526,13 @@ void computeLineNormal(const glm::vec3 &tangent, glm::vec3 &normal, const glm::v
  */
 void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
                                 std::vector<std::vector<float>> &importanceCriteriaIn,
+                                std::vector<glm::vec3> &tangentsIn,
                                 std::vector<glm::vec3> &vertices,
                                 std::vector<std::vector<float>> &importanceCriteriaOut,
                                 std::vector<glm::vec3> &tangents,
                                 std::vector<glm::vec3> &normals,
-                                std::vector<uint32_t> &indices)
+                                std::vector<uint32_t> &indices,
+                                const TrajectoryType& trajectoryType)
 {
     int n = (int)pathLineCenters.size();
     int numImportanceCriteria = (int)importanceCriteriaIn.size();
@@ -560,22 +562,29 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
         }
 
         glm::vec3 tangent;
-        if (i == 0) {
-            // First node
-            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
-        } else if (i == n-1) {
-            // Last node
-            tangent = pathLineCenters.at(i) - pathLineCenters.at(i-1);
-        } else {
-            // Node with two neighbors - use both normals
-            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
-            //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
-        }
-        if (glm::length(tangent) < 1E-7) {
-            // In case the two vertices are almost identical, just skip this path line segment
-            continue;
-        }
-        tangent = glm::normalize(tangent);
+//        if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+//        {
+//            tangent = glm::normalize(tangentsIn.at(i));
+//        }
+//        else
+//        {
+            if (i == 0) {
+                // First node
+                tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
+            } else if (i == n-1) {
+                // Last node
+                tangent = pathLineCenters.at(i) - pathLineCenters.at(i-1);
+            } else {
+                // Node with two neighbors - use both normals
+                tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i - 1);
+                //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
+            }
+            if (glm::length(tangent) < 1E-7) {
+                // In case the two vertices are almost identical, just skip this path line segment
+                continue;
+            }
+            tangent = glm::normalize(tangent);
+//        }
 
         glm::vec3 normal;
         computeLineNormal(tangent, normal, lastNormal);
@@ -964,8 +973,10 @@ void convertTrajectoryDataToBinaryLineMesh(
         std::vector<glm::vec3> localNormals;
         std::vector<uint32_t> localIndices;
         std::vector<std::vector<float>> importanceCriteriaOut;
-        createTangentAndNormalData(trajectory.positions, trajectory.attributes, localVertices,
-                                   importanceCriteriaOut, localTangents, localNormals, localIndices);
+        createTangentAndNormalData(trajectory.positions, trajectory.attributes, trajectory.tangents,
+                                   localVertices,
+                                   importanceCriteriaOut, localTangents, localNormals, localIndices,
+                                   trajectoryType);
 
         // Local -> global
         if (localVertices.size() > 0) {

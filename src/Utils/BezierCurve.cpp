@@ -21,10 +21,10 @@ void BezierCurve::evaluate(const float t, glm::vec3& P, glm::vec3& dt) const
     float negT = 1.0f - tN;
     // Check old algorithm to verify the Bezier Curve
     // Original algebraic solution
-    glm::vec3 pos = float(std::pow(negT, 3)) * controlPoints[0]
-            + 3 * float(std::pow(negT, 2)) * tN * controlPoints[1]
-            + 3 * negT * float(std::pow(tN, 2)) * controlPoints[2]
-            + float(std::pow(tN, 3)) * controlPoints[3];
+//    glm::vec3 pos = float(std::pow(negT, 3)) * controlPoints[0]
+//            + 3 * float(std::pow(negT, 2)) * tN * controlPoints[1]
+//            + 3 * negT * float(std::pow(tN, 2)) * controlPoints[2]
+//            + float(std::pow(tN, 3)) * controlPoints[3];
 
     // De-Casteljau algorithm
     auto P01 = glm::mix(controlPoints[0], controlPoints[1], tN);
@@ -34,7 +34,7 @@ void BezierCurve::evaluate(const float t, glm::vec3& P, glm::vec3& dt) const
     auto P12 = glm::mix(P02, P03, tN);
     P = glm::mix(P11, P12, tN);
 
-    auto testDT = derivative(t);
+//    auto testDT = derivative(t);
 
     dt = 3.0f * (P12 - P11);
 }
@@ -47,8 +47,11 @@ glm::vec3 BezierCurve::derivative(const float t) const
     float negT = 1.0f - tN;
 
     // Original algebraic solution
-    glm::vec3 tangent = 6.0f * negT * (controlPoints[2] - 2.0f * controlPoints[1] + controlPoints[0])
-            + 6.0f * tN * (controlPoints[3] - 2.0f * controlPoints[2] + controlPoints[1]);
+//    auto DP01 = controlPoints[1] - controlPoints[0];
+//    auto DP12 = controlPoints[2] - controlPoints[1];
+//    auto DP23 = controlPoints[3] - controlPoints[2];
+//
+//    glm::vec3 tangent = 3.0f * negT * negT * DP01 + 6.0f * negT * tN * DP12 + 3 * tN * tN * DP23;
 
     // De-Casteljau algorithm
     auto P01 = glm::mix(controlPoints[0], controlPoints[1], tN);
@@ -58,12 +61,16 @@ glm::vec3 BezierCurve::derivative(const float t) const
     auto P12 = glm::mix(P02, P03, tN);
 
     auto dt = 3.0f * (P12 - P11);
+
     return dt;
 }
 
 glm::vec3 BezierCurve::curvature(const float t) const
 {
     assert(minT <= t && t <= maxT);
+
+    //    glm::vec3 tangent = 6.0f * negT * (controlPoints[2] - 2.0f * controlPoints[1] + controlPoints[0])
+    //         + 6.0f * tN * (controlPoints[3] - 2.0f * controlPoints[2] + controlPoints[1]);
 
     return glm::vec3(0);
 }
@@ -75,8 +82,10 @@ float BezierCurve::evalArcLength(const float _minT, const float _maxT, const uin
     assert(_minT <= _maxT);
 
     // Normalize min and max borders
-    float minTN = normalizeT(_minT);
-    float maxTN = normalizeT(_maxT);
+//    float minTN = normalizeT(_minT);
+//    float maxTN = normalizeT(_maxT);
+    float minTN = _minT;
+    float maxTN = _maxT;
 
     // Trapezoidal rule for integration
     float h = (maxTN - minTN) / float(numSteps - 1);
@@ -85,7 +94,8 @@ float BezierCurve::evalArcLength(const float _minT, const float _maxT, const uin
 
     for (auto i = 0; i < numSteps; ++i)
     {
-        float curT = minTN + i * h;
+        // Avoid overflow due to numerical error
+        float curT = std::min(minTN + i * h, maxTN);
         float segmentL = glm::length(derivative(curT));
 
         if (i > 0 || i < numSteps - 1)
@@ -109,7 +119,7 @@ float BezierCurve::solveTForArcLength(const float _arcLength) const
     // Initial guess
     float t = minT + _arcLength / totalArcLength * (maxT - minT);
 
-    float delta = 1E-4;
+    float delta = 1E-5;
     // We use bisection to get closer to our solution
     float lower = minT;
     float upper = maxT;

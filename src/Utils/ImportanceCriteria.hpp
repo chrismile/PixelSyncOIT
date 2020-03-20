@@ -45,7 +45,8 @@ enum MultiVarRenderModeType {
     MULTIVAR_RENDERMODE_RIBBONS = 0,
     MULTIVAR_RENDERMODE_RIBBONS_FIBERS,
     MULTIVAR_RENDERMODE_STAR_GLYPHS,
-    MULTIVAR_RENDERMODE_TUBE_ROLLS
+    MULTIVAR_RENDERMODE_TUBE_ROLLS,
+    MULTIVAR_RENDERMODE_LINE
 };
 
 const char *const IMPORTANCE_CRITERION_ANEURYSM_DISPLAYNAMES[] = {
@@ -65,7 +66,7 @@ const char *const IMPORTANCE_CRITERION_CFD_DISPLAYNAMES[] = {
 };
 
 const char *const MULTIVAR_RENDERTYPE_DISPLAYNAMES[] = {
-        "Ribbons", "Fibers", "Star Glyphs", "Tube Rolls"
+        "Ribbons", "Fibers", "Star Glyphs", "Tube Rolls", "Line"
 };
 
 

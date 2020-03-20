@@ -688,13 +688,16 @@ in VertexData
     float lineAttributes[NUM_MULTI_ATTRIBUTES];
 } v_in[];
 
+in int gl_PrimitiveIDIn;
+
 out vec3 fragmentNormal;
 out vec3 fragmentTangent;
 out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 flat out float fragmentAttribute;
+flat out int fragmentAttributeIndex;
 
-#define NUM_SEGMENTS 5
+#define NUM_SEGMENTS 9
 
 void main()
 {
@@ -736,6 +739,8 @@ void main()
         position += tangetialFactor * circleTangent;
         position *= radialFactor;
     }
+
+    fragmentAttributeIndex = gl_PrimitiveIDIn;
 
     // Emit the tube triangle vertices
     for (int i = 0; i < NUM_SEGMENTS; i++) {
@@ -850,14 +855,14 @@ void main()
     float shadowFactor = 1.0f;
 #endif
 
-    vec4 colorAttribute = transferFunction(fragmentAttributeIndex, CUR_ATTRIBUTE);
-    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(0.4, 0.4, 0.4, 1); }
-    if (fragmentAttributeIndex == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
-    if (fragmentAttributeIndex == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
-    if (fragmentAttributeIndex == 2) { colorAttribute = vec4(0, 0, 0.7, 1); }
-    if (fragmentAttributeIndex == 3) { colorAttribute = vec4(0.7, 0, 0.7, 1); }
-    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(0.7, 0.7, 0, 1); }
-    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(0, 0.7, 0.7, 1); }
+    vec4 colorAttribute = transferFunction(fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES, CUR_ATTRIBUTE);
+    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == -1) { colorAttribute = vec4(0.4, 0.4, 0.4, 1); }
+    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
+    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
+    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 2) { colorAttribute = vec4(0, 0, 0.7, 1); }
+    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 3) { colorAttribute = vec4(0.7, 0, 0.7, 1); }
+    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 4) { colorAttribute = vec4(0.7, 0.7, 0, 1); }
+    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 5) { colorAttribute = vec4(0, 0.7, 0.7, 1); }
 
     #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
     vec3 fragmentNormal;

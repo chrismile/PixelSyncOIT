@@ -53,8 +53,8 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
             numSegments++;
 
             glm::vec3 C0 = pos1;
-            glm::vec3 C1 = pos1 + cotangent1 * lenTangent * 0.1f;
-            glm::vec3 C2 = pos2 - cotangent2 * lenTangent * 0.1f;
+            glm::vec3 C1 = pos1 + cotangent1 * lenTangent * 0.5f;
+            glm::vec3 C2 = pos2 - cotangent2 * lenTangent * 0.5f;
             glm::vec3 C3 = pos2;
 
             const std::vector<float>& attributes = trajectory.attributes[v];
@@ -63,19 +63,20 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
             BezierCurve BCurve({{ C0, C1, C2, C3}}, minT, maxT);
 
             curveSet.push_back(BCurve);
-            curveArcLengths[v] += BCurve.totalArcLength;
+            curveArcLengths[trajCounter] += BCurve.totalArcLength;
 
             minT += 1.0f;
             maxT += 1.0f;
-            trajCounter++;
         }
+
+        trajCounter++;
     }
 
     avgSegLength /= numSegments;
 
     // 2) Compute several equally-distributed / equi-distant points along Bezier curves.
     // Store these points in a new trajectory
-    float rollSegLength = avgSegLength * 0.25f;
+    float rollSegLength = avgSegLength * 0.2f;
 
     Trajectories newTrajectories(inTrajectories.size());
 
@@ -97,34 +98,49 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         BCurves[0].evaluate(0, pos, tangent);
 
         newTrajectory.positions.push_back(pos);
-        newTrajectory.attributes.push_back(attributes);
         newTrajectory.tangents.push_back(tangent);
         newTrajectory.segmentID.push_back(lineID);
 
+        newTrajectory.attributes.resize(inTrajectories[traj].attributes.size());
+
+        for (auto a = 0; a < inTrajectories[traj].attributes.size(); ++a)
+        {
+            newTrajectory.attributes[a].push_back(inTrajectories[traj].attributes[a][lineID]);
+        }
+
         curArcLength += rollSegLength;
+
+        lineID = 0;
+        float sumArcLengths = 0.0f;  //BCurves[0].totalArcLength;
+        float sumArcLengthsNext = BCurves[0].totalArcLength;
+
+
 
         while(curArcLength <= totalArcLength)
         {
-            // Obtain current Bezier segment
-            lineID = 0;
-            float sumArcLengths = BCurves[0].totalArcLength;
-            while (sumArcLengths < curArcLength)
+            // Obtain current Bezier segment index based on arc length
+            while (sumArcLengthsNext < curArcLength)
             {
                 lineID++;
-                sumArcLengths += BCurves[lineID].totalArcLength;
+                sumArcLengths = sumArcLengthsNext;
+                sumArcLengthsNext += BCurves[lineID].totalArcLength;
             }
 
             const auto& BCurve = BCurves[lineID];
 
-            float t = BCurve.solveTForArcLength(curArcLength);
+            float t = BCurve.solveTForArcLength(curArcLength - sumArcLengths);
 
             BCurves[lineID].evaluate(t, pos, tangent);
-            attributes = inTrajectories[traj].attributes[lineID];
+//            attributes = inTrajectories[traj].attributes[lineID];
 
             newTrajectory.positions.push_back(pos);
-            newTrajectory.attributes.push_back(attributes);
             newTrajectory.tangents.push_back(tangent);
             newTrajectory.segmentID.push_back(lineID);
+
+            for (auto a = 0; a < inTrajectories[traj].attributes.size(); ++a)
+            {
+                newTrajectory.attributes[a].push_back(inTrajectories[traj].attributes[a][lineID]);
+            }
 
             curArcLength += rollSegLength;
         }
@@ -157,6 +173,7 @@ Trajectories loadTrajectoriesFromFile(const std::string &filename, TrajectoryTyp
     if (isMultiVar)
     {
         // Convert to Bezier curve segments
+        trajectories = convertTrajectoriesToBezierCurves(trajectories);
     }
 
 

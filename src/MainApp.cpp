@@ -927,6 +927,11 @@ void PixelSyncApp::setMultiVarShaders()
                            "PseudoPhongTrajectoriesMultiVar.TubeRollsGeometry",
                            "PseudoPhongTrajectoriesMultiVar.Fragment"};
         break;
+    case MULTIVAR_RENDERMODE_LINE:
+        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+                           "PseudoPhongTrajectoriesMultiVar.Geometry",
+                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+        break;
     }
 }
 

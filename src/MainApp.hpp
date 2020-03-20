@@ -187,7 +187,7 @@ private:
             = IMPORTANCE_CRITERION_CFD_CURL;
     ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
-    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_TUBE_ROLLS;
+    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_LINE;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     std::vector<glm::vec2> criterionsMinMaxValues;
