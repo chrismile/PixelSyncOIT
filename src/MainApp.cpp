@@ -710,8 +710,15 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     updateShaderMode(SHADER_MODE_UPDATE_NEW_MODEL);
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING) {
+        int instancing = 0;
+        if (multiVarRenderMode == MULTIVAR_RENDERMODE_LINE_INSTANCED)
+        {
+            instancing = 6;
+        }
+
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
-                useProgrammableFetch, programmableFetchUseAoS, lineRadius);
+                useProgrammableFetch, programmableFetchUseAoS, lineRadius,
+                instancing);
         if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
             recomputeHistogramForMesh();
         }
@@ -930,6 +937,11 @@ void PixelSyncApp::setMultiVarShaders()
     case MULTIVAR_RENDERMODE_LINE:
         gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
                            "PseudoPhongTrajectoriesMultiVar.Geometry",
+                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+        break;
+    case MULTIVAR_RENDERMODE_LINE_INSTANCED:
+        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.InstanceVertex",
+                           "PseudoPhongTrajectoriesMultiVar.InstanceGeometry",
                            "PseudoPhongTrajectoriesMultiVar.Fragment"};
         break;
     }

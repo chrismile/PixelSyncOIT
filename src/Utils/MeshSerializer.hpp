@@ -86,6 +86,17 @@ struct BinaryMeshUniform
     std::vector<uint8_t> data;
 };
 
+struct BinaryLineVariable
+{
+    std::string name; // .e.g. "temperature"
+    sgl::VertexAttributeFormat attributeFormat;
+    uint32_t numComponents;
+    std::vector<uint8_t> data;
+    uint32_t index; // index of variable to identify variable along curve
+    float minValue; // minimum value
+    float maxValue; // maximum value
+};
+
 struct BinarySubMesh
 {
     ObjMaterial material;
@@ -93,6 +104,7 @@ struct BinarySubMesh
     std::vector<uint32_t> indices;
     std::vector<BinaryMeshAttribute> attributes;
     std::vector<BinaryMeshUniform> uniforms;
+    std::vector<BinaryLineVariable> variables;
 };
 
 struct BinaryMesh
@@ -169,6 +181,7 @@ class LineMultiVarRenderer : public MeshRenderer
  * @return: The loaded mesh stored in a ShaderAttributes object.
  */
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData = false,
-        bool useProgrammableFetch = false, bool programmableFetchUseAoS = true, float lineRadius = 0.001f);
+        bool useProgrammableFetch = false, bool programmableFetchUseAoS = true,
+        float lineRadius = 0.001f, int instancing = 0);
 
 #endif /* UTILS_MESHSERIALIZER_HPP_ */

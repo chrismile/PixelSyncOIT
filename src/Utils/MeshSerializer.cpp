@@ -70,6 +70,19 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
             stream.write((uint32_t)uniform.numComponents);
             stream.writeArray(uniform.data);
         }
+
+        // Write variables
+        stream.write((uint32_t)submesh.variables.size());
+        for (const BinaryLineVariable &variable : submesh.variables)
+        {
+            stream.write(variable.name);
+            stream.write((uint32_t)variable.attributeFormat);
+            stream.write((uint32_t)variable.numComponents);
+            stream.write((uint32_t)variable.index);
+            stream.writeArray(variable.data);
+            stream.write<float>(variable.minValue);
+            stream.write<float>(variable.maxValue);
+        }
     }
 
 #ifndef __MINGW32__
@@ -361,7 +374,7 @@ struct LinePointData
 };
 
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData,
-        bool useProgrammableFetch, bool programmableFetchUseAoS, float lineRadius)
+        bool useProgrammableFetch, bool programmableFetchUseAoS, float lineRadius, int instancing)
 {
     MeshRenderer meshRenderer(useProgrammableFetch);
     BinaryMesh mesh;
@@ -391,6 +404,11 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
             renderData->setVertexMode(submesh.vertexMode);
         } else {
             renderData->setVertexMode(VERTEX_MODE_TRIANGLES);
+        }
+
+        if (instancing > 0)
+        {
+            renderData->setInstanceCount(instancing);
         }
 
         if (submesh.indices.size() > 0 && !useProgrammableFetch) {
@@ -440,6 +458,38 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
         std::vector<std::vector<float>> vertexAttributeData;
         std::vector<glm::vec3> vertexTangentData;
 
+        for (size_t j = 0; j < submesh.variables.size(); j++) {
+            BinaryLineVariable &lineVariable = submesh.variables.at(j);
+            GeometryBufferPtr attributeBuffer;
+
+            // Currently all variables are 1-dimensional
+            if (lineVariable.numComponents == 1)
+            {
+                ImportanceCriterionAttribute importanceCriterionAttribute;
+                importanceCriterionAttribute.name = lineVariable.name;
+
+                int64_t numAttributeValues = 0;
+
+                float *attributeValuesUnorm = reinterpret_cast<float*>(&lineVariable.data.front());
+                numAttributeValues = lineVariable.data.size() / sizeof(float);
+
+                importanceCriterionAttribute.attributes.resize(numAttributeValues);
+
+                for (auto a = 0; a < numAttributeValues; ++a)
+                {
+                    importanceCriterionAttribute.attributes[a] = attributeValuesUnorm[a];
+                }
+
+                importanceCriterionAttribute.minAttribute = lineVariable.minValue;
+                importanceCriterionAttribute.maxAttribute = lineVariable.maxValue;
+
+                meshRenderer.importanceCriterionAttributes.push_back(importanceCriterionAttribute);
+
+                renderData->addGeometryBufferOptional(attributeBuffer, lineVariable.name.c_str(),
+                                                      lineVariable.attributeFormat, lineVariable.numComponents, 0, 0, 0, true);
+            }
+        }
+
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
             BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
             GeometryBufferPtr attributeBuffer;
@@ -450,6 +500,7 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 importanceCriterionAttribute.name = meshAttribute.name;
 
                 size_t numAttributeValues = 0;
+
                 // Copy values to mesh renderer data structure
                 if (meshAttribute.attributeFormat == ATTRIB_UNSIGNED_SHORT)
                 {
@@ -526,6 +577,8 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                     // Importance criterion attributes are bound to location 3 and onwards in vertex shader
                     /*renderData->addGeometryBuffer(attributeBuffer, importanceCriterionLocationCounter,
                             meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true); */
+
+                    //! TODO This is the point where we set optional buffers
                     renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
                             meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true);
                 } else {
