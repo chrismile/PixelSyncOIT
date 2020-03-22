@@ -42,6 +42,7 @@ void main()
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexLineNormal;
 layout(location = 2) in vec3 vertexLineTangent;
+layout(location = 3) in vec4 multiVariable;
 
 out VertexData
 {
@@ -49,6 +50,7 @@ out VertexData
     vec3 lineNormal;
     vec3 lineTangent;
     int instanceID;
+    vec4 lineVariable;
 };
 
 void main()
@@ -56,6 +58,7 @@ void main()
     linePosition = vertexPosition;
     lineNormal = vertexLineNormal;
     lineTangent = vertexLineTangent;
+    lineVariable = multiVariable;
     instanceID = gl_InstanceID;
 }
 
@@ -825,6 +828,7 @@ in VertexData
     vec3 lineNormal;
     vec3 lineTangent;
     int instanceID;
+    vec4 lineVariable;
 } v_in[];
 
 in int gl_PrimitiveIDIn;
@@ -867,8 +871,28 @@ void main()
     float tangetialFactor = tan(theta); // opposite / adjacent
     float radialFactor = cos(theta); // adjacent / hypotenuse
 
-    vec2 position = vec2(radius * 0.5 * (instanceID + 1) * 0.5 * (gl_PrimitiveIDIn % MAX_NUM_CIRLCE_SEGMENTS + 1), 0.0);
-//    vec2 position = vec2(radius, 0.0);
+    //    fragmentAttributeIndex = gl_PrimitiveIDIn; //instanceID;//gl_PrimitiveIDIn;
+    vec4 varInfo = v_in[0].lineVariable;
+
+    fragmentAttributeIndex = int(varInfo.w);
+
+    float curRadius = radius * 0.25;
+
+    if (fragmentAttributeIndex > -1)
+    {
+        fragmentAttribute = ((varInfo.x - varInfo.y) / (varInfo.z - varInfo.y)) * 0.7 + 0.3;
+
+        curRadius = fragmentAttribute * radius * 0.75 + radius * 0.25;
+    }
+    else
+    {
+        fragmentAttribute = 0;
+    }
+
+//    vec2 position = vec2(radius * 0.5 * (instanceID + 1) * 0.5 * (gl_PrimitiveIDIn % MAX_NUM_CIRLCE_SEGMENTS + 1), 0.0);
+    curRadius = radius;
+
+    vec2 position = vec2(curRadius, 0.0);
     // adjust start position
     for (int i = 0; i < instanceID; i++) {
         vec2 circleTangent = vec2(-position.y, position.x);
@@ -894,8 +918,6 @@ void main()
         position *= radialFactor;
     }
 
-    fragmentAttributeIndex = gl_PrimitiveIDIn; //instanceID;//gl_PrimitiveIDIn;
-
     // Emit the tube triangle vertices
     for (int i = 0; i < NUM_SEGMENTS - 1; i++) {
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[i], 1.0);
@@ -903,7 +925,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0);
@@ -911,7 +933,7 @@ void main()
         fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         fragmentTangent = tangent;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
@@ -919,14 +941,14 @@ void main()
         fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         fragmentTangent = tangent;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0);
         fragmentNormal = vertexNormalsNext[(i+1)%NUM_SEGMENTS];
         fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         fragmentTangent = tangent;
         EmitVertex();
 
@@ -944,7 +966,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(currentPoint, 1.0);
@@ -952,7 +974,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(currentPoint, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(currentPoint, 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[i + 1], 1.0);
@@ -960,7 +982,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[i + 1], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i + 1], 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         EndPrimitive();
@@ -974,7 +996,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[i + 1], 1.0);
@@ -982,7 +1004,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i + 1], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i + 1], 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(nextPoint, 1.0);
@@ -990,7 +1012,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(nextPoint, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(nextPoint, 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         EndPrimitive();
@@ -1005,7 +1027,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
         if (i == 0)
@@ -1016,7 +1038,7 @@ void main()
             fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
             fragmentTangent = tangent;
-            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
 
             gl_Position = mvpMatrix * vec4(currentPoint, 1.0);
@@ -1024,7 +1046,7 @@ void main()
             fragmentPositionWorld = (mMatrix * vec4(currentPoint, 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(currentPoint, 1.0)).xyz;
             fragmentTangent = tangent;
-            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
         }
         else
@@ -1034,7 +1056,7 @@ void main()
             fragmentPositionWorld = (mMatrix * vec4(currentPoint, 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(currentPoint, 1.0)).xyz;
             fragmentTangent = tangent;
-            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
 
             gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
@@ -1042,7 +1064,7 @@ void main()
             fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
             fragmentTangent = tangent;
-            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
         }
 
@@ -1051,7 +1073,7 @@ void main()
 //        fragmentNormal = vertexNormalsNext[(i+1)%NUM_SEGMENTS];
         fragmentPositionWorld = (mMatrix * vec4(nextPoint, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(nextPoint, 1.0)).xyz;
-        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
+//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         fragmentTangent = tangent;
         EmitVertex();
 
@@ -1121,6 +1143,23 @@ vec4 transferFunction(float attr, uint index)
     return texture(transferFunctionTexture, posFloat);
 }
 
+vec3 saturate(in vec3 color, in float saturateFactor)
+{
+    color *= 0.1;
+
+    float gray = 0.2989*color.r + 0.5870*color.g + 0.1140*color.b; //weights from CCIR 601 spec
+    vec3 newColor;
+    newColor.r = -gray * saturateFactor + color.r * (1 + saturateFactor);
+    newColor.g = -gray * saturateFactor + color.g * (1 + saturateFactor);
+    newColor.b = -gray * saturateFactor + color.b * (1 + saturateFactor);
+
+    newColor.r = min(1.0, max(0.0, newColor.r));
+    newColor.g = min(1.0, max(0.0, newColor.g));
+    newColor.b = min(1.0, max(0.0, newColor.b));
+
+    return newColor;
+}
+
 void main()
 {
 #if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
@@ -1134,18 +1173,33 @@ void main()
 #endif
 
     vec4 colorAttribute = transferFunction(fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES, CUR_ATTRIBUTE);
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == -1) { colorAttribute = vec4(0.4, 0.4, 0.4, 1); }
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 2) { colorAttribute = vec4(0, 0, 0.7, 1); }
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 3) { colorAttribute = vec4(0.7, 0, 0.7, 1); }
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 4) { colorAttribute = vec4(0.7, 0.7, 0, 1); }
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 5) { colorAttribute = vec4(0, 0.7, 0.7, 1); }
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == -1) { colorAttribute = vec4(0.4, 0.4, 0.4, 1); }
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 2) { colorAttribute = vec4(0, 0, 0.7, 1); }
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 3) { colorAttribute = vec4(0.7, 0, 0.7, 1); }
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 4) { colorAttribute = vec4(0.7, 0.7, 0, 1); }
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 5) { colorAttribute = vec4(0, 0.7, 0.7, 1); }
 
-    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 3 && fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 0)
+    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(1, 1, 1, 1); }
+    if (fragmentAttributeIndex == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
+    if (fragmentAttributeIndex == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
+    if (fragmentAttributeIndex == 2) { colorAttribute = vec4(0, 0, 0.7, 1); }
+    if (fragmentAttributeIndex == 3) { colorAttribute = vec4(1, 0, 1, 1); }
+    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(1, 1, 0, 1); }
+    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(0, 1, 1, 1); }
+
+//    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 0 && fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 5)
+//    {
+//        colorAttribute.a = 0.1;
+//    }
+
+    if (fragmentAttributeIndex > -1)
     {
-        colorAttribute.a = 0.1;
+//        colorAttribute.rgb *= fragmentAttribute;
+        colorAttribute.rgb = saturate(colorAttribute.rgb, fragmentAttribute * 15);
     }
+
 
     #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
     vec3 fragmentNormal;
@@ -1167,8 +1221,8 @@ void main()
 
     const float kA = 0.05 * occlusionFactor * shadowFactor;
     const vec3 Ia = kA * ambientColor;
-    const float kD = 0.75;
-    const float kS = 0.2;
+    const float kD = 0.85;
+    const float kS = 0.1;
     const float s = 10;
 
     const vec3 n = normalize(fragmentNormal);

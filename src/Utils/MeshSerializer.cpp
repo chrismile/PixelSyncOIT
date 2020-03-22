@@ -552,6 +552,57 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 
             BufferType bufferType = useProgrammableFetch ? SHADER_STORAGE_BUFFER : VERTEX_BUFFER;
 
+            if (meshAttribute.name.find("multiVariable") != meshAttribute.name.npos)
+            {
+                glm::vec4 *attributeValues = (glm::vec4*)&meshAttribute.data.front();
+                size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec4);
+                std::vector<glm::vec4> vec4AttributeValues;
+                vec4AttributeValues.reserve(numAttributeValues);
+
+                // TODO current HACK
+                uint32_t maxNumVars = 6;
+                std::vector<std::vector<float>> varValues(maxNumVars);
+                std::vector<glm::vec2> minMaxValues(maxNumVars, glm::vec2(0, 0));
+
+                for (size_t i = 0; i < numAttributeValues; i++) {
+                    glm::vec4 vec4Value = attributeValues[i];
+                    vec4AttributeValues.push_back(vec4Value); // maybe this is unecessary
+
+                    if (vec4Value.w >= 0)
+                    {
+                        varValues[vec4Value.w].push_back(vec4Value.x);
+                        minMaxValues[vec4Value.w] = glm::vec2(vec4Value.y, vec4Value.z);
+                    }
+                }
+
+                for (auto a = 0; a < maxNumVars; ++a)
+                {
+                    ImportanceCriterionAttribute importanceCriterionAttribute;
+                    importanceCriterionAttribute.name = meshAttribute.name;
+                    importanceCriterionAttribute.attributes = varValues[a];
+                    importanceCriterionAttribute.minAttribute = minMaxValues[a].x;
+                    importanceCriterionAttribute.maxAttribute = minMaxValues[a].y;
+
+                    meshRenderer.importanceCriterionAttributes.push_back(importanceCriterionAttribute);
+                }
+
+
+                for (size_t i = 0; i < numAttributeValues; i++) {
+                    glm::vec4 vec4Value = attributeValues[i];
+                    vec4AttributeValues.push_back(vec4Value); // maybe this is unecessary
+
+                    // create importance criterion attributes
+                    ImportanceCriterionAttribute importanceCriterionAttribute;
+                    importanceCriterionAttribute.name = meshAttribute.name;
+                }
+
+
+
+                attributeBuffer = Renderer->createGeometryBuffer(
+                        vec4AttributeValues.size() * sizeof(glm::vec4),
+                        (void*)&vec4AttributeValues.front(), bufferType);
+            }
+
             if (!(useProgrammableFetch && programmableFetchUseAoS)
                 && !(meshAttribute.numComponents == 1 && useProgrammableFetch)
                 && !(meshAttribute.numComponents == 3 && useProgrammableFetch)) {

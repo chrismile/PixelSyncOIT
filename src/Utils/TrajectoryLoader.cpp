@@ -1065,16 +1065,38 @@ void convertTrajectoryDataToBinaryLineMesh(
     }
     else
     {
-        for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
-            std::vector<float> &currentAttr = globalImportanceCriteria.at(i);
-            BinaryMeshAttribute vertexAttribute;
-            vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
-            vertexAttribute.attributeFormat = ATTRIB_FLOAT;
-            vertexAttribute.numComponents = 1;
-            vertexAttribute.data.resize(currentAttr.size() * sizeof(float));
-            memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(float));
-            submesh.attributes.push_back(vertexAttribute);
+        // Old deprecated storing
+//        for (size_t i = 0; i < globalImportanceCriteria.size(); i++) {
+//            std::vector<float> &currentAttr = globalImportanceCriteria.at(i);
+//            BinaryMeshAttribute vertexAttribute;
+//            vertexAttribute.name = "vertexAttribute" + sgl::toString(i);
+//            vertexAttribute.attributeFormat = ATTRIB_FLOAT;
+//            vertexAttribute.numComponents = 1;
+//            vertexAttribute.data.resize(currentAttr.size() * sizeof(float));
+//            memcpy(&vertexAttribute.data.front(), &currentAttr.front(), currentAttr.size() * sizeof(float));
+//            submesh.attributes.push_back(vertexAttribute);
+//        }
+
+        // New behavior: --> we store the attributes in a vec4 with (value, min, max, varID)
+        std::vector<glm::vec4> multiVariablesAttr(globalImportanceCriteria.at(0).size());
+
+        for (auto v = 0; v < globalImportanceCriteria.at(0).size(); v++)
+        {
+            glm::vec4 attr(globalImportanceCriteria.at(0)[v],
+                           globalImportanceCriteria.at(1)[v],
+                           globalImportanceCriteria.at(2)[v],
+                           globalImportanceCriteria.at(3)[v]);
+
+            multiVariablesAttr[v] = attr;
         }
+
+        BinaryMeshAttribute vertexAttribute;
+        vertexAttribute.name = "multiVariable";
+        vertexAttribute.attributeFormat = ATTRIB_FLOAT;
+        vertexAttribute.numComponents = 4;
+        vertexAttribute.data.resize(multiVariablesAttr.size() * sizeof(glm::vec4));
+        memcpy(&vertexAttribute.data.front(), &multiVariablesAttr.front(), multiVariablesAttr.size() * sizeof(glm::vec4));
+        submesh.attributes.push_back(vertexAttribute);
     }
 
     auto end = std::chrono::system_clock::now();
