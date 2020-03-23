@@ -880,9 +880,10 @@ void main()
 
     if (fragmentAttributeIndex > -1)
     {
-        fragmentAttribute = ((varInfo.x - varInfo.y) / (varInfo.z - varInfo.y)) * 0.9 + 0.1;
+        fragmentAttribute = (varInfo.x - varInfo.y) / (varInfo.z - varInfo.y);
+        float interpolant = fragmentAttribute * 0.9 + 0.1;
 
-        curRadius = fragmentAttribute * radius * 0.75 + radius * 0.25;
+        curRadius = interpolant * radius * 0.75 + radius * 0.25;
     }
     else
     {
@@ -1247,6 +1248,34 @@ vec3 hsvToRGB(in vec3 color)
     }
 }
 
+vec3 linearRGBTosRGB(in vec3 color_sRGB)
+{
+//float factor = 1.0f / 2.2f;
+//return glm::pow(color_sRGB, glm::vec3(factor));
+// See https://en.wikipedia.org/wiki/SRGB
+return mix(1.055f * pow(color_sRGB, vec3(1.0f / 2.4f)) - 0.055f, color_sRGB * 12.92f,
+                        lessThanEqual(color_sRGB, vec3(0.0031308f)));
+}
+
+vec3 sRGBToLinearRGB(in vec3 color_LinearRGB)
+{
+//float factor = 2.2f;
+//return glm::pow(color_LinearRGB, glm::vec3(factor));
+// See https://en.wikipedia.org/wiki/SRGB
+return mix(pow((color_LinearRGB + 0.055f) / 1.055f, vec3(2.4f)),
+            color_LinearRGB / 12.92f, lessThanEqual(color_LinearRGB, vec3(0.04045f)));
+}
+
+
+// https://stats.stackexchange.com/questions/214877/is-there-a-formula-for-an-s-shaped-curve-with-domain-and-range-0-1
+float sigmoid_zero_one(in float x)
+{
+    float beta = 2.2;
+
+    float denom = 1.0 + pow((x / (1 - x)), beta);
+    return 1.0 - 1.0 / denom;
+}
+
 void main()
 {
 #if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
@@ -1268,14 +1297,29 @@ void main()
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 4) { colorAttribute = vec4(0.7, 0.7, 0, 1); }
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 5) { colorAttribute = vec4(0, 0.7, 0.7, 1); }
 
-    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(1, 1, 1, 1); }
-    if (fragmentAttributeIndex == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
-    if (fragmentAttributeIndex == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
-    if (fragmentAttributeIndex == 2) { colorAttribute = vec4(0, 0, 0.7, 1); }
-    if (fragmentAttributeIndex == 3) { colorAttribute = vec4(1, 0, 1, 1); }
-    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(1, 1, 0, 1); }
-    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(0, 1, 1, 1); }
+//    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(0.6, 0.6, 0.6, 1); }
+    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(0.8, 0.8, 0.8, 1); }
+//    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(247 / 255.0, 129 / 255.0, 191 / 255.0, 1); }
 
+//    if (fragmentAttributeIndex == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
+//    if (fragmentAttributeIndex == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
+//    if (fragmentAttributeIndex == 2) { colorAttribute = vec4(0, 0, 0.7, 1); }
+//    if (fragmentAttributeIndex == 3) { colorAttribute = vec4(1, 0, 1, 1); }
+//    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(1, 1, 0, 1); }
+//    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(0, 1, 1, 1); }
+
+    // https://www.rapidtables.com/convert/color/rgb-to-hsv.html
+    // https://colorbrewer2.org/#type=qualitative&scheme=Set1&n=9
+
+    if (fragmentAttributeIndex == 0) { colorAttribute = vec4(227 / 255.0, 26 / 255.0, 28 / 255.0, 1); }
+    if (fragmentAttributeIndex == 1) { colorAttribute = vec4(51 / 255.0, 160 / 255.0, 44 / 255.0, 1); }
+    if (fragmentAttributeIndex == 2) { colorAttribute = vec4(31 / 255.0, 120 / 255.0, 180 / 255.0, 1); }
+    if (fragmentAttributeIndex == 3) { colorAttribute = vec4(152 / 255.0, 78 / 255.0, 163 / 255.0, 1); }
+    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 255 / 255.0, 51 / 255.0, 1); }
+//    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
+    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(177 / 255.0, 89 / 255.0, 40 / 255.0, 1); }
+
+    colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 0 && fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 5)
 //    {
 //        colorAttribute.a = 0.1;
@@ -1285,7 +1329,7 @@ void main()
     {
         vec3 hsvCol = rgbToHSV(colorAttribute.rgb);
         hsvCol.g = 1;
-        hsvCol.g *= fragmentAttribute;
+        hsvCol.g = 0.25 + 0.75 * sigmoid_zero_one(fragmentAttribute);
         colorAttribute.rgb = hsvToRGB(hsvCol);
 
 //        colorAttribute.rgb *= fragmentAttribute;
@@ -1311,10 +1355,10 @@ void main()
     const vec3 ambientColor = colorAttribute.rgb;
     const vec3 diffuseColor = colorAttribute.rgb;
 
-    const float kA = 0.05 * occlusionFactor * shadowFactor;
+    const float kA = 0.1 * occlusionFactor * shadowFactor;
     const vec3 Ia = kA * ambientColor;
     const float kD = 0.85;
-    const float kS = 0.1;
+    const float kS = 0.05;
     const float s = 10;
 
     const vec3 n = normalize(fragmentNormal);
