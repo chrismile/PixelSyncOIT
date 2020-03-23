@@ -880,7 +880,7 @@ void main()
 
     if (fragmentAttributeIndex > -1)
     {
-        fragmentAttribute = ((varInfo.x - varInfo.y) / (varInfo.z - varInfo.y)) * 0.7 + 0.3;
+        fragmentAttribute = ((varInfo.x - varInfo.y) / (varInfo.z - varInfo.y)) * 0.9 + 0.1;
 
         curRadius = fragmentAttribute * radius * 0.75 + radius * 0.25;
     }
@@ -1160,6 +1160,93 @@ vec3 saturate(in vec3 color, in float saturateFactor)
     return newColor;
 }
 
+vec3 rgbToHSV(in vec3 color)
+{
+    float minValue = min(color.r, min(color.g, color.b));
+    float maxValue = max(color.r, max(color.g, color.b));
+
+    float C = maxValue - minValue;
+
+    // 1) Compute hue H
+    float H = 0;
+    if (maxValue == color.r)
+    {
+        H = mod((color.g - color.b) / C, 6.0);
+    }
+    else if (maxValue == color.g)
+    {
+        H = (color.b - color.r) / C + 2;
+    }
+    else if (maxValue == color.b)
+    {
+        H = (color.r - color.g) / C + 4;
+    }
+    else { H = 0; }
+
+    H *= 60; // hue is in degree
+
+    // 2) Compute the value V
+    float V = maxValue;
+
+    // 3) Compute saturation S
+    float S = 0;
+    if (V == 0)
+    {
+        S = 0;
+    }
+    else
+    {
+//        S = C / V;
+        S = C / (1 - abs(maxValue + minValue - 1));
+    }
+
+    return vec3(H, S, V);
+}
+
+// https://en.wikipedia.org/wiki/HSL_and_HSV
+// https://de.wikipedia.org/wiki/HSV-Farbraum
+
+vec3 hsvToRGB(in vec3 color)
+{
+    const float H = color.r;
+    const float S = color.g;
+    const float V = color.b;
+
+    float h = H / 60.0;
+
+    int hi = int(floor(h));
+    float f = (h - float(hi));
+
+    float p = V * (1.0 - S);
+    float q = V * (1.0 - S * f);
+    float t = V * (1.0 - S * (1.0 - f));
+
+    if (hi == 1)
+    {
+        return vec3(q, V, p);
+    }
+    else if (hi == 2)
+    {
+        return vec3(p, V, t);
+    }
+    else if (hi == 3)
+    {
+        return vec3(p, q, V);
+    }
+    else if (hi == 4)
+    {
+        return vec3(t, p, V);
+    }
+    else if (hi == 5)
+    {
+        return vec3(V, p, q);
+    }
+    else
+    {
+        return vec3(V, t, p);
+    }
+}
+
 void main()
 {
 #if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
@@ -1196,8 +1283,13 @@ void main()
 
     if (fragmentAttributeIndex > -1)
     {
+        vec3 hsvCol = rgbToHSV(colorAttribute.rgb);
+        hsvCol.g = 1;
+        hsvCol.g *= fragmentAttribute;
+        colorAttribute.rgb = hsvToRGB(hsvCol);
+
 //        colorAttribute.rgb *= fragmentAttribute;
-        colorAttribute.rgb = saturate(colorAttribute.rgb, fragmentAttribute * 15);
+//        colorAttribute.rgb = saturate(colorAttribute.rgb, fragmentAttribute * 15);
     }
 
 
