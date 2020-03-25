@@ -92,9 +92,15 @@ struct BinaryLineVariable
     sgl::VertexAttributeFormat attributeFormat;
     uint32_t numComponents;
     std::vector<uint8_t> data;
-    uint32_t index; // index of variable to identify variable along curve
-    float minValue; // minimum value
-    float maxValue; // maximum value
+//    uint32_t index; // index of variable to identify variable along curve
+//    float minValue; // minimum value
+//    float maxValue; // maximum value
+    std::vector<uint8_t> minValues;
+    std::vector<uint8_t> maxValues;
+    std::vector<uint8_t> lineOffsets;
+    std::vector<uint8_t> varOffsets;
+    std::vector<uint8_t> allMinValues;
+    std::vector<uint8_t> allMaxValues;
 };
 
 struct BinarySubMesh

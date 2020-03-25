@@ -10,6 +10,27 @@
 #include <glm/glm.hpp>
 #include "Utils/ImportanceCriteria.hpp"
 
+// If nothing works --> pad data to vec4
+struct MultiVarArray
+{
+    float value;
+};
+
+// Describes the position of variables in the buffer and the total number of variable values for the entire line
+struct LineDesc
+{
+    float startIndex; // pointer to index in array
+    float numValues;     // number of variables along line
+};
+
+// Describes the range of values for each variable and the offset within each line
+struct VarDesc
+{
+    float startIndex;
+    glm::vec2 minMax;
+    float dummy;
+};
+
 class Trajectory {
 public:
     explicit Trajectory() {}
@@ -18,6 +39,10 @@ public:
     std::vector<std::vector<float>> attributes;
     std::vector<glm::vec3> tangents;
     std::vector<uint32_t> segmentID;
+
+    std::vector<float> multiVarData;
+    LineDesc lineDesc;
+    std::vector<VarDesc> multiVarDescs;
 };
 
 //class BezierTrajectory : public Trajectory {

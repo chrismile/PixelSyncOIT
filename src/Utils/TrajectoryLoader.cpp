@@ -1097,6 +1097,86 @@ void convertTrajectoryDataToBinaryLineMesh(
         vertexAttribute.data.resize(multiVariablesAttr.size() * sizeof(glm::vec4));
         memcpy(&vertexAttribute.data.front(), &multiVariablesAttr.front(), multiVariablesAttr.size() * sizeof(glm::vec4));
         submesh.attributes.push_back(vertexAttribute);
+
+        std::vector<glm::vec2> multiVariablesDesc(globalImportanceCriteria.at(0).size());
+
+        for (auto v = 0; v < globalImportanceCriteria.at(0).size(); v++)
+        {
+            glm::vec2 desc(globalImportanceCriteria.at(4)[v],
+                           globalImportanceCriteria.at(5)[v]);
+
+            multiVariablesDesc[v] = desc;
+        }
+
+        BinaryMeshAttribute varDescAttribute;
+        varDescAttribute.name = "variableDesc";
+        varDescAttribute.attributeFormat = ATTRIB_FLOAT;
+        varDescAttribute.numComponents = 2;
+        varDescAttribute.data.resize(multiVariablesDesc.size() * sizeof(glm::vec2));
+        memcpy(&varDescAttribute.data.front(), &multiVariablesDesc.front(), multiVariablesDesc.size() * sizeof(glm::vec2));
+        submesh.attributes.push_back(varDescAttribute);
+
+        // Create SSBOs from variable descriptions
+        std::vector<float> data;
+        std::vector<float> minValues;
+        std::vector<float> maxValues;
+        std::vector<float> allMinValues;
+        std::vector<float> allMaxValues;
+        std::vector<float> varStartIndices;
+        std::vector<float> startIndices;
+        std::vector<float> numValues;
+
+        std::vector<glm::vec2> varMinMax(trajectories[0].multiVarDescs.size(),
+                glm::vec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest()));
+
+        for (auto v = 0; v < trajectories.size(); ++v)
+        {
+            const auto& trajectory = trajectories[v];
+
+            std::copy(trajectory.multiVarData.begin(), trajectory.multiVarData.end(), std::back_inserter(data));
+
+            startIndices.push_back(trajectory.lineDesc.startIndex);
+            numValues.push_back(trajectory.lineDesc.numValues);
+
+            for (auto varID = 0; varID < trajectory.multiVarDescs.size(); ++varID)
+            {
+                const auto& multiVarDesc = trajectory.multiVarDescs[varID];
+
+                minValues.push_back(multiVarDesc.minMax.r);
+                maxValues.push_back(multiVarDesc.minMax.g);
+                varStartIndices.push_back(multiVarDesc.startIndex);
+
+                varMinMax[varID].r = std::min(varMinMax[varID].r, multiVarDesc.minMax.r);
+                varMinMax[varID].g = std::max(varMinMax[varID].g, multiVarDesc.minMax.g);
+            }
+        }
+
+        for (auto varID = 0; varID < varMinMax.size(); ++varID)
+        {
+            allMinValues.push_back(varMinMax[varID].r);
+            allMaxValues.push_back(varMinMax[varID].g);
+        }
+
+        BinaryLineVariable lineVariables;
+        lineVariables.numComponents = varMinMax.size();
+        lineVariables.name = "ssboMultiVar";
+        lineVariables.attributeFormat = ATTRIB_FLOAT;
+
+        lineVariables.data.resize(data.size() * sizeof(float));
+        memcpy(&lineVariables.data.front(), &data.front(), data.size() * sizeof(float));
+        lineVariables.minValues.resize(minValues.size() * sizeof(float));
+        memcpy(&lineVariables.minValues.front(), &minValues.front(), minValues.size() * sizeof(float));
+        lineVariables.maxValues.resize(maxValues.size() * sizeof(float));
+        memcpy(&lineVariables.maxValues.front(), &maxValues.front(), maxValues.size() * sizeof(float));
+        lineVariables.lineOffsets.resize(startIndices.size() * sizeof(float));
+        memcpy(&lineVariables.lineOffsets.front(), &startIndices.front(), startIndices.size() * sizeof(float));
+        lineVariables.varOffsets.resize(varStartIndices.size() * sizeof(float));
+        memcpy(&lineVariables.varOffsets.front(), &varStartIndices.front(), varStartIndices.size() * sizeof(float));
+        lineVariables.allMinValues.resize(allMinValues.size() * sizeof(float));
+        memcpy(&lineVariables.allMinValues.front(), &allMinValues.front(), allMinValues.size() * sizeof(float));
+        lineVariables.allMaxValues.resize(allMaxValues.size() * sizeof(float));
+        memcpy(&lineVariables.allMaxValues.front(), &allMaxValues.front(), allMaxValues.size() * sizeof(float));
+        submesh.variables.push_back(lineVariables);
     }
 
     auto end = std::chrono::system_clock::now();

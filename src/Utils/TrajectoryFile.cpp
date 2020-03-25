@@ -23,6 +23,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
 
     // Average segment length;
     float avgSegLength = 0.0f;
+    float minSegLength = std::numeric_limits<float>::max();
     float numSegments = 0;
 
     int32_t trajCounter = 0;
@@ -50,6 +51,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
             const float lenTangent = glm::length(tangent);
 
             avgSegLength += lenTangent;
+            minSegLength = std::min(minSegLength, lenTangent);
             numSegments++;
 
             glm::vec3 C0 = pos1;
@@ -80,24 +82,56 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
     std::vector<glm::vec2> attributesMinMax(numVariables,
             glm::vec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest()));
 
+    const uint32_t maxNumVariables = inTrajectories[0].attributes.size();
+    const uint32_t numLines = inTrajectories.size();
+
+    // 2.5) Create buffer array with all variables and statistics
+    std::vector<std::vector<float>> multiVarData(numLines);
+    std::vector<LineDesc> lineDescs(numLines);
+    std::vector<std::vector<VarDesc>> lineMultiVarDescs(numLines);
+
+    uint32_t lineOffset = 0;
+    uint32_t lineID = 0;
+
     for (const auto& trajectory : inTrajectories)
     {
-        for (auto v = 0; v < trajectory.attributes.size(); ++v)
+        uint32_t varOffsetPerLine = 0;
+
+        for (auto v = 0; v < maxNumVariables; ++v)
         {
+            VarDesc varDescPerLine = {0 };
+            varDescPerLine.minMax = glm::vec2(std::numeric_limits<float>::max(),
+                                       std::numeric_limits<float>::lowest());
+            varDescPerLine.startIndex = varOffsetPerLine;
+            varDescPerLine.dummy = 0.0f;
+
             const auto& variableArray = trajectory.attributes[v];
 
             for (const auto& variable : variableArray)
             {
                 attributesMinMax[v].x = std::min(attributesMinMax[v].x, variable);
                 attributesMinMax[v].y = std::max(attributesMinMax[v].y, variable);
+
+                varDescPerLine.minMax.x = std::min(varDescPerLine.minMax.x, variable);
+                varDescPerLine.minMax.y = std::max(varDescPerLine.minMax.y, variable);
+
+                multiVarData[lineID].push_back(variable);
             }
+
+            lineMultiVarDescs[lineID].push_back(varDescPerLine);
+            varOffsetPerLine += variableArray.size();
         }
+        lineDescs[lineID].startIndex = lineOffset;
+        lineDescs[lineID].numValues = varOffsetPerLine;
+
+        lineOffset += varOffsetPerLine;
+        lineID++;
     }
 
 
     // 3) Compute several equally-distributed / equi-distant points along Bezier curves.
     // Store these points in a new trajectory
-    float rollSegLength = avgSegLength * 0.2f;
+    float rollSegLength = minSegLength / 6.0f;// avgSegLength * 0.2f;
 
     Trajectories newTrajectories(inTrajectories.size());
 
@@ -124,11 +158,17 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         newTrajectory.segmentID.push_back(lineID);
 
         // Now we store variable, min, and max, and var ID per vertex as new attributes
-        newTrajectory.attributes.resize(4);
-        newTrajectory.attributes[0].push_back(inTrajectories[traj].attributes[varIDPerLine][lineID]);
+        newTrajectory.attributes.resize(6);
+        float varValue = inTrajectories[traj].attributes[varIDPerLine][lineID];
+        newTrajectory.attributes[0].push_back(varValue);
         newTrajectory.attributes[1].push_back(attributesMinMax[varIDPerLine].x);
         newTrajectory.attributes[2].push_back(attributesMinMax[varIDPerLine].y);
+        // var ID
         newTrajectory.attributes[3].push_back(static_cast<float>(varIDPerLine));
+        // var element index
+        newTrajectory.attributes[4].push_back(static_cast<float>(lineID));
+        // line ID
+        newTrajectory.attributes[5].push_back(static_cast<float>(traj));
 
 //        newTrajectory.attributes.resize(inTrajectories[traj].attributes.size());
 
@@ -145,6 +185,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         float sumArcLengthsNext = BCurves[0].totalArcLength;
 
         varIDPerLine++;
+
 
         while(curArcLength <= totalArcLength)
         {
@@ -170,10 +211,16 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
 
             if (varIDPerLine < numVariables)
             {
-                newTrajectory.attributes[0].push_back(inTrajectories[traj].attributes[varIDPerLine][lineID]);
+                float varValue = inTrajectories[traj].attributes[varIDPerLine][lineID];
+                newTrajectory.attributes[0].push_back(varValue);
                 newTrajectory.attributes[1].push_back(attributesMinMax[varIDPerLine].x);
                 newTrajectory.attributes[2].push_back(attributesMinMax[varIDPerLine].y);
+                // var ID
                 newTrajectory.attributes[3].push_back(static_cast<float>(varIDPerLine));
+                // var element index
+                newTrajectory.attributes[4].push_back(static_cast<float>(lineID));
+                // line ID
+                newTrajectory.attributes[5].push_back(static_cast<float>(traj));
             }
             else
             {
@@ -181,6 +228,8 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
                 newTrajectory.attributes[1].push_back(0.0);
                 newTrajectory.attributes[2].push_back(0.0);
                 newTrajectory.attributes[3].push_back(-1.0);
+                newTrajectory.attributes[4].push_back(lineID);
+                newTrajectory.attributes[5].push_back(traj);
             }
 
 
@@ -193,6 +242,10 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
             curArcLength += rollSegLength;
             varIDPerLine++;
         }
+
+        newTrajectory.lineDesc = lineDescs[traj];
+        newTrajectory.multiVarData = multiVarData[traj];
+        newTrajectory.multiVarDescs = lineMultiVarDescs[traj];
 
         newTrajectories[traj] = newTrajectory;
     }

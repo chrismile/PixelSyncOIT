@@ -78,10 +78,13 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
             stream.write(variable.name);
             stream.write((uint32_t)variable.attributeFormat);
             stream.write((uint32_t)variable.numComponents);
-            stream.write((uint32_t)variable.index);
             stream.writeArray(variable.data);
-            stream.write<float>(variable.minValue);
-            stream.write<float>(variable.maxValue);
+            stream.writeArray(variable.minValues);
+            stream.writeArray(variable.maxValues);
+            stream.writeArray(variable.lineOffsets);
+            stream.writeArray(variable.varOffsets);
+            stream.writeArray(variable.allMinValues);
+            stream.writeArray(variable.allMaxValues);
         }
     }
 
@@ -178,6 +181,28 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
             stream.read(uniform.numComponents);
             stream.readArray(uniform.data);
         }
+
+        // Read variables
+        uint32_t numVariables;
+        stream.read(numVariables);
+        submesh.variables.resize(numVariables);
+
+        for (uint32_t j = 0; j < numVariables; j++) {
+            BinaryLineVariable &lineVariables = submesh.variables.at(j);
+            stream.read(lineVariables.name);
+            uint32_t format;
+            stream.read(format);
+            lineVariables.attributeFormat = (sgl::VertexAttributeFormat)format;
+            stream.read(lineVariables.numComponents);
+            stream.readArray(lineVariables.data);
+            stream.readArray(lineVariables.minValues);
+            stream.readArray(lineVariables.maxValues);
+            stream.readArray(lineVariables.lineOffsets);
+            stream.readArray(lineVariables.varOffsets);
+            stream.readArray(lineVariables.allMinValues);
+            stream.readArray(lineVariables.allMaxValues);
+        }
+
     }
 
     //delete[] buffer; // BinaryReadStream does deallocation
@@ -195,6 +220,12 @@ void MeshRenderer::render(sgl::ShaderProgramPtr passShader, bool isGBufferPass, 
                     || attributeIndex == sgl::fromString<int>(ssboEntry.attributeName.substr(15)))) {
                 sgl::ShaderManager->bindShaderStorageBuffer(ssboEntry.bindingPoint, ssboEntry.attributeBuffer);
             }
+        }
+    }
+
+    for (SSBOEntry &ssboEntry : ssboEntries) {
+        if (ssboEntry.bindingPoint >= 0) {
+            sgl::ShaderManager->bindShaderStorageBuffer(ssboEntry.bindingPoint, ssboEntry.attributeBuffer);
         }
     }
 
@@ -373,6 +404,27 @@ struct LinePointData
     float padding;
 };
 
+struct LineDescData
+{
+    float startIndex;
+};
+
+struct VarDescData
+{
+//    float startIndex;
+//    glm::vec2 minMax;
+//    float padding;
+    glm::vec4 info;
+};
+
+struct LineVarDescData
+{
+//    float startIndex;
+//    glm::vec2 minMax;
+//    float padding;
+    glm::vec4 minMax;
+};
+
 MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shader, bool shuffleData,
         bool useProgrammableFetch, bool programmableFetchUseAoS, float lineRadius, int instancing)
 {
@@ -459,35 +511,111 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
         std::vector<glm::vec3> vertexTangentData;
 
         for (size_t j = 0; j < submesh.variables.size(); j++) {
+//            continue;
             BinaryLineVariable &lineVariable = submesh.variables.at(j);
-            GeometryBufferPtr attributeBuffer;
+//            GeometryBufferPtr attributeBuffer;
 
-            // Currently all variables are 1-dimensional
-            if (lineVariable.numComponents == 1)
+            const uint32_t numVariables = lineVariable.numComponents;
+
+            float *allVariablesData = reinterpret_cast<float*>(&lineVariable.data.front());
+            uint32_t numVariablesValues = lineVariable.data.size() / sizeof(float);
+
+            // Per variable
+            float *minValues = reinterpret_cast<float*>(&lineVariable.minValues.front());
+            float *maxValues = reinterpret_cast<float*>(&lineVariable.maxValues.front());
+            float *varOffsets = reinterpret_cast<float*>(&lineVariable.varOffsets.front());
+            uint32_t numOffsets = lineVariable.varOffsets.size() / sizeof(float);
+            // Per line
+            float *lineOffsets = reinterpret_cast<float*>(&lineVariable.lineOffsets.front());
+            float *allMinValues = reinterpret_cast<float*>(&lineVariable.allMinValues.front());
+            float *allMaxValues = reinterpret_cast<float*>(&lineVariable.allMaxValues.front());
+
+            uint32_t minMaxValues = lineVariable.allMinValues.size() / sizeof(float);
+
+            uint32_t numLines = lineVariable.lineOffsets.size() / sizeof(float);
+
+            std::vector<float> varData;
+            std::vector<LineDescData> lineDescData(numLines);
+            std::vector<VarDescData> varDescData;
+            std::vector<LineVarDescData> lineVarDescData;
+
+            for (auto v = 0; v < numVariablesValues; ++v)
             {
-                ImportanceCriterionAttribute importanceCriterionAttribute;
-                importanceCriterionAttribute.name = lineVariable.name;
-
-                int64_t numAttributeValues = 0;
-
-                float *attributeValuesUnorm = reinterpret_cast<float*>(&lineVariable.data.front());
-                numAttributeValues = lineVariable.data.size() / sizeof(float);
-
-                importanceCriterionAttribute.attributes.resize(numAttributeValues);
-
-                for (auto a = 0; a < numAttributeValues; ++a)
-                {
-                    importanceCriterionAttribute.attributes[a] = attributeValuesUnorm[a];
-                }
-
-                importanceCriterionAttribute.minAttribute = lineVariable.minValue;
-                importanceCriterionAttribute.maxAttribute = lineVariable.maxValue;
-
-                meshRenderer.importanceCriterionAttributes.push_back(importanceCriterionAttribute);
-
-                renderData->addGeometryBufferOptional(attributeBuffer, lineVariable.name.c_str(),
-                                                      lineVariable.attributeFormat, lineVariable.numComponents, 0, 0, 0, true);
+                varData.push_back(allVariablesData[v]);
             }
+
+            for (auto l = 0; l < numLines; ++l)
+            {
+                lineDescData[l].startIndex = lineOffsets[l];
+            }
+
+            for (auto var = 0; var < numLines * minMaxValues; ++var)
+            {
+                uint32_t tempVarID = var % minMaxValues;
+
+                VarDescData descData;
+//                descData.startIndex = varOffsets[var];
+//                descData.minMax = glm::vec2(allMinValues[tempVarID], allMaxValues[tempVarID]);
+//                descData.padding = 0;
+                descData.info = glm::vec4(varOffsets[var], allMinValues[tempVarID], allMaxValues[tempVarID], 0.0);
+                varDescData.push_back(descData);
+
+                LineVarDescData lineVarDesc;
+                lineVarDesc.minMax = glm::vec4(minValues[var], maxValues[var], 0.0, 0.0);
+                lineVarDescData.push_back(lineVarDesc);
+            }
+
+            GeometryBufferPtr varBuffer = Renderer->createGeometryBuffer(
+                    varData.size()*sizeof(float), (void*)&varData.front(),
+                    SHADER_STORAGE_BUFFER);
+            meshRenderer.ssboEntries.push_back(SSBOEntry(2, "allVariables" ,
+                                                         varBuffer));
+
+            GeometryBufferPtr lineDescBuffer = Renderer->createGeometryBuffer(
+                    lineDescData.size()*sizeof(LineDescData), (void*)&lineDescData.front(),
+                    SHADER_STORAGE_BUFFER);
+            meshRenderer.ssboEntries.push_back(SSBOEntry(3, "lineDescs" ,
+                                                         lineDescBuffer));
+
+            GeometryBufferPtr varDescBuffer = Renderer->createGeometryBuffer(
+                    varDescData.size()*sizeof(VarDescData), (void*)&varDescData.front(),
+                    SHADER_STORAGE_BUFFER);
+            meshRenderer.ssboEntries.push_back(SSBOEntry(4, "varDescs" ,
+                                                         varDescBuffer));
+
+            GeometryBufferPtr lineVarDescBuffer = Renderer->createGeometryBuffer(
+                    lineVarDescData.size()*sizeof(LineVarDescData), (void*)&lineVarDescData.front(),
+                    SHADER_STORAGE_BUFFER);
+            meshRenderer.ssboEntries.push_back(SSBOEntry(5, "lineVarDescs" ,
+                                                         lineVarDescBuffer));
+
+
+//            // Currently all variables are 1-dimensional
+//            if (lineVariable.numComponents == 1)
+//            {
+//                ImportanceCriterionAttribute importanceCriterionAttribute;
+//                importanceCriterionAttribute.name = lineVariable.name;
+//
+//                int64_t numAttributeValues = 0;
+//
+//                float *attributeValuesUnorm = reinterpret_cast<float*>(&lineVariable.data.front());
+//                numAttributeValues = lineVariable.data.size() / sizeof(float);
+//
+//                importanceCriterionAttribute.attributes.resize(numAttributeValues);
+//
+//                for (auto a = 0; a < numAttributeValues; ++a)
+//                {
+//                    importanceCriterionAttribute.attributes[a] = attributeValuesUnorm[a];
+//                }
+//
+//                importanceCriterionAttribute.minAttribute = lineVariable.minValue;
+//                importanceCriterionAttribute.maxAttribute = lineVariable.maxValue;
+//
+//                meshRenderer.importanceCriterionAttributes.push_back(importanceCriterionAttribute);
+
+//                renderData->addGeometryBufferOptional(attributeBuffer, lineVariable.name.c_str(),
+//                                                      lineVariable.attributeFormat, lineVariable.numComponents, 0, 0, 0, true);
+//            }
         }
 
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
@@ -552,6 +680,22 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 
             BufferType bufferType = useProgrammableFetch ? SHADER_STORAGE_BUFFER : VERTEX_BUFFER;
 
+            if (meshAttribute.name.find("variableDesc") != meshAttribute.name.npos)
+            {
+                glm::vec2 *attributeValues = (glm::vec2*)&meshAttribute.data.front();
+                size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec2);
+                std::vector<glm::vec2> vec2AttributeValues;
+                vec2AttributeValues.reserve(numAttributeValues);
+
+                for (size_t v = 0; v < numAttributeValues; v++) {
+                    vec2AttributeValues.push_back(attributeValues[v]);
+                }
+
+//                attributeBuffer = Renderer->createGeometryBuffer(
+//                        numAttributeValues * sizeof(glm::vec2),
+//                        (void*)&vec2AttributeValues.front(), bufferType);
+            }
+
             if (meshAttribute.name.find("multiVariable") != meshAttribute.name.npos)
             {
                 glm::vec4 *attributeValues = (glm::vec4*)&meshAttribute.data.front();
@@ -598,13 +742,15 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 
 
 
-                attributeBuffer = Renderer->createGeometryBuffer(
-                        vec4AttributeValues.size() * sizeof(glm::vec4),
-                        (void*)&vec4AttributeValues.front(), bufferType);
+//                attributeBuffer = Renderer->createGeometryBuffer(
+//                        vec4AttributeValues.size() * sizeof(glm::vec4),
+//                        (void*)&vec4AttributeValues.front(), bufferType);
             }
 
             if (!(useProgrammableFetch && programmableFetchUseAoS)
                 && !(meshAttribute.numComponents == 1 && useProgrammableFetch)
+                && !(meshAttribute.numComponents == 6 && useProgrammableFetch)
+                && !(meshAttribute.numComponents == 2 && useProgrammableFetch)
                 && !(meshAttribute.numComponents == 3 && useProgrammableFetch)) {
                 attributeBuffer = Renderer->createGeometryBuffer(
                         meshAttribute.data.size(), (void*)&meshAttribute.data.front(), bufferType);

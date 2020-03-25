@@ -713,7 +713,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         int instancing = 0;
         if (multiVarRenderMode == MULTIVAR_RENDERMODE_LINE_INSTANCED)
         {
-            instancing = 6;
+            instancing = 12;
         }
 
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
