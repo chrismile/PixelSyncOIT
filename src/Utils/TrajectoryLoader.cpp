@@ -507,14 +507,19 @@ void convertTrajectoryDataToBinaryTriangleMesh(
 
 
 
-void computeLineNormal(const glm::vec3 &tangent, glm::vec3 &normal, const glm::vec3 &lastNormal)
+void computeLineNormal(const glm::vec3 &tangent, glm::vec3 &normal, const glm::vec3 &lastNormal, bool& invertWinding)
 {
     glm::vec3 helperAxis = lastNormal;
     if (glm::length(glm::cross(helperAxis, tangent)) < 0.01f) {
-        // If tangent == helperAxis
+        // If tangent == lastNormal
         helperAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+        if (glm::length(glm::cross(helperAxis, tangent)) < 0.01f) {
+            // If tangent == helperAxis
+            helperAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+        }
     }
     normal = glm::normalize(helperAxis - tangent * glm::dot(helperAxis, tangent)); // Gram-Schmidt
+    invertWinding = glm::dot(helperAxis, tangent) < 0.01f;
     //glm::vec3 binormal = glm::normalize(glm::cross(tangent, normal));
 }
 
@@ -568,7 +573,7 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
             tangent = pathLineCenters.at(i) - pathLineCenters.at(i-1);
         } else {
             // Node with two neighbors - use both normals
-            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i);
+            tangent = pathLineCenters.at(i+1) - pathLineCenters.at(i-1);
             //normal += pathLineCenters.at(i) - pathLineCenters.at(i-1);
         }
         if (glm::length(tangent) < 0.0001f) {
@@ -578,7 +583,8 @@ void createTangentAndNormalData(std::vector<glm::vec3> &pathLineCenters,
         tangent = glm::normalize(tangent);
 
         glm::vec3 normal;
-        computeLineNormal(tangent, normal, lastNormal);
+        bool invertWinding;
+        computeLineNormal(tangent, normal, lastNormal, invertWinding);
         lastNormal = normal;
 
         vertices.push_back(pathLineCenters.at(i));

@@ -503,13 +503,16 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
     }
 
-//    lineRadius = 0.001;
-
     std::cout << "Line radius = " << lineRadius << std::endl << std::flush;
 
     // Only load new TF if loading dataset-specific transfer functions isn't overwritten.
     if (transferFunctionName.empty()) {
-        if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && !perfMeasurementMode)
+        if (boost::starts_with(modelFilenamePure, "Data/Rings/test") && !perfMeasurementMode)
+        {
+            transferFunctionWindow.loadFunctionFromFile(
+                    "Data/TransferFunctions/TestRings.xml");
+        }
+        else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && !perfMeasurementMode)
         {
             transferFunctionWindow.loadFunctionFromFile(
                     "Data/TransferFunctions/quality/9213_streamlines_semi.xml");
@@ -556,6 +559,12 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
         }
     }
+
+    if (boost::starts_with(modelFilenamePure, "Data/Rings/test"))
+    {
+        lineRadius = 0.010;
+    }
+
 
     if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
         sgl::ShaderManager->addPreprocessorDefine("CONVECTION_ROLLS", "");
@@ -827,6 +836,11 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 camera->setPosition(glm::vec3(-0.508684f, -1.85755f, -0.273644f));
                 camera->setYaw(-1.5651f);
                 camera->setPitch(-0.0865055f);
+            } else if (boost::starts_with(modelFilenamePure, "Data/Rings/test")) {
+                // ControlPoint(1, 0.695618, 0.516083, 0.737828, 4.76855, 0.252483),
+                camera->setPosition(glm::vec3( 0.695618, 0.516083, 0.737828));
+                camera->setYaw(4.76855);
+                camera->setPitch(0.252483);
             } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
                 camera->setPosition(glm::vec3(0.154441f, 0.0162448f, 0.483843f));
