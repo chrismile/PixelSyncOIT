@@ -97,6 +97,7 @@ out VertexData
     vec4 lineVariable;
     vec2 lineMinMax;
     vec2 lineVariableDesc;
+    int vertexID;
 };
 
 //void main()
@@ -110,7 +111,7 @@ out VertexData
 //    instanceID = gl_InstanceID;
 //}
 
-#define DRAW_ROLLS 1
+//#define DRAW_ROLLS 1
 //#define CONSTANT_RADIUS 1
 
 void main()
@@ -140,6 +141,7 @@ void main()
 #endif
     lineVariableDesc = variableDesc;
     instanceID = gl_InstanceID;
+    vertexID = gl_VertexID;
 }
 
 -- StarGeometry
@@ -911,6 +913,7 @@ in VertexData
     vec4 lineVariable;
     vec2 lineMinMax;
     vec2 lineVariableDesc;
+    int vertexID;
 } v_in[];
 
 in int gl_PrimitiveIDIn;
@@ -924,7 +927,7 @@ flat out int fragmentAttributeIndex;
 
 #define NUM_SEGMENTS 3
 #define MAX_NUM_CIRLCE_SEGMENTS 12
-//#define CONSTANT_RADIUS 1
+#define CONSTANT_RADIUS 1
 
 void main()
 {
@@ -944,6 +947,7 @@ void main()
     vec3 binormalNext = cross(tangentNext, normalNext);
 
     int instanceID = v_in[0].instanceID;
+    int vertexID = v_in[0].vertexID;
 
     vec3 tangent = normalize(nextPoint - currentPoint);
 
@@ -992,6 +996,17 @@ void main()
         vec2 circleTangent = vec2(-position.y, position.x);
         position += tangetialFactor * circleTangent;
         position *= radialFactor;
+    }
+
+    // offset position
+    float thetaOffset = 2.0 * 3.1415926 / 50;
+    float tangetialFactorOffset = tan(thetaOffset); // opposite / adjacent
+    float radialFactorOffset = cos(thetaOffset); // adjacent / hypotenuse
+
+    for (int i = 0; i < vertexID; i++) {
+        vec2 circleTangent = vec2(-position.y, position.x);
+        position += tangetialFactorOffset * circleTangent;
+        position *= radialFactorOffset;
     }
 
     theta /= float(NUM_SEGMENTS - 1);
@@ -1475,8 +1490,18 @@ void main()
     float angle2 = abs( dot( v, normalize(t))) * 0.2;
     float halo = min(1.0,mix(1.0f,angle1 + angle2,haloParameter));//((angle1)+(angle2)), haloParameter);
 
+    vec3 hV = normalize(cross(t, v));
+    vec3 vNew = normalize(cross(hV, t));
+
+    float angle = pow(abs((dot(vNew, n))), 1.8); // 1.8 + 1.5
+    float angleN = pow(abs((dot(v, n))), 1.4);
+    float EPSILON = 0.8f;
+    float coverage = 1.0 - smoothstep(1.0 - 2.0*EPSILON, 1.0, angle);
+
     vec3 colorShading = Ia + Id + Is;
-    colorShading *= clamp(halo, 0, 1) * clamp(halo, 0, 1);
+    float haloNew = min(1.0, mix(1.0f, angle * 1 + angleN, 0.9)) * 0.9 + 0.1;
+    colorShading *= (haloNew) * (haloNew);//clamp(halo, 0, 1) * clamp(halo, 0, 1);
+//    colordShading = mix(colorShading, vec3(0, 0, 0), coverage);
     #elif REFLECTION_MODEL == 1 // COMBINED_SHADOW_MAP_AND_AO
     vec3 colorShading = vec3(occlusionFactor * shadowFactor);
     #elif REFLECTION_MODEL == 2 // LOCAL_SHADOW_MAP_OCCLUSION
