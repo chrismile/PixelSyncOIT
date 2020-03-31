@@ -116,7 +116,7 @@ out VertexData
 
 void main()
 {
-    const uint varID = gl_InstanceID % 6;
+    uint varID = gl_InstanceID % 6;
     const uint lineID = int(variableDesc.y);
     const uint varElementID = uint(variableDesc.x);
 
@@ -136,6 +136,8 @@ void main()
     lineMinMax = lineVarDescs[6 * lineID + uint(multiVariable.w)].minMax.rg;
 #else
     // For STRIPES
+//    if (multiVariable.w < 0) { lineVariable = vec4(0.0, 0.0, 0.0, -1.0); }
+//    else { lineVariable = vec4(value, varMinMax.r, varMinMax.g, varID); }
     lineVariable = vec4(value, varMinMax.r, varMinMax.g, varID);
     lineMinMax = lineVarDesc.minMax.rg;
 #endif
@@ -978,11 +980,17 @@ void main()
     else
     {
         fragmentAttribute = 0.0;
+        fragmentAttributeIndex = -1;
+//        curRadius = 0.4 * radius;
     }
 
 //    vec2 position = vec2(radius * 0.5 * (instanceID + 1) * 0.5 * (gl_PrimitiveIDIn % MAX_NUM_CIRLCE_SEGMENTS + 1), 0.0);
 #if defined (CONSTANT_RADIUS)
     curRadius = radius;
+//    if (fragmentAttributeIndex < 0)
+//    {
+//        curRadius = 0.4 * radius;
+//    }
 #endif
 
     // Varying radius
@@ -999,7 +1007,7 @@ void main()
     }
 
     // offset position
-    float thetaOffset = 2.0 * 3.1415926 / 50;
+    float thetaOffset = 2.0 * 3.1415926 / 15;
     float tangetialFactorOffset = tan(thetaOffset); // opposite / adjacent
     float radialFactorOffset = cos(thetaOffset); // adjacent / hypotenuse
 
@@ -1407,6 +1415,7 @@ void main()
 
 //    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(0.6, 0.6, 0.6, 1); }
     if (fragmentAttributeIndex == -1) { colorAttribute = vec4(0.8, 0.8, 0.8, 1); }
+//    colorAttribute = vec4(0.8, 0.8, 0.8, 1);
 //    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(247 / 255.0, 129 / 255.0, 191 / 255.0, 1); }
 
 //    if (fragmentAttributeIndex == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
@@ -1420,30 +1429,40 @@ void main()
     // https://colorbrewer2.org/#type=qualitative&scheme=Set1&n=9
 
     if (fragmentAttributeIndex == 0) { colorAttribute = vec4(227 / 255.0, 26 / 255.0, 28 / 255.0, 1); }
-    if (fragmentAttributeIndex == 1) { colorAttribute = vec4(51 / 255.0, 160 / 255.0, 44 / 255.0, 1); }
-    if (fragmentAttributeIndex == 2) { colorAttribute = vec4(31 / 255.0, 120 / 255.0, 180 / 255.0, 1); }
-    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(152 / 255.0, 78 / 255.0, 163 / 255.0, 1); }
-    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 255 / 255.0, 51 / 255.0, 1); }
+    else if (fragmentAttributeIndex == 1) { colorAttribute = vec4(51 / 255.0, 160 / 255.0, 44 / 255.0, 1); }
+    else if (fragmentAttributeIndex == 2) { colorAttribute = vec4(31 / 255.0, 120 / 255.0, 180 / 255.0, 1); }
+    else if (fragmentAttributeIndex == 5) { colorAttribute = vec4(152 / 255.0, 78 / 255.0, 163 / 255.0, 1); }
+    else if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 255 / 255.0, 51 / 255.0, 1); }
 //    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
 //    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(177 / 255.0, 89 / 255.0, 40 / 255.0, 1); }
-    if (fragmentAttributeIndex == 3) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
+    else if (fragmentAttributeIndex == 3) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
 
-    colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
+
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 0 && fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 5)
 //    {
 //        colorAttribute.a = 0.1;
 //    }
 
-    if (fragmentAttributeIndex > -1)
+    if (fragmentAttributeIndex < 0)
     {
+        colorAttribute.a = 1.0;
+    }
+
+    if (fragmentAttributeIndex >= 0.0)
+    {
+        colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
+
         vec3 hsvCol = rgbToHSV(colorAttribute.rgb);
         hsvCol.g = 1;
         hsvCol.g = 0.4 + 0.6 * sigmoid_zero_one(fragmentAttribute);
-        colorAttribute.rgb = hsvToRGB(hsvCol);
+        colorAttribute.rgb = hsvCol.rgb;
 
-//        colorAttribute.rgb *= fragmentAttribute;
+        colorAttribute.rgb = hsvToRGB(colorAttribute.rgb);
+        //        colorAttribute.rgb *= fragmentAttribute;
 //        colorAttribute.rgb = saturate(colorAttribute.rgb, fragmentAttribute * 15);
     }
+
+
 
 
     #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
