@@ -98,6 +98,8 @@ out VertexData
     vec2 lineMinMax;
     vec2 lineVariableDesc;
     int vertexID;
+    uint lineSegID;
+    uint varElemOffsetID;
 };
 
 //void main()
@@ -144,6 +146,8 @@ void main()
     lineVariableDesc = variableDesc;
     instanceID = gl_InstanceID;
     vertexID = gl_VertexID;
+    lineSegID = lineID;
+    varElemOffsetID = varElementID;
 }
 
 -- StarGeometry
@@ -916,6 +920,8 @@ in VertexData
     vec2 lineMinMax;
     vec2 lineVariableDesc;
     int vertexID;
+    uint lineSegID;
+    uint varElemOffsetID;
 } v_in[];
 
 in int gl_PrimitiveIDIn;
@@ -926,6 +932,9 @@ out vec3 fragmentPositionWorld;
 out vec3 screenSpacePosition;
 flat out float fragmentAttribute;
 flat out int fragmentAttributeIndex;
+out vec2 texCoords;
+flat out uint fragmentLineSegID;
+flat out uint fragmentVarElemOffsetID;
 
 #define NUM_SEGMENTS 3
 #define MAX_NUM_CIRLCE_SEGMENTS 12
@@ -952,6 +961,19 @@ void main()
     int vertexID = v_in[0].vertexID;
 
     vec3 tangent = normalize(nextPoint - currentPoint);
+
+    vec3 cameraPos = normalize((inverse(vMatrix) * vec4(0, 0, 0, 1)).xyz);
+    vec3 cameraUp = normalize((inverse(vMatrix) * vec4(0, 1, 0, 0)).xyz);
+    vec3 cameraRight = normalize((inverse(vMatrix) * vec4(-1, 0, 0, 0)).xyz);
+    vec3 cameraDir = normalize((inverse(vMatrix) * vec4(0, 0, -1, 0)).xyz);
+//    normalCurrent = cameraUp;
+//    normalNext = cameraUp;
+//
+//    binormalCurrent = cross(tangentCurrent, cameraUp);
+//    binormalNext = cross(tangentNext, cameraUp);
+//
+//    normalCurrent = cross(binormalCurrent, tangentCurrent);
+//    normalNext = cross(binormalNext, tangentNext);
 
     mat3 tangentFrameMatrixCurrent = mat3(normalCurrent, binormalCurrent, tangentCurrent);
     mat3 tangentFrameMatrixNext = mat3(normalNext, binormalNext, tangentNext);
@@ -998,8 +1020,115 @@ void main()
 
 //    curRadius = 0.5 * radius * (varInfo.x - minMaxPerLine.x) / (minMaxPerLine.y - minMaxPerLine.x) + 0.5 * radius;
 
-    vec2 position = vec2(curRadius, 0.0);
+//    vec3 posCurCam = normalize(tangentFrameMatrixCurrent * vec3(cameraUp.xy, 0));
+//    vec3 posNextCam = normalize(tangentFrameMatrixNext * vec3(cameraUp.xy, 0));
+
+//    ///////////////////////////////////////
+//    // Implicit rotation
+//    vec3 refVector = cameraUp;
+//    vec2 posOnCircle = normalize(vec2(dot(normalize(normalCurrent), refVector), dot(normalize(binormalCurrent), refVector)));
+//    if (abs(dot(normalize(tangentCurrent), cameraUp)) <= 0.02) {
+//        refVector = cameraRight;
+//        posOnCircle = normalize(vec2(dot(normalize(normalCurrent), refVector), dot(normalize(binormalCurrent), refVector)));
+//        tangetialFactor = tan(-theta); // opposite / adjacent
+//        radialFactor = cos(-theta); // adjacent / hypotenuse
+//    }
+
+//        refVector = cameraRight;
+//        posOnCircle = normalize(vec2(dot(normalize(normalCurrent), refVector), dot(normalize(binormalCurrent), refVector)));
+//    }
+//
+//    vec2 position = posOnCircle * curRadius;
+
+    //    ///////////////////////////////////////
+
+
+
+//    vec3 posInFrame = tangentFrameMatrixCurrent * vec3(posOnCircle, 0.0) * curRadius;
+//    vec3 tempPosUp = currentPoint + posInFrame;
+//    vec3 viewDir = normalize(cameraPos - curPoint);
+//    vec3 tempPosDown = currentPoint - posInFrame;
+//
+//    vec3 tempViewPosUp = (vMatrix * vec4(tempPosUp, 1.0)).xyz;
+//    vec3 tempViewPosDown = (vMatrix * vec4(tempPosDown, 1.0)).xyz;
+//
+//    if (tempViewPosDown.y > tempViewPosUp.y)
+//    {
+//        posOnCircle *= -1;
+//    }
+
+
+
+
+//    vec2 position = vec2(curRadius, 0.0);
+//    vec2 position = posCurCam.xy * curRadius;
+
+    ///////////////////////////////////////
+    // Manual Translation
+//    vec2 position = vec2(curRadius, 0.0);
+//    float curSign = -2.0;
+//    float numSteps = 400;
+//
+//    float thetaMove = 2.0 * 3.1415926 / numSteps;
+//    float tangetialFactorMove = tan(thetaMove); // opposite / adjacent
+//    float radialFactorMove = cos(thetaMove); // adjacent / hypotenuse
+//
+//    for (int i = 0; i < numSteps; i++) {
+//        vec2 circleTangent = vec2(-position.y, position.x);
+//        position += tangetialFactorMove * circleTangent;
+//        position *= radialFactorMove;
+//
+//        vec3 point2DCurrent = tangentFrameMatrixCurrent * vec3(position, 0.0);
+//        vec3 point2DNext = tangentFrameMatrixNext * vec3(position, 0.0);
+//        vec3 curPoint = point2DCurrent.xyz + currentPoint;
+//
+//        vec3 curNormal = normalize(curPoint - currentPoint);
+//
+//        vec3 viewDir = normalize(cameraPos - curPoint);
+//        float scalar = dot(viewDir, curNormal);
+//
+//        float signProd = sign(scalar);
+////        if (abs(scalar) <= 0.001)
+////        {
+////            vec3 curBinormal = normalize(cross(tangentCurrent, curNormal));
+////            scalar = dot(viewDir, curBinormal);
+////            signProd = sign(scalar);
+////        }
+//
+//
+//
+////        if (scalar >= 0)
+////        {
+////            signProd = dot(curNormal, cameraUp);
+////        }
+//
+////        float signProd = sign(scalar);
+//
+//        if (curSign == -2.0 || signProd == curSign)
+//        {
+//            curSign = signProd;
+//        }
+//        else
+//        {
+//            float signNToCam = sign(dot(curNormal, cameraUp));
+//
+//            if (signNToCam <= 0.01 || curSign <= 0.01)
+//            {
+//                curSign = signProd;
+//            }
+//            else
+//            {
+//                break;
+//            }
+//
+//        }
+//    }
+
+    ///////////////////////////////////////
+
     // adjust start position
+    vec2 position = vec2(curRadius, 0.0);
+
     for (int i = 0; i < instanceID; i++) {
         vec2 circleTangent = vec2(-position.y, position.x);
         position += tangetialFactor * circleTangent;
@@ -1007,15 +1136,116 @@ void main()
     }
 
     // offset position
-    float thetaOffset = 2.0 * 3.1415926 / 15;
-    float tangetialFactorOffset = tan(thetaOffset); // opposite / adjacent
-    float radialFactorOffset = cos(thetaOffset); // adjacent / hypotenuse
+    // For Rolled Stripes
+//    float thetaOffset = 0;//2.0 * 3.1415926 / 15;
+//    float tangetialFactorOffset = tan(thetaOffset); // opposite / adjacent
+//    float radialFactorOffset = cos(thetaOffset); // adjacent / hypotenuse
+//
+//    for (int i = 0; i < vertexID; i++) {
+//        vec2 circleTangent = vec2(-position.y, position.x);
+//        position += tangetialFactorOffset * circleTangent;
+//        position *= radialFactorOffset;
+//    }
 
-    for (int i = 0; i < vertexID; i++) {
-        vec2 circleTangent = vec2(-position.y, position.x);
-        position += tangetialFactorOffset * circleTangent;
-        position *= radialFactorOffset;
+
+    // Test whether we can make use of texture coordinates
+    vec3 circlePointsCurrentNDC[MAX_NUM_CIRLCE_SEGMENTS];
+    vec3 circlePointsNextNDC[MAX_NUM_CIRLCE_SEGMENTS];
+//    vec3 vertexNormalsCurrent[MAX_NUM_CIRLCE_SEGMENTS];
+//    vec3 vertexNormalsNext[MAX_NUM_CIRLCE_SEGMENTS];
+
+    vec2 tempPosition = vec2(curRadius, 0.0);
+
+    // minX, maxX, minY, maxY
+    vec2 bboxMin = vec2(10,10);
+    vec2 bboxMax = vec2(-10,-10);
+
+    vec4 pCurNDXCenter = mvpMatrix * vec4(currentPoint, 1);
+    pCurNDXCenter.xyz /= pCurNDXCenter.w;
+    vec4 pNextNDXCenter = mvpMatrix * vec4(nextPoint, 1);
+    pNextNDXCenter.xyz /= pNextNDXCenter.w;
+
+    vec2 ndcOrientation = normalize(pNextNDXCenter.xy - pCurNDXCenter.xy);
+    vec2 ndcOrientNormal = vec2(-ndcOrientation.y, ndcOrientation.x);
+
+//    for (int i = 0; i < MAX_NUM_CIRLCE_SEGMENTS; ++i)
+//    {
+//        vec3 point2DCurrent = tangentFrameMatrixCurrent * vec3(tempPosition, 0.0);
+//        vec3 point2DNext = tangentFrameMatrixNext * vec3(tempPosition, 0.0);
+//        vec3 pCur = point2DCurrent.xyz + currentPoint;
+//        vec3 pNext = point2DNext.xyz + nextPoint;
+//
+//        vec4 pCurNDX = mvpMatrix * vec4(pCur, 1);
+//        pCurNDX.xyz /= pCurNDX.w;
+//        vec4 pNextNDX = mvpMatrix * vec4(pNext, 1);
+//        pNextNDX.xyz /= pNextNDX.w;
+//
+//        vec2 circleTangent = vec2(-tempPosition.y, tempPosition.x);
+//        tempPosition += tangetialFactor * circleTangent;
+//        tempPosition *= radialFactor;
+//
+////        ndcOrientNormal += (pNextNDX.xy - pNextNDXCenter.xy);
+//        ndcOrientNormal += (pCurNDX.xy - pCurNDXCenter.xy);
+//    }
+
+//    vec2 ndcOrientation = normalize(pNextNDX.xy - pCurNDX.xy);
+    ndcOrientation = normalize(ndcOrientation);
+    ndcOrientNormal = normalize(ndcOrientNormal);
+    //    if (pNextNDX.x < pCurNDX.x) { ndcOrientation *= -1; }
+
+
+    mat2 matrixNDC = inverse(mat2(ndcOrientation, ndcOrientNormal));
+
+    tempPosition = vec2(curRadius, 0.0);
+
+    for (int i = 0; i < MAX_NUM_CIRLCE_SEGMENTS; ++i)
+    {
+        vec3 point2DCurrent = tangentFrameMatrixCurrent * vec3(tempPosition, 0.0);
+        vec3 point2DNext = tangentFrameMatrixNext * vec3(tempPosition, 0.0);
+        vec3 pCur = point2DCurrent.xyz + currentPoint;
+        vec3 pNext = point2DNext.xyz + nextPoint;
+
+        vec4 pCurNDX = mvpMatrix * vec4(pCur, 1);
+        pCurNDX.xyz /= pCurNDX.w;
+        pCurNDX.xy = matrixNDC * pCurNDX.xy;
+        vec4 pNextNDX = mvpMatrix * vec4(pNext, 1);
+        pNextNDX.xyz /= pNextNDX.w;
+        pNextNDX.xy = matrixNDC * pNextNDX.xy;
+
+//        if (pCurNDX.y <= bboxY.x) { p00 = pCurNDX.xy; }
+//        if (pCurNDX.x >= bboxX.y) { p11 = pCurNDX.xy; }
+
+        bboxMin.x = min(pCurNDX.x, bboxMin.x);
+        bboxMax.x = max(pCurNDX.x, bboxMax.x);
+        bboxMin.y = min(pCurNDX.y, bboxMin.y);
+        bboxMax.y = max(pCurNDX.y, bboxMax.y);
+
+        bboxMin.x = min(pNextNDX.x, bboxMin.x);
+        bboxMax.x = max(pNextNDX.x, bboxMax.x);
+        bboxMin.y = min(pNextNDX.y, bboxMin.y);
+        bboxMax.y = max(pNextNDX.y, bboxMax.y);
+
+        circlePointsCurrentNDC[i] = pCurNDX.xyz;
+        circlePointsNextNDC[i] = pNextNDX.xyz;
+
+        vec2 circleTangent = vec2(-tempPosition.y, tempPosition.x);
+        tempPosition += tangetialFactor * circleTangent;
+        tempPosition *= radialFactor;
     }
+
+    vec2 ndcRefPoint = vec2(bboxMin.x, bboxMax.y);
+    vec2 ndcNormal = vec2(0, bboxMin.y - bboxMax.y);//vec2(bboxX.x, bboxY.x) - ndcRefPoint;
+    vec2 ndcTangent = vec2(bboxMax.x - bboxMin.x, 0);//vec2(bboxX.y, bboxY.y) - ndcRefPoint;
+
+//    if (ndcOrientation.y > ndcOrientation.x)
+//    {
+//        ndcRefPoint = vec2(bboxX.x, bboxY.x);
+//        ndcNormal = vec2(bboxX.y, bboxY.x) - ndcRefPoint;
+//        ndcTangent = vec2(bboxX.x, bboxY.y) - ndcRefPoint;
+//    }
+
+    vec2 circleTexCoordsCurrent[NUM_SEGMENTS];
+    vec2 circleTexCoordsNext[NUM_SEGMENTS];
 
     theta /= float(NUM_SEGMENTS - 1);
     tangetialFactor = tan(theta); // opposite / adjacent
@@ -1029,11 +1259,34 @@ void main()
         vertexNormalsCurrent[i] = normalize(circlePointsCurrent[i] - currentPoint);
         vertexNormalsNext[i] = normalize(circlePointsNext[i] - nextPoint);
 
+        vec4 pCurNDX = mvpMatrix * vec4(circlePointsCurrent[i], 1);
+        pCurNDX.xyz /= pCurNDX.w;
+        pCurNDX.xy = matrixNDC * pCurNDX.xy;
+        vec4 pNextNDX = mvpMatrix * vec4(circlePointsNext[i], 1);
+        pNextNDX.xyz /= pNextNDX.w;
+        pNextNDX.xy = matrixNDC * pNextNDX.xy;
+
+        vec2 localNDX = pCurNDX.xy - ndcRefPoint;
+        vec2 texCoord = vec2(dot(localNDX, normalize(ndcTangent)) / length(ndcTangent),
+                             dot(localNDX, normalize(ndcNormal)) / length(ndcNormal));
+        circleTexCoordsCurrent[i] = texCoord;
+
+        localNDX = pNextNDX.xy - ndcRefPoint;
+        texCoord = vec2(dot(localNDX, normalize(ndcTangent)) / length(ndcTangent),
+                        dot(localNDX, normalize(ndcNormal)) / length(ndcNormal));
+        circleTexCoordsNext[i] = texCoord;
+
         // Add the tangent vector and correct the position using the radial factor.
         vec2 circleTangent = vec2(-position.y, position.x);
         position += tangetialFactor * circleTangent;
         position *= radialFactor;
     }
+
+//    fragmentAttributeIndex = int(floor(circleTexCoordsCurrent[NUM_SEGMENTS - 1].y * 6.0));
+//    fragmentAttribute = 1.0;
+
+    fragmentLineSegID = v_in[0].lineSegID;
+    fragmentVarElemOffsetID = v_in[0].varElemOffsetID;
 
     // Emit the tube triangle vertices
     for (int i = 0; i < NUM_SEGMENTS - 1; i++) {
@@ -1042,6 +1295,7 @@ void main()
         fragmentTangent = tangent;
         fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[i], 1.0)).xyz;
+        texCoords = circleTexCoordsCurrent[i];
 //        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
@@ -1050,6 +1304,7 @@ void main()
         fragmentPositionWorld = (mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsCurrent[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
         fragmentTangent = tangent;
+        texCoords = circleTexCoordsCurrent[(i+1)%NUM_SEGMENTS];
 //        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
@@ -1058,6 +1313,7 @@ void main()
         fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
         fragmentTangent = tangent;
+        texCoords = circleTexCoordsNext[i];
 //        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
 
@@ -1067,6 +1323,7 @@ void main()
         screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[(i+1)%NUM_SEGMENTS], 1.0)).xyz;
 //        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         fragmentTangent = tangent;
+        texCoords = circleTexCoordsNext[(i+1)%NUM_SEGMENTS];
         EmitVertex();
 
         EndPrimitive();
@@ -1219,6 +1476,9 @@ in vec3 fragmentTangent;
 in vec3 fragmentPositionWorld;
 flat in float fragmentAttribute;
 flat in int fragmentAttributeIndex;
+in vec2 texCoords;
+flat in uint fragmentLineSegID;
+flat in uint fragmentVarElemOffsetID;
 
 #ifdef DIRECT_BLIT_GATHER
 out vec4 fragColor;
@@ -1246,6 +1506,49 @@ uniform bool transparencyMapping = true;
 
 // Color of the object
 uniform vec4 colorGlobal;
+
+struct VarData
+{
+    float value;
+};
+
+struct LineDescData
+{
+    float startIndex;
+};
+
+struct VarDescData
+{
+//    float startIndex;
+//    vec2 minMax;
+//    float dummy;
+    vec4 info;
+};
+
+struct LineVarDescData
+{
+    vec4 minMax;
+};
+
+layout (std430, binding = 2) buffer VariableArray
+{
+    float varArray[];
+};
+
+layout (std430, binding = 3) buffer LineDescArray
+{
+    float lineDescs[];
+};
+
+layout (std430, binding = 4) buffer VarDescArray
+{
+    VarDescData varDescs[];
+};
+
+layout (std430, binding = 5) buffer LineVarDescArray
+{
+    LineVarDescData lineVarDescs[];
+};
 
 
 // Transfer function color lookup table
@@ -1404,7 +1707,28 @@ void main()
     float shadowFactor = 1.0f;
 #endif
 
-    vec4 colorAttribute = transferFunction(fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES, CUR_ATTRIBUTE);
+    const int varID = int(floor(texCoords.y * 3.0));
+    const uint lineID = fragmentLineSegID;
+    const uint varElementID = fragmentVarElemOffsetID;
+
+    uint startIndex = uint(lineDescs[lineID]);
+    VarDescData varDesc = varDescs[6 * lineID + varID];
+    LineVarDescData lineVarDesc = lineVarDescs[6 * lineID + varID];
+    const uint varOffset = uint(varDesc.info.r);
+    const vec2 varMinMax = varDesc.info.gb;
+    float value = varArray[startIndex + varOffset + varElementID];
+
+//    fragmentAttributeIndex = varID;
+//    fragmentAttribute = (value - varMinMax.x) / (varMinMax.y - varMinMax.x);
+
+    uint variableIndex = varID;
+    float variableValue = (value - varMinMax.x) / (varMinMax.y - varMinMax.x);
+
+//    uint variableIndex = int(fragmentAttributeIndex);
+//    float variableValue = fragmentAttribute;
+
+
+    vec4 colorAttribute = transferFunction(variableIndex % NUM_MULTI_ATTRIBUTES, CUR_ATTRIBUTE);
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == -1) { colorAttribute = vec4(0.4, 0.4, 0.4, 1); }
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 0) { colorAttribute = vec4(0.7, 0, 0, 1); }
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 1) { colorAttribute = vec4(0, 0.7, 0, 1); }
@@ -1414,7 +1738,7 @@ void main()
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES == 5) { colorAttribute = vec4(0, 0.7, 0.7, 1); }
 
 //    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(0.6, 0.6, 0.6, 1); }
-    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(0.8, 0.8, 0.8, 1); }
+    if (variableIndex == -1) { colorAttribute = vec4(0.8, 0.8, 0.8, 1); }
 //    colorAttribute = vec4(0.8, 0.8, 0.8, 1);
 //    if (fragmentAttributeIndex == -1) { colorAttribute = vec4(247 / 255.0, 129 / 255.0, 191 / 255.0, 1); }
 
@@ -1428,14 +1752,14 @@ void main()
     // https://www.rapidtables.com/convert/color/rgb-to-hsv.html
     // https://colorbrewer2.org/#type=qualitative&scheme=Set1&n=9
 
-    if (fragmentAttributeIndex == 0) { colorAttribute = vec4(227 / 255.0, 26 / 255.0, 28 / 255.0, 1); }
-    else if (fragmentAttributeIndex == 1) { colorAttribute = vec4(51 / 255.0, 160 / 255.0, 44 / 255.0, 1); }
-    else if (fragmentAttributeIndex == 2) { colorAttribute = vec4(31 / 255.0, 120 / 255.0, 180 / 255.0, 1); }
-    else if (fragmentAttributeIndex == 5) { colorAttribute = vec4(152 / 255.0, 78 / 255.0, 163 / 255.0, 1); }
-    else if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 255 / 255.0, 51 / 255.0, 1); }
+    if (variableIndex == 0) { colorAttribute = vec4(227 / 255.0, 26 / 255.0, 28 / 255.0, 1); }
+    else if (variableIndex == 1) { colorAttribute = vec4(51 / 255.0, 160 / 255.0, 44 / 255.0, 1); }
+    else if (variableIndex == 2) { colorAttribute = vec4(31 / 255.0, 120 / 255.0, 180 / 255.0, 1); }
+    else if (variableIndex == 5) { colorAttribute = vec4(152 / 255.0, 78 / 255.0, 163 / 255.0, 1); }
+    else if (variableIndex == 4) { colorAttribute = vec4(255 / 255.0, 255 / 255.0, 51 / 255.0, 1); }
 //    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
 //    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(177 / 255.0, 89 / 255.0, 40 / 255.0, 1); }
-    else if (fragmentAttributeIndex == 3) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
+    else if (variableIndex == 3) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
 
 
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 0 && fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 5)
@@ -1443,18 +1767,18 @@ void main()
 //        colorAttribute.a = 0.1;
 //    }
 
-    if (fragmentAttributeIndex < 0)
+    if (variableIndex < 0)
     {
         colorAttribute.a = 1.0;
     }
 
-    if (fragmentAttributeIndex >= 0.0)
+    if (variableIndex >= 0)
     {
         colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
 
         vec3 hsvCol = rgbToHSV(colorAttribute.rgb);
         hsvCol.g = 1;
-        hsvCol.g = 0.4 + 0.6 * sigmoid_zero_one(fragmentAttribute);
+        hsvCol.g = 0.4 + 0.6 * sigmoid_zero_one(variableValue);
         colorAttribute.rgb = hsvCol.rgb;
 
         colorAttribute.rgb = hsvToRGB(colorAttribute.rgb);
@@ -1463,6 +1787,8 @@ void main()
     }
 
 
+//    colorAttribute = vec4(floor(length(texCoords.y) * 4.0) / 10.0, 0, 0, 1);
+//    colorAttribute = vec4(floor(texCoords.y * 4.0) / 4.0, 0, 0, 1);
 
 
     #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
