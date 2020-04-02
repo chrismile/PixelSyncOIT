@@ -940,6 +940,130 @@ flat out uint fragmentVarElemOffsetID;
 #define MAX_NUM_CIRLCE_SEGMENTS 12
 #define CONSTANT_RADIUS 1
 
+// https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
+void computeBarycentricCoordinates(in vec2 p, in vec2 a, in vec2 b, in vec2 c,
+                                    out float u, out float v, out float w)
+{
+//    vec2 v0 = b - a;
+//    vec2 v1 = c - a;
+//    vec2 v2 = p - a;
+//    float d00 = dot(v0, v0);
+//    float d01 = dot(v0, v1);
+//    float d11 = dot(v1, v1);
+//    float d20 = dot(v2, v0);
+//    float d21 = dot(v2, v1);
+//    float invDenom = 1.0 / (d00 * d11 - d01 * d01);
+//    v = (d11 * d20 - d01 * d21) * invDenom;
+//    w = (d00 * d21 - d01 * d20) * invDenom;
+//    u = 1.0f - v - w;
+
+    vec2 v0 = b - a;
+    vec2 v1 = c - a;
+    vec2 v2 = p - a;
+    float invDenom = 1.0f / (v0.x * v1.y - v1.x - v0.y);
+    v = (v2.x * v1.y - v1.x * v2.y) * invDenom;
+    w = (v0.x * v2.y - v2.x * v0.y) * invDenom;
+    u = 1.0 - v - w;
+}
+
+void computeTrapezoidal(in vec2 p, inout vec2 p00, inout vec2 p10,
+                        inout vec2 p01, inout vec2 p11)
+{
+    vec2 op00 = p00;
+    vec2 op10 = p10;
+    vec2 op01 = p01;
+    vec2 op11 = p11;
+
+    if (p.x < op00.x && p.y < op00.y)
+    {
+        p00 = p;
+    }
+    if (p.x < op01.x && p.y > op01.y)
+    {
+        p01 = p;
+    }
+    if (p.x > op10.x && p.y < op10.y)
+    {
+        p10 = p;
+    }
+    if (p.x > op11.x && p.y > op11.y)
+    {
+        p11 = p;
+    }
+
+
+//    if (p.x < op10.x && p.x < p11.x)
+//    {
+//        if (p.y < op01.y)
+//        {
+//            if (p.x < op00.x && p.y < op00.y)
+//            {
+//                p00 = p;
+//            }
+//        }
+//        if (p.y > op00.y)
+//        {
+//            if (p.x < op01.x && p.y > op01.y)
+//            {
+//                p01 = p;
+//            }
+//        }
+//    }
+//    if (p.x > op00.x && p.x > op01.x)
+//    {
+//        if (p.y < op11.y)
+//        {
+//            if (p.x > op10.x && p.y < op10.y)
+//            {
+//                p10 = p;
+//            }
+//        }
+//        if (p.y > op10.y)
+//        {
+//            if (p.x > op11.x && p.y > op11.y)
+//            {
+//                p11 = p;
+//            }
+//        }
+//    }
+}
+
+
+vec2 computeTexCoords(in vec2 p, in vec2 p00, in vec2 p10, in vec2 p01, in vec2 p11)
+{
+    // temporary bilinear
+    vec2 up = p01 - p00;
+    vec2 right = p10 - p00;
+
+    float dy = dot(p - p00, normalize(up));
+    float dx = dot(p - p00, normalize(right));
+
+    return vec2(dx / length(right), dy / length(up));
+
+
+//    vec2 diagonal = p11 - p00;
+//    vec2 diagNormal = normalize(vec2(-diagonal.y, diagonal.x));
+//    float d = dot(p - p00, diagNormal);
+//
+//    float u = 0;
+//    float v = 0;
+//    float w = 0;
+//
+//    if (d > 0)
+//    {
+//        computeBarycentricCoordinates(p, p00, p01, p11, u, v, w);
+//
+//        return u * vec2(0, 0) + v * vec2(0, 1) + w * vec2(1, 1);
+//    }
+//    else
+//    {
+//        computeBarycentricCoordinates(p, p00, p10, p11, u, v, w);
+//
+//        return u * vec2(0, 0) + v * vec2(1, 0) + w * vec2(1, 1);
+//    }
+}
+
+
 void main()
 {
     vec3 currentPoint = (mMatrix * vec4(v_in[0].linePosition, 1.0)).xyz;
@@ -1160,13 +1284,17 @@ void main()
     vec2 bboxMin = vec2(10,10);
     vec2 bboxMax = vec2(-10,-10);
 
+    vec2 p00 = vec2(0);
+    vec2 p10 = vec2(0);
+    vec2 p11 = vec2(0);
+    vec2 p01 = vec2(0);
+
     vec4 pCurNDXCenter = mvpMatrix * vec4(currentPoint, 1);
     pCurNDXCenter.xyz /= pCurNDXCenter.w;
     vec4 pNextNDXCenter = mvpMatrix * vec4(nextPoint, 1);
     pNextNDXCenter.xyz /= pNextNDXCenter.w;
 
     vec2 ndcOrientation = normalize(pNextNDXCenter.xy - pCurNDXCenter.xy);
-    vec2 ndcOrientNormal = vec2(-ndcOrientation.y, ndcOrientation.x);
 
 //    for (int i = 0; i < MAX_NUM_CIRLCE_SEGMENTS; ++i)
 //    {
@@ -1180,19 +1308,15 @@ void main()
 //        vec4 pNextNDX = mvpMatrix * vec4(pNext, 1);
 //        pNextNDX.xyz /= pNextNDX.w;
 //
+//        ndcOrientation += normalize(pNextNDX.xy - pCurNDX.xy);
+//
 //        vec2 circleTangent = vec2(-tempPosition.y, tempPosition.x);
 //        tempPosition += tangetialFactor * circleTangent;
 //        tempPosition *= radialFactor;
-//
-////        ndcOrientNormal += (pNextNDX.xy - pNextNDXCenter.xy);
-//        ndcOrientNormal += (pCurNDX.xy - pCurNDXCenter.xy);
 //    }
 
-//    vec2 ndcOrientation = normalize(pNextNDX.xy - pCurNDX.xy);
     ndcOrientation = normalize(ndcOrientation);
-    ndcOrientNormal = normalize(ndcOrientNormal);
-    //    if (pNextNDX.x < pCurNDX.x) { ndcOrientation *= -1; }
-
+    vec2 ndcOrientNormal = vec2(-ndcOrientation.y, ndcOrientation.x);
 
     mat2 matrixNDC = inverse(mat2(ndcOrientation, ndcOrientNormal));
 
@@ -1224,6 +1348,19 @@ void main()
         bboxMax.x = max(pNextNDX.x, bboxMax.x);
         bboxMin.y = min(pNextNDX.y, bboxMin.y);
         bboxMax.y = max(pNextNDX.y, bboxMax.y);
+
+        // Algorithm to find bounding boxes
+        if (i == 0)
+        {
+            p00 = p10 = p11 = p01 = pCurNDX.xy;
+        }
+        else
+        {
+            computeTrapezoidal(pCurNDX.xy, p00, p10, p01, p11);
+        }
+
+        computeTrapezoidal(pNextNDX.xy, p00, p10, p01, p11);
+
 
         circlePointsCurrentNDC[i] = pCurNDX.xyz;
         circlePointsNextNDC[i] = pNextNDX.xyz;
@@ -1269,11 +1406,13 @@ void main()
         vec2 localNDX = pCurNDX.xy - ndcRefPoint;
         vec2 texCoord = vec2(dot(localNDX, normalize(ndcTangent)) / length(ndcTangent),
                              dot(localNDX, normalize(ndcNormal)) / length(ndcNormal));
+//        vec2 texCoord = computeTexCoords(pCurNDX.xy, p00, p10, p01, p11);
         circleTexCoordsCurrent[i] = texCoord;
-
+//
         localNDX = pNextNDX.xy - ndcRefPoint;
         texCoord = vec2(dot(localNDX, normalize(ndcTangent)) / length(ndcTangent),
                         dot(localNDX, normalize(ndcNormal)) / length(ndcNormal));
+//        texCoord = computeTexCoords(pNextNDX.xy, p00, p10, p01, p11);
         circleTexCoordsNext[i] = texCoord;
 
         // Add the tangent vector and correct the position using the radial factor.
@@ -1695,6 +1834,40 @@ float sigmoid_zero_one(in float x)
     return 1.0 - 1.0 / denom;
 }
 
+
+vec4 map_color(in float value, uint index)
+{
+    if (index == 0)
+    {
+        return mix(vec4(vec3(253,219,199)/ 255.0, 1), vec4(vec3(178,24,43)/ 255.0, 1), value);
+    }
+    else if (index == 1)
+    {
+        return mix(vec4(vec3(209,229,240)/ 255.0, 1), vec4(vec3(33,102,172)/ 255.0, 1), value);
+    }
+    else if (index == 2)
+    {
+        return mix(vec4(vec3(217,240,211)/ 255.0, 1), vec4(vec3(27,120,55)/ 255.0, 1), value);
+    }
+    else if (index == 3)
+    {
+        return mix(vec4(vec3(216,218,235) / 255.0, 1), vec4(vec3(84,39,136) / 255.0, 1), value);
+    }
+    else if (index == 5)
+    {
+        return mix(vec4(vec3(254,224,182)/ 255.0, 1), vec4(vec3(179,88,6)/ 255.0, 1), value);
+    }
+    else if (index == 6)
+    {
+        return mix(vec4(vec3(199,234,229)/ 255.0, 1), vec4(vec3(1,102,94)/ 255.0, 1), value);
+    }
+    else if (index == 4)
+    {
+        return mix(vec4(vec3(253,224,239)/ 255.0, 1), vec4(vec3(197,27,125)/ 255.0, 1), value);
+    }
+}
+
+
 void main()
 {
 #if !defined(SHADOW_MAP_GENERATE) && !defined(SHADOW_MAPPING_MOMENTS_GENERATE)
@@ -1707,7 +1880,9 @@ void main()
     float shadowFactor = 1.0f;
 #endif
 
-    const int varID = int(floor(texCoords.y * 3.0));
+    const int varID = int(floor(texCoords.y * 5.0));
+    float rest = texCoords.y * 5.0 - float(varID);
+
     const uint lineID = fragmentLineSegID;
     const uint varElementID = fragmentVarElemOffsetID;
 
@@ -1752,15 +1927,40 @@ void main()
     // https://www.rapidtables.com/convert/color/rgb-to-hsv.html
     // https://colorbrewer2.org/#type=qualitative&scheme=Set1&n=9
 
-    if (variableIndex == 0) { colorAttribute = vec4(227 / 255.0, 26 / 255.0, 28 / 255.0, 1); }
-    else if (variableIndex == 1) { colorAttribute = vec4(51 / 255.0, 160 / 255.0, 44 / 255.0, 1); }
-    else if (variableIndex == 2) { colorAttribute = vec4(31 / 255.0, 120 / 255.0, 180 / 255.0, 1); }
-    else if (variableIndex == 5) { colorAttribute = vec4(152 / 255.0, 78 / 255.0, 163 / 255.0, 1); }
-    else if (variableIndex == 4) { colorAttribute = vec4(255 / 255.0, 255 / 255.0, 51 / 255.0, 1); }
-//    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
-//    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(177 / 255.0, 89 / 255.0, 40 / 255.0, 1); }
-    else if (variableIndex == 3) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
+//    if (variableIndex == 0) { colorAttribute = vec4(227 / 255.0, 26 / 255.0, 28 / 255.0, 1); }
+//    else if (variableIndex == 1) { colorAttribute = vec4(51 / 255.0, 160 / 255.0, 44 / 255.0, 1); }
+//    else if (variableIndex == 2) { colorAttribute = vec4(31 / 255.0, 120 / 255.0, 180 / 255.0, 1); }
+//    else if (variableIndex == 5) { colorAttribute = vec4(152 / 255.0, 78 / 255.0, 163 / 255.0, 1); }
+//    else if (variableIndex == 4) { colorAttribute = vec4(255 / 255.0, 255 / 255.0, 51 / 255.0, 1); }
+////    if (fragmentAttributeIndex == 4) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
+////    if (fragmentAttributeIndex == 5) { colorAttribute = vec4(177 / 255.0, 89 / 255.0, 40 / 255.0, 1); }
+//    else if (variableIndex == 3) { colorAttribute = vec4(255 / 255.0, 127 / 255.0, 0 / 255.0, 1); }
 
+    // Colorbrewer Qualitative 1
+//    if (variableIndex == 0) { colorAttribute = vec4(359, 89 / 100.0, 89 / 100.0, 1); }
+//    else if (variableIndex == 2) { colorAttribute = vec4(207, 70 / 100.0, 72 / 100.0, 1); }
+//    else if (variableIndex == 1) { colorAttribute = vec4(122, 65 / 100.0, 69 / 100.0, 1); }
+//    else if (variableIndex == 3) { colorAttribute = vec4(292, 52 / 100.0, 64 / 100.0, 1); }
+//    else if (variableIndex == 5) { colorAttribute = vec4(30, 100 / 100.0, 100 / 100.0, 1); }
+//    else if (variableIndex == 4) { colorAttribute = vec4(60, 80 / 100.0, 60 / 100.0, 1); }
+//    else if (variableIndex == 6) { colorAttribute = vec4(22, 76 / 100.0, 65 / 100.0, 1); }
+
+    // Colorbrewer Qualitative 2
+//    if (variableIndex == 0) { colorAttribute = vec4(162, 83 / 100.0, 62 / 100.0, 1); }
+//    else if (variableIndex == 2) { colorAttribute = vec4(26, 99 / 100.0, 85 / 100.0, 1); }
+//    else if (variableIndex == 1) { colorAttribute = vec4(244, 37 / 100.0, 70 / 100.0, 1); }
+//    else if (variableIndex == 3) { colorAttribute = vec4(392, 82 / 100.0, 91 / 100.0, 1); }
+//    else if (variableIndex == 5) { colorAttribute = vec4(88, 82 / 100.0, 65 / 100.0, 1); }
+//    else if (variableIndex == 4) { colorAttribute = vec4(44, 99 / 100.0, 90 / 100.0, 1); }
+//    else if (variableIndex == 6) { colorAttribute = vec4(39, 83 / 100.0, 65 / 100.0, 1); }
+
+    if (variableIndex == 0) { colorAttribute = vec4(vec3(228,26,28)/ 255.0, 1); } // red
+    else if (variableIndex == 1) { colorAttribute = vec4(vec3(55,126,184)/ 255.0, 1); } // blue
+    else if (variableIndex == 2) { colorAttribute = vec4(vec3(77,175,74)/ 255.0, 1); } // green
+    else if (variableIndex == 3) { colorAttribute = vec4(vec3(152,78,163)/ 255.0, 1); } // lila / purple
+    else if (variableIndex == 4) { colorAttribute = vec4(vec3(241,105,19)/ 255.0, 1); } // pink
+    else if (variableIndex == 6) { colorAttribute = vec4(vec3(206,18,86)/ 255.0, 1); } // brown
+    else if (variableIndex == 5) { colorAttribute = vec4(vec3(153,52,4)/ 255.0, 1); } // brown
 
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 0 && fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 5)
 //    {
@@ -1774,21 +1974,38 @@ void main()
 
     if (variableIndex >= 0)
     {
+//        colorAttribute.b = 1;
+//        colorAttribute.rgb = hsvToRGB(colorAttribute.rgb);
         colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
-
+//        vec3 hsvCol = colorAttribute.rgb;
         vec3 hsvCol = rgbToHSV(colorAttribute.rgb);
-        hsvCol.g = 1;
-        hsvCol.g = 0.4 + 0.6 * sigmoid_zero_one(variableValue);
+//        hsvCol.g = 1;
+//        hsvCol.b = 0.6;
+        hsvCol.g = hsvCol.g * (0.25 + 0.75 * sigmoid_zero_one(variableValue));
         colorAttribute.rgb = hsvCol.rgb;
 
         colorAttribute.rgb = hsvToRGB(colorAttribute.rgb);
+
+//        colorAttribute = map_color(variableValue, variableIndex);
+//        colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
+
+
         //        colorAttribute.rgb *= fragmentAttribute;
 //        colorAttribute.rgb = saturate(colorAttribute.rgb, fragmentAttribute * 15);
+    }
+
+    float borderWidth = 0.08;
+    if (rest <= borderWidth || rest >= (1.0 - borderWidth))
+    {
+        if (rest > 0.5) { rest = 1.0 - rest; }
+
+        colorAttribute.rgb = colorAttribute.rgb * rest / borderWidth * vec3(1, 1, 1);
     }
 
 
 //    colorAttribute = vec4(floor(length(texCoords.y) * 4.0) / 10.0, 0, 0, 1);
 //    colorAttribute = vec4(floor(texCoords.y * 4.0) / 4.0, 0, 0, 1);
+//    colorAttribute = vec4(floor(length(texCoords.y) * 4.0) / 10.0, 0, 0, 1);
 
 
     #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
@@ -1838,8 +2055,8 @@ void main()
     vec3 hV = normalize(cross(t, v));
     vec3 vNew = normalize(cross(hV, t));
 
-    float angle = pow(abs((dot(vNew, n))), 1.8); // 1.8 + 1.5
-    float angleN = pow(abs((dot(v, n))), 1.4);
+    float angle = pow(abs((dot(vNew, n))), 1.0); // 1.8 + 1.5
+    float angleN = pow(abs((dot(v, n))), 1.0);
     float EPSILON = 0.8f;
     float coverage = 1.0 - smoothstep(1.0 - 2.0*EPSILON, 1.0, angle);
 
