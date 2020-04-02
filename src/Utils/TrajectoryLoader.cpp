@@ -1098,12 +1098,14 @@ void convertTrajectoryDataToBinaryLineMesh(
         memcpy(&vertexAttribute.data.front(), &multiVariablesAttr.front(), multiVariablesAttr.size() * sizeof(glm::vec4));
         submesh.attributes.push_back(vertexAttribute);
 
-        std::vector<glm::vec2> multiVariablesDesc(globalImportanceCriteria.at(0).size());
+        std::vector<glm::vec4> multiVariablesDesc(globalImportanceCriteria.at(0).size());
 
         for (auto v = 0; v < globalImportanceCriteria.at(0).size(); v++)
         {
-            glm::vec2 desc(globalImportanceCriteria.at(4)[v],
-                           globalImportanceCriteria.at(5)[v]);
+            glm::vec4 desc(globalImportanceCriteria.at(4)[v], // elementID
+                           globalImportanceCriteria.at(5)[v], // lineID
+                           globalImportanceCriteria.at(6)[v], // elementID + 1
+                           globalImportanceCriteria.at(7)[v]); // interpolant
 
             multiVariablesDesc[v] = desc;
         }
@@ -1111,9 +1113,9 @@ void convertTrajectoryDataToBinaryLineMesh(
         BinaryMeshAttribute varDescAttribute;
         varDescAttribute.name = "variableDesc";
         varDescAttribute.attributeFormat = ATTRIB_FLOAT;
-        varDescAttribute.numComponents = 2;
-        varDescAttribute.data.resize(multiVariablesDesc.size() * sizeof(glm::vec2));
-        memcpy(&varDescAttribute.data.front(), &multiVariablesDesc.front(), multiVariablesDesc.size() * sizeof(glm::vec2));
+        varDescAttribute.numComponents = 4;
+        varDescAttribute.data.resize(multiVariablesDesc.size() * sizeof(glm::vec4));
+        memcpy(&varDescAttribute.data.front(), &multiVariablesDesc.front(), multiVariablesDesc.size() * sizeof(glm::vec4));
         submesh.attributes.push_back(varDescAttribute);
 
         // Create SSBOs from variable descriptions

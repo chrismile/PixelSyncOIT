@@ -24,8 +24,8 @@ public:
     glm::vec3 curvature(const float t) const;
     float evalArcLength(const float _minT, const float _maxT, const uint16_t numSteps) const;
     float solveTForArcLength(const float _arcLength) const;
-private:
     float normalizeT(const float t) const { return (t - minT) / (maxT - minT); }
+private:
     float denormalizeT(const float t) const { return t * (maxT - minT) + minT; }
 };
 

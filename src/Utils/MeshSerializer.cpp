@@ -682,9 +682,9 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 
             if (meshAttribute.name.find("variableDesc") != meshAttribute.name.npos)
             {
-                glm::vec2 *attributeValues = (glm::vec2*)&meshAttribute.data.front();
-                size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec2);
-                std::vector<glm::vec2> vec2AttributeValues;
+                glm::vec4 *attributeValues = (glm::vec4*)&meshAttribute.data.front();
+                size_t numAttributeValues = meshAttribute.data.size() / sizeof(glm::vec4);
+                std::vector<glm::vec4> vec2AttributeValues;
                 vec2AttributeValues.reserve(numAttributeValues);
 
                 for (size_t v = 0; v < numAttributeValues; v++) {

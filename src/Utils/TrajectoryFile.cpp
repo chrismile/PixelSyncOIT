@@ -158,7 +158,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         newTrajectory.segmentID.push_back(lineID);
 
         // Now we store variable, min, and max, and var ID per vertex as new attributes
-        newTrajectory.attributes.resize(6);
+        newTrajectory.attributes.resize(8);
         float varValue = inTrajectories[traj].attributes[varIDPerLine][lineID];
         newTrajectory.attributes[0].push_back(varValue);
         newTrajectory.attributes[1].push_back(attributesMinMax[varIDPerLine].x);
@@ -169,6 +169,10 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         newTrajectory.attributes[4].push_back(static_cast<float>(lineID));
         // line ID
         newTrajectory.attributes[5].push_back(static_cast<float>(traj));
+        // next line ID
+        newTrajectory.attributes[6].push_back(static_cast<float>(std::min(lineID, uint32_t(BCurves.size() - 1))));
+        // interpolant t
+        newTrajectory.attributes[7].push_back(0.0f);
 
 //        newTrajectory.attributes.resize(inTrajectories[traj].attributes.size());
 
@@ -217,10 +221,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
                 newTrajectory.attributes[2].push_back(attributesMinMax[varIDPerLine].y);
                 // var ID
                 newTrajectory.attributes[3].push_back(static_cast<float>(varIDPerLine));
-                // var element index
-                newTrajectory.attributes[4].push_back(static_cast<float>(lineID));
-                // line ID
-                newTrajectory.attributes[5].push_back(static_cast<float>(traj));
+
             }
             else
             {
@@ -228,9 +229,17 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
                 newTrajectory.attributes[1].push_back(0.0);
                 newTrajectory.attributes[2].push_back(0.0);
                 newTrajectory.attributes[3].push_back(-1.0);
-                newTrajectory.attributes[4].push_back(lineID);
-                newTrajectory.attributes[5].push_back(traj);
             }
+
+            // var element index
+            newTrajectory.attributes[4].push_back(static_cast<float>(lineID));
+            // line ID
+            newTrajectory.attributes[5].push_back(static_cast<float>(traj));
+            // next line ID
+            newTrajectory.attributes[6].push_back(static_cast<float>(std::min(lineID + 1, uint32_t(BCurves.size() - 1))));
+            // interpolant t
+            float normalizedT = BCurve.normalizeT(t);
+            newTrajectory.attributes[7].push_back(normalizedT);
 
 
             // We only store one variable per trajectory vertex

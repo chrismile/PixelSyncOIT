@@ -43,7 +43,7 @@ layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexLineNormal;
 layout(location = 2) in vec3 vertexLineTangent;
 layout(location = 3) in vec4 multiVariable;
-layout(location = 4) in vec2 variableDesc;
+layout(location = 4) in vec4 variableDesc;
 
 struct VarData
 {
@@ -96,7 +96,7 @@ out VertexData
     int instanceID;
     vec4 lineVariable;
     vec2 lineMinMax;
-    vec2 lineVariableDesc;
+    vec4 lineVariableDesc;
     int vertexID;
     uint lineSegID;
     uint varElemOffsetID;
@@ -918,7 +918,7 @@ in VertexData
     int instanceID;
     vec4 lineVariable;
     vec2 lineMinMax;
-    vec2 lineVariableDesc;
+    vec4 lineVariableDesc;
     int vertexID;
     uint lineSegID;
     uint varElemOffsetID;
@@ -934,6 +934,8 @@ flat out float fragmentAttribute;
 flat out int fragmentAttributeIndex;
 out vec2 texCoords;
 flat out uint fragmentLineSegID;
+flat out uint fragmentLineSegNextID;
+out float fragmentLineSegInterpolant;
 flat out uint fragmentVarElemOffsetID;
 
 #define NUM_SEGMENTS 3
@@ -1427,8 +1429,12 @@ void main()
     fragmentLineSegID = v_in[0].lineSegID;
     fragmentVarElemOffsetID = v_in[0].varElemOffsetID;
 
+
     // Emit the tube triangle vertices
     for (int i = 0; i < NUM_SEGMENTS - 1; i++) {
+        fragmentLineSegInterpolant = v_in[0].lineVariableDesc.w;
+        fragmentLineSegNextID = uint(v_in[0].lineVariableDesc.z);
+
         gl_Position = mvpMatrix * vec4(circlePointsCurrent[i], 1.0);
         fragmentNormal = vertexNormalsCurrent[i];
         fragmentTangent = tangent;
@@ -1446,6 +1452,18 @@ void main()
         texCoords = circleTexCoordsCurrent[(i+1)%NUM_SEGMENTS];
 //        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
         EmitVertex();
+
+        fragmentLineSegInterpolant = v_in[1].lineVariableDesc.w;
+        if (v_in[1].lineVariableDesc.w < v_in[0].lineVariableDesc.w)
+        {
+            fragmentLineSegInterpolant = 1.0f;
+            fragmentLineSegNextID = uint(v_in[0].lineVariableDesc.z);
+        }
+        else
+        {
+            fragmentLineSegInterpolant = v_in[1].lineVariableDesc.w;
+            fragmentLineSegNextID = uint(v_in[1].lineVariableDesc.z);
+        }
 
         gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
         fragmentNormal = vertexNormalsNext[i];
@@ -1618,6 +1636,8 @@ flat in int fragmentAttributeIndex;
 in vec2 texCoords;
 flat in uint fragmentLineSegID;
 flat in uint fragmentVarElemOffsetID;
+flat in uint fragmentLineSegNextID;
+in float fragmentLineSegInterpolant;
 
 #ifdef DIRECT_BLIT_GATHER
 out vec4 fragColor;
@@ -1880,11 +1900,14 @@ void main()
     float shadowFactor = 1.0f;
 #endif
 
-    const int varID = int(floor(texCoords.y * 5.0));
-    float rest = texCoords.y * 5.0 - float(varID);
+    const float numVars = 6.0;
+    const int varID = int(floor(texCoords.y * numVars));
+    float rest = texCoords.y * numVars - float(varID);
 
     const uint lineID = fragmentLineSegID;
     const uint varElementID = fragmentVarElemOffsetID;
+    const uint varElementIDNext = fragmentLineSegNextID;
+    float varInterpolant = fragmentLineSegInterpolant;
 
     uint startIndex = uint(lineDescs[lineID]);
     VarDescData varDesc = varDescs[6 * lineID + varID];
@@ -1892,12 +1915,14 @@ void main()
     const uint varOffset = uint(varDesc.info.r);
     const vec2 varMinMax = varDesc.info.gb;
     float value = varArray[startIndex + varOffset + varElementID];
+    float valueNext = varArray[startIndex + varOffset + varElementIDNext];
 
 //    fragmentAttributeIndex = varID;
 //    fragmentAttribute = (value - varMinMax.x) / (varMinMax.y - varMinMax.x);
 
     uint variableIndex = varID;
     float variableValue = (value - varMinMax.x) / (varMinMax.y - varMinMax.x);
+    float variableValueNext = (valueNext - varMinMax.x) / (varMinMax.y - varMinMax.x);
 
 //    uint variableIndex = int(fragmentAttributeIndex);
 //    float variableValue = fragmentAttribute;
@@ -1956,11 +1981,10 @@ void main()
 
     if (variableIndex == 0) { colorAttribute = vec4(vec3(228,26,28)/ 255.0, 1); } // red
     else if (variableIndex == 1) { colorAttribute = vec4(vec3(55,126,184)/ 255.0, 1); } // blue
-    else if (variableIndex == 2) { colorAttribute = vec4(vec3(77,175,74)/ 255.0, 1); } // green
-    else if (variableIndex == 3) { colorAttribute = vec4(vec3(152,78,163)/ 255.0, 1); } // lila / purple
-    else if (variableIndex == 4) { colorAttribute = vec4(vec3(241,105,19)/ 255.0, 1); } // pink
-    else if (variableIndex == 6) { colorAttribute = vec4(vec3(206,18,86)/ 255.0, 1); } // brown
-    else if (variableIndex == 5) { colorAttribute = vec4(vec3(153,52,4)/ 255.0, 1); } // brown
+    else if (variableIndex == 2) { colorAttribute = vec4(vec3(5,139,69)/ 255.0, 1); } // green
+    else if (variableIndex == 3) { colorAttribute = vec4(vec3(129,15,124)/ 255.0, 1); } // lila / purple
+    else if (variableIndex == 4) { colorAttribute = vec4(vec3(217,72,1)/ 255.0, 1); } // orange
+    else if (variableIndex == 5) { colorAttribute = vec4(vec3(231,41,138)/ 255.0, 1); } // pink
 
 //    if (fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 0 && fragmentAttributeIndex % NUM_MULTI_ATTRIBUTES != 5)
 //    {
@@ -1974,32 +1998,24 @@ void main()
 
     if (variableIndex >= 0)
     {
-//        colorAttribute.b = 1;
-//        colorAttribute.rgb = hsvToRGB(colorAttribute.rgb);
         colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
-//        vec3 hsvCol = colorAttribute.rgb;
         vec3 hsvCol = rgbToHSV(colorAttribute.rgb);
-//        hsvCol.g = 1;
-//        hsvCol.b = 0.6;
-        hsvCol.g = hsvCol.g * (0.25 + 0.75 * sigmoid_zero_one(variableValue));
+        float curMapping = variableValue;
+        float nextMapping = variableValueNext;
+        float rate = mix(curMapping, nextMapping, varInterpolant);
+
+        hsvCol.g = hsvCol.g * (0.25 + 0.75 * rate);
         colorAttribute.rgb = hsvCol.rgb;
-
         colorAttribute.rgb = hsvToRGB(colorAttribute.rgb);
-
-//        colorAttribute = map_color(variableValue, variableIndex);
-//        colorAttribute.rgb = sRGBToLinearRGB(colorAttribute.rgb);
-
-
-        //        colorAttribute.rgb *= fragmentAttribute;
-//        colorAttribute.rgb = saturate(colorAttribute.rgb, fragmentAttribute * 15);
     }
 
-    float borderWidth = 0.08;
+    float borderWidth = 0.0;
+    float alphaBorder = 0.5;
     if (rest <= borderWidth || rest >= (1.0 - borderWidth))
     {
         if (rest > 0.5) { rest = 1.0 - rest; }
 
-        colorAttribute.rgb = colorAttribute.rgb * rest / borderWidth * vec3(1, 1, 1);
+        colorAttribute.rgb = colorAttribute.rgb * (alphaBorder + (1 - alphaBorder) * rest / borderWidth);
     }
 
 
