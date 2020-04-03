@@ -2009,7 +2009,7 @@ void main()
         colorAttribute.rgb = hsvToRGB(colorAttribute.rgb);
     }
 
-    float borderWidth = 0.0;
+    float borderWidth = 0.08;
     float alphaBorder = 0.5;
     if (rest <= borderWidth || rest >= (1.0 - borderWidth))
     {
@@ -2022,6 +2022,8 @@ void main()
 //    colorAttribute = vec4(floor(length(texCoords.y) * 4.0) / 10.0, 0, 0, 1);
 //    colorAttribute = vec4(floor(texCoords.y * 4.0) / 4.0, 0, 0, 1);
 //    colorAttribute = vec4(floor(length(texCoords.y) * 4.0) / 10.0, 0, 0, 1);
+
+//    colorAttribute = vec4(floor((texCoords.y) * 4.0) / 10.0, 0, 0, 1);
 
 
     #if defined(USE_PROGRAMMABLE_FETCH) || defined(BILLBOARD_LINES)
@@ -2071,8 +2073,8 @@ void main()
     vec3 hV = normalize(cross(t, v));
     vec3 vNew = normalize(cross(hV, t));
 
-    float angle = pow(abs((dot(vNew, n))), 1.0); // 1.8 + 1.5
-    float angleN = pow(abs((dot(v, n))), 1.0);
+    float angle = pow(abs((dot(vNew, n))), 1.2); // 1.8 + 1.5
+    float angleN = pow(abs((dot(v, n))), 1.2);
     float EPSILON = 0.8f;
     float coverage = 1.0 - smoothstep(1.0 - 2.0*EPSILON, 1.0, angle);
 

@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     // Load the file containing the app settings
     string settingsFile = FileUtils::get()->getConfigDirectory() + "settings.txt";
     AppSettings::get()->loadSettings(settingsFile.c_str());
-    AppSettings::get()->getSettings().addKeyValue("window-multisamples", 0);
+    AppSettings::get()->getSettings().addKeyValue("window-multisamples", 16);
     AppSettings::get()->getSettings().addKeyValue("window-debugContext", true);
     AppSettings::get()->getSettings().addKeyValue("window-vSync", true);
     AppSettings::get()->getSettings().addKeyValue("window-resizable", true);
