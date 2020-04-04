@@ -176,9 +176,10 @@ vec4 determineColorLinearInterpolate(in int varID, in float variableValue, in fl
     return surfaceColor;
 }
 
-void drawSeparatorBetweenStripes(inout vec4 surfaceColor, in float varFraction)
+void drawSeparatorBetweenStripes(inout vec4 surfaceColor, in float varFraction,
+                                 in float separatorWidth)
 {
-    float borderWidth = 0.15;
+    float borderWidth = separatorWidth;
     float alphaBorder = 0.5;
     if (varFraction <= borderWidth || varFraction >= (1.0 - borderWidth))
     {
@@ -192,6 +193,13 @@ void drawSeparatorBetweenStripes(inout vec4 surfaceColor, in float varFraction)
 ///////////////////////////////////////////
 // Phong lighting model
 
+uniform float materialAmbient;
+uniform float materialDiffuse;
+uniform float materialSpecular;
+uniform float materialSpecularExp;
+uniform bool drawHalo;
+uniform float haloFactor;
+
 vec4 computePhongLighting(in vec4 surfaceColor, in float occlusionFactor, in float shadowFactor,
                           in vec3 worldPos, in vec3 normal, in vec3 tangent)
 {
@@ -199,11 +207,11 @@ vec4 computePhongLighting(in vec4 surfaceColor, in float occlusionFactor, in flo
     const vec3 ambientColor = surfaceColor.rgb;
     const vec3 diffuseColor = surfaceColor.rgb;
 
-    const float kA = 0.1 * occlusionFactor * shadowFactor;
+    const float kA = materialAmbient * occlusionFactor * shadowFactor;
     const vec3 Ia = kA * ambientColor;
-    const float kD = 0.85;
-    const float kS = 0.05;
-    const float s = 10;
+    const float kD = materialDiffuse;
+    const float kS = materialSpecular;
+    const float s = materialSpecularExp;
 
     const vec3 n = normalize(normal);
     const vec3 v = normalize(cameraPosition - worldPos);
@@ -218,21 +226,25 @@ vec4 computePhongLighting(in vec4 surfaceColor, in float occlusionFactor, in flo
     vec3 Is = kS * pow(clamp((dot(n, h)), 0.0, 1.0), s) * lightColor;
     vec3 colorShading = Ia + Id + Is;
 
-    //    float haloParameter = 0.5;
-    //    float angle1 = abs( dot( v, n)) * 0.8;
-    //    float angle2 = abs( dot( v, normalize(t))) * 0.2;
-    //    float halo = min(1.0,mix(1.0f,angle1 + angle2,haloParameter));//((angle1)+(angle2)), haloParameter);
+    if (drawHalo)
+    {
+        //    float haloParameter = 0.5;
+        //    float angle1 = abs( dot( v, n)) * 0.8;
+        //    float angle2 = abs( dot( v, normalize(t))) * 0.2;
+        //    float halo = min(1.0,mix(1.0f,angle1 + angle2,haloParameter));//((angle1)+(angle2)), haloParameter);
 
-    vec3 hV = normalize(cross(t, v));
-    vec3 vNew = normalize(cross(hV, t));
+        vec3 hV = normalize(cross(t, v));
+        vec3 vNew = normalize(cross(hV, t));
 
-    float angle = pow(abs((dot(vNew, n))), 1.2); // 1.8 + 1.5
-    float angleN = pow(abs((dot(v, n))), 1.2);
-    //    float EPSILON = 0.8f;
-    //    float coverage = 1.0 - smoothstep(1.0 - 2.0*EPSILON, 1.0, angle);
+        float angle = pow(abs((dot(vNew, n))), haloFactor); // 1.8 + 1.5
+        float angleN = pow(abs((dot(v, n))), haloFactor);
+        //    float EPSILON = 0.8f;
+        //    float coverage = 1.0 - smoothstep(1.0 - 2.0*EPSILON, 1.0, angle);
 
-    float haloNew = min(1.0, mix(1.0f, angle + angleN, 0.9)) * 0.9 + 0.1;
-    colorShading *= (haloNew) * (haloNew);
+        float haloNew = min(1.0, mix(1.0f, angle + angleN, 0.9)) * 0.9 + 0.1;
+        colorShading *= (haloNew) * (haloNew);
+    }
+
 
     ////////////
 

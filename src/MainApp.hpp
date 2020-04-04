@@ -100,6 +100,8 @@ protected:
 private:
     void renderGUI(); // Renders GUI
     void renderSceneSettingsGUI();
+    void renderLineRenderingSettingsGUI();
+    void renderMultiVarSettingsGUI();
     void updateColorSpaceMode();
 
     // Lighting & rendering
@@ -169,6 +171,20 @@ private:
     float ROT_SPEED = 1.0f;
     float MOUSE_ROT_SPEED = 0.05f;
 
+    // Multi-Variate settings
+    int32_t numVariables = 4;
+    int32_t maxNumVariables = 6;
+    int32_t numLineSegments = 8;
+    float separatorWidth = 0.15;
+
+    // Lighting settings
+    float materialConstantAmbient = 0.1;
+    float materialConstantDiffuse = 0.85;
+    float materialConstantSpecular = 0.05;
+    float materialConstantSpecularExp = 10;
+    bool drawHalo = true;
+    float haloFactor = 1.2;
+
     TransferFunctionWindow transferFunctionWindow;
 
     // Trajectory rendering
@@ -187,7 +203,7 @@ private:
             = IMPORTANCE_CRITERION_CFD_CURL;
     ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
-    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_LINE_INSTANCED;
+    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     std::vector<glm::vec2> criterionsMinMaxValues;

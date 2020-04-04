@@ -1,5 +1,8 @@
-// Number of variables to display
-uniform uint numVariables;
+// Current number of variables to display
+uniform int numVariables;
+// Maximum number of variables to display
+uniform int maxNumVariables;
+
 // Number of instances for rendering
 uniform uint numInstances;
 // Radius of tubes
@@ -55,7 +58,7 @@ void sampleVariableFromLineSSBO(in uint lineID, in uint varID, in uint elementID
                                 out float value, out vec2 minMax)
 {
     uint startIndex = uint(lineDescs[lineID]);
-    VarDescData varDesc = varDescs[numVariables * lineID + varID];
+    VarDescData varDesc = varDescs[maxNumVariables * lineID + varID];
     const uint varOffset = uint(varDesc.info.r);
     // Output
     minMax = varDesc.info.gb;
@@ -65,6 +68,6 @@ void sampleVariableFromLineSSBO(in uint lineID, in uint varID, in uint elementID
 // Function to sample distribution from SSBO
 void sampleVariableDistributionFromLineSSBO(in uint lineID, in uint varID, out vec2 minMax)
 {
-    LineVarDescData lineVarDesc = lineVarDescs[numVariables * lineID + varID];
+    LineVarDescData lineVarDesc = lineVarDescs[maxNumVariables * lineID + varID];
     minMax = lineVarDesc.minMax.xy;
 }

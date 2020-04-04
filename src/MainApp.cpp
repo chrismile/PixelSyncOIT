@@ -463,7 +463,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    lineRadius = 0.001;
+    lineRadius = 0.005;
 
     if (timeCoherence)
     {
@@ -711,10 +711,10 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING) {
         int instancing = 0;
-        if (multiVarRenderMode == MULTIVAR_RENDERMODE_LINE_INSTANCED)
-        {
-            instancing = 0;
-        }
+//        if (multiVarRenderMode == MULTIVAR_RENDERMODE_LINE_INSTANCED)
+//        {
+//            instancing = 0;
+//        }
 
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
                 useProgrammableFetch, programmableFetchUseAoS, lineRadius,
@@ -913,39 +913,36 @@ void PixelSyncApp::setMultiVarShaders()
 {
     switch (multiVarRenderMode)
     {
-    case MULTIVAR_RENDERMODE_RIBBONS:
-        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
-                           "PseudoPhongTrajectoriesMultiVar.RibbonGeometry",
-                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
-        break;
-    case MULTIVAR_RENDERMODE_RIBBONS_FIBERS:
-        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
-                           "PseudoPhongTrajectoriesMultiVar.FibersGeometry",
-                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
-        break;
-    case MULTIVAR_RENDERMODE_STAR_GLYPHS:
-        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
-                           "PseudoPhongTrajectoriesMultiVar.StarGeometry",
-                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
-        break;
-
-    case MULTIVAR_RENDERMODE_TUBE_ROLLS:
-        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
-                           "PseudoPhongTrajectoriesMultiVar.TubeRollsGeometry",
-                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
-        break;
-    case MULTIVAR_RENDERMODE_LINE:
-        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
-                           "PseudoPhongTrajectoriesMultiVar.Geometry",
-                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
-        break;
-    case MULTIVAR_RENDERMODE_LINE_INSTANCED:
-        gatherShaderIDs = {"MultiVarOrientedStripes.Vertex",
-                           "MultiVarOrientedStripes.Geometry",
-                           "MultiVarOrientedStripes.Fragment"};
-//        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.InstanceVertex",
-//                           "PseudoPhongTrajectoriesMultiVar.InstanceGeometry",
+//    case MULTIVAR_RENDERMODE_RIBBONS:
+//        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+//                           "PseudoPhongTrajectoriesMultiVar.RibbonGeometry",
 //                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+//        break;
+//    case MULTIVAR_RENDERMODE_RIBBONS_FIBERS:
+//        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+//                           "PseudoPhongTrajectoriesMultiVar.FibersGeometry",
+//                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+//        break;
+//    case MULTIVAR_RENDERMODE_STAR_GLYPHS:
+//        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+//                           "PseudoPhongTrajectoriesMultiVar.StarGeometry",
+//                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+//        break;
+//
+//    case MULTIVAR_RENDERMODE_TUBE_ROLLS:
+//        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+//                           "PseudoPhongTrajectoriesMultiVar.TubeRollsGeometry",
+//                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+//        break;
+//    case MULTIVAR_RENDERMODE_LINE:
+//        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.Vertex",
+//                           "PseudoPhongTrajectoriesMultiVar.Geometry",
+//                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+//        break;
+    case MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS:
+        gatherShaderIDs = {"MultiVarOrientedColorBands.Vertex",
+                           "MultiVarOrientedColorBands.Geometry",
+                           "MultiVarOrientedColorBands.Fragment"};
         break;
     }
 }
@@ -1691,7 +1688,19 @@ void PixelSyncApp::renderGUI()
             ImGui::Separator();
 
             static bool showSceneSettings = true;
-            if (ImGui::CollapsingHeader("Scene Settings", NULL, ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+            {
+                if (ImGui::CollapsingHeader("Multi-Variate Settings", NULL, ImGuiTreeNodeFlags_DefaultOpen)) {
+                    renderMultiVarSettingsGUI();
+                }
+            }
+
+            if (ImGui::CollapsingHeader("Line Rendering Settings", NULL, ImGuiTreeNodeFlags_DefaultOpen )) {
+                renderLineRenderingSettingsGUI();
+            }
+
+
+            if (ImGui::CollapsingHeader("Scene Settings", NULL, 0)) {
                 renderSceneSettingsGUI();
             }
 
@@ -1732,6 +1741,98 @@ glm::vec3 linearRGBTosRGB(const glm::vec3 &color_sRGB)
     // See https://en.wikipedia.org/wiki/SRGB
     return glm::mix(1.055f * glm::pow(color_sRGB, glm::vec3(1.0f / 2.4f)) - 0.055f,
                     color_sRGB * 12.92f, glm::lessThanEqual(color_sRGB, glm::vec3(0.0031308f)));
+}
+
+void PixelSyncApp::renderLineRenderingSettingsGUI()
+{
+    if ((useGeometryShader || useProgrammableFetch || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
+        && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
+        if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
+            static_cast<OIT_VoxelRaytracing *>(oitRenderer.get())->setLineRadius(lineRadius);
+#ifdef USE_RAYTRACING
+            } else if (mode == RENDER_MODE_RAYTRACING) {
+                static_cast<OIT_RayTracing*>(oitRenderer.get())->setLineRadius(lineRadius);
+#endif
+        }
+        reRender = true;
+    }
+    if (ImGui::SliderInt("Num Line Segments", &numLineSegments, 3, 20))
+    {
+        // Update shader
+        //!TODO later change this to oriented stripes
+        if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
+        {
+            sgl::ShaderManager->addPreprocessorDefine("NUM_SEGMENTS", numLineSegments);
+        }
+
+        ShaderManager->invalidateShaderCache();
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+        transparentObject.setNewShader(transparencyShader);
+        reRender = true;
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Phong Lighting Settings:");
+
+    if (ImGui::SliderFloat("MaterialAmbient", &materialConstantAmbient, 0.0, 1.0, "%.2f"));
+    {
+        reRender = true;
+    }
+    if (ImGui::SliderFloat("MaterialDiffuse", &materialConstantDiffuse, 0.0, 1.0, "%.2f"));
+    {
+        reRender = true;
+    }
+    if (ImGui::SliderFloat("MaterialSpecular", &materialConstantSpecular, 0.0, 1.0, "%.2f"));
+    {
+        reRender = true;
+    }
+    if (ImGui::SliderFloat("MaterialSpecularExp", &materialConstantSpecularExp, 0.0, 100.0, "%.2f"));
+    {
+        reRender = true;
+    }
+    if (ImGui::Checkbox("Draw Halo", &drawHalo))
+    {
+        reRender = true;
+    }
+    if (ImGui::SliderFloat("Halo Factor", &haloFactor, 0.0, 4.0, "%.1f"))
+    {
+        reRender = true;
+    }
+}
+
+void PixelSyncApp::renderMultiVarSettingsGUI()
+{
+    // Switch importance criterion
+    if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+    {
+        bool success = ImGui::Combo("Render Technique", (int*)&multiVarRenderMode,
+                                    MULTIVAR_RENDERTYPE_DISPLAYNAMES,
+                                    IM_ARRAYSIZE(MULTIVAR_RENDERTYPE_DISPLAYNAMES));
+        if (success)
+        {
+            setMultiVarShaders();
+
+            ShaderManager->invalidateShaderCache();
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+            transparentObject.setNewShader(transparencyShader);
+            reRender = true;
+        }
+    }
+
+    if (ImGui::SliderInt("Num Variables", &numVariables, 1, 6))
+    {
+        reRender = true;
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Technique settings:");
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
+    {
+        if (ImGui::SliderFloat("Separator Width", &separatorWidth, 0.0, 1.0, "%.2f"));
+        {
+            reRender = true;
+        }
+    }
 }
 
 
@@ -1858,17 +1959,6 @@ void PixelSyncApp::renderSceneSettingsGUI()
                 reRender = true;
             }
         }
-        if ((useGeometryShader || useProgrammableFetch || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
-            && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
-            if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-                static_cast<OIT_VoxelRaytracing *>(oitRenderer.get())->setLineRadius(lineRadius);
-#ifdef USE_RAYTRACING
-            } else if (mode == RENDER_MODE_RAYTRACING) {
-                static_cast<OIT_RayTracing*>(oitRenderer.get())->setLineRadius(lineRadius);
-#endif
-            }
-            reRender = true;
-        }
         if (modelType == MODEL_TYPE_POINTS
             && ImGui::SliderFloat("Point radius", &pointRadius, 0.00005f, 0.005f, "%.5f")) {
             reRender = true;
@@ -1905,22 +1995,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 
     if (shaderMode == SHADER_MODE_SCIENTIFIC_ATTRIBUTE)
     {
-        // Switch importance criterion
-        if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
-        {
-            bool success = ImGui::Combo("MultiVar Render Mode", (int*)&multiVarRenderMode,
-                                           MULTIVAR_RENDERTYPE_DISPLAYNAMES,
-                                           IM_ARRAYSIZE(MULTIVAR_RENDERTYPE_DISPLAYNAMES));
-            if (success)
-            {
-                setMultiVarShaders();
 
-                ShaderManager->invalidateShaderCache();
-                updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
-                transparentObject.setNewShader(transparencyShader);
-                reRender = true;
-            }
-        }
 
     }
 
@@ -2019,6 +2094,34 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                 transparencyShader->setUniformArray("minMaxCriterionValues", &criterionsMinMaxValues.front(),
                         criterionsMinMaxValues.size());
             }
+            if (transparencyShader->hasUniform("numVariables")) {
+                transparencyShader->setUniform("numVariables", numVariables);
+                transparencyShader->setUniform("maxNumVariables", maxNumVariables);
+            }
+            if (transparencyShader->hasUniform("materialAmbient")) {
+                transparencyShader->setUniform("materialAmbient", materialConstantAmbient);
+            }
+            if (transparencyShader->hasUniform("materialDiffuse")) {
+                transparencyShader->setUniform("materialDiffuse", materialConstantDiffuse);
+            }
+            if (transparencyShader->hasUniform("materialSpecular")) {
+                transparencyShader->setUniform("materialSpecular", materialConstantSpecular);
+            }
+            if (transparencyShader->hasUniform("materialSpecularExp")) {
+                transparencyShader->setUniform("materialSpecularExp", materialConstantSpecularExp);
+            }
+            if (transparencyShader->hasUniform("drawHalo")) {
+                transparencyShader->setUniform("drawHalo", drawHalo);
+            }
+            if (transparencyShader->hasUniform("haloFactor")) {
+                transparencyShader->setUniform("haloFactor", haloFactor);
+            }
+
+            if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
+            {
+                transparencyShader->setUniform("separatorWidth", separatorWidth);
+            }
+
             if (transparencyShader->hasUniform("radius")) {
                 if (modelType == MODEL_TYPE_POINTS) {
                     transparencyShader->setUniform("radius", pointRadius);

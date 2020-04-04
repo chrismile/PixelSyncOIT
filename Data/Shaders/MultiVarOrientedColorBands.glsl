@@ -44,7 +44,7 @@ layout(triangle_strip, max_vertices = 128) out;
 
 #include "MultiVarGlobalVariables.glsl"
 
-#define NUM_SEGMENTS 10
+//#define NUM_SEGMENTS 10
 #include "MultiVarGeometryUtils.glsl"
 
 // Input from vertex buffer
@@ -220,6 +220,7 @@ out vec4 fragColor;
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 uniform vec3 cameraPosition; // world space
+uniform float separatorWidth;
 
 #include "AmbientOcclusion.glsl"
 #include "Shadows.glsl"
@@ -236,9 +237,8 @@ void main()
     vec2 variableNextMinMax;
 
     // 1) Determine variable ID along tube geometry
-    const float numVars = 4.0;
-    const int varID = int(floor(fragTexCoord.y * numVars));
-    float varFraction = fragTexCoord.y * numVars - float(varID);
+    const int varID = int(floor(fragTexCoord.y * numVariables));
+    float varFraction = fragTexCoord.y * numVariables - float(varID);
 
     // 2) Sample variables from buffers
     sampleVariableFromLineSSBO(fragLineID, varID, fragElementID, variableValue, variableMinMax);
@@ -251,7 +251,11 @@ void main()
     // 4) Determine variable color
     vec4 surfaceColor = determineColorLinearInterpolate(varID, variableValue, variableNextValue);
     // 4.1) Draw black separators between single stripes.
-    drawSeparatorBetweenStripes(surfaceColor, varFraction);
+    if (separatorWidth > 0)
+    {
+        drawSeparatorBetweenStripes(surfaceColor, varFraction, separatorWidth);
+    }
+
 
     ////////////
     // 5) Phong Lighting
