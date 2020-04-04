@@ -713,7 +713,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         int instancing = 0;
         if (multiVarRenderMode == MULTIVAR_RENDERMODE_LINE_INSTANCED)
         {
-            instancing = 12;
+            instancing = 0;
         }
 
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
@@ -940,9 +940,12 @@ void PixelSyncApp::setMultiVarShaders()
                            "PseudoPhongTrajectoriesMultiVar.Fragment"};
         break;
     case MULTIVAR_RENDERMODE_LINE_INSTANCED:
-        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.InstanceVertex",
-                           "PseudoPhongTrajectoriesMultiVar.InstanceGeometry",
-                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
+        gatherShaderIDs = {"MultiVarOrientedStripes.Vertex",
+                           "MultiVarOrientedStripes.Geometry",
+                           "MultiVarOrientedStripes.Fragment"};
+//        gatherShaderIDs = {"PseudoPhongTrajectoriesMultiVar.InstanceVertex",
+//                           "PseudoPhongTrajectoriesMultiVar.InstanceGeometry",
+//                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
         break;
     }
 }
@@ -1408,7 +1411,7 @@ void PixelSyncApp::render()
     }
 
 
-    //glDisable(GL_FRAMEBUFFER_SRGB);
+//    glDisable(GL_FRAMEBUFFER_SRGB);
 
     if (mode != RENDER_MODE_RAYTRACING) {
         // Render to screen
@@ -1713,12 +1716,31 @@ void PixelSyncApp::renderGUI()
     ImGuiWrapper::get()->renderEnd();
 }
 
+glm::vec3 sRGBToLinearRGB(const glm::vec3 &color_LinearRGB)
+{
+    //float factor = 2.2f;
+    //return glm::pow(color_LinearRGB, glm::vec3(factor));
+    // See https://en.wikipedia.org/wiki/SRGB
+    return glm::mix(glm::pow((color_LinearRGB + 0.055f) / 1.055f, glm::vec3(2.4f)),
+                    color_LinearRGB / 12.92f, glm::lessThanEqual(color_LinearRGB, glm::vec3(0.04045f)));
+}
+
+glm::vec3 linearRGBTosRGB(const glm::vec3 &color_sRGB)
+{
+    //float factor = 1.0f / 2.2f;
+    //return glm::pow(color_sRGB, glm::vec3(factor));
+    // See https://en.wikipedia.org/wiki/SRGB
+    return glm::mix(1.055f * glm::pow(color_sRGB, glm::vec3(1.0f / 2.4f)) - 0.055f,
+                    color_sRGB * 12.92f, glm::lessThanEqual(color_sRGB, glm::vec3(0.0031308f)));
+}
+
+
 void PixelSyncApp::renderSceneSettingsGUI()
 {
     // Color selection in binning mode (if not showing all values in different color channels in mode 1)
     static ImVec4 colorSelection = ImColor(165, 220, 84, 120);
     if (modelFilenamePure != "Data/Models/Ship_04" && mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
-        int misc_flags = 0;
+        int misc_flags = ImGuiColorEditFlags_PickerHueWheel;
         if (ImGui::ColorEdit4("Model Color", (float*)&colorSelection, misc_flags)) {
             bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
             reRender = true;
@@ -1734,8 +1756,10 @@ void PixelSyncApp::renderSceneSettingsGUI()
     }
     //ImGui::Separator();
 
-    if (ImGui::ColorEdit3("Clear Color", (float*)&clearColorSelection, 0)) {
-        clearColor = colorFromFloat(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z,
+    int misc_flags = ImGuiColorEditFlags_PickerHueWheel;
+    if (ImGui::ColorEdit3("Clear Color", (float*)&clearColorSelection, misc_flags)) {
+        glm::vec3 srgbColor = linearRGBTosRGB(glm::vec3(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z));
+        clearColor = colorFromFloat(srgbColor.x, srgbColor.y, srgbColor.z,
                                     clearColorSelection.w);
         if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
             static_cast<OIT_VoxelRaytracing*>(oitRenderer.get())->setClearColor(clearColor);
@@ -2001,14 +2025,14 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                     transparencyShader->setUniform("radius", lineRadius);
                 }
             }
-            transparencyShader->setUniform("transparencyMapping", transparencyMapping);
+//            transparencyShader->setUniform("transparencyMapping", transparencyMapping);
             if (transparencyShader->hasUniform("colorByPosition"))
             {
                 transparencyShader->setUniform("colorByPosition", colorByPosition);
             }
 
-            transparencyShader->setUniform("transferFunctionTexture",
-                    transferFunctionWindow.getTransferFunctionMapTexture(), 5);
+//            transparencyShader->setUniform("transferFunctionTexture",
+//                    transferFunctionWindow.getTransferFunctionMapTexture(), 5);
             //transparencyShader->setUniformBuffer(2, "TransferFunctionBlock",
             //      transferFunctionWindow.getTransferFunctionMapUBO());
             //std::cout << "Max Vorticity: " << *maxVorticity << std::endl;
@@ -2032,7 +2056,7 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
         }
 
         if (!isHairDataset) {
-            transparencyShader->setUniform("colorGlobal", bandingColor);
+//            transparencyShader->setUniform("colorGlobal", bandingColor);
         }
         if (transparencyShader->hasUniform("lightDirection")) {
             transparencyShader->setUniform("lightDirection", lightDirection);

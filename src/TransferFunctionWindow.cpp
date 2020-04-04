@@ -153,6 +153,7 @@ bool TransferFunctionWindow::loadFunctionFromFile(const std::string &filename)
 void TransferFunctionWindow::updateAvailableFiles()
 {
     availableFiles = sgl::FileUtils::get()->getFilesInDirectoryVector(saveDirectory);
+    std::sort(availableFiles.begin(), availableFiles.end());
 
     // Update currently selected filename
     for (size_t i = 0; i < availableFiles.size(); i++) {
@@ -172,7 +173,7 @@ void TransferFunctionWindow::setClearColor(const sgl::Color &clearColor)
 
 void TransferFunctionWindow::computeHistogram(const std::vector<float> &attributes, float minAttr, float maxAttr)
 {
-    const int histogramResolution = 256;
+    const int histogramResolution = 50;
     histogram.clear();
     histogram.resize(histogramResolution);
     for (float attr : attributes) {
