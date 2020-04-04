@@ -1,9 +1,9 @@
 // Number of variables to display
-uniform uint numVariables = 6;
+uniform uint numVariables;
 // Number of instances for rendering
 uniform uint numInstances;
 // Radius of tubes
-uniform float radius = 0.001f;
+uniform float radius;
 
 // Structs for SSBOs
 struct VarData
