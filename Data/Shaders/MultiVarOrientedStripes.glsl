@@ -11,8 +11,10 @@ out VertexData
     vec3 vNormal;// Orientation normal along line in world space
     vec3 vTangent;// Tangent of line in world space
 //    int variableID; // variable index
-    uint vLineID;// number of line
-    uint vElementID;// number of line element (original line vertex index)
+    int vLineID;// number of line
+    int vElementID;// number of line element (original line vertex index)
+    int vElementNextID; // number of next line element (original next line vertex index)
+    float vElementInterpolant; // curve parameter t along curve between element and next element
 };
 //} GeomOut;
 
@@ -21,16 +23,18 @@ out VertexData
 void main()
 {
 //    uint varID = gl_InstanceID % 6;
-    const uint lineID = int(variableDesc.y);
-    const uint elementID = uint(variableDesc.x);
+    const int lineID = int(variableDesc.y);
+    const int elementID = int(variableDesc.x);
 
     vPosition = vertexPosition;
     vNormal = normalize(vertexLineNormal);
     vTangent = normalize(vertexLineTangent);
 
-//    Output.variableID = varID;
     vLineID = lineID;
     vElementID = elementID;
+
+    vElementNextID = int(variableDesc.z);
+    vElementInterpolant = variableDesc.w;
 }
 
 -- Geometry
@@ -38,11 +42,11 @@ void main()
 #version 430 core
 
 layout(lines) in;
-layout(triangle_strip, max_vertices = 64) out;
+layout(triangle_strip, max_vertices = 128) out;
 
 #include "MultiVarGlobalVariables.glsl"
 
-#define NUM_SEGMENTS 14
+#define NUM_SEGMENTS 10
 
 void createTubeSegments(inout vec3 positions[NUM_SEGMENTS],
                         inout vec3 normals[NUM_SEGMENTS],
@@ -109,34 +113,29 @@ void computeTexCoords(inout vec2 texCoords[NUM_SEGMENTS], inout vec3 positions[N
     }
 }
 
+// Input from vertex buffer
 in VertexData
 {
     vec3 vPosition;// Position in world space
     vec3 vNormal;// Orientation normal along line in world space
     vec3 vTangent;// Tangent of line in world space
-//    int variableID; // variable index
-    uint vLineID;// number of line
-    uint vElementID;// number of line element (original line vertex index)
+    int vLineID;// number of line
+    int vElementID;// number of line element (original line vertex index)
+    int vElementNextID; // number of next line element (original next line vertex index)
+    float vElementInterpolant; // curve parameter t along curve between element and next element
 } vertexOutput[];
 
-//out DataOut
-//{
-//    vec3 worldPos;
-//    vec3 normal;
-//    vec3 tangent;
-//    flat vec2 texCoord;
-//} fragOut;
-
+// Output to fragments
 out vec3 fragWorldPos;
 out vec3 fragNormal;
 out vec3 fragTangent;
-out vec3 screenSpacePosition;
+out vec3 screenSpacePosition; // screen space position for depth in view space (to sort for buckets...)
 out vec2 fragTexCoord;
-
-//out DataOutFlat
-//{
-//
-//} fragOutFlat;
+// "Oriented Stripes"-specfic variables
+flat out int fragElementID; // Actual per-line vertex index --> required for sampling from global buffer
+flat out int fragElementNextID; // Actual next per-line vertex index --> for linear interpolation
+flat out int fragLineID; // Line index --> required for sampling from global buffer
+out float fragElementInterpolant; // current number of curve parameter t (in [0;1]) within one line segment
 
 void main()
 {
@@ -196,31 +195,9 @@ void main()
     computeTexCoords(vertexTexCoordsNext, circlePointsNext,
     invMatNDC, tangentNDC, normalNDC, refPointNDC);
 
-//    fragmentAttributeIndex = gl_PrimitiveIDIn;
-
     // 4) Emit the tube triangle vertices and attributes to the fragment shader
-//    gl_Position = mvpMatrix * vec4(currentPoint, 1.0);
-//    normal = vertexNormalsCurrent[0];
-//    tangent = tangent;
-//    worldPos = (mMatrix * vec4(currentPoint, 1.0)).xyz;
-//    texCoord = vertexTexCoordsCurrent[0];
-//    EmitVertex();
-//
-//    gl_Position = mvpMatrix * vec4(nextPoint, 1.0);
-//    normal = vertexNormalsCurrent[0];
-//    tangent = tangent;
-//    worldPos = (mMatrix * vec4(nextPoint, 1.0)).xyz;
-//    texCoord = vertexTexCoordsCurrent[0];
-//    EmitVertex();
-//
-////    gl_Position = vec4(1, -1, 0, 1);//mvpMatrix * vec4(nextPoint + 10 * normalCurrent, 1.0);
-////    normal = vertexNormalsCurrent[0];
-////    tangent = tangent;
-////    worldPos = (mMatrix * vec4(nextPoint + 10 * normalCurrent, 1.0)).xyz;
-////    texCoord = vertexTexCoordsCurrent[0];
-////    EmitVertex();
-
-//    EndPrimitive();
+    fragElementID = vertexOutput[0].vElementID;
+    fragLineID = vertexOutput[0].vLineID;
 
     for (int i = 0; i < NUM_SEGMENTS; i++)
     {
@@ -231,9 +208,12 @@ void main()
         vec3 segmentPointCurrent1 = circlePointsCurrent[iN];
         vec3 segmentPointNext1 = circlePointsNext[iN];
 
+        fragElementNextID = vertexOutput[0].vElementNextID;
+        fragElementInterpolant = vertexOutput[0].vElementInterpolant;
+
         gl_Position = mvpMatrix * vec4(segmentPointCurrent0, 1.0);
         fragNormal = vertexNormalsCurrent[i];
-        fragTangent = tangent;
+        fragTangent = tangentCurrent;
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
         fragTexCoord = vertexTexCoordsCurrent[i];
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
@@ -241,15 +221,26 @@ void main()
 
         gl_Position = mvpMatrix * vec4(segmentPointCurrent1, 1.0);
         fragNormal = vertexNormalsCurrent[iN];
-        fragTangent = tangent;
+        fragTangent = tangentCurrent;
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent1, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent1, 1.0)).xyz;
         fragTexCoord = vertexTexCoordsCurrent[iN];
         EmitVertex();
 
+        if (vertexOutput[1].vElementInterpolant < vertexOutput[0].vElementInterpolant)
+        {
+            fragElementInterpolant = 1.0f;
+            fragElementNextID = int(vertexOutput[0].vElementNextID);
+        }
+        else
+        {
+            fragElementInterpolant = vertexOutput[1].vElementInterpolant;
+            fragElementNextID = int(vertexOutput[1].vElementNextID);
+        }
+
         gl_Position = mvpMatrix * vec4(segmentPointNext0, 1.0);
         fragNormal = vertexNormalsNext[i];
-        fragTangent = tangent;
+        fragTangent = tangentNext;
         fragWorldPos = (mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
         fragTexCoord = vertexTexCoordsNext[i];
@@ -257,7 +248,7 @@ void main()
 
         gl_Position = mvpMatrix * vec4(segmentPointNext1, 1.0);
         fragNormal = vertexNormalsNext[iN];
-        fragTangent = tangent;
+        fragTangent = tangentNext;
         fragWorldPos = (mMatrix * vec4(segmentPointNext1, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext1, 1.0)).xyz;
         fragTexCoord = vertexTexCoordsNext[iN];
@@ -272,29 +263,20 @@ void main()
 
 #version 430 core
 
-in vec3 screenSpacePosition;
-
-#if !defined(DIRECT_BLIT_GATHER) || defined(SHADOW_MAPPING_MOMENTS_GENERATE)
-#include OIT_GATHER_HEADER
-#endif
-
-//in DataIn
-//{
-//    vec3 worldPos;
-//    vec3 normal;
-//    vec3 tangent;
-//    flat vec2 texCoord;
-//} fragInput;
+in vec3 screenSpacePosition; // Required for transparency rendering techniques
 
 in vec3 fragWorldPos;
 in vec3 fragNormal;
 in vec3 fragTangent;
 in vec2 fragTexCoord;
+flat in int fragElementID; // Actual per-line vertex index --> required for sampling from global buffer
+flat in int fragElementNextID; // Actual next per-line vertex index --> for linear interpolation
+flat in int fragLineID; // Line index --> required for sampling from global buffer
+in float fragElementInterpolant; // current number of curve parameter t (in [0;1]) within one line segment
 
-//in DataInFlat
-//{
-//
-//} fragInputFlat;
+#if !defined(DIRECT_BLIT_GATHER) || defined(SHADOW_MAPPING_MOMENTS_GENERATE)
+#include OIT_GATHER_HEADER
+#endif
 
 
 
@@ -309,10 +291,196 @@ uniform vec3 cameraPosition; // world space
 #include "Shadows.glsl"
 #include "MultiVarGlobalVariables.glsl"
 
+vec3 rgbToHSV(in vec3 color)
+{
+    float minValue = min(color.r, min(color.g, color.b));
+    float maxValue = max(color.r, max(color.g, color.b));
+
+    float C = maxValue - minValue;
+
+    // 1) Compute hue H
+    float H = 0;
+    if (maxValue == color.r)
+    {
+        H = mod((color.g - color.b) / C, 6.0);
+    }
+    else if (maxValue == color.g)
+    {
+        H = (color.b - color.r) / C + 2;
+    }
+    else if (maxValue == color.b)
+    {
+        H = (color.r - color.g) / C + 4;
+    }
+    else { H = 0; }
+
+    H *= 60; // hue is in degree
+
+    // 2) Compute the value V
+    float V = maxValue;
+
+    // 3) Compute saturation S
+    float S = 0;
+    if (V == 0)
+    {
+        S = 0;
+    }
+    else
+    {
+        S = C / V;
+//        S = C / (1 - abs(maxValue + minValue - 1));
+    }
+
+    return vec3(H, S, V);
+}
+
+// https://en.wikipedia.org/wiki/HSL_and_HSV
+// https://de.wikipedia.org/wiki/HSV-Farbraum
+
+vec3 hsvToRGB(in vec3 color)
+{
+    const float H = color.r;
+    const float S = color.g;
+    const float V = color.b;
+
+    float h = H / 60.0;
+
+    int hi = int(floor(h));
+    float f = (h - float(hi));
+
+    float p = V * (1.0 - S);
+    float q = V * (1.0 - S * f);
+    float t = V * (1.0 - S * (1.0 - f));
+
+    if (hi == 1)
+    {
+        return vec3(q, V, p);
+    }
+    else if (hi == 2)
+    {
+        return vec3(p, V, t);
+    }
+    else if (hi == 3)
+    {
+        return vec3(p, q, V);
+    }
+    else if (hi == 4)
+    {
+        return vec3(t, p, V);
+    }
+    else if (hi == 5)
+    {
+        return vec3(V, p, q);
+    }
+    else
+    {
+        return vec3(V, t, p);
+    }
+}
+
+vec3 linearRGBTosRGB(in vec3 color_sRGB)
+{
+    //float factor = 1.0f / 2.2f;
+    //return glm::pow(color_sRGB, glm::vec3(factor));
+    // See https://en.wikipedia.org/wiki/SRGB
+    return mix(1.055f * pow(color_sRGB, vec3(1.0f / 2.4f)) - 0.055f, color_sRGB * 12.92f,
+    lessThanEqual(color_sRGB, vec3(0.0031308f)));
+}
+
+vec3 sRGBToLinearRGB(in vec3 color_LinearRGB)
+{
+    //float factor = 2.2f;
+    //return glm::pow(color_LinearRGB, glm::vec3(factor));
+    // See https://en.wikipedia.org/wiki/SRGB
+    return mix(pow((color_LinearRGB + 0.055f) / 1.055f, vec3(2.4f)),
+    color_LinearRGB / 12.92f, lessThanEqual(color_LinearRGB, vec3(0.04045f)));
+}
+
+
+vec4 mapColor(in float value, uint index)
+{
+    if (index == 0)
+    {
+        return mix(vec4(vec3(253,219,199)/ 255.0, 1), vec4(vec3(178,24,43)/ 255.0, 1), value);
+    }
+    else if (index == 1)
+    {
+        return mix(vec4(vec3(209,229,240)/ 255.0, 1), vec4(vec3(33,102,172)/ 255.0, 1), value);
+    }
+    else if (index == 2)
+    {
+        return mix(vec4(vec3(217,240,211)/ 255.0, 1), vec4(vec3(27,120,55)/ 255.0, 1), value);
+    }
+    else if (index == 3)
+    {
+        return mix(vec4(vec3(216,218,235) / 255.0, 1), vec4(vec3(84,39,136) / 255.0, 1), value);
+    }
+    else if (index == 5)
+    {
+        return mix(vec4(vec3(254,224,182)/ 255.0, 1), vec4(vec3(179,88,6)/ 255.0, 1), value);
+    }
+    else if (index == 6)
+    {
+        return mix(vec4(vec3(199,234,229)/ 255.0, 1), vec4(vec3(1,102,94)/ 255.0, 1), value);
+    }
+    else if (index == 4)
+    {
+        return mix(vec4(vec3(253,224,239)/ 255.0, 1), vec4(vec3(197,27,125)/ 255.0, 1), value);
+    }
+}
+
 void main()
 {
 //    vec4 surfaceColor = vec4(floor(fragTexCoord.y * 4.0) / 10.0, 0, 0, 1);
-    vec4 surfaceColor = vec4(fragTexCoord.xy, 0, 1);
+//    vec4 surfaceColor = vec4(fragTexCoord.xy, 0, 1);
+
+    float variableValue;
+    vec2 variableMinMax;
+
+    float variableNextValue;
+    vec2 variableNextMinMax;
+
+    const float numVars = 4.0;
+    const int varID = int(floor(fragTexCoord.y * numVars));
+    float rest = fragTexCoord.y * numVars - float(varID);
+
+    // Sample variables from buffers
+    sampleVariableFromLineSSBO(fragLineID, varID, fragElementID, variableValue, variableMinMax);
+    sampleVariableFromLineSSBO(fragLineID, varID, fragElementNextID, variableNextValue, variableNextMinMax);
+
+    // Normalize values
+    variableValue = (variableValue - variableMinMax.x) / (variableMinMax.y - variableMinMax.x);
+    variableNextValue = (variableNextValue - variableNextMinMax.x) / (variableNextMinMax.y - variableNextMinMax.x);
+
+    // Determine variable color
+    vec4 surfaceColor = vec4(0.2, 0.2, 0.2, 1);
+    if (varID == 0) { surfaceColor = vec4(vec3(228,26,28)/ 255.0, 1); } // red
+    else if (varID == 1) { surfaceColor = vec4(vec3(55,126,184)/ 255.0, 1); } // blue
+    else if (varID == 2) { surfaceColor = vec4(vec3(5,139,69)/ 255.0, 1); } // green
+    else if (varID == 3) { surfaceColor = vec4(vec3(129,15,124)/ 255.0, 1); } // lila / purple
+    else if (varID == 4) { surfaceColor = vec4(vec3(217,72,1)/ 255.0, 1); } // orange
+    else if (varID == 5) { surfaceColor = vec4(vec3(231,41,138)/ 255.0, 1); } // pink
+
+    surfaceColor.rgb = sRGBToLinearRGB(surfaceColor.rgb);
+//    vec3 hsvCol = rgbToHSV(surfaceColor.rgb);
+//    surfaceColor.rgb = hsvToRGB(hsvCol.rgb);
+    vec3 hsvCol = rgbToHSV(surfaceColor.rgb);
+    float curMapping = variableValue;
+    float nextMapping = variableNextValue;
+    float rate = mix(curMapping, nextMapping, fragElementInterpolant);
+//
+    hsvCol.g = hsvCol.g * (0.25 + 0.75 * rate);
+    surfaceColor.rgb = hsvCol.rgb;
+    surfaceColor.rgb = hsvToRGB(surfaceColor.rgb);
+
+    float borderWidth = 0.15;
+    float alphaBorder = 0.5;
+    if (rest <= borderWidth || rest >= (1.0 - borderWidth))
+    {
+        if (rest > 0.5) { rest = 1.0 - rest; }
+
+        surfaceColor.rgb = surfaceColor.rgb * (alphaBorder + (1 - alphaBorder) * rest / borderWidth);
+    }
 
     ////////////
     // Shading
@@ -331,15 +499,15 @@ void main()
 
     const vec3 n = normalize(fragNormal);
     const vec3 v = normalize(cameraPosition - fragWorldPos);
-    //    const vec3 l = normalize(lightDirection);
+//        const vec3 l = normalize(lightDirection);
     const vec3 l = normalize(v);
     const vec3 h = normalize(v + l);
     vec3 t = normalize(fragTangent);
 //    vec3 t = normalize(cross(vec3(0, 0, 1), n));
 
 
-    vec3 Id = kD * clamp(abs(dot(n, l)), 0.0, 1.0) * diffuseColor;
-    vec3 Is = kS * pow(clamp(abs(dot(n, h)), 0.0, 1.0), s) * lightColor;
+    vec3 Id = kD * clamp((dot(n, l)), 0.0, 1.0) * diffuseColor;
+    vec3 Is = kS * pow(clamp((dot(n, h)), 0.0, 1.0), s) * lightColor;
     vec3 colorShading = Ia + Id + Is;
 
 //    float haloParameter = 0.5;
@@ -350,12 +518,12 @@ void main()
     vec3 hV = normalize(cross(t, v));
     vec3 vNew = normalize(cross(hV, t));
 
-    float angle = pow(abs((dot(vNew, n))), 0.5); // 1.8 + 1.5
-    float angleN = pow(abs((dot(v, n))), 0.5);
+    float angle = pow(abs((dot(vNew, n))), 1.2); // 1.8 + 1.5
+    float angleN = pow(abs((dot(v, n))), 1.2);
 //    float EPSILON = 0.8f;
 //    float coverage = 1.0 - smoothstep(1.0 - 2.0*EPSILON, 1.0, angle);
 
-    float haloNew = min(1.0, mix(1.0f, 0.5 * angle + 0.5 * angleN, 0.9)) * 0.9 + 0.1;
+    float haloNew = min(1.0, mix(1.0f, angle + angleN, 0.9)) * 0.9 + 0.1;
     colorShading *= (haloNew) * (haloNew);
 
     ////////////

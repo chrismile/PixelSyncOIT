@@ -1,5 +1,5 @@
 // Number of variables to display
-uniform uint numVariables;
+uniform uint numVariables = 6;
 // Number of instances for rendering
 uniform uint numInstances;
 // Radius of tubes

@@ -1758,7 +1758,8 @@ void PixelSyncApp::renderSceneSettingsGUI()
 
     int misc_flags = ImGuiColorEditFlags_PickerHueWheel;
     if (ImGui::ColorEdit3("Clear Color", (float*)&clearColorSelection, misc_flags)) {
-        glm::vec3 srgbColor = linearRGBTosRGB(glm::vec3(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z));
+        glm::vec3 srgbColor = sRGBToLinearRGB(glm::vec3(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z));
+//        glm::vec3 srgbColor = glm::vec3(clearColorSelection.x, clearColorSelection.y, clearColorSelection.z);
         clearColor = colorFromFloat(srgbColor.x, srgbColor.y, srgbColor.z,
                                     clearColorSelection.w);
         if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
