@@ -65,11 +65,15 @@ out vec3 fragNormal;
 out vec3 fragTangent;
 out vec3 screenSpacePosition; // screen space position for depth in view space (to sort for buckets...)
 out vec2 fragTexCoord;
-// "Oriented Stripes"-specfic variables
+// "Oriented Stripes"-specfic outputs
 flat out int fragElementID; // Actual per-line vertex index --> required for sampling from global buffer
 flat out int fragElementNextID; // Actual next per-line vertex index --> for linear interpolation
 flat out int fragLineID; // Line index --> required for sampling from global buffer
 out float fragElementInterpolant; // current number of curve parameter t (in [0;1]) within one line segment
+
+#if !defined(NUM_SEGMENTS)
+    #define NUM_SEGMENTS 10
+#endif
 
 void main()
 {
