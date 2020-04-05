@@ -944,6 +944,11 @@ void PixelSyncApp::setMultiVarShaders()
 //                           "PseudoPhongTrajectoriesMultiVar.Geometry",
 //                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
 //        break;
+    case MULTIVAR_RENDERMODE_COLOR_BANDS:
+        gatherShaderIDs = {"MultiVarColorBands.Vertex",
+                           "MultiVarColorBands.Geometry",
+                           "MultiVarColorBands.Fragment"};
+        break;
     case MULTIVAR_RENDERMODE_ROLLS:
         gatherShaderIDs = {"MultiVarRolls.Vertex",
                            "MultiVarRolls.Geometry",
@@ -1789,7 +1794,9 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
             reRender = true;
         }
     }
-    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS)
     {
         if (ImGui::SliderInt("Num Line Segments", &numInstances, 3, 20))
         {
@@ -1863,7 +1870,8 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
     {
 
     }
-    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS)
     {
         if (ImGui::Checkbox("Map Tube Diameter", &mapTubeDiameter))
         {
