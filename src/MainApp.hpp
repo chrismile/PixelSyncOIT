@@ -175,7 +175,9 @@ private:
     int32_t numVariables = 4;
     int32_t maxNumVariables = 6;
     int32_t numLineSegments = 8;
+    int32_t numInstances = 12;
     float separatorWidth = 0.15;
+    bool mapTubeDiameter = false;
 
     // Lighting settings
     float materialConstantAmbient = 0.1;

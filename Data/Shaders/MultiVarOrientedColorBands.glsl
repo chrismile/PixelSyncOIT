@@ -45,7 +45,6 @@ layout(triangle_strip, max_vertices = 128) out;
 #include "MultiVarGlobalVariables.glsl"
 
 //#define NUM_SEGMENTS 10
-#include "MultiVarGeometryUtils.glsl"
 
 // Input from vertex buffer
 in VertexData
@@ -74,6 +73,8 @@ out float fragElementInterpolant; // current number of curve parameter t (in [0;
 #if !defined(NUM_SEGMENTS)
     #define NUM_SEGMENTS 10
 #endif
+
+#include "MultiVarGeometryUtils.glsl"
 
 void main()
 {

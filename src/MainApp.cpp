@@ -711,15 +711,15 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING) {
         int instancing = 0;
-        if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
-        {
-            instancing = 12;
-            sgl::ShaderManager->addPreprocessorDefine("NUM INSTANCES", instancing);
-        }
-        else
-        {
-            sgl::ShaderManager->removePreprocessorDefine("NUM INSTANCES");
-        }
+//        if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
+//        {
+//            instancing = 0;
+//            sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES", instancing);
+//        }
+//        else
+//        {
+//            sgl::ShaderManager->removePreprocessorDefine("NUM_INSTANCES");
+//        }
 
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
                 useProgrammableFetch, programmableFetchUseAoS, lineRadius,
@@ -1775,20 +1775,34 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
         }
         reRender = true;
     }
-    if (ImGui::SliderInt("Num Line Segments", &numLineSegments, 3, 20))
-    {
-        // Update shader
-        //!TODO later change this to oriented stripes
-        if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
-        {
-            sgl::ShaderManager->addPreprocessorDefine("NUM_SEGMENTS", numLineSegments);
-        }
 
-        ShaderManager->invalidateShaderCache();
-        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
-        transparentObject.setNewShader(transparencyShader);
-        reRender = true;
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
+    {
+        if (ImGui::SliderInt("Num Line Segments", &numLineSegments, 3, 20))
+        {
+            // Update shader
+            sgl::ShaderManager->addPreprocessorDefine("NUM_SEGMENTS", numLineSegments);
+
+            ShaderManager->invalidateShaderCache();
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+            transparentObject.setNewShader(transparencyShader);
+            reRender = true;
+        }
     }
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
+    {
+        if (ImGui::SliderInt("Num Line Segments", &numInstances, 3, 20))
+        {
+            // Update shader
+            sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES", numInstances);
+
+            ShaderManager->invalidateShaderCache();
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+            transparentObject.setNewShader(transparencyShader);
+            reRender = true;
+        }
+    }
+
 
     ImGui::Separator();
     ImGui::Text("Phong Lighting Settings:");
@@ -1846,6 +1860,18 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
     ImGui::Separator();
     ImGui::Text("Technique settings:");
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
+    {
+
+    }
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
+    {
+        if (ImGui::Checkbox("Map Tube Diameter", &mapTubeDiameter))
+        {
+            reRender = true;
+        }
+    }
+
+    if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
         if (ImGui::SliderFloat("Separator Width", &separatorWidth, 0.0, 1.0, "%.2f"));
         {
@@ -2138,9 +2164,14 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                 transparencyShader->setUniform("haloFactor", haloFactor);
             }
 
-            if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
+            if (transparencyShader->hasUniform("separatorWidth"))
             {
                 transparencyShader->setUniform("separatorWidth", separatorWidth);
+            }
+
+            if (transparencyShader->hasUniform("mapTubeDiameter"))
+            {
+                transparencyShader->setUniform("mapTubeDiameter", mapTubeDiameter);
             }
 
             if (transparencyShader->hasUniform("radius")) {

@@ -45,13 +45,23 @@ void main()
 
 #version 430 core
 
-layout(lines) in;
-layout(triangle_strip, max_vertices = 128) out;
+#if !defined(NUM_INSTANCES)
+    #define NUM_INSTANCES 10
+#endif
+
+#if !defined(NUM_CIRCLE_POINTS_PER_INSTANCE)
+    #define NUM_CIRCLE_POINTS_PER_INSTANCE 3
+#endif
 
 #include "MultiVarGlobalVariables.glsl"
 
+layout(lines, invocations = NUM_INSTANCES) in;
+layout(triangle_strip, max_vertices = 128) out;
+
+
+
 //#define NUM_SEGMENTS 10
-#include "MultiVarGeometryUtils.glsl"
+
 
 // Input from vertex buffer
 in VertexData
@@ -79,135 +89,12 @@ out vec2 fragTexCoord;
 // "Rolls"-specfic outputs
 flat out int fragVariableID;
 flat out float fragVariableValue;
+out float fragBorderInterpolant;
 
+#include "MultiVarGeometryUtils.glsl"
 
 // "Rolls" specific uniforms
-#if !defined(NUM_CIRCLE_POINTS_PER_INSTANCE)
-    #define NUM_CIRCLE_POINTS_PER_INSTANCE 3
-#endif
-#if !defined(NUM_INSTANCES)
-    #define NUM_INSTANCES 12
-#endif
-
-
-void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTANCE],
-                                inout vec3 normals[NUM_CIRCLE_POINTS_PER_INSTANCE],
-                                in vec3 center, in vec3 normal,
-                                in vec3 tangent, in float curRadius, in int varID)
-{
-    float theta = 2.0 * 3.1415926 / float(NUM_INSTANCES);
-    float tangetialFactor = tan(theta); // opposite / adjacent
-    float radialFactor = cos(theta); // adjacent / hypotenuse
-
-    // Set position to the offset for ribbons (and rolls for varying radius)
-    vec2 position = vec2(curRadius, 0.0);
-
-    for (int i = 0; i < varID; i++) {
-        vec2 circleTangent = vec2(-position.y, position.x);
-        position += tangetialFactor * circleTangent;
-        position *= radialFactor;
-    }
-
-    vec3 binormal = cross(tangent, normal);
-    mat3 matFrame = mat3(normal, binormal, tangent);
-
-    // Subdivide theta in number of segments per instance
-    theta /= float(NUM_CIRCLE_POINTS_PER_INSTANCE - 1);
-    tangetialFactor = tan(theta); // opposite / adjacent
-    radialFactor = cos(theta); // adjacent / hypotenuse
-
-    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE; i++) {
-        vec3 pointOnCricle = matFrame * vec3(position, 0.0);
-        positions[i] = pointOnCricle + center;
-        normals[i] = normalize(pointOnCricle);
-
-        // Add the tangent vector and correct the position using the radial factor.
-        vec2 circleTangent = vec2(-position.y, position.x);
-        position += tangetialFactor * circleTangent;
-        position *= radialFactor;
-    }
-}
-
-void drawTangentLid(in vec3 p0, in vec3 p1, in vec3 p2)
-{
-    gl_Position = mvpMatrix * vec4(p0, 1.0);
-    fragWorldPos = (mMatrix * vec4(p0, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(p0, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(p1, 1.0);
-    fragWorldPos = (mMatrix * vec4(p1, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(p1, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(p2, 1.0);
-    fragWorldPos = (mMatrix * vec4(p2, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(p2, 1.0)).xyz;
-    EmitVertex();
-
-    EndPrimitive();
-}
-
-void drawPartialCircleLids(inout vec3 circlePointsCurrent[NUM_CIRCLE_POINTS_PER_INSTANCE],
-                            inout vec3 vertexNormalsCurrent[NUM_CIRCLE_POINTS_PER_INSTANCE],
-                            inout vec3 circlePointsNext[NUM_CIRCLE_POINTS_PER_INSTANCE],
-                            inout vec3 vertexNormalsNext[NUM_CIRCLE_POINTS_PER_INSTANCE],
-                            in vec3 centerCurrent, in vec3 centerNext, in vec3 tangent)
-{
-    vec3 pointCurFirst = circlePointsCurrent[0];
-    vec3 pointNextFirst = circlePointsNext[0];
-
-    vec3 pointCurLast = circlePointsCurrent[NUM_CIRCLE_POINTS_PER_INSTANCE - 1];
-    vec3 pointNextLast = circlePointsNext[NUM_CIRCLE_POINTS_PER_INSTANCE - 1];
-
-    // 1) First half
-    gl_Position = mvpMatrix * vec4(pointCurFirst, 1.0);
-    fragNormal = normalize(cross(vertexNormalsCurrent[0], normalize(tangent)));
-    fragTangent = normalize(cross(tangent, fragNormal));
-    fragWorldPos = (mMatrix * vec4(pointCurFirst, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(pointCurFirst, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(pointNextFirst, 1.0);
-    fragWorldPos = (mMatrix * vec4(pointNextFirst, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(pointNextFirst, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(centerCurrent, 1.0);
-    fragWorldPos = (mMatrix * vec4(centerCurrent, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(centerCurrent, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(centerNext, 1.0);
-    fragWorldPos = (mMatrix * vec4(centerNext, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(centerNext, 1.0)).xyz;
-    EmitVertex();
-
-    // 2) Second half
-    gl_Position = mvpMatrix * vec4(pointCurLast, 1.0);
-    fragNormal = normalize(cross(normalize(tangent), vertexNormalsCurrent[NUM_CIRCLE_POINTS_PER_INSTANCE - 1]));
-    fragTangent = normalize(cross(tangent, fragNormal)); //! TODO compute actual tangent
-    fragWorldPos = (mMatrix * vec4(pointCurLast, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(pointCurLast, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(centerCurrent, 1.0);
-    fragWorldPos = (mMatrix * vec4(centerCurrent, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(centerCurrent, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(pointNextLast, 1.0);
-    fragWorldPos = (mMatrix * vec4(pointNextLast, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(pointNextLast, 1.0)).xyz;
-    EmitVertex();
-
-    gl_Position = mvpMatrix * vec4(centerNext, 1.0);
-    fragWorldPos = (mMatrix * vec4(centerNext, 1.0)).xyz;
-    screenSpacePosition = (vMatrix * mMatrix * vec4(centerNext, 1.0)).xyz;
-    EmitVertex();
-
-    EndPrimitive();
-}
+uniform bool mapTubeDiameter;
 
 
 void main()
@@ -231,11 +118,12 @@ void main()
     vec3 tangent = normalize(nextPoint - currentPoint);
 
     // 1) Sample variables at each tube roll
-    const int instanceID = vertexOutput[0].vInstanceID;
-    const int varID = vertexOutput[0].vVariableID;
+    const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
+    const int varID = vertexOutput[0].vVariableID; // instanceID % numVariables for stripes
     const int elementID = vertexOutput[0].vElementID;
     const int lineID = vertexOutput[0].vLineID;
 
+    float variableValueOrig = 0;
     float variableValue = 0;
     vec2 variableMinMax = vec2(0);
 
@@ -243,18 +131,37 @@ void main()
 
     if (varID >= 0)
     {
-        sampleVariableFromLineSSBO(lineID, varID, elementID, variableValue, variableMinMax);
+        sampleVariableFromLineSSBO(lineID, varID, elementID, variableValueOrig, variableMinMax);
         // Normalize value
-        variableValue = (variableValue - variableMinMax.x) / (variableMinMax.y - variableMinMax.x);
+        variableValue = (variableValueOrig - variableMinMax.x) / (variableMinMax.y - variableMinMax.x);
 //        variableValue = (varInfo.x - varInfo.y) / (varInfo.z - varInfo.y);
     }
 
     // 2.1) Radius mapping
-    float curRadius = radius * instanceID * 0.1;
+    float curRadius = radius;
+    float minRadius = 0.5 * radius;
 
-    if (varID < 0)
+    if (mapTubeDiameter)
     {
-        curRadius *= 0.55;
+        curRadius = minRadius;
+        if (varID >= 0)
+        {
+            vec2 lineVarMinMax = vec2(0);
+            sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+            if (lineVarMinMax.x != lineVarMinMax.y)
+            {
+                float interpolant = (variableValueOrig - lineVarMinMax.x) / (lineVarMinMax.y - lineVarMinMax.x);
+//                interpolant = max(0.0, min(1.0, interpolant));
+                curRadius = mix(minRadius, radius, interpolant);
+            }
+        }
+    }
+    else
+    {
+        if (varID < 0)
+        {
+            curRadius = minRadius;
+        }
     }
 
     // 2) Create tube circle vertices for current and next point
@@ -282,6 +189,7 @@ void main()
         fragTangent = tangentCurrent;
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
+        fragBorderInterpolant = 0.0f;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointCurrent1, 1.0);
@@ -296,6 +204,7 @@ void main()
         fragTangent = tangentNext;
         fragWorldPos = (mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
+        fragBorderInterpolant = 1.0f;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointNext1, 1.0);
@@ -353,6 +262,7 @@ in vec2 fragTexCoord;
 // "Rolls"-specfic inputs
 flat in int fragVariableID;
 flat in float fragVariableValue;
+in float fragBorderInterpolant;
 
 #if !defined(DIRECT_BLIT_GATHER) || defined(SHADOW_MAPPING_MOMENTS_GENERATE)
     #include OIT_GATHER_HEADER
@@ -371,6 +281,8 @@ uniform vec3 cameraPosition; // world space
 #include "MultiVarGlobalVariables.glsl"
 #include "MultiVarShadingUtils.glsl"
 
+// "Rolls"-specific uniforms
+uniform float separatorWidth;
 
 void main()
 {
@@ -378,10 +290,11 @@ void main()
     // 1) Determine variable color
     vec4 surfaceColor = determineColor(fragVariableID, fragVariableValue);
     // 1.1) Draw black separators between single stripes.
-//    if (separatorWidth > 0)
-//    {
-//        drawSeparatorBetweenStripes(surfaceColor, varFraction, separatorWidth);
-//    }
+    float varFraction = fragBorderInterpolant;
+    if (separatorWidth > 0)
+    {
+        drawSeparatorBetweenStripes(surfaceColor, varFraction, separatorWidth);
+    }
 
     ////////////
     // 2) Phong Lighting
