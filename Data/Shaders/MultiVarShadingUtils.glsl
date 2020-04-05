@@ -147,23 +147,51 @@ vec4 mapColor(in float value, uint index)
     return vec4(0);
 }
 
-
-vec4 determineColorLinearInterpolate(in int varID, in float variableValue, in float variableNextValue)
+vec4 determineVariableColor(in int varID)
 {
-    // Determine variable color
     vec4 surfaceColor = vec4(0.2, 0.2, 0.2, 1);
+
     if (varID == 0) { surfaceColor = vec4(vec3(228,26,28)/ 255.0, 1); } // red
     else if (varID == 1) { surfaceColor = vec4(vec3(55,126,184)/ 255.0, 1); } // blue
     else if (varID == 2) { surfaceColor = vec4(vec3(5,139,69)/ 255.0, 1); } // green
     else if (varID == 3) { surfaceColor = vec4(vec3(129,15,124)/ 255.0, 1); } // lila / purple
     else if (varID == 4) { surfaceColor = vec4(vec3(217,72,1)/ 255.0, 1); } // orange
     else if (varID == 5) { surfaceColor = vec4(vec3(231,41,138)/ 255.0, 1); } // pink
+    else { surfaceColor = vec4(0.4, 0.4, 0.4, 1); }
 
     surfaceColor.rgb = sRGBToLinearRGB(surfaceColor.rgb);
+
+    return surfaceColor;
+}
+
+vec4 determineColor(in int varID, in float variableValue)
+{
+    // Determine variable color
+    vec4 surfaceColor = determineVariableColor(varID);
+
+    if (varID >= 0)
+    {
+        vec3 hsvCol = rgbToHSV(surfaceColor.rgb);
+        float rate = variableValue;
+        hsvCol.g = hsvCol.g * (0.25 + 0.75 * rate);
+        surfaceColor.rgb = hsvCol.rgb;
+        surfaceColor.rgb = hsvToRGB(surfaceColor.rgb);
+    }
+
+    return surfaceColor;
+}
+
+
+vec4 determineColorLinearInterpolate(in int varID, in float variableValue,
+                                     in float variableNextValue, in float interpolant)
+{
+    // Determine variable color
+    vec4 surfaceColor = determineVariableColor(varID);
+
     vec3 hsvCol = rgbToHSV(surfaceColor.rgb);
     float curMapping = variableValue;
     float nextMapping = variableNextValue;
-    float rate = mix(curMapping, nextMapping, fragElementInterpolant);
+    float rate = mix(curMapping, nextMapping, interpolant);
     //
     hsvCol.g = hsvCol.g * (0.25 + 0.75 * rate);
     surfaceColor.rgb = hsvCol.rgb;

@@ -711,10 +711,15 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (mode != RENDER_MODE_VOXEL_RAYTRACING_LINES && mode != RENDER_MODE_RAYTRACING) {
         int instancing = 0;
-//        if (multiVarRenderMode == MULTIVAR_RENDERMODE_LINE_INSTANCED)
-//        {
-//            instancing = 0;
-//        }
+        if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
+        {
+            instancing = 12;
+            sgl::ShaderManager->addPreprocessorDefine("NUM INSTANCES", instancing);
+        }
+        else
+        {
+            sgl::ShaderManager->removePreprocessorDefine("NUM INSTANCES");
+        }
 
         transparentObject = parseMesh3D(modelFilenameOptimized, transparencyShader, shuffleGeometry,
                 useProgrammableFetch, programmableFetchUseAoS, lineRadius,
@@ -939,6 +944,12 @@ void PixelSyncApp::setMultiVarShaders()
 //                           "PseudoPhongTrajectoriesMultiVar.Geometry",
 //                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
 //        break;
+    case MULTIVAR_RENDERMODE_ROLLS:
+        gatherShaderIDs = {"MultiVarRolls.Vertex",
+                           "MultiVarRolls.Geometry",
+                           "MultiVarRolls.Fragment"};
+        break;
+
     case MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS:
         gatherShaderIDs = {"MultiVarOrientedColorBands.Vertex",
                            "MultiVarOrientedColorBands.Geometry",
@@ -1745,6 +1756,14 @@ glm::vec3 linearRGBTosRGB(const glm::vec3 &color_sRGB)
 
 void PixelSyncApp::renderLineRenderingSettingsGUI()
 {
+    if (ImGui::Button("Reload Shader"))
+    {
+        ShaderManager->invalidateShaderCache();
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+        transparentObject.setNewShader(transparencyShader);
+        reRender = true;
+    }
+
     if ((useGeometryShader || useProgrammableFetch || mode == RENDER_MODE_VOXEL_RAYTRACING_LINES)
         && ImGui::SliderFloat("Line radius", &lineRadius, 0.0001f, 0.01f, "%.4f")) {
         if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
@@ -2096,6 +2115,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             }
             if (transparencyShader->hasUniform("numVariables")) {
                 transparencyShader->setUniform("numVariables", numVariables);
+            }
+            if (transparencyShader->hasUniform("maxNumVariables")) {
                 transparencyShader->setUniform("maxNumVariables", maxNumVariables);
             }
             if (transparencyShader->hasUniform("materialAmbient")) {

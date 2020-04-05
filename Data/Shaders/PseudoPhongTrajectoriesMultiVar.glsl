@@ -1565,47 +1565,32 @@ void main()
         {
 
             gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
-//            fragmentNormal = vertexNormalsCurrent[(i+1)%NUM_SEGMENTS];
             fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
-//            fragmentTangent = tangent;
-//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
 
             gl_Position = mvpMatrix * vec4(currentPoint, 1.0);
-//            fragmentNormal = vertexNormalsNext[i];
             fragmentPositionWorld = (mMatrix * vec4(currentPoint, 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(currentPoint, 1.0)).xyz;
-//            fragmentTangent = tangent;
-//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
         }
         else
         {
             gl_Position = mvpMatrix * vec4(currentPoint, 1.0);
-//            fragmentNormal = vertexNormalsNext[i];
             fragmentPositionWorld = (mMatrix * vec4(currentPoint, 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(currentPoint, 1.0)).xyz;
-//            fragmentTangent = tangent;
-//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
 
             gl_Position = mvpMatrix * vec4(circlePointsNext[i], 1.0);
-//            fragmentNormal = vertexNormalsCurrent[(i+1)%NUM_SEGMENTS];
             fragmentPositionWorld = (mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
             screenSpacePosition = (vMatrix * mMatrix * vec4(circlePointsNext[i], 1.0)).xyz;
-//            fragmentTangent = tangent;
-//            fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
             EmitVertex();
         }
 
 
         gl_Position = mvpMatrix * vec4(nextPoint, 1.0);
-//        fragmentNormal = vertexNormalsNext[(i+1)%NUM_SEGMENTS];
         fragmentPositionWorld = (mMatrix * vec4(nextPoint, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(nextPoint, 1.0)).xyz;
-//        fragmentAttribute = 0.0;//v_in[0].lineAttributes[CUR_ATTRIBUTE];
-//        fragmentTangent = tangent;
         EmitVertex();
 
         EndPrimitive();

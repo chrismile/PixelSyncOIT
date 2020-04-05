@@ -224,6 +224,8 @@ out vec4 fragColor;
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);
 uniform vec3 cameraPosition; // world space
+
+// "Color bands"-specific uniforms
 uniform float separatorWidth;
 
 #include "AmbientOcclusion.glsl"
@@ -253,7 +255,8 @@ void main()
     variableNextValue = (variableNextValue - variableNextMinMax.x) / (variableNextMinMax.y - variableNextMinMax.x);
 
     // 4) Determine variable color
-    vec4 surfaceColor = determineColorLinearInterpolate(varID, variableValue, variableNextValue);
+    vec4 surfaceColor = determineColorLinearInterpolate(varID, variableValue, variableNextValue,
+                                                       fragElementInterpolant);
     // 4.1) Draw black separators between single stripes.
     if (separatorWidth > 0)
     {
