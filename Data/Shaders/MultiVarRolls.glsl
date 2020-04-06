@@ -139,10 +139,11 @@ void main()
 
     // 2.1) Radius mapping
     float curRadius = radius;
-    float minRadius = 0.5 * radius;
+    float minRadius = 0.8 * radius;
 
     if (mapTubeDiameter)
     {
+        minRadius = 0.5 * radius;
         curRadius = minRadius;
         if (varID >= 0)
         {
