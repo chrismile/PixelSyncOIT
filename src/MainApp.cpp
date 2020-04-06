@@ -944,6 +944,11 @@ void PixelSyncApp::setMultiVarShaders()
 //                           "PseudoPhongTrajectoriesMultiVar.Geometry",
 //                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
 //        break;
+    case MULTIVAR_RENDERMODE_TWISTED_ROLLS:
+        gatherShaderIDs = {"MultiVarTwistedRolls.Vertex",
+                           "MultiVarTwistedRolls.Geometry",
+                           "MultiVarTwistedRolls.Fragment"};
+        break;
     case MULTIVAR_RENDERMODE_COLOR_BANDS:
         gatherShaderIDs = {"MultiVarColorBands.Vertex",
                            "MultiVarColorBands.Geometry",
@@ -1871,9 +1876,23 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
 
     }
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
-        || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS)
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS)
     {
         if (ImGui::Checkbox("Map Tube Diameter", &mapTubeDiameter))
+        {
+            reRender = true;
+        }
+    }
+
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS)
+    {
+        if (ImGui::SliderFloat("Twist Offset", &twistOffset, 0.0, 1.0, "%.2f"))
+        {
+            reRender = true;
+        }
+
+        if (ImGui::Checkbox("Constant Twist Offset", &constantTwistOffset))
         {
             reRender = true;
         }
@@ -2180,6 +2199,14 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             if (transparencyShader->hasUniform("mapTubeDiameter"))
             {
                 transparencyShader->setUniform("mapTubeDiameter", mapTubeDiameter);
+            }
+            if (transparencyShader->hasUniform("twistOffset"))
+            {
+                transparencyShader->setUniform("twistOffset", twistOffset);
+            }
+            if (transparencyShader->hasUniform("constantTwistOffset"))
+            {
+                transparencyShader->setUniform("constantTwistOffset", constantTwistOffset);
             }
 
             if (transparencyShader->hasUniform("radius")) {

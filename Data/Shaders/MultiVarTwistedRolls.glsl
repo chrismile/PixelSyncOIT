@@ -16,7 +16,8 @@ out VertexData
     int vElementNextID; // number of next line element (original next line vertex index)
     float vElementInterpolant; // curve parameter t along curve between element and next element
     int vInstanceID; // current instance ID for multi-instancing rendering
-    vec4 lineVariable;
+    vec4 lineVariable; // not needed anymore actually
+    int vVertexID;
 };
 //} GeomOut; // does not work
 
@@ -34,6 +35,7 @@ void main()
     vLineID = lineID;
     vElementID = elementID;
     vInstanceID = gl_InstanceID;
+    vVertexID = gl_VertexID;
 
     vElementNextID = int(variableDesc.z);
     vElementInterpolant = variableDesc.w;
@@ -75,7 +77,8 @@ in VertexData
     int vElementNextID; // number of next line element (original next line vertex index)
     float vElementInterpolant; // curve parameter t along curve between element and next element
     int vInstanceID; // current instance ID for multi-instancing rendering
-    vec4 lineVariable;
+    vec4 lineVariable; // not needed anymore
+    int vVertexID;
 } vertexOutput[];
 
 in int gl_PrimitiveIDIn;
@@ -96,8 +99,10 @@ out float fragElementInterpolant;
 
 #include "MultiVarGeometryUtils.glsl"
 
-// "Color Bands" specific uniforms
+// "Twisted Rolls" specific uniforms
 uniform bool mapTubeDiameter;
+uniform float twistOffset;
+uniform bool constantTwistOffset;
 
 
 void main()
@@ -169,9 +174,14 @@ void main()
 
     // 2) Create tube circle vertices for current and next point
     createPartialTubeSegments(circlePointsCurrent, vertexNormalsCurrent, currentPoint,
-                                normalCurrent, tangentCurrent, curRadius, instanceID, 0, 0);
+                                normalCurrent, tangentCurrent, curRadius, instanceID,
+                                twistOffset, vertexOutput[0].vVertexID);
+
+    int vertexIDNext = (constantTwistOffset) ? vertexOutput[0].vVertexID : vertexOutput[1].vVertexID;
+
     createPartialTubeSegments(circlePointsNext, vertexNormalsNext, nextPoint,
-                                normalNext, tangentNext, nextRadius, instanceID, 0, 0);
+                                normalNext, tangentNext, nextRadius, instanceID,
+                                twistOffset, vertexIDNext);
 
 
     // 3) Draw Tube Front Sides
@@ -315,8 +325,8 @@ void main()
 
     // 3) Render partial circle lids
     drawPartialCircleLids(circlePointsCurrent, vertexNormalsCurrent,
-    circlePointsNext, vertexNormalsNext,
-    currentPoint, nextPoint, normalize(circlePointsNext[0] - circlePointsCurrent[0]));//tangent);
+                        circlePointsNext, vertexNormalsNext,
+                        currentPoint, nextPoint, normalize(circlePointsNext[0] - circlePointsCurrent[0]));//tangent);
 }
 
 

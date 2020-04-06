@@ -74,7 +74,8 @@ void computeTexCoords(inout vec2 texCoords[NUM_SEGMENTS], inout vec3 positions[N
 void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTANCE],
                                 inout vec3 normals[NUM_CIRCLE_POINTS_PER_INSTANCE],
                                 in vec3 center, in vec3 normal,
-                                in vec3 tangent, in float curRadius, in int varID)
+                                in vec3 tangent, in float curRadius, in int varID,
+                                in float offset, in int vertexID)
 {
     float theta = 2.0 * 3.1415926 / float(NUM_INSTANCES);
     float tangetialFactor = tan(theta); // opposite / adjacent
@@ -87,6 +88,20 @@ void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTAN
         vec2 circleTangent = vec2(-position.y, position.x);
         position += tangetialFactor * circleTangent;
         position *= radialFactor;
+    }
+
+    // Shift positions for twisted rolls
+    if (offset > 0)
+    {
+        float thetaOffset = offset * theta;
+        float tangetialFactorOffset = tan(thetaOffset); // opposite / adjacent
+        float radialFactorOffset = cos(thetaOffset); // adjacent / hypotenuse
+
+        for (int i = 0; i < vertexID; i++) {
+            vec2 circleTangent = vec2(-position.y, position.x);
+            position += tangetialFactorOffset * circleTangent;
+            position *= radialFactorOffset;
+        }
     }
 
     vec3 binormal = cross(tangent, normal);
@@ -190,4 +205,34 @@ void drawPartialCircleLids(inout vec3 circlePointsCurrent[NUM_CIRCLE_POINTS_PER_
     EmitVertex();
 
     EndPrimitive();
+}
+
+float computeRadius(in int lineID, in int varID, in int elementID, in int elementNextID,
+in float minRadius, in float maxRadius, in float interpolant)
+{
+    float curRadius = minRadius;
+    float nextRadius = minRadius;
+
+    vec2 lineVarMinMax = vec2(0);
+    float variableValueOrig = 0;
+    sampleVariableFromLineSSBO(lineID, varID, elementID , variableValueOrig, lineVarMinMax);
+    sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+    if (lineVarMinMax.x != lineVarMinMax.y)
+    {
+        float interpolant = (variableValueOrig - lineVarMinMax.x) / (lineVarMinMax.y - lineVarMinMax.x);
+        //                interpolant = max(0.0, min(1.0, interpolant));
+        curRadius = mix(minRadius, maxRadius, interpolant);
+    }
+
+    sampleVariableFromLineSSBO(lineID, varID, elementNextID , variableValueOrig, lineVarMinMax);
+    sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+    //            float variableNextValue = (variableNextValueOrig - variableNextMinMax.x) / (variableNextMinMax.y - variableNextMinMax.x);
+    if (lineVarMinMax.x != lineVarMinMax.y)
+    {
+        float interpolant = (variableValueOrig - lineVarMinMax.x) / (lineVarMinMax.y - lineVarMinMax.x);
+        //                interpolant = max(0.0, min(1.0, interpolant));
+        nextRadius = mix(minRadius, maxRadius, interpolant);
+    }
+
+    return  mix(curRadius, nextRadius, interpolant);
 }
