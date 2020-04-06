@@ -82,7 +82,7 @@ void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTAN
     float radialFactor = cos(theta); // adjacent / hypotenuse
 
     // Set position to the offset for ribbons (and rolls for varying radius)
-    vec2 position = vec2(curRadius, 0.0);
+    vec2 position = vec2(1.0, 0.0);
 
     for (int i = 0; i < varID; i++) {
         vec2 circleTangent = vec2(-position.y, position.x);
@@ -93,16 +93,18 @@ void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTAN
     // Shift positions for twisted rolls
     if (offset > 0)
     {
-        float thetaOffset = offset * theta;
+        float thetaOffset = offset * theta * vertexID;
         float tangetialFactorOffset = tan(thetaOffset); // opposite / adjacent
         float radialFactorOffset = cos(thetaOffset); // adjacent / hypotenuse
 
-        for (int i = 0; i < vertexID; i++) {
+        for (int i = 0; i < 1; i++) {
             vec2 circleTangent = vec2(-position.y, position.x);
             position += tangetialFactorOffset * circleTangent;
             position *= radialFactorOffset;
         }
     }
+
+    position *= curRadius;
 
     vec3 binormal = cross(tangent, normal);
     mat3 matFrame = mat3(normal, binormal, tangent);

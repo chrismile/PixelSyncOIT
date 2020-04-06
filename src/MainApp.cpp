@@ -944,6 +944,12 @@ void PixelSyncApp::setMultiVarShaders()
 //                           "PseudoPhongTrajectoriesMultiVar.Geometry",
 //                           "PseudoPhongTrajectoriesMultiVar.Fragment"};
 //        break;
+    case MULTIVAR_RENDERMODE_CHECKERBOARD:
+        gatherShaderIDs = {"MultiVarCheckerboard.Vertex",
+                           "MultiVarCheckerboard.Geometry",
+                           "MultiVarCheckerboard.Fragment"};
+        break;
+
     case MULTIVAR_RENDERMODE_TWISTED_ROLLS:
         gatherShaderIDs = {"MultiVarTwistedRolls.Vertex",
                            "MultiVarTwistedRolls.Geometry",
@@ -1801,7 +1807,8 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
     }
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
-        || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS)
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_CHECKERBOARD)
     {
         if (ImGui::SliderInt("Num Line Segments", &numInstances, 3, 20))
         {
@@ -1877,9 +1884,26 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
     }
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
-        || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS)
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_CHECKERBOARD)
     {
         if (ImGui::Checkbox("Map Tube Diameter", &mapTubeDiameter))
+        {
+            reRender = true;
+        }
+    }
+
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_CHECKERBOARD)
+    {
+        if (ImGui::SliderInt("Checkerboard Height", &checkerboardHeight, 1, 10))
+        {
+            reRender = true;
+        }
+        if (ImGui::SliderInt("Checkerboard Width", &checkerboardWidth, 1, 20))
+        {
+            reRender = true;
+        }
+        if (ImGui::SliderInt("Checkerboard Iterator", &checkerboardIterator, 1, 5))
         {
             reRender = true;
         }
@@ -2200,10 +2224,25 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             {
                 transparencyShader->setUniform("mapTubeDiameter", mapTubeDiameter);
             }
+
             if (transparencyShader->hasUniform("twistOffset"))
             {
                 transparencyShader->setUniform("twistOffset", twistOffset);
             }
+
+            if (transparencyShader->hasUniform("checkerboardWidth"))
+            {
+                transparencyShader->setUniform("checkerboardWidth", checkerboardWidth);
+            }
+            if (transparencyShader->hasUniform("checkerboardHeight"))
+            {
+                transparencyShader->setUniform("checkerboardHeight", checkerboardHeight);
+            }
+            if (transparencyShader->hasUniform("checkerboardIterator"))
+            {
+                transparencyShader->setUniform("checkerboardIterator", checkerboardIterator);
+            }
+
             if (transparencyShader->hasUniform("constantTwistOffset"))
             {
                 transparencyShader->setUniform("constantTwistOffset", constantTwistOffset);

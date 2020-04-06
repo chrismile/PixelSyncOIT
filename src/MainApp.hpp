@@ -180,6 +180,9 @@ private:
     bool mapTubeDiameter = false;
     float twistOffset = 0.1;
     bool constantTwistOffset = false;
+    int32_t checkerboardWidth = 3;
+    int32_t checkerboardHeight = 2;
+    int32_t checkerboardIterator = 2;
 
     // Lighting settings
     float materialConstantAmbient = 0.1;
@@ -207,7 +210,7 @@ private:
             = IMPORTANCE_CRITERION_CFD_CURL;
     ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
-    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_TWISTED_ROLLS;
+    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_CHECKERBOARD;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     std::vector<glm::vec2> criterionsMinMaxValues;

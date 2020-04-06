@@ -92,7 +92,7 @@ out vec2 fragTexCoord;
 // "Rolls"-specfic outputs
 flat out int fragVariableID;
 flat out float fragVariableValue;
-out float fragBorderInterpolant;
+out vec2 fragBorderInterpolant;
 //flat out int fragVariableNextID;
 flat out float fragVariableNextValue;
 out float fragElementInterpolant;
@@ -103,6 +103,9 @@ out float fragElementInterpolant;
 uniform bool mapTubeDiameter;
 uniform float twistOffset;
 uniform bool constantTwistOffset;
+uniform int checkerboardWidth;
+uniform int checkerboardHeight;
+uniform int checkerboardIterator;
 
 
 void main()
@@ -127,7 +130,9 @@ void main()
 
     // 1) Sample variables at each tube roll
     const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
-    const int varID = instanceID % numVariables; // for stripes
+    const int varID = (instanceID / checkerboardHeight + vertexOutput[0].vVertexID / checkerboardWidth * checkerboardIterator) % numVariables;//vertexOutput[0].vVertexID % 2;
+
+//    const int varID = instanceID % numVariables; // for stripes
     const int elementID = vertexOutput[0].vElementID;
     const int lineID = vertexOutput[0].vLineID;
 
@@ -175,13 +180,13 @@ void main()
     // 2) Create tube circle vertices for current and next point
     createPartialTubeSegments(circlePointsCurrent, vertexNormalsCurrent, currentPoint,
                                 normalCurrent, tangentCurrent, curRadius, instanceID,
-                                twistOffset, vertexOutput[0].vVertexID);
+                                0.0, vertexOutput[0].vVertexID);
 
     int vertexIDNext = (constantTwistOffset) ? vertexOutput[0].vVertexID : vertexOutput[1].vVertexID;
 
     createPartialTubeSegments(circlePointsNext, vertexNormalsNext, nextPoint,
                                 normalNext, tangentNext, nextRadius, instanceID,
-                                twistOffset, vertexIDNext);
+                                0.0, vertexIDNext);
 
 
     // 3) Draw Tube Front Sides
@@ -229,7 +234,7 @@ void main()
         }
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
-        fragBorderInterpolant = curInterpolant;
+        fragBorderInterpolant = vec2(curInterpolant, 0.0f);
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointCurrent1, 1.0);
@@ -242,7 +247,7 @@ void main()
         }
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent1, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent1, 1.0)).xyz;
-        fragBorderInterpolant = curInterpolant + interpIncrement;
+        fragBorderInterpolant = vec2(curInterpolant + interpIncrement, 0.0f);
         EmitVertex();
 
         ////////////////////////
@@ -279,7 +284,7 @@ void main()
         }
             fragWorldPos = (mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
-        fragBorderInterpolant = curInterpolant;
+        fragBorderInterpolant = vec2(curInterpolant, 1.0f);
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointNext1, 1.0);
@@ -292,7 +297,7 @@ void main()
         }
         fragWorldPos = (mMatrix * vec4(segmentPointNext1, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext1, 1.0)).xyz;
-        fragBorderInterpolant = curInterpolant + interpIncrement;
+        fragBorderInterpolant = vec2(curInterpolant + interpIncrement, 1.0f);
         EmitVertex();
 
         EndPrimitive();
@@ -303,32 +308,32 @@ void main()
     // Render lids
 
     // 3) Ŕender lids
-//    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
-//        fragNormal = normalize(-tangent);
-//        //! TODO compute tangent
-//        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
-//
-//        vec3 segmentPointCurrent0 = circlePointsCurrent[i];
-//        vec3 segmentPointCurrent1 = circlePointsCurrent[iN];
-//
-//        drawTangentLid(segmentPointCurrent0, currentPoint, segmentPointCurrent1);
-//    }
-//
-//    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
-//        fragNormal = normalize(tangent);
-//        //! TODO compute tangent
-//        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
-//
-//        vec3 segmentPointCurrent0 = circlePointsNext[i];
-//        vec3 segmentPointCurrent1 = circlePointsNext[iN];
-//
-//        drawTangentLid(segmentPointCurrent0, segmentPointCurrent1, nextPoint);
-//    }
+    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
+        fragNormal = normalize(-tangent);
+        //! TODO compute tangent
+        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
+
+        vec3 segmentPointCurrent0 = circlePointsCurrent[i];
+        vec3 segmentPointCurrent1 = circlePointsCurrent[iN];
+
+        drawTangentLid(segmentPointCurrent0, currentPoint, segmentPointCurrent1);
+    }
+
+    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
+        fragNormal = normalize(tangent);
+        //! TODO compute tangent
+        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
+
+        vec3 segmentPointCurrent0 = circlePointsNext[i];
+        vec3 segmentPointCurrent1 = circlePointsNext[iN];
+
+        drawTangentLid(segmentPointCurrent0, segmentPointCurrent1, nextPoint);
+    }
 
     // 3) Render partial circle lids
     drawPartialCircleLids(circlePointsCurrent, vertexNormalsCurrent,
                         circlePointsNext, vertexNormalsNext,
-                        currentPoint, nextPoint, normalize(circlePointsNext[0] - circlePointsCurrent[0]));//tangent);
+                        currentPoint, nextPoint, tangent);
 }
 
 
@@ -345,7 +350,7 @@ in vec2 fragTexCoord;
 // "Rolls"-specfic inputs
 flat in int fragVariableID;
 flat in float fragVariableValue;
-in float fragBorderInterpolant;
+in vec2 fragBorderInterpolant;
 //flat in int fragVariableNextID;
 flat in float fragVariableNextValue;
 in float fragElementInterpolant;
@@ -378,10 +383,12 @@ void main()
     vec4 surfaceColor = determineColorLinearInterpolate(fragVariableID, fragVariableValue,
                                                         fragVariableNextValue, fragElementInterpolant);
     // 1.1) Draw black separators between single stripes.
-    float varFraction = fragBorderInterpolant;
+    float varFractionY = fragBorderInterpolant.y;
+    float varFractionX = fragBorderInterpolant.x;
     if (separatorWidth > 0)
     {
-        drawSeparatorBetweenStripes(surfaceColor, varFraction, separatorWidth);
+        drawSeparatorBetweenStripes(surfaceColor, varFractionX, separatorWidth);
+        drawSeparatorBetweenStripes(surfaceColor, varFractionY, separatorWidth);
     }
 
     ////////////
