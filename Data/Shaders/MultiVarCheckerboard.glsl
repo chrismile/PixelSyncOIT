@@ -130,7 +130,9 @@ void main()
 
     // 1) Sample variables at each tube roll
     const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
-    const int varID = (instanceID / checkerboardHeight + vertexOutput[0].vVertexID / checkerboardWidth * checkerboardIterator) % numVariables;//vertexOutput[0].vVertexID % 2;
+    const float curAreaHeight = float(instanceID) / checkerboardHeight;
+    const float curAreaWidth = float(vertexOutput[0].vVertexID) / checkerboardWidth;
+    const int varID = (int(curAreaHeight) + int(curAreaWidth) * checkerboardIterator) % numVariables;//vertexOutput[0].vVertexID % 2;
 
 //    const int varID = instanceID % numVariables; // for stripes
     const int elementID = vertexOutput[0].vElementID;
@@ -193,10 +195,15 @@ void main()
     fragVariableValue = variableValue;
     fragVariableID = varID;
 
-    float interpIncrement = 1.0 / (NUM_CIRCLE_POINTS_PER_INSTANCE - 1);
-    float curInterpolant = 0.0f;
+//    float test = float(instanceID) / checkerboardHeight;
+//    int rem = int((test - floor(test)) * checkerboardHeight);
+    float interpIncrement = 1.0 / (NUM_CIRCLE_POINTS_PER_INSTANCE - 1) * (1.0 / (checkerboardHeight));
+    float curInterpolant = curAreaHeight - floor(curAreaHeight);
 
 //    if (varID > 1) {  return; }
+
+    float borderFracX = curAreaWidth - floor(curAreaWidth);
+    float borderInc = 1.0 / float(checkerboardWidth);
 
     for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++)
     {
@@ -222,6 +229,7 @@ void main()
         }
 //        fragVariableNextID = elementNextID;
         fragElementInterpolant = vertexOutput[0].vElementInterpolant;
+
         ////////////////////////
 
         gl_Position = mvpMatrix * vec4(segmentPointCurrent0, 1.0);
@@ -234,7 +242,7 @@ void main()
         }
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
-        fragBorderInterpolant = vec2(curInterpolant, 0.0f);
+        fragBorderInterpolant = vec2(borderFracX, curInterpolant);
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointCurrent1, 1.0);
@@ -247,7 +255,7 @@ void main()
         }
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent1, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent1, 1.0)).xyz;
-        fragBorderInterpolant = vec2(curInterpolant + interpIncrement, 0.0f);
+        fragBorderInterpolant = vec2(borderFracX, curInterpolant + interpIncrement);
         EmitVertex();
 
         ////////////////////////
@@ -282,9 +290,9 @@ void main()
         } else {
             fragNormal = vertexNormalsNext[i];
         }
-            fragWorldPos = (mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
+        fragWorldPos = (mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
-        fragBorderInterpolant = vec2(curInterpolant, 1.0f);
+        fragBorderInterpolant = vec2(borderFracX + borderInc, curInterpolant);
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointNext1, 1.0);
@@ -297,7 +305,7 @@ void main()
         }
         fragWorldPos = (mMatrix * vec4(segmentPointNext1, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext1, 1.0)).xyz;
-        fragBorderInterpolant = vec2(curInterpolant + interpIncrement, 1.0f);
+        fragBorderInterpolant = vec2(borderFracX + borderInc, curInterpolant + interpIncrement);
         EmitVertex();
 
         EndPrimitive();
@@ -387,6 +395,12 @@ void main()
     float varFractionX = fragBorderInterpolant.x;
     if (separatorWidth > 0)
     {
+//        vec4 c0 = surfaceColor;
+//        vec4 c1 = surfaceColor;
+//        drawSeparatorBetweenStripes(c0, varFractionX, separatorWidth);
+//        drawSeparatorBetweenStripes(c1, varFractionY, separatorWidth);
+//
+//        surfaceColor = (c0 + c1) / 2;
         drawSeparatorBetweenStripes(surfaceColor, varFractionX, separatorWidth);
         drawSeparatorBetweenStripes(surfaceColor, varFractionY, separatorWidth);
     }
