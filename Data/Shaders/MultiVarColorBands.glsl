@@ -169,9 +169,9 @@ void main()
 
     // 2) Create tube circle vertices for current and next point
     createPartialTubeSegments(circlePointsCurrent, vertexNormalsCurrent, currentPoint,
-                                normalCurrent, tangentCurrent, curRadius, instanceID, 0, 0);
+                                normalCurrent, tangentCurrent, curRadius, -1.0, instanceID, 0, 0);
     createPartialTubeSegments(circlePointsNext, vertexNormalsNext, nextPoint,
-                                normalNext, tangentNext, nextRadius, instanceID, 0, 0);
+                                normalNext, tangentNext, nextRadius, -1.0, instanceID, 0, 0);
 
 
     // 3) Draw Tube Front Sides

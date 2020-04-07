@@ -181,13 +181,13 @@ void main()
 
     // 2) Create tube circle vertices for current and next point
     createPartialTubeSegments(circlePointsCurrent, vertexNormalsCurrent, currentPoint,
-                                normalCurrent, tangentCurrent, curRadius, instanceID,
+                                normalCurrent, tangentCurrent, curRadius, -1, instanceID,
                                 0.0, vertexOutput[0].vVertexID);
 
     int vertexIDNext = (constantTwistOffset) ? vertexOutput[0].vVertexID : vertexOutput[1].vVertexID;
 
     createPartialTubeSegments(circlePointsNext, vertexNormalsNext, nextPoint,
-                                normalNext, tangentNext, nextRadius, instanceID,
+                                normalNext, tangentNext, nextRadius, -1, instanceID,
                                 0.0, vertexIDNext);
 
 

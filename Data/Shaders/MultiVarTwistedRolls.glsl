@@ -170,17 +170,20 @@ void main()
             curRadius = minRadius;
             nextRadius = minRadius;
         }
+
+        minRadius = -1.0f;
     }
 
     // 2) Create tube circle vertices for current and next point
+    if (constantTwistOffset) { minRadius = -1; }
     createPartialTubeSegments(circlePointsCurrent, vertexNormalsCurrent, currentPoint,
-                                normalCurrent, tangentCurrent, curRadius, instanceID,
+                                normalCurrent, tangentCurrent, curRadius, minRadius, instanceID,
                                 twistOffset, vertexOutput[0].vVertexID);
 
     int vertexIDNext = (constantTwistOffset) ? vertexOutput[0].vVertexID : vertexOutput[1].vVertexID;
 
     createPartialTubeSegments(circlePointsNext, vertexNormalsNext, nextPoint,
-                                normalNext, tangentNext, nextRadius, instanceID,
+                                normalNext, tangentNext, nextRadius, minRadius, instanceID,
                                 twistOffset, vertexIDNext);
 
 
@@ -303,27 +306,27 @@ void main()
     // Render lids
 
     // 3) Ŕender lids
-//    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
-//        fragNormal = normalize(-tangent);
-//        //! TODO compute tangent
-//        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
-//
-//        vec3 segmentPointCurrent0 = circlePointsCurrent[i];
-//        vec3 segmentPointCurrent1 = circlePointsCurrent[iN];
-//
-//        drawTangentLid(segmentPointCurrent0, currentPoint, segmentPointCurrent1);
-//    }
-//
-//    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
-//        fragNormal = normalize(tangent);
-//        //! TODO compute tangent
-//        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
-//
-//        vec3 segmentPointCurrent0 = circlePointsNext[i];
-//        vec3 segmentPointCurrent1 = circlePointsNext[iN];
-//
-//        drawTangentLid(segmentPointCurrent0, segmentPointCurrent1, nextPoint);
-//    }
+    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
+        fragNormal = normalize(-tangent);
+        //! TODO compute tangent
+        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
+
+        vec3 segmentPointCurrent0 = circlePointsCurrent[i];
+        vec3 segmentPointCurrent1 = circlePointsCurrent[iN];
+
+        drawTangentLid(segmentPointCurrent0, currentPoint, segmentPointCurrent1);
+    }
+
+    for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE - 1; i++) {
+        fragNormal = normalize(tangent);
+        //! TODO compute tangent
+        int iN = (i + 1) % NUM_CIRCLE_POINTS_PER_INSTANCE;
+
+        vec3 segmentPointCurrent0 = circlePointsNext[i];
+        vec3 segmentPointCurrent1 = circlePointsNext[iN];
+
+        drawTangentLid(segmentPointCurrent0, segmentPointCurrent1, nextPoint);
+    }
 
     // 3) Render partial circle lids
     drawPartialCircleLids(circlePointsCurrent, vertexNormalsCurrent,

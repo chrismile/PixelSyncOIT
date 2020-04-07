@@ -74,7 +74,8 @@ void computeTexCoords(inout vec2 texCoords[NUM_SEGMENTS], inout vec3 positions[N
 void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTANCE],
                                 inout vec3 normals[NUM_CIRCLE_POINTS_PER_INSTANCE],
                                 in vec3 center, in vec3 normal,
-                                in vec3 tangent, in float curRadius, in int varID,
+                                in vec3 tangent, in float curRadius, in float minRadius,
+                                in int varID,
                                 in float offset, in int vertexID)
 {
     float theta = 2.0 * 3.1415926 / float(NUM_INSTANCES);
@@ -104,7 +105,9 @@ void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTAN
         }
     }
 
-    position *= curRadius;
+    if (minRadius > 0) { position *= minRadius; }
+    else { position *= curRadius; }
+
 
     vec3 binormal = cross(tangent, normal);
     mat3 matFrame = mat3(normal, binormal, tangent);
@@ -123,6 +126,18 @@ void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTAN
         vec2 circleTangent = vec2(-position.y, position.x);
         position += tangetialFactor * circleTangent;
         position *= radialFactor;
+    }
+
+    if (minRadius > 0)
+    {
+        vec3 avgNormal = vec3(0);
+        for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE; i++) {
+            avgNormal += normals[i];
+        }
+        avgNormal = normalize(avgNormal);
+        for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE; i++) {
+            positions[i] += avgNormal * (curRadius - minRadius);
+        }
     }
 }
 
