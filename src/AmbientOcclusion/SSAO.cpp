@@ -73,7 +73,7 @@ void SSAOHelper::resolutionChanged()
     normalTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     gBufferFBO->bindTexture(normalTexture, COLOR_ATTACHMENT1);
 
-    depthStencilRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
+    depthStencilRBO = Renderer->createRBO(width, height, sgl::RBO_DEPTH24_STENCIL8);
     gBufferFBO->bindRenderbuffer(depthStencilRBO, DEPTH_STENCIL_ATTACHMENT);
 
 

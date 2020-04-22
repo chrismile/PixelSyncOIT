@@ -233,7 +233,7 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
     textureSettings.pixelFormat = GL_RGB;
     sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     sceneFramebuffer->bindTexture(sceneTexture);
-    sceneDepthRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
+    sceneDepthRBO = Renderer->createRBO(width, height, sgl::RBO_DEPTH24_STENCIL8);
     sceneFramebuffer->bindRenderbuffer(sceneDepthRBO, DEPTH_STENCIL_ATTACHMENT);
 
     camera->onResolutionChanged(event);
@@ -266,7 +266,7 @@ void PixelSyncApp::updateColorSpaceMode()
     textureSettings.pixelFormat = GL_RGB;
     sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     sceneFramebuffer->bindTexture(sceneTexture);
-    sceneDepthRBO = Renderer->createRBO(width, height, DEPTH24_STENCIL8);
+    sceneDepthRBO = Renderer->createRBO(width, height, sgl::RBO_DEPTH24_STENCIL8);
     sceneFramebuffer->bindRenderbuffer(sceneDepthRBO, DEPTH_STENCIL_ATTACHMENT);
 
     transferFunctionWindow.setUseLinearRGB(useLinearRGB);
