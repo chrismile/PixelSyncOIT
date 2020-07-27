@@ -109,4 +109,4 @@ https://www.in.tum.de/fileadmin/w00bws/cg/Research/Publications/2019/3D_Line_Set
 This tar archive includes all performance measurements (rendering times), image quality measurements (SSIM / PSNR), depth complexity, and the used transfer functions.
 
 ## Videos
-https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cvideos
+https://youtu.be/bxV71bkJM4k
