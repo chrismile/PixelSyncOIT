@@ -104,10 +104,9 @@ Click on the DOI link to obtain all line data sets:
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3637625.svg)](https://doi.org/10.5281/zenodo.3637625)
 
 ## Benchmark Results
-1) Performance Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cperformance
-2) Image Quality Measurements: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cimages_quality
-3) Depth Complexity: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cdepth_complexity
-4) Transfer Functions: https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Ctransfer_functions
+https://www.in.tum.de/fileadmin/w00bws/cg/Research/Publications/2019/3D_Line_Sets_Transparency/benchmark_results.tar
+
+This tar archive includes all performance measurements (rendering times), image quality measurements (SSIM / PSNR), depth complexity, and the used transfer functions.
 
 ## Videos
 https://webdisk.ads.mwn.de/Handlers/AnonymousDownload.ashx?folder=59f626a6&path=tvcg_paper_oit_public%5Cvideos
