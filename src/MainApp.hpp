@@ -161,6 +161,7 @@ private:
     bool colorByPosition = false;
     bool useLinearRGB = true;
     float lineRadius = 0.001f;
+    float fiberRadius = 0.0005f;
     float pointRadius = 0.0002f;
     std::vector<float> fpsArray;
     size_t fpsArrayOffset = 0;
@@ -210,7 +211,7 @@ private:
             = IMPORTANCE_CRITERION_CFD_CURL;
     ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
-    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_CHECKERBOARD;
+    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_FIBERS;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     std::vector<glm::vec2> criterionsMinMaxValues;

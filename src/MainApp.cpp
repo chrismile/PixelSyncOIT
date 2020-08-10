@@ -971,6 +971,11 @@ void PixelSyncApp::setMultiVarShaders()
                            "MultiVarOrientedColorBands.Geometry",
                            "MultiVarOrientedColorBands.Fragment"};
         break;
+    case MULTIVAR_RENDERMODE_FIBERS:
+            gatherShaderIDs = {"MultiVarFibers.Vertex",
+                               "MultiVarFibers.Geometry",
+                               "MultiVarFibers.Fragment"};
+            break;
     }
 }
 
@@ -1792,7 +1797,8 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
         reRender = true;
     }
 
-    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS)
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS
+       || multiVarRenderMode == MULTIVAR_RENDERMODE_FIBERS)
     {
         if (ImGui::SliderInt("Num Line Segments", &numLineSegments, 3, 20))
         {
@@ -1805,6 +1811,22 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
             reRender = true;
         }
     }
+
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_FIBERS)
+    {
+        if (ImGui::SliderInt("Num Variables", &numInstances, 2, 6)
+         || ImGui::SliderFloat("Fiber radius", &fiberRadius, 0.0001f, 0.01f, "%.4f"))
+        {
+            // Update shader
+            sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES", numInstances);
+
+            ShaderManager->invalidateShaderCache();
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+            transparentObject.setNewShader(transparencyShader);
+            reRender = true;
+        }
+    }
+
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS
@@ -1820,6 +1842,48 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
             transparentObject.setNewShader(transparencyShader);
             reRender = true;
         }
+    }
+
+    static std::string comboValue = "";
+    static std::vector<uint8_t> selectedVars(2, false);
+    static std::vector<string> varNames = { "Temperature", "Pressure" };
+//    std::vector<int> test(2);
+//    std::vector<uint8_t > test2(2);
+//    int* p = test.data();
+//    uint8_t* p2 = test2.data();
+
+    if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+    {
+//        ImGui::Combo("Combo")
+
+
+        std::vector<std::string> comboSelVec(0);
+        if (ImGui::BeginCombo("Test", comboValue.c_str()))
+        {
+            uint8_t* pSelectedVars = selectedVars.data();
+            for (auto v = 0; v < selectedVars.size(); ++v)
+            {
+                ImGui::Selectable(varNames[v].c_str(), reinterpret_cast<bool*>(&selectedVars[v]), ImGuiSelectableFlags_::ImGuiSelectableFlags_DontClosePopups);
+
+                if (static_cast<bool>(selectedVars[v]))
+                {
+                    comboSelVec.push_back(varNames[v]);
+                }
+            }
+
+            comboValue = "";
+            for (auto v = 0; v < comboSelVec.size(); ++v)
+            {
+                comboValue += comboSelVec[v];
+                if (comboSelVec.size() > 1 && v != comboSelVec.size() - 1)
+                {
+                    comboValue += ",";
+                }
+            }
+
+            ImGui::EndCombo();
+        }
+
     }
 
 
@@ -1885,7 +1949,8 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS
-        || multiVarRenderMode == MULTIVAR_RENDERMODE_CHECKERBOARD)
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_CHECKERBOARD
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_FIBERS)
     {
         if (ImGui::Checkbox("Map Tube Diameter", &mapTubeDiameter))
         {
@@ -2228,6 +2293,10 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             if (transparencyShader->hasUniform("twistOffset"))
             {
                 transparencyShader->setUniform("twistOffset", twistOffset);
+            }
+            if (transparencyShader->hasUniform("fiberRadius"))
+            {
+                transparencyShader->setUniform("fiberRadius", fiberRadius);
             }
 
             if (transparencyShader->hasUniform("checkerboardWidth"))

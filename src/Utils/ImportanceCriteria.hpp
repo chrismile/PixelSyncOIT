@@ -52,7 +52,8 @@ enum MultiVarRenderModeType {
     MULTIVAR_RENDERMODE_TWISTED_ROLLS,
     MULTIVAR_RENDERMODE_COLOR_BANDS,
     MULTIVAR_RENDERMODE_ORIENTED_COLOR_BANDS,
-    MULTIVAR_RENDERMODE_CHECKERBOARD
+    MULTIVAR_RENDERMODE_CHECKERBOARD,
+    MULTIVAR_RENDERMODE_FIBERS
 };
 
 const char *const IMPORTANCE_CRITERION_ANEURYSM_DISPLAYNAMES[] = {
@@ -73,7 +74,7 @@ const char *const IMPORTANCE_CRITERION_CFD_DISPLAYNAMES[] = {
 
 const char *const MULTIVAR_RENDERTYPE_DISPLAYNAMES[] = {
 //        "Ribbons", "Fibers", "Star Glyphs", "Tube Rolls", "Line", "Line Instanced"
-    "Rolls", "Twisted Rolls", "Color Bands", "Oriented Color Bands", "Checkerboard"
+    "Rolls", "Twisted Rolls", "Color Bands", "Oriented Color Bands", "Checkerboard", "Fibers"
 };
 
 
