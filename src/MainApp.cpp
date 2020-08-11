@@ -1847,18 +1847,11 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
     static std::string comboValue = "";
     static std::vector<uint8_t> selectedVars(2, false);
     static std::vector<string> varNames = { "Temperature", "Pressure" };
-//    std::vector<int> test(2);
-//    std::vector<uint8_t > test2(2);
-//    int* p = test.data();
-//    uint8_t* p2 = test2.data();
 
     if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
-//        ImGui::Combo("Combo")
-
-
         std::vector<std::string> comboSelVec(0);
-        if (ImGui::BeginCombo("Test", comboValue.c_str()))
+        if (ImGui::BeginCombo("Variables", comboValue.c_str(), ImGuiComboFlags_NoArrowButton))
         {
             uint8_t* pSelectedVars = selectedVars.data();
             for (auto v = 0; v < selectedVars.size(); ++v)
@@ -1867,6 +1860,7 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
 
                 if (static_cast<bool>(selectedVars[v]))
                 {
+                    ImGui::SetItemDefaultFocus();
                     comboSelVec.push_back(varNames[v]);
                 }
             }
