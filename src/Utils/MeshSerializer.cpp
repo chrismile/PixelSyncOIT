@@ -640,6 +640,20 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
             meshRenderer.varNames.push_back(submesh.varInfos[j].name);
         }
 
+        meshRenderer.varSelected = std::vector<uint32_t>(meshRenderer.varNames.size(), false);
+//        std::vector<float> selBufFloat;
+//        for (const auto& sel : meshRenderer.varSelected)
+//        {
+//            selBufFloat.push_back(static_cast<float>(sel));
+//        }
+
+        GeometryBufferPtr selectedBuffer = Renderer->createGeometryBuffer(
+                meshRenderer.varSelected.size()*sizeof(uint32_t), (void*)&meshRenderer.varSelected.front(),
+                SHADER_STORAGE_BUFFER);
+        meshRenderer.ssboEntries.push_back(SSBOEntry(6, "selectedVars" ,
+                                                     selectedBuffer));
+        meshRenderer.numVarSelected = 0;
+
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
             BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
             GeometryBufferPtr attributeBuffer;

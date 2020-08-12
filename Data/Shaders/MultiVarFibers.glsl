@@ -109,12 +109,12 @@ void main()
 
     // 0) Setup temp fiber offset on imaginary circle
     const int instanceID = gl_InvocationID;
-    const int varID = instanceID % numVariables; // for stripes
+    const int varID = sampleActualVarID(instanceID % maxNumVariables); // for stripes
     const int elementID = vertexOutput[0].vElementID;
     const int lineID = vertexOutput[0].vLineID;
 
     float thetaInc = 2 * 3.1415926 / (NUM_INSTANCES);
-    float thetaCur = thetaInc * varID;
+    float thetaCur = thetaInc * instanceID;
 
     currentPoint = currentPoint + (cos(thetaCur) * normalCurrent + sin(thetaCur) * binormalCurrent) * radius;
     nextPoint = nextPoint + (cos(thetaCur) * normalNext + sin(thetaCur) * binormalNext) * radius;
@@ -176,7 +176,7 @@ void main()
     // 4) Emit the tube triangle vertices and attributes to the fragment shader
     fragElementID = vertexOutput[0].vElementID;
     fragLineID = vertexOutput[0].vLineID;
-    fragVarID = instanceID;
+    fragVarID = varID;
 
     for (int i = 0; i < NUM_SEGMENTS; i++)
     {

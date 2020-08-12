@@ -175,6 +175,8 @@ public:
     sgl::Sphere boundingSphere;
     std::vector<ImportanceCriterionAttribute> importanceCriterionAttributes;
     std::vector<std::string> varNames;
+    std::vector<std::uint32_t> varSelected;
+    std::uint8_t numVarSelected;
 };
 
 

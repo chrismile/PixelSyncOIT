@@ -53,6 +53,34 @@ layout (std430, binding = 5) buffer LineVarDescArray
     LineVarDescData lineVarDescs[];
 };
 
+layout (std430, binding = 6) buffer VarSelectedArray
+{
+    uint selectedVars[];
+};
+
+// Sample the actual variable ID from the current user selection
+int sampleActualVarID(in uint varID)
+{
+    uint index = varID + 1;
+
+    uint numSelected = 0;
+    // HACK: change to dynamic variable
+    for (int c = 0; c < maxNumVariables; ++c)
+    {
+        if (selectedVars[c] > 0)
+        {
+            numSelected++;
+        }
+
+        if (numSelected >= index)
+        {
+            return c;
+        }
+    }
+
+    return -1;
+}
+
 // Function to sample from SSBOs
 void sampleVariableFromLineSSBO(in uint lineID, in uint varID, in uint elementID,
                                 out float value, out vec2 minMax)
