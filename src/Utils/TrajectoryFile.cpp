@@ -13,6 +13,7 @@
 #include "BezierCurve.hpp"
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectories)
 {
@@ -361,12 +362,14 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     bool isUCLA = trajectoryType == TRAJECTORY_TYPE_UCLA;
 
     bool isMultiVar = trajectoryType == TRAJECTORY_TYPE_MULTIVAR;
-    const uint8_t NUM_MULTI_VARIABLES = 6;
+//    const uint8_t NUM_MULTI_VARIABLES = 6;
 
     Trajectories trajectories;
 
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
+    std::vector<std::string> globalMultiVarNames;
+    uint8_t globalNumVars = 0;
 
     FILE *file = fopen(filename.c_str(), "r");
     if (!file) {
@@ -414,27 +417,50 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
         } else if (command == 'v' && command2 == 't') {
             if (isMultiVar)
             {
-                float attrs[NUM_MULTI_VARIABLES];
+//                float attrs[NUM_MULTI_VARIABLES];
                 // Replace with string stream to dynamically parse a number of attributes
                 // Use different attribute names to store multiple variables at each vertex (for statistics computation)
-                sscanf(lineBuffer.c_str() + 2, "%f %f %f %f %f %f", &attrs[0], &attrs[1], &attrs[2],
-                       &attrs[3], &attrs[4], &attrs[5]);
+                std::stringstream lineStream(lineBuffer);
 
-                for (auto j = 0; j < NUM_MULTI_VARIABLES; ++j)
+                while (lineStream.good())
                 {
-//                    float attr = 0;
-//                    sscanf(lineBuffer.c_str() + 2 + 2 * j, "%f", &attr);
-                    globalLineVertexAttributes.push_back(attrs[j]);
+                    float value = 0;
+                    lineStream >> value;
+                    globalLineVertexAttributes.push_back(value);
                 }
+
+//                sscanf(lineBuffer.c_str() + 2, "%f %f %f %f %f %f", &attrs[0], &attrs[1], &attrs[2],
+//                       &attrs[3], &attrs[4], &attrs[5]);
+//
+//                for (auto j = 0; j < NUM_MULTI_VARIABLES; ++j)
+//                {
+////                    float attr = 0;
+////                    sscanf(lineBuffer.c_str() + 2 + 2 * j, "%f", &attr);
+//                    globalLineVertexAttributes.push_back(attrs[j]);
+//                }
             }
             else
             {
                 // Path line vertex attribute
                 float attr = 0.0f;
 
-                sscanf(lineBuffer.c_str()+2, "%f", &attr);
+                sscanf(lineBuffer.c_str() + 2, "%f", &attr);
                 globalLineVertexAttributes.push_back(attr);
             }
+        } else if (isMultiVar && (command == 'v' && command2 == 'g')) {
+
+            std::stringstream lineStream(lineBuffer);
+//            uint8_t counter = 0;
+            while (lineStream.good())
+            {
+                std::string name;
+                lineStream >> name;
+                globalMultiVarNames.push_back(name);
+            }
+
+            globalNumVars = globalMultiVarNames.size();
+
+            std::cout << "Found " << globalMultiVarNames.size() << " variables\n";
 
         } else if (command == 'v' && command2 == 'n') {
             // Not supported so far
@@ -487,18 +513,18 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 
                 trajectory.positions.push_back(globalLineVertices.at(currentLineIndex));
 
-                uint8_t numVariables = (isMultiVar) ? NUM_MULTI_VARIABLES : 1;
+                uint8_t numVariables = (isMultiVar) ? globalNumVars : 1;
                 for (auto v = 0; v < numVariables; ++v)
                 {
                     pathLineVorticities.push_back(
                             globalLineVertexAttributes.at(currentLineIndex * numVariables + v));
                 }
-
             }
 
             // Compute importance criteria
             computeTrajectoryAttributes(
-                    trajectoryType, trajectory.positions, pathLineVorticities, trajectory.attributes);
+                    trajectoryType, trajectory.positions, pathLineVorticities,
+                    trajectory.attributes, globalNumVars);
 
             // Line filtering for WCB trajectories
             //if (trajectoryType == TRAJECTORY_TYPE_WCB) {
@@ -506,6 +532,11 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             //      continue;
             //  }
             //}
+
+            for (auto& varName : globalMultiVarNames)
+            {
+                trajectory.multiVarNames.push_back(varName);
+            }
 
             trajectories.push_back(trajectory);
         } else if (command = '#') {

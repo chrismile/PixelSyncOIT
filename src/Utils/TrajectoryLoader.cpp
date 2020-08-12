@@ -1159,6 +1159,13 @@ void convertTrajectoryDataToBinaryLineMesh(
             allMaxValues.push_back(varMinMax[varID].g);
         }
 
+        for (const auto& varName : trajectories[0].multiVarNames)
+        {
+            BinaryVariableInfo info;
+            info.name = varName;
+            submesh.varInfos.push_back(info);
+        }
+
         BinaryLineVariable lineVariables;
         lineVariables.numComponents = varMinMax.size();
         lineVariables.name = "ssboMultiVar";

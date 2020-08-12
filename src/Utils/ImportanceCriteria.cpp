@@ -238,7 +238,8 @@ void computeTrajectoryAttributes(
         TrajectoryType trajectoryType,
         std::vector<glm::vec3> &vertexPositions,
         std::vector<float> &vertexAttributes,
-        std::vector<std::vector<float>> &importanceCriteria)
+        std::vector<std::vector<float>> &importanceCriteria,
+        uint8_t numVariables)
 {
     if (trajectoryType == TRAJECTORY_TYPE_ANEURYSM)
     {
@@ -247,15 +248,13 @@ void computeTrajectoryAttributes(
 //        // 1. Curvature
 //        importanceCriteria.push_back(computeCurvature(vertexPositions));
     } else if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR) {
-        const uint8_t NUM_MULTI_VARIABLES = 6;
-
-        for (auto v = 0; v < NUM_MULTI_VARIABLES; ++v)
+        for (auto v = 0; v < numVariables; ++v)
         {
             std::vector<float> attributes(vertexPositions.size());
 
             for (auto i = 0; i < attributes.size(); ++i)
             {
-                attributes[i] = vertexAttributes[i * NUM_MULTI_VARIABLES + v];
+                attributes[i] = vertexAttributes[i * numVariables + v];
             }
 
             importanceCriteria.push_back(attributes);

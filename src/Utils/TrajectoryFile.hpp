@@ -43,6 +43,7 @@ public:
     std::vector<float> multiVarData;
     LineDesc lineDesc;
     std::vector<VarDesc> multiVarDescs;
+    std::vector<std::string> multiVarNames;
 };
 
 //class BezierTrajectory : public Trajectory {

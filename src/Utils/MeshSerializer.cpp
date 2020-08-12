@@ -86,6 +86,12 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
             stream.writeArray(variable.allMinValues);
             stream.writeArray(variable.allMaxValues);
         }
+
+        // Write variables info
+        for (const BinaryVariableInfo& info : submesh.varInfos)
+        {
+            stream.write(info.name);
+        }
     }
 
 #ifndef __MINGW32__
@@ -186,6 +192,7 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
         uint32_t numVariables;
         stream.read(numVariables);
         submesh.variables.resize(numVariables);
+        submesh.varInfos.resize(numVariables);
 
         for (uint32_t j = 0; j < numVariables; j++) {
             BinaryLineVariable &lineVariables = submesh.variables.at(j);
@@ -201,6 +208,12 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
             stream.readArray(lineVariables.varOffsets);
             stream.readArray(lineVariables.allMinValues);
             stream.readArray(lineVariables.allMaxValues);
+        }
+
+        for (uint32_t j = 0; j < numVariables; ++j)
+        {
+            BinaryVariableInfo& varInfo = submesh.varInfos.at(j);
+            stream.read(varInfo.name);
         }
 
     }

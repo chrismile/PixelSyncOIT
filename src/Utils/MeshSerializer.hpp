@@ -103,6 +103,11 @@ struct BinaryLineVariable
     std::vector<uint8_t> allMaxValues;
 };
 
+struct BinaryVariableInfo
+{
+    std::string name;
+};
+
 struct BinarySubMesh
 {
     ObjMaterial material;
@@ -111,6 +116,7 @@ struct BinarySubMesh
     std::vector<BinaryMeshAttribute> attributes;
     std::vector<BinaryMeshUniform> uniforms;
     std::vector<BinaryLineVariable> variables;
+    std::vector<BinaryVariableInfo> varInfos;
 };
 
 struct BinaryMesh

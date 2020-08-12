@@ -93,6 +93,7 @@ void computeTrajectoryAttributes(
         TrajectoryType trajectoryType,
         std::vector<glm::vec3> &vertexPositions,
         std::vector<float> &vertexAttributes,
-        std::vector<std::vector<float>> &importanceCriteria);
+        std::vector<std::vector<float>> &importanceCriteria,
+        uint8_t numVariables = 1);
 
 #endif //PIXELSYNCOIT_IMPORTANCECRITERIA_HPP
