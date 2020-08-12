@@ -175,6 +175,8 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         // interpolant t
         newTrajectory.attributes[7].push_back(0.0f);
 
+
+
 //        newTrajectory.attributes.resize(inTrajectories[traj].attributes.size());
 
 
@@ -256,6 +258,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         newTrajectory.lineDesc = lineDescs[traj];
         newTrajectory.multiVarData = multiVarData[traj];
         newTrajectory.multiVarDescs = lineMultiVarDescs[traj];
+        newTrajectory.multiVarNames = inTrajectories[traj].multiVarNames;
 
         newTrajectories[traj] = newTrajectory;
     }
@@ -420,7 +423,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 //                float attrs[NUM_MULTI_VARIABLES];
                 // Replace with string stream to dynamically parse a number of attributes
                 // Use different attribute names to store multiple variables at each vertex (for statistics computation)
-                std::stringstream lineStream(lineBuffer);
+                std::stringstream lineStream(lineBuffer.c_str() + 2);
 
                 while (lineStream.good())
                 {
@@ -449,7 +452,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             }
         } else if (isMultiVar && (command == 'v' && command2 == 'g')) {
 
-            std::stringstream lineStream(lineBuffer);
+            std::stringstream lineStream(lineBuffer.c_str() + 2);
 //            uint8_t counter = 0;
             while (lineStream.good())
             {

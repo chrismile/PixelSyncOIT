@@ -174,6 +174,7 @@ public:
     sgl::AABB3 boundingBox;
     sgl::Sphere boundingSphere;
     std::vector<ImportanceCriterionAttribute> importanceCriterionAttributes;
+    std::vector<std::string> varNames;
 };
 
 

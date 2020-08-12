@@ -88,6 +88,7 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
         }
 
         // Write variables info
+        stream.write((uint32_t)submesh.varInfos.size());
         for (const BinaryVariableInfo& info : submesh.varInfos)
         {
             stream.write(info.name);
@@ -192,7 +193,6 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
         uint32_t numVariables;
         stream.read(numVariables);
         submesh.variables.resize(numVariables);
-        submesh.varInfos.resize(numVariables);
 
         for (uint32_t j = 0; j < numVariables; j++) {
             BinaryLineVariable &lineVariables = submesh.variables.at(j);
@@ -210,7 +210,10 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
             stream.readArray(lineVariables.allMaxValues);
         }
 
-        for (uint32_t j = 0; j < numVariables; ++j)
+        uint32_t numVariablesParam = 0;
+        stream.read(numVariablesParam);
+        submesh.varInfos.resize(numVariablesParam);
+        for (uint32_t j = 0; j < numVariablesParam; ++j)
         {
             BinaryVariableInfo& varInfo = submesh.varInfos.at(j);
             stream.read(varInfo.name);
@@ -631,6 +634,12 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 //            }
         }
 
+        // read variable names
+        for (size_t j = 0; j < submesh.varInfos.size(); ++j)
+        {
+            meshRenderer.varNames.push_back(submesh.varInfos[j].name);
+        }
+
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
             BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
             GeometryBufferPtr attributeBuffer;
@@ -717,7 +726,7 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                 vec4AttributeValues.reserve(numAttributeValues);
 
                 // TODO current HACK
-                uint32_t maxNumVars = 6;
+                uint32_t maxNumVars = meshRenderer.varNames.size();
                 std::vector<std::vector<float>> varValues(maxNumVars);
                 std::vector<glm::vec2> minMaxValues(maxNumVars, glm::vec2(0, 0));
 

@@ -1844,16 +1844,16 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
         }
     }
 
-    static std::string comboValue = "";
-    static std::vector<uint8_t> selectedVars(2, false);
-    static std::vector<string> varNames = { "Temperature", "Pressure" };
-
     if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
+        static std::string comboValue = "";
+        static std::vector<uint8_t> selectedVars(transparentObject.varNames.size(), false);
+        static std::vector<string> varNames = { "Temperature", "Pressure" };
+
         std::vector<std::string> comboSelVec(0);
         if (ImGui::BeginCombo("Variables", comboValue.c_str(), ImGuiComboFlags_NoArrowButton))
         {
-            uint8_t* pSelectedVars = selectedVars.data();
+//            uint8_t* pSelectedVars = selectedVars.data();
             for (auto v = 0; v < selectedVars.size(); ++v)
             {
                 ImGui::Selectable(varNames[v].c_str(), reinterpret_cast<bool*>(&selectedVars[v]), ImGuiSelectableFlags_::ImGuiSelectableFlags_DontClosePopups);
