@@ -2004,11 +2004,33 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
         ImGui::EndCombo();
     }
 
-    static ImVec4 colorTest;
-    if (ImGui::ColorEdit3("##testColor", reinterpret_cast<float*>(&colorTest),
-            ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_NoInputs))
+//    static ImVec4 colorTest;
+    bool colorHasChanged = false;
+    for (auto v = 0; v < varSelected.size(); ++v)
     {
-        std::cout << "Test" << std::endl;
+        std::stringstream ss;
+        ss << "##testColor" << v;
+
+        if (ImGui::ColorEdit3(ss.str().c_str(), reinterpret_cast<float*>(&transparentObject.varColors[v]),
+                ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_NoInputs))
+        {
+            colorHasChanged = true;
+
+
+        } ImGui::SameLine();
+    } ImGui::NewLine();
+
+    if (colorHasChanged)
+    {
+        GeometryBufferPtr varColorBuffer = Renderer->createGeometryBuffer(
+                transparentObject.varColors.size()*sizeof(glm::vec4), (void*)&transparentObject.varColors.front(),
+                SHADER_STORAGE_BUFFER);
+        transparentObject.ssboEntries[5] = SSBOEntry(7, "colorVars" , varColorBuffer);
+
+        ShaderManager->invalidateShaderCache();
+        updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+        transparentObject.setNewShader(transparencyShader);
+        reRender = true;
     }
 }
 

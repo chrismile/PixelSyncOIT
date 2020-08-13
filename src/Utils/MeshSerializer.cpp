@@ -29,6 +29,25 @@ using namespace sgl;
 
 const uint32_t MESH_FORMAT_VERSION = 4u;
 
+std::vector<glm::vec4> defaultColors = {
+        // RED
+        glm::vec4(228 / 255.0, 26 / 255.0, 28 / 255.0, 1.0),
+        // BLUE
+        glm::vec4(55 / 255.0, 126 / 255.0, 184 / 255.0, 1.0),
+        // GREEN
+        glm::vec4(5 / 255.0, 139 / 255.0, 69 / 255.0, 1.0),
+        // PURPLE
+        glm::vec4(129 / 255.0, 15 / 255.0, 124 / 255.0, 1.0),
+        // ORANGE
+        glm::vec4(217 / 255.0, 72 / 255.0, 1 / 255.0, 1.0),
+        // PINK
+        glm::vec4(231 / 255.0, 41 / 255.0, 138 / 255.0, 1.0),
+        // GOLD
+        glm::vec4(254 / 255.0, 178 / 255.0, 76 / 255.0, 1.0),
+        // BLACK
+        glm::vec4(82 / 255.0, 82 / 255.0, 82 / 255.0, 1.0)
+};
+
 void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
 #ifndef __MINGW32__
     std::ofstream file(filename.c_str(), std::ofstream::binary);
@@ -641,6 +660,16 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
         }
 
         meshRenderer.varSelected = std::vector<uint32_t>(meshRenderer.varNames.size(), false);
+
+        // Set starting colors
+        meshRenderer.varColors = std::vector<glm::vec4>(meshRenderer.varNames.size());
+        // Default color values
+        for (auto c = 0; c < meshRenderer.varColors.size(); ++c)
+        {
+            meshRenderer.varColors[c] = defaultColors[c % defaultColors.size()];
+        }
+
+
 //        std::vector<float> selBufFloat;
 //        for (const auto& sel : meshRenderer.varSelected)
 //        {
@@ -653,6 +682,12 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
         meshRenderer.ssboEntries.push_back(SSBOEntry(6, "selectedVars" ,
                                                      selectedBuffer));
         meshRenderer.numVarSelected = 0;
+
+        GeometryBufferPtr varColorBuffer = Renderer->createGeometryBuffer(
+                meshRenderer.varColors.size()*sizeof(glm::vec4), (void*)&meshRenderer.varColors.front(),
+                SHADER_STORAGE_BUFFER);
+        meshRenderer.ssboEntries.push_back(SSBOEntry(7, "colorVars" ,
+                                                     varColorBuffer));
 
         for (size_t j = 0; j < submesh.attributes.size(); j++) {
             BinaryMeshAttribute &meshAttribute = submesh.attributes.at(j);
