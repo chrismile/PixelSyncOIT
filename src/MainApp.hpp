@@ -173,7 +173,7 @@ private:
     float MOUSE_ROT_SPEED = 0.05f;
 
     // Multi-Variate settings
-    int32_t numVariables = 4;
+    int32_t numVariables = 0;
     int32_t maxNumVariables = 6;
     int32_t numLineSegments = 8;
     int32_t numInstances = 12;

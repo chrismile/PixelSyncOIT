@@ -61,6 +61,11 @@ layout (std430, binding = 6) buffer VarSelectedArray
 // Sample the actual variable ID from the current user selection
 int sampleActualVarID(in uint varID)
 {
+    if (varID < 0 || varID >= maxNumVariables)
+    {
+        return -1;
+    }
+
     uint index = varID + 1;
 
     uint numSelected = 0;

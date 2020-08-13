@@ -1814,16 +1814,8 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
 
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_FIBERS)
     {
-        if (ImGui::SliderInt("Num Variables", &numInstances, 0, transparentObject.numVarSelected)
-         || ImGui::SliderFloat("Fiber radius", &fiberRadius, 0.0001f, 0.01f, "%.4f"))
+         if (ImGui::SliderFloat("Fiber radius", &fiberRadius, 0.0001f, 0.01f, "%.4f"))
         {
-            // Update shader
-//            sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES", numInstances);
-            sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES", numInstances);
-
-            ShaderManager->invalidateShaderCache();
-            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
-            transparentObject.setNewShader(transparencyShader);
             reRender = true;
         }
     }
@@ -1836,82 +1828,13 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
         if (ImGui::SliderInt("Num Line Segments", &numInstances, 3, 20))
         {
             // Update shader
-            sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES", numInstances);
+            sgl::ShaderManager->addPreprocessorDefine("NUM_LINESEGMENTS", numInstances);
 
             ShaderManager->invalidateShaderCache();
             updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
             transparentObject.setNewShader(transparencyShader);
             reRender = true;
         }
-    }
-
-    if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
-    {
-        static std::string comboValue = "";
-//        static std::vector<uint8_t> selectedVars(transparentObject.varNames.size(), false);
-//        static std::vector<string> varNames = { "Temperature", "Pressure" };
-        auto& varNames = transparentObject.varNames;
-        auto& varSelected = transparentObject.varSelected;
-        bool itemHasChanged = false;
-
-        std::vector<std::string> comboSelVec(0);
-        if (ImGui::BeginCombo("Variables", comboValue.c_str(), ImGuiComboFlags_NoArrowButton))
-        {
-//            uint8_t* pSelectedVars = selectedVars.data();
-            for (auto v = 0; v < varSelected.size(); ++v)
-            {
-                if (ImGui::Selectable(varNames[v].c_str(), reinterpret_cast<bool*>(&varSelected[v]),
-                        ImGuiSelectableFlags_::ImGuiSelectableFlags_DontClosePopups))
-                {
-                    itemHasChanged = true;
-                }
-
-                if (static_cast<bool>(varSelected[v]))
-                {
-                    ImGui::SetItemDefaultFocus();
-                    comboSelVec.push_back(varNames[v]);
-                }
-            }
-
-            transparentObject.numVarSelected = comboSelVec.size();
-
-            comboValue = "";
-            for (auto v = 0; v < comboSelVec.size(); ++v)
-            {
-                comboValue += comboSelVec[v];
-                if (comboSelVec.size() > 1 && v != comboSelVec.size() - 1)
-                {
-                    comboValue += ",";
-                }
-            }
-
-            // Update SSBO
-            if (itemHasChanged)
-            {
-                // Convert to float
-//                std::vector<float> selBufFloat;
-//                for (const auto& sel : varSelected)
-//                {
-//                    selBufFloat.push_back(static_cast<float>(sel));
-//                }
-
-                GeometryBufferPtr selectedBuffer = Renderer->createGeometryBuffer(
-                        varSelected.size()*sizeof(uint32_t), (void*)&varSelected.front(),
-                        SHADER_STORAGE_BUFFER);
-                transparentObject.ssboEntries[4] = SSBOEntry(6, "selectedVars" ,
-                                                             selectedBuffer);
-
-//                ShaderManager->invalidateShaderCache();
-//                updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
-//                transparentObject.setNewShader(transparencyShader);
-
-                reRender = true;
-            }
-
-
-            ImGui::EndCombo();
-        }
-
     }
 
 
@@ -2021,6 +1944,71 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
         {
             reRender = true;
         }
+    }
+
+    static std::string comboValue = "";
+    auto& varNames = transparentObject.varNames;
+    auto& varSelected = transparentObject.varSelected;
+    bool itemHasChanged = false;
+
+    std::vector<std::string> comboSelVec(0);
+    if (ImGui::BeginCombo("Variables", comboValue.c_str(), ImGuiComboFlags_NoArrowButton))
+    {
+//            uint8_t* pSelectedVars = selectedVars.data();
+        for (auto v = 0; v < varSelected.size(); ++v)
+        {
+            if (ImGui::Selectable(varNames[v].c_str(), reinterpret_cast<bool*>(&varSelected[v]),
+                                  ImGuiSelectableFlags_::ImGuiSelectableFlags_DontClosePopups))
+            {
+                itemHasChanged = true;
+            }
+
+            if (static_cast<bool>(varSelected[v]))
+            {
+                ImGui::SetItemDefaultFocus();
+                comboSelVec.push_back(varNames[v]);
+            }
+        }
+
+        transparentObject.numVarSelected = comboSelVec.size();
+        numVariables = transparentObject.numVarSelected;
+
+        comboValue = "";
+        for (auto v = 0; v < comboSelVec.size(); ++v)
+        {
+            comboValue += comboSelVec[v];
+            if (comboSelVec.size() > 1 && v != comboSelVec.size() - 1)
+            {
+                comboValue += ",";
+            }
+        }
+
+        // Update SSBO
+        if (itemHasChanged)
+        {
+            GeometryBufferPtr selectedBuffer = Renderer->createGeometryBuffer(
+                    varSelected.size()*sizeof(uint32_t), (void*)&varSelected.front(),
+                    SHADER_STORAGE_BUFFER);
+            transparentObject.ssboEntries[4] = SSBOEntry(6, "selectedVars" ,
+                                                         selectedBuffer);
+
+            sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES",
+                                                      static_cast<uint32_t>(transparentObject.numVarSelected));
+
+            ShaderManager->invalidateShaderCache();
+            updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
+            transparentObject.setNewShader(transparencyShader);
+            reRender = true;
+        }
+
+        ImGui::EndCombo();
+    }
+
+    static ImVec4 colorTest;
+    if (ImGui::ColorEdit3("##testColor", reinterpret_cast<float*>(&colorTest),
+            ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_NoInputs))
+    {
+        std::cout << "Test" << std::endl;
     }
 }
 

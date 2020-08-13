@@ -177,6 +177,7 @@ public:
     std::vector<std::string> varNames;
     std::vector<std::uint32_t> varSelected;
     std::uint8_t numVarSelected;
+    std::vector<glm::vec4> varColors;
 };
 
 

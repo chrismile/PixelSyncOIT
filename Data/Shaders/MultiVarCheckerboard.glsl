@@ -47,8 +47,8 @@ void main()
 
 #version 430 core
 
-#if !defined(NUM_INSTANCES)
-    #define NUM_INSTANCES 10
+#if !defined(NUM_LINESEGMENTS)
+    #define NUM_LINESEGMENTS 10
 #endif
 
 #if !defined(NUM_CIRCLE_POINTS_PER_INSTANCE)
@@ -57,7 +57,7 @@ void main()
 
 #include "MultiVarGlobalVariables.glsl"
 
-layout(lines, invocations = NUM_INSTANCES) in;
+layout(lines, invocations = NUM_LINESEGMENTS) in;
 layout(triangle_strip, max_vertices = 128) out;
 
 
@@ -132,7 +132,7 @@ void main()
     const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
     const float curAreaHeight = float(instanceID) / checkerboardHeight;
     const float curAreaWidth = float(vertexOutput[0].vVertexID) / checkerboardWidth;
-    const int varID = (int(curAreaHeight) + int(curAreaWidth) * checkerboardIterator) % numVariables;//vertexOutput[0].vVertexID % 2;
+    const int varID = sampleActualVarID((int(curAreaHeight) + int(curAreaWidth) * checkerboardIterator) % numVariables);//vertexOutput[0].vVertexID % 2;
 
 //    const int varID = instanceID % numVariables; // for stripes
     const int elementID = vertexOutput[0].vElementID;

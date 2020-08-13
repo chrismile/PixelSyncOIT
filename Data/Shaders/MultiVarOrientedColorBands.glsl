@@ -248,16 +248,16 @@ void main()
     float varFraction = fragTexCoord.y * numVariables - float(varID);
 
     // 2) Sample variables from buffers
-    sampleVariableFromLineSSBO(fragLineID, varID, fragElementID, variableValue, variableMinMax);
-    sampleVariableFromLineSSBO(fragLineID, varID, fragElementNextID, variableNextValue, variableNextMinMax);
+    sampleVariableFromLineSSBO(fragLineID, sampleActualVarID(varID), fragElementID, variableValue, variableMinMax);
+    sampleVariableFromLineSSBO(fragLineID, sampleActualVarID(varID), fragElementNextID, variableNextValue, variableNextMinMax);
 
     // 3) Normalize values
     variableValue = (variableValue - variableMinMax.x) / (variableMinMax.y - variableMinMax.x);
     variableNextValue = (variableNextValue - variableNextMinMax.x) / (variableNextMinMax.y - variableNextMinMax.x);
 
     // 4) Determine variable color
-    vec4 surfaceColor = determineColorLinearInterpolate(varID, variableValue, variableNextValue,
-                                                       fragElementInterpolant);
+    vec4 surfaceColor = determineColorLinearInterpolate(sampleActualVarID(varID), variableValue,
+                                                        variableNextValue, fragElementInterpolant);
     // 4.1) Draw black separators between single stripes.
     if (separatorWidth > 0)
     {

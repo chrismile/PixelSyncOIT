@@ -45,8 +45,8 @@ void main()
 
 #version 430 core
 
-#if !defined(NUM_INSTANCES)
-    #define NUM_INSTANCES 10
+#if !defined(NUM_LINESEGMENTS)
+    #define NUM_LINESEGMENTS 10
 #endif
 
 #if !defined(NUM_CIRCLE_POINTS_PER_INSTANCE)
@@ -55,7 +55,7 @@ void main()
 
 #include "MultiVarGlobalVariables.glsl"
 
-layout(lines, invocations = NUM_INSTANCES) in;
+layout(lines, invocations = NUM_LINESEGMENTS) in;
 layout(triangle_strip, max_vertices = 128) out;
 
 
@@ -119,7 +119,7 @@ void main()
 
     // 1) Sample variables at each tube roll
     const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
-    const int varID = vertexOutput[0].vVariableID; // instanceID % numVariables for stripes
+    const int varID = sampleActualVarID(vertexOutput[0].vVariableID); // instanceID % numVariables for stripes
     const int elementID = vertexOutput[0].vElementID;
     const int lineID = vertexOutput[0].vLineID;
 

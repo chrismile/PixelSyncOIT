@@ -2,8 +2,8 @@
     #define NUM_SEGMENTS 9
 #endif
 
-#if !defined(NUM_INSTANCES)
-#define NUM_INSTANCES 10
+#if !defined(NUM_LINESEGMENTS)
+#define NUM_LINESEGMENTS 10
 #endif
 
 void createTubeSegments(inout vec3 positions[NUM_SEGMENTS], inout vec3 normals[NUM_SEGMENTS],
@@ -78,7 +78,7 @@ void createPartialTubeSegments(inout vec3 positions[NUM_CIRCLE_POINTS_PER_INSTAN
                                 in int varID,
                                 in float offset, in int vertexID)
 {
-    float theta = 2.0 * 3.1415926 / float(NUM_INSTANCES);
+    float theta = 2.0 * 3.1415926 / float(NUM_LINESEGMENTS);
     float tangetialFactor = tan(theta); // opposite / adjacent
     float radialFactor = cos(theta); // adjacent / hypotenuse
 
