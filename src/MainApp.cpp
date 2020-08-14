@@ -141,6 +141,8 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
     transferFunctionWindow.setClearColor(clearColor);
     transferFunctionWindow.setUseLinearRGB(useLinearRGB);
 
+    multiVarWindow.setClearColor(clearColor);
+
     setNewTilingMode(2, 8);
 
     bool useVsync = AppSettings::get()->getSettings().getBoolValue("window-vSync");
@@ -989,25 +991,10 @@ void PixelSyncApp::recomputeHistogramForMesh()
     transferFunctionWindow.computeHistogram(importanceCriterionAttribute.attributes,
             minCriterionValue, maxCriterionValue);
 
+    // Should be exported to other function here.
     if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
         criterionsMinMaxValues.resize(transparentObject.importanceCriterionAttributes.size());
-//        std::vector<glm::vec2> minMaxs = { glm::vec2(204.41896, 298.59796),
-//                                           glm::vec2(14579.305, 100395.76),
-//                                           glm::vec2(0.0, 0.0046437355),
-//                                           glm::vec2(0.0, 0.0066332296),
-//                                           glm::vec2(0.0, 0.0008263761),
-//                                           glm::vec2(0.0, 0.0056324285),
-//                                           glm::vec2(0.0, 0.00069549587),
-//                                           glm::vec2(0.0, 0.0101735)};
-        std::vector<glm::vec2> minMaxs = { glm::vec2(0, 1.0),
-                                           glm::vec2(0, 1.0),
-                                           glm::vec2(0, 1.0),
-                                           glm::vec2(0, 1.0),
-                                           glm::vec2(0, 1.0),
-                                           glm::vec2(0, 1.0),
-                                           glm::vec2(0, 1.0),
-                                           glm::vec2(0, 1.0)};
 
         for (auto c = 0; c < criterionsMinMaxValues.size(); ++ c)
         {
@@ -1015,6 +1002,8 @@ void PixelSyncApp::recomputeHistogramForMesh()
             criterionsMinMaxValues[c] = glm::vec2(attribute.minAttribute, attribute.maxAttribute);
 //            criterionsMinMaxValues[c] = minMaxs[c];
         }
+
+        multiVarWindow.setVariables(transparentObject.importanceCriterionAttributes, transparentObject.varNames);
     }
 }
 
@@ -1741,6 +1730,11 @@ void PixelSyncApp::renderGUI()
         ImGui::End();
     }
 
+    if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+    {
+        multiVarWindow.renderGUI();
+    }
+
     if (transferFunctionWindow.renderGUI()) {
         reRender = true;
         if (transferFunctionWindow.getTransferFunctionMapRebuilt()) {
@@ -2004,21 +1998,33 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
         ImGui::EndCombo();
     }
 
+    ImGui::NewLine();
+
 //    static ImVec4 colorTest;
     bool colorHasChanged = false;
     for (auto v = 0; v < varSelected.size(); ++v)
     {
-        std::stringstream ss;
-        ss << "##testColor" << v;
+//        std::stringstream ss;
+//        ss << "##testColor" << v;
 
-        if (ImGui::ColorEdit3(ss.str().c_str(), reinterpret_cast<float*>(&transparentObject.varColors[v]),
-                ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_NoInputs))
+        if (varSelected[v])
         {
-            colorHasChanged = true;
+            ImGui::SameLine();
+            if (ImGui::ColorEdit3(transparentObject.varNames[v].substr(0, 3).c_str(),
+                                  reinterpret_cast<float*>(&transparentObject.varColors[v]),
+                                  ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_NoInputs))
+            {
+                colorHasChanged = true;
+            }
+        }
 
+//        if ((v + 1) % 4 == 0) { ImGui::NewLine(); }
+//        else { ImGui::SameLine(); }
 
-        } ImGui::SameLine();
-    } ImGui::NewLine();
+    }
+
+//    if (varSelected.size() % 4 != 0) { ImGui::NewLine(); }
+//    ImGui::NewLine();
 
     if (colorHasChanged)
     {
@@ -2604,6 +2610,10 @@ void PixelSyncApp::update(float dt)
     {
         showSettingsWindow = !showSettingsWindow;
         transferFunctionWindow.setShow(showSettingsWindow);
+        if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
+        {
+            multiVarWindow.setShow(showSettingsWindow);
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         reRender = true;
     }

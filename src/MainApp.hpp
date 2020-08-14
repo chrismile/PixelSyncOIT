@@ -31,6 +31,7 @@
 #include "Performance/InternalState.hpp"
 #include "Performance/AutoPerfMeasurer.hpp"
 #include "TransferFunctionWindow.hpp"
+#include "MultiVarWindow.hpp"
 
 using namespace std;
 using namespace sgl;
@@ -194,6 +195,7 @@ private:
     float haloFactor = 1.2;
 
     TransferFunctionWindow transferFunctionWindow;
+    MultiVarWindow multiVarWindow;
 
     // Trajectory rendering
     //bool modelContainsTrajectories;

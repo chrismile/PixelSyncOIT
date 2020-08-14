@@ -60,8 +60,10 @@ public:
     bool saveFunctionToFile(const std::string &filename);
     bool loadFunctionFromFile(const std::string &filename);
     void updateAvailableFiles();
+    void setMultiVarMode(bool enabled) { multiVarMode = enabled; }
 
     bool renderGUI();
+//    bool renderMultiVarGUI(const std::string& varNames);
     void update(float dt);
 
     void setClearColor(const sgl::Color &clearColor);
@@ -133,6 +135,7 @@ private:
     std::vector<ColorPoint_LinearRGB> colorPoints_LinearRGB;
     bool useLinearRGB = true;
     bool transferFunctionMapRebuilt = true;
+    bool multiVarMode = false;
 };
 
 extern TransferFunctionWindow *g_TransferFunctionWindowHandle;
