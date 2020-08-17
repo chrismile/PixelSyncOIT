@@ -137,11 +137,12 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
 
     bandingColor = Color(165, 220, 84, 120);
     clearColor = Color(255, 255, 255, 255);
+    Color blackColor = Color(0, 0, 0, 255);
     clearColorSelection = ImColor(clearColor.getColorRGBA());
     transferFunctionWindow.setClearColor(clearColor);
     transferFunctionWindow.setUseLinearRGB(useLinearRGB);
 
-    multiVarWindow.setClearColor(clearColor);
+    multiVarWindow.setClearColor(blackColor);
 
     setNewTilingMode(2, 8);
 

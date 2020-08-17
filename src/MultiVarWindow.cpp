@@ -97,6 +97,19 @@ void MultiVarWindow::renderVarChart()
 
     const auto& histogram = histograms[variableIndex];
 
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    ImVec2 backgroundPos = ImGui::GetCursorScreenPos();
+
+    ImColor backgroundColor(clearColor.getFloatR(), clearColor.getFloatG(), clearColor.getFloatB());
+    int border = 0;
+    drawList->AddRectFilled(ImVec2(backgroundPos.x + border,
+                                   backgroundPos.y + border),
+                            ImVec2(backgroundPos.x + regionWidth - border,
+                                   backgroundPos.y + graphHeight - border),
+                            backgroundColor,
+                            ImGui::GetStyle().FrameRounding);
+
     ImVec2 cursorPosHistogram = ImGui::GetCursorPos();
 //    ImVec2 oldPadding = ImGui::GetStyle().FramePadding;
 //    ImGui::GetStyle().FramePadding = ImVec2(1,1);
@@ -118,9 +131,16 @@ void MultiVarWindow::renderVarChart()
 void MultiVarWindow::renderSettings()
 {
 //    ImGui::NewLine();
-    if (ImGui::SliderInt("Variable", &variableIndex, 0, variables.size()))
+    ImGui::ListBoxHeader("Variables", ImVec2(-1, 180));
+
+    for (auto n = 0; n < names.size(); ++n)
     {
+        if (ImGui::Selectable(names[n].c_str(), variableIndex == n))
+        {
+            variableIndex = n;
+        }
     }
+    ImGui::ListBoxFooter();
 
     if (ImGui::SliderInt("Histogram Res.", &histogramRes, 0, 255))
     {
