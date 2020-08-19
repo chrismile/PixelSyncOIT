@@ -1832,6 +1832,14 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
         }
     }
 
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS)
+    {
+        if (ImGui::SliderInt("Roll Width", &rollWidth, 1, 4))
+        {
+            reRender = true;
+        }
+    }
+
 
     ImGui::Separator();
     ImGui::Text("Phong Lighting Settings:");
@@ -1892,6 +1900,7 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
     {
 
     }
+
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
         || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS
@@ -2334,6 +2343,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             if (transparencyShader->hasUniform("mapTubeDiameter"))
             {
                 transparencyShader->setUniform("mapTubeDiameter", mapTubeDiameter);
+            }
+
+            if (transparencyShader->hasUniform("rollWidth"))
+            {
+                transparencyShader->setUniform("rollWidth", rollWidth);
             }
 
             if (transparencyShader->hasUniform("twistOffset"))

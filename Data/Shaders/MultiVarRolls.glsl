@@ -95,7 +95,7 @@ out float fragBorderInterpolant;
 
 // "Rolls" specific uniforms
 uniform bool mapTubeDiameter;
-
+uniform int rollWidth;
 
 void main()
 {
@@ -119,7 +119,9 @@ void main()
 
     // 1) Sample variables at each tube roll
     const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
-    const int varID = sampleActualVarID(vertexOutput[0].vVariableID); // instanceID % numVariables for stripes
+    const float mappedVarIDRatio = mod(float(vertexOutput[0].vVariableID) / float(rollWidth), 1.0);
+    const int mappedVarID = (vertexOutput[0].vVariableID >= 0) ? vertexOutput[0].vVariableID / rollWidth : -1;
+    const int varID = sampleActualVarID(mappedVarID); // instanceID % numVariables for stripes
     const int elementID = vertexOutput[0].vElementID;
     const int lineID = vertexOutput[0].vLineID;
 
@@ -190,7 +192,7 @@ void main()
         fragTangent = tangentCurrent;
         fragWorldPos = (mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointCurrent0, 1.0)).xyz;
-        fragBorderInterpolant = 0.0f;
+        fragBorderInterpolant = mappedVarIDRatio;
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointCurrent1, 1.0);
@@ -205,7 +207,7 @@ void main()
         fragTangent = tangentNext;
         fragWorldPos = (mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
         screenSpacePosition = (vMatrix * mMatrix * vec4(segmentPointNext0, 1.0)).xyz;
-        fragBorderInterpolant = 1.0f;
+        fragBorderInterpolant = mappedVarIDRatio + 1.0f / float(rollWidth);
         EmitVertex();
 
         gl_Position = mvpMatrix * vec4(segmentPointNext1, 1.0);

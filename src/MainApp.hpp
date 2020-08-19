@@ -178,6 +178,7 @@ private:
     int32_t maxNumVariables = 6;
     int32_t numLineSegments = 8;
     int32_t numInstances = 12;
+    int32_t rollWidth = 1;
     float separatorWidth = 0.15;
     bool mapTubeDiameter = false;
     float twistOffset = 0.1;
@@ -213,7 +214,7 @@ private:
             = IMPORTANCE_CRITERION_CFD_CURL;
     ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
-    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_FIBERS;
+    MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_ROLLS;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     std::vector<glm::vec2> criterionsMinMaxValues;
