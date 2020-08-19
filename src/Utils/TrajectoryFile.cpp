@@ -79,6 +79,11 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
 
     // 2) Compute min max values of all attributes across all trajectories
     const uint32_t numVariables = inTrajectories[0].attributes.size();
+    if (numVariables <= 0)
+    {
+        std::cout << "[ERROR]: No variable was found in trajectory file" << std::endl;
+        std::exit(-2);
+    }
 
     std::vector<glm::vec2> attributesMinMax(numVariables,
             glm::vec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest()));
