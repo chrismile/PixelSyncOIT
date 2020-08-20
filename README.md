@@ -16,6 +16,7 @@ The followings rendering algorithms are currently supported.
 - Multi-Layer Alpha Blending using depth buckets (MLABDB)
 - K-Buffer (KB)
 - Hybrid Transparency (HT)
+- Weighted Blended Order-Independent Transparency (WBOIT)
 - Depth Peeling (DP)
 - Voxel Ray Casting (VRC)
 - Ray tracing using OSPRay (triangles, lines using Embree, generalized tube primitives, see https://github.com/MengjiaoH/ospray-module-tubes)
