@@ -12,7 +12,7 @@
 
 const int NUM_OIT_MODES = 11;
 const char *const OIT_MODE_NAMES[] = {
-        "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
+        "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT", "WBOIT",
         "Depth Complexity", "No OIT", "Depth Peeling", "MLAB (Buckets)", "Voxel Ray Casting (Lines)", "Ray Tracing"
 };
 enum RenderModeOIT {
@@ -21,6 +21,7 @@ enum RenderModeOIT {
     RENDER_MODE_OIT_MLAB, // Mutli-layer Alpha Blending
     RENDER_MODE_OIT_HT, // Hybrid Transparency
     RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
+    RENDER_MODE_OIT_WBOIT, // Weighted Blended Order-Independent Transparency
     RENDER_MODE_OIT_DEPTH_COMPLEXITY,
     RENDER_MODE_OIT_DUMMY,
     RENDER_MODE_OIT_DEPTH_PEELING,

@@ -3,10 +3,10 @@
  * Transparency" by Münstermann, Krumpen, Klein, and Peters (http://momentsingraphics.de/?page_id=210).
  * The original code was released in accordance to CC0 (https://creativecommons.org/publicdomain/zero/1.0/).
  *
- * This port is released under the terms of GNU General Public License v3. For more details please see the LICENSE
- * file in the root directory of this project.
+ * This port is released under the terms of BSD 2-Clause License. For more details please see the LICENSE file in the
+ * root directory of this project.
  *
- * Changes for the OpenGL port: Copyright 2018 Christoph Neuhauser
+ * Changes for the OpenGL port: Copyright 2018-2020 Christoph Neuhauser
  */
 
 #ifndef PIXELSYNCOIT_OIT_MBOIT_UTILS_HPP

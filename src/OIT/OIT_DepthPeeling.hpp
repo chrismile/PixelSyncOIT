@@ -7,6 +7,9 @@
 
 #include "OIT_Renderer.hpp"
 
+/**
+ * Depth peeling: C. Everitt, "Interactive order-independent transparency", NVIDIA Corporation, vol. 2, 10 2001.
+ */
 class OIT_DepthPeeling : public OIT_Renderer {
 public:
     /**

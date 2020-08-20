@@ -13,10 +13,10 @@
 #include "OIT_MBOIT_Utils.hpp"
 
 /**
- * An order independent transparency renderer using pixel sync.
+ * C. Munstermann, S. Krumpen, R. Klein, and C. Peters, "Moment-based order-independent transparency," Proceedings of
+ * the ACM on Computer Graphics and Interactive Techniques, vol. 1, no. 1, pp. 7:1–7:20, May 2018.
  *
- * (To be precise, it doesn't use the Intel-specific Pixel Sync extension
- * INTEL_fragment_shader_ordering, but the vendor-independent ARB_fragment_shader_interlock).
+ * This implementation uses pixel sync (i.e., ARB_fragment_shader_interlock).
  */
 class OIT_MBOIT : public OIT_Renderer {
 public:

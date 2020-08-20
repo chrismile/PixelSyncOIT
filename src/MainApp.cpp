@@ -58,6 +58,7 @@
 #include "OIT/OIT_MLABBucket.hpp"
 #include "OIT/OIT_HT.hpp"
 #include "OIT/OIT_MBOIT.hpp"
+#include "OIT/OIT_WBOIT.hpp"
 #include "OIT/OIT_DepthComplexity.hpp"
 #include "OIT/OIT_DepthPeeling.hpp"
 #include "OIT/TilingMode.hpp"
@@ -915,6 +916,8 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_HT);
     } else if (mode == RENDER_MODE_OIT_MBOIT) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MBOIT);
+    } else if (mode == RENDER_MODE_OIT_WBOIT) {
+        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_WBOIT);
     } else if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
         oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
     } else if (mode == RENDER_MODE_OIT_DUMMY) {
