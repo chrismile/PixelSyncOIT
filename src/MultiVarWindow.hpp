@@ -34,7 +34,7 @@ protected:
     std::vector<ImportanceCriterionAttribute> variables;
     std::vector<std::string> names;
     std::vector<std::vector<float>> histograms;
-    float histogramsMax;
+//    float histogramsMax;
     std::vector<glm::vec2> variablesMinMax;
 
     void computeHistograms();

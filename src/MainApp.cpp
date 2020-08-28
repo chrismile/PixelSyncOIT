@@ -11,6 +11,7 @@
 #include <ctime>
 #include <algorithm>
 #include <thread>
+#include <boost/algorithm/string.hpp>
 
 #include <glm/gtx/color_space.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -1961,7 +1962,10 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
 //            uint8_t* pSelectedVars = selectedVars.data();
         for (auto v = 0; v < varSelected.size(); ++v)
         {
-            if (ImGui::Selectable(varNames[v].c_str(), reinterpret_cast<bool*>(&varSelected[v]),
+            std::vector<string> names;
+            boost::split(names, varNames[v], [](char c) { return c == '#'; });
+
+            if (ImGui::Selectable(names[0].c_str(), reinterpret_cast<bool*>(&varSelected[v]),
                                   ImGuiSelectableFlags_::ImGuiSelectableFlags_DontClosePopups))
             {
                 itemHasChanged = true;
@@ -1970,7 +1974,7 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
             if (static_cast<bool>(varSelected[v]))
             {
                 ImGui::SetItemDefaultFocus();
-                comboSelVec.push_back(varNames[v]);
+                comboSelVec.push_back(names[1]);
             }
         }
 
@@ -2014,13 +2018,14 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
     bool colorHasChanged = false;
     for (auto v = 0; v < varSelected.size(); ++v)
     {
-//        std::stringstream ss;
-//        ss << "##testColor" << v;
-
         if (varSelected[v])
         {
+            std::vector<string> names;
+            boost::split(names, varNames[v], [](char c) { return c == '#'; });
+
             ImGui::SameLine();
-            if (ImGui::ColorEdit3(transparentObject.varNames[v].substr(0, 3).c_str(),
+            if (ImGui::ColorEdit3(names[1].c_str(),
+                    //transparentObject.varNames[v].substr(0, 3).c_str(),
                                   reinterpret_cast<float*>(&transparentObject.varColors[v]),
                                   ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_NoInputs))
             {

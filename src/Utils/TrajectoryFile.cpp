@@ -137,7 +137,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
 
     // 3) Compute several equally-distributed / equi-distant points along Bezier curves.
     // Store these points in a new trajectory
-    float rollSegLength = minSegLength / 6.0f;// avgSegLength * 0.2f;
+    float rollSegLength = avgSegLength / maxNumVariables;// avgSegLength * 0.2f;
 
     Trajectories newTrajectories(inTrajectories.size());
 
@@ -202,7 +202,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         while(curArcLength <= totalArcLength)
         {
             // Obtain current Bezier segment index based on arc length
-            while (sumArcLengthsNext < curArcLength)
+            while (sumArcLengthsNext <= curArcLength)
             {
                 varIDPerLine = 0;
                 lineID++;
@@ -501,6 +501,12 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             if (numberString.size() != 0) {
                 currentLineIndices.push_back(atoi(numberString.c_str()) - 1);
                 numberString.clear();
+            }
+
+            if (currentLineIndices.size() < 3)
+            {
+                lineBuffer.clear();
+                continue;
             }
 
             Trajectory trajectory;

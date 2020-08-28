@@ -31,7 +31,7 @@ enum RenderModeOIT {
 };
 
 const char *const MODEL_FILENAMES[] = {
-        "Data/MultiVar/test2.obj",
+        "Data/MultiVar/test_meteo.obj",
         "Data/UCLA/UCLA_400k_100v.obj",
         "Data/IsoSurfaces/rm-140-isosurface.bobj",
         "Data/IsoSurfaces/rm-80-isosurface.bobj",

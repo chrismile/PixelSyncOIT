@@ -59,15 +59,16 @@ bool MultiVarWindow::renderGUI()
 void MultiVarWindow::computeHistograms()
 {
     histograms.resize(variables.size());
-    histogramsMax = 0;
 
     for (auto v = 0; v < variables.size(); ++v)
     {
+        float histogramsMax = 0;
+
         const auto& var = variables[v].attributes;
         const auto& minMax = variablesMinMax[v];
 //        const auto& name = names[v];
         auto& histogram = histograms[v];
-        histogram.resize(histogramRes);
+        histogram = std::vector<float>(histogramRes, 0.0f);
 
         for (const auto& value : var)
         {
@@ -142,7 +143,7 @@ void MultiVarWindow::renderSettings()
     }
     ImGui::ListBoxFooter();
 
-    if (ImGui::SliderInt("Histogram Res.", &histogramRes, 0, 255))
+    if (ImGui::SliderInt("Histogram Res.", &histogramRes, 1, 255))
     {
         computeHistograms();
     }
