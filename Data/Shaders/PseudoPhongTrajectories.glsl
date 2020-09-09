@@ -177,9 +177,9 @@ void main()
 
 #ifdef BILLBOARD_LINES
     vec3 viewDirectionCurrent = normalize(cameraPosition - currentPoint);
-    vec3 offsetDirectionCurrent = cross(viewDirectionCurrent, v_in[0].lineTangent);
+    vec3 offsetDirectionCurrent = normalize(cross(viewDirectionCurrent, v_in[0].lineTangent));
     vec3 viewDirectionNext = normalize(cameraPosition - nextPoint);
-    vec3 offsetDirectionNext = cross(viewDirectionNext, v_in[1].lineTangent);
+    vec3 offsetDirectionNext = normalize(cross(viewDirectionNext, v_in[1].lineTangent));
     vec3 vertexPosition;
 
     vertexPosition = nextPoint - radius * offsetDirectionNext;

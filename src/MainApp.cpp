@@ -472,6 +472,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
             lineRadius = 0.002;
         } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
             lineRadius = 0.001;
+        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/tornado")) {
+            lineRadius = 0.1;
         } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
             lineRadius = 0.0005;
         } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
@@ -794,6 +796,11 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 camera->setPosition(glm::vec3(1.94571f, 0.761162f, 2.9094f));
                 camera->setYaw(-1.61776f);
                 camera->setPitch(-0.0535428f);
+            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/tornado")) {
+                // ControlPoint(1, 13.4968, 17.7291, -20.9052, -4.57163, -0.299466)
+                camera->setPosition(glm::vec3(13.4968f, 17.7291f, -20.9052f));
+                camera->setYaw(-4.57163);
+                camera->setPitch(-0.299466);
             } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
             } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
