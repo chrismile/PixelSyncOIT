@@ -960,6 +960,7 @@ void convertTrajectoryDataToBinaryLineMesh(
     std::vector<glm::vec3> globalTangents;
     std::vector<std::vector<float>> globalImportanceCriteria;
     std::vector<uint32_t> globalIndices;
+    std::vector<float> globalHistograms;
 
 
     Trajectories trajectories = loadTrajectoriesFromFile(trajectoriesFilename, trajectoryType);

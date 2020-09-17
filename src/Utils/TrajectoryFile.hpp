@@ -37,10 +37,13 @@ public:
 
     std::vector<glm::vec3> positions;
     std::vector<std::vector<float>> attributes;
+    std::vector<std::vector<float>> histograms;
     std::vector<glm::vec3> tangents;
     std::vector<uint32_t> segmentID;
 
     std::vector<float> multiVarData;
+    std::vector<float> multiVarHistograms;
+    uint8_t numBins;
     LineDesc lineDesc;
     std::vector<VarDesc> multiVarDescs;
     std::vector<std::string> multiVarNames;
