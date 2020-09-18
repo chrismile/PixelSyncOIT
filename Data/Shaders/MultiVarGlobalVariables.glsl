@@ -17,6 +17,8 @@ struct VarData
 struct LineDescData
 {
     float startIndex;
+    float startHistogramIndex;
+//    vec2 dummy;
 };
 
 struct VarDescData
@@ -38,25 +40,34 @@ layout (std430, binding = 2) buffer VariableArray
     float varArray[];
 };
 
-layout (std430, binding = 3) buffer LineDescArray
+layout (std430, binding = 3) buffer HistogramArray
 {
-    float lineDescs[];
+    float histArray[];
 };
 
-layout (std430, binding = 4) buffer VarDescArray
+layout (std430, binding = 4) buffer LineDescArray
+{
+    LineDescData lineDescs[];
+};
+
+layout (std430, binding = 5) buffer VarDescArray
 {
     VarDescData varDescs[];
 };
 
-layout (std430, binding = 5) buffer LineVarDescArray
+layout (std430, binding = 6) buffer LineVarDescArray
 {
     LineVarDescData lineVarDescs[];
 };
 
-layout (std430, binding = 6) buffer VarSelectedArray
+layout (std430, binding = 7) buffer VarSelectedArray
 {
     uint selectedVars[];
 };
+
+// binding 8 belongs to selected color array
+
+
 
 // Sample the actual variable ID from the current user selection
 int sampleActualVarID(in uint varID)
@@ -90,12 +101,25 @@ int sampleActualVarID(in uint varID)
 void sampleVariableFromLineSSBO(in uint lineID, in uint varID, in uint elementID,
                                 out float value, out vec2 minMax)
 {
-    uint startIndex = uint(lineDescs[lineID]);
+    uint startIndex = uint(lineDescs[lineID].startIndex);
     VarDescData varDesc = varDescs[maxNumVariables * lineID + varID];
     const uint varOffset = uint(varDesc.info.r);
     // Output
     minMax = varDesc.info.gb;
     value = varArray[startIndex + varOffset + elementID];
+}
+
+void sampleHistogramFromLineSSBO(in uint lineID, in uint varID, in uint elementID,
+                                 out float[5] values)
+{
+    uint startIndex = uint(lineDescs[lineID].startHistogramIndex);
+    uint numBins = 5;
+    uint varOffset = varID * numBins + elementID * numBins * maxNumVariables;
+    // Output
+    for (int b = 0; b < 5; ++b)
+    {
+        values[b] = histArray[startIndex + varOffset + b];
+    }
 }
 
 // Function to sample distribution from SSBO

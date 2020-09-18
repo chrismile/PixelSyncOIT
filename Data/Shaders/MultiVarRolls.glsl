@@ -116,6 +116,7 @@ void main()
     vec3 binormalNext = cross(tangentNext, normalNext);
 
     vec3 tangent = normalize(nextPoint - currentPoint);
+    vec3 tangentOrig = nextPoint - currentPoint;
 
     // 1) Sample variables at each tube roll
     const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
@@ -142,6 +143,7 @@ void main()
     // 2.1) Radius mapping
     float curRadius = radius;
     float minRadius = 0.8 * radius;
+    float histOffset = 0.0;
 
     if (mapTubeDiameter)
     {
@@ -157,7 +159,13 @@ void main()
 //                interpolant = max(0.0, min(1.0, interpolant));
                 curRadius = mix(minRadius, radius, interpolant);
             }
+
+            float histValues[5];
+            sampleHistogramFromLineSSBO(lineID, varID, elementID, histValues);
+            histOffset = 0.8 * (1.0 - histValues[instanceID % 5]);
+//            curRadius = mix(minRadius, radius, histValues[instanceID % 5]);
         }
+
     }
     else
     {
@@ -173,6 +181,23 @@ void main()
     createPartialTubeSegments(circlePointsNext, vertexNormalsNext, nextPoint,
                               normalNext, tangentNext, curRadius, curRadius, instanceID, 0, 0);
 
+    if (histOffset > 0 && varID >= 0)
+    {
+        int indexID = vertexOutput[0].vVariableID % rollWidth;
+
+        for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE; i++)
+        {
+            if (indexID == 0)
+            {
+                circlePointsCurrent[i] += tangentOrig * histOffset;
+            }
+            if (indexID == rollWidth - 1)
+            {
+                circlePointsNext[i] -= tangentOrig * histOffset;
+            }
+
+        }
+    }
 
     // 3) Draw Tube Front Sides
     fragVariableValue = variableValue;

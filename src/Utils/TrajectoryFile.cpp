@@ -96,14 +96,17 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
     std::vector<std::vector<float>> multiVarHistograms(numLines);
     std::vector<LineDesc> lineDescs(numLines);
     std::vector<std::vector<VarDesc>> lineMultiVarDescs(numLines);
+    std::vector<std::vector<VarDesc>> lineHistogramDescs(numLines);
 
     uint32_t lineOffset = 0;
     uint32_t lineID = 0;
     uint32_t numBins = 0;
+    uint32_t histogramOffset = 0;
 
     for (const auto& trajectory : inTrajectories)
     {
         uint32_t varOffsetPerLine = 0;
+        const int maxVertices = trajectory.positions.size();
 
         for (auto v = 0; v < maxNumVariables; ++v)
         {
@@ -115,7 +118,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
 
             const auto& variableArray = trajectory.attributes[v];
 
-            uint32_t vCounter = 0;
+//            uint32_t vCounter = 0;
             for (const auto& variable : variableArray)
             {
                 attributesMinMax[v].x = std::min(attributesMinMax[v].x, variable);
@@ -127,11 +130,17 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
                 multiVarData[lineID].push_back(variable);
                 numBins = trajectory.numBins;
 
-                std::copy(trajectory.histograms[vCounter].begin(),
-                          trajectory.histograms[vCounter].end(),
-                          std::back_inserter(multiVarHistograms[lineID]));
 
-                vCounter++;
+
+//                vCounter++;
+            }
+
+            // Create histogram buffer
+            for (int v = 0; v < maxVertices - 1; ++v)
+            {
+                std::copy(trajectory.histograms[v].begin(),
+                          trajectory.histograms[v].end(),
+                          std::back_inserter(multiVarHistograms[lineID]));
             }
 
             lineMultiVarDescs[lineID].push_back(varDescPerLine);
@@ -139,7 +148,9 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         }
         lineDescs[lineID].startIndex = lineOffset;
         lineDescs[lineID].numValues = varOffsetPerLine;
+        lineDescs[lineID].startHistogramIndex = histogramOffset;
 
+        histogramOffset += maxVertices * numBins * numVariables;
         lineOffset += varOffsetPerLine;
         lineID++;
     }
@@ -391,7 +402,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     std::vector<float> globalLineHistograms;
     std::vector<std::string> globalMultiVarNames;
     uint8_t globalNumVars = 0;
-    uint8_t globalNumBinsPerHisto = 0;
+    float globalNumBinsPerHisto = 0;
 
     FILE *file = fopen(filename.c_str(), "r");
     if (!file) {
@@ -544,6 +555,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 
             std::vector<float> pathLineVorticities;
             trajectory.positions.reserve(currentLineIndices.size());
+            trajectory.histograms.reserve(currentLineIndices.size());
             pathLineVorticities.reserve(currentLineIndices.size());
             for (size_t i = 0; i < currentLineIndices.size(); i++) {
                 glm::vec3 pos = globalLineVertices.at(currentLineIndices.at(i));
@@ -555,6 +567,8 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                 }
 
                 const uint32_t currentLineIndex = currentLineIndices.at(i);
+
+                std::vector<float> histogramValues;
 
                 trajectory.positions.push_back(globalLineVertices.at(currentLineIndex));
 
@@ -568,8 +582,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                     {
                         trajectory.numBins = globalNumBinsPerHisto;
 
-                        std::vector<float> histogramValues;
-
                         for (auto h = 0; h < globalNumBinsPerHisto; ++h)
                         {
 //                            const uint8_t numBins = 5;
@@ -580,8 +592,14 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                                 globalLineHistograms.at(index));
                         }
 
-                        trajectory.histograms.push_back(histogramValues);
+
                     }
+
+                }
+
+                if (isMultiVar)
+                {
+                    trajectory.histograms.push_back(histogramValues);
                 }
             }
 

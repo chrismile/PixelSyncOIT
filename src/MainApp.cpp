@@ -1997,7 +1997,7 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
             GeometryBufferPtr selectedBuffer = Renderer->createGeometryBuffer(
                     varSelected.size()*sizeof(uint32_t), (void*)&varSelected.front(),
                     SHADER_STORAGE_BUFFER);
-            transparentObject.ssboEntries[4] = SSBOEntry(6, "selectedVars" ,
+            transparentObject.ssboEntries[5] = SSBOEntry(7, "selectedVars" ,
                                                          selectedBuffer);
 
             sgl::ShaderManager->addPreprocessorDefine("NUM_INSTANCES",
@@ -2046,7 +2046,7 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
         GeometryBufferPtr varColorBuffer = Renderer->createGeometryBuffer(
                 transparentObject.varColors.size()*sizeof(glm::vec4), (void*)&transparentObject.varColors.front(),
                 SHADER_STORAGE_BUFFER);
-        transparentObject.ssboEntries[5] = SSBOEntry(7, "colorVars" , varColorBuffer);
+        transparentObject.ssboEntries[5] = SSBOEntry(8, "colorVars" , varColorBuffer);
 
         ShaderManager->invalidateShaderCache();
         updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);

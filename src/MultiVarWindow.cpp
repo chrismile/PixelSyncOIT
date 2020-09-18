@@ -7,6 +7,8 @@
 #include <Math/Math.hpp>
 #include <ImGui/imgui_custom.h>
 
+// https://github.com/ocornut/imgui/issues/2342
+
 MultiVarWindow::MultiVarWindow()
     : show(true), variableIndex(0), clearColor(sgl::Color(255, 0, 0, 1.0)),
       histogramRes(50)

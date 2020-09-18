@@ -20,7 +20,8 @@ struct MultiVarArray
 struct LineDesc
 {
     float startIndex; // pointer to index in array
-    float numValues;     // number of variables along line
+    float numValues;     // number of variables along line after Bezier curve transformation
+    float startHistogramIndex; // original number of vertices
 };
 
 // Describes the range of values for each variable and the offset within each line

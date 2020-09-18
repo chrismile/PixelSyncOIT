@@ -1,7 +1,7 @@
 ///////////////////////////////////////////
 // RGB <-> HSV color space mapping
 
-layout (std430, binding = 7) buffer VarColorArray
+layout (std430, binding = 8) buffer VarColorArray
 {
     vec4 colorVars[];
 };

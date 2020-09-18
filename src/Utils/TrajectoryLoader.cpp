@@ -1121,6 +1121,7 @@ void convertTrajectoryDataToBinaryLineMesh(
 
         // Create SSBOs from variable descriptions
         std::vector<float> data;
+        std::vector<float> histogramData;
         std::vector<float> minValues;
         std::vector<float> maxValues;
         std::vector<float> allMinValues;
@@ -1128,6 +1129,7 @@ void convertTrajectoryDataToBinaryLineMesh(
         std::vector<float> varStartIndices;
         std::vector<float> startIndices;
         std::vector<float> numValues;
+        std::vector<float> startHistogramIndex;
 
         std::vector<glm::vec2> varMinMax(trajectories[0].multiVarDescs.size(),
                 glm::vec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest()));
@@ -1137,9 +1139,11 @@ void convertTrajectoryDataToBinaryLineMesh(
             const auto& trajectory = trajectories[v];
 
             std::copy(trajectory.multiVarData.begin(), trajectory.multiVarData.end(), std::back_inserter(data));
+            std::copy(trajectory.multiVarHistograms.begin(), trajectory.multiVarHistograms.end(), std::back_inserter(histogramData));
 
             startIndices.push_back(trajectory.lineDesc.startIndex);
             numValues.push_back(trajectory.lineDesc.numValues);
+            startHistogramIndex.push_back(trajectory.lineDesc.startHistogramIndex);
 
             for (auto varID = 0; varID < trajectory.multiVarDescs.size(); ++varID)
             {
@@ -1174,6 +1178,8 @@ void convertTrajectoryDataToBinaryLineMesh(
 
         lineVariables.data.resize(data.size() * sizeof(float));
         memcpy(&lineVariables.data.front(), &data.front(), data.size() * sizeof(float));
+        lineVariables.histogramData.resize(histogramData.size() * sizeof(float));
+        memcpy(&lineVariables.histogramData.front(), &histogramData.front(), histogramData.size() * sizeof(float));
         lineVariables.minValues.resize(minValues.size() * sizeof(float));
         memcpy(&lineVariables.minValues.front(), &minValues.front(), minValues.size() * sizeof(float));
         lineVariables.maxValues.resize(maxValues.size() * sizeof(float));
@@ -1186,7 +1192,10 @@ void convertTrajectoryDataToBinaryLineMesh(
         memcpy(&lineVariables.allMinValues.front(), &allMinValues.front(), allMinValues.size() * sizeof(float));
         lineVariables.allMaxValues.resize(allMaxValues.size() * sizeof(float));
         memcpy(&lineVariables.allMaxValues.front(), &allMaxValues.front(), allMaxValues.size() * sizeof(float));
+        lineVariables.startHistogramIndex.resize(startHistogramIndex.size() * sizeof(float));
+        memcpy(&lineVariables.startHistogramIndex.front(), &startHistogramIndex.front(), startHistogramIndex.size() * sizeof(float));
         submesh.variables.push_back(lineVariables);
+
     }
 
     auto end = std::chrono::system_clock::now();
