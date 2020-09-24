@@ -585,7 +585,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                         for (auto h = 0; h < globalNumBinsPerHisto; ++h)
                         {
 //                            const uint8_t numBins = 5;
-                            const uint32_t index = currentLineIndex * numVariables *
+                            const uint32_t index = currentLineIndex *   numVariables *
                                                    globalNumBinsPerHisto + v * globalNumBinsPerHisto + h;
 
                             histogramValues.push_back(

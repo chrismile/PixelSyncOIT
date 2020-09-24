@@ -181,23 +181,23 @@ void main()
     createPartialTubeSegments(circlePointsNext, vertexNormalsNext, nextPoint,
                               normalNext, tangentNext, curRadius, curRadius, instanceID, 0, 0);
 
-    if (histOffset > 0 && varID >= 0)
-    {
-        int indexID = vertexOutput[0].vVariableID % rollWidth;
-
-        for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE; i++)
-        {
-            if (indexID == 0)
-            {
-                circlePointsCurrent[i] += tangentOrig * histOffset;
-            }
-            if (indexID == rollWidth - 1)
-            {
-                circlePointsNext[i] -= tangentOrig * histOffset;
-            }
-
-        }
-    }
+//    if (histOffset > 0 && varID >= 0)
+//    {
+//        int indexID = vertexOutput[0].vVariableID % rollWidth;
+//
+//        for (int i = 0; i < NUM_CIRCLE_POINTS_PER_INSTANCE; i++)
+//        {
+//            if (indexID == 0)
+//            {
+//                circlePointsCurrent[i] += tangentOrig * histOffset;
+//            }
+//            if (indexID == rollWidth - 1)
+//            {
+//                circlePointsNext[i] -= tangentOrig * histOffset;
+//            }
+//
+//        }
+//    }
 
     // 3) Draw Tube Front Sides
     fragVariableValue = variableValue;

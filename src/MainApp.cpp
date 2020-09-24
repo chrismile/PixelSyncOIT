@@ -2046,7 +2046,7 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
         GeometryBufferPtr varColorBuffer = Renderer->createGeometryBuffer(
                 transparentObject.varColors.size()*sizeof(glm::vec4), (void*)&transparentObject.varColors.front(),
                 SHADER_STORAGE_BUFFER);
-        transparentObject.ssboEntries[5] = SSBOEntry(8, "colorVars" , varColorBuffer);
+        transparentObject.ssboEntries[6] = SSBOEntry(8, "colorVars" , varColorBuffer);
 
         ShaderManager->invalidateShaderCache();
         updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
