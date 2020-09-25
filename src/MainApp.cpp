@@ -467,7 +467,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         return;
     }
 
-    lineRadius = 0.005;
+    lineRadius = 0.002;
 
     if (timeCoherence)
     {
@@ -1810,7 +1810,7 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
 
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_FIBERS)
     {
-         if (ImGui::SliderFloat("Fiber radius", &fiberRadius, 0.0001f, 0.01f, "%.4f"))
+        if (ImGui::SliderFloat("Fiber radius", &fiberRadius, 0.0001f, 0.01f, "%.4f"))
         {
             reRender = true;
         }
@@ -1829,6 +1829,18 @@ void PixelSyncApp::renderLineRenderingSettingsGUI()
             ShaderManager->invalidateShaderCache();
             updateShaderMode(SHADER_MODE_UPDATE_EFFECT_CHANGE);
             transparentObject.setNewShader(transparencyShader);
+            reRender = true;
+        }
+    }
+
+    if (multiVarRenderMode == MULTIVAR_RENDERMODE_ROLLS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_COLOR_BANDS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_TWISTED_ROLLS
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_CHECKERBOARD
+        || multiVarRenderMode == MULTIVAR_RENDERMODE_FIBERS)
+    {
+        if (ImGui::SliderFloat("Min. Radius Factor", &minRadiusFactor, 0.0f, 1.0f, "%.3f"))
+        {
             reRender = true;
         }
     }
@@ -1912,6 +1924,17 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
         {
             reRender = true;
         }
+
+        if (mapTubeDiameter)
+        {
+            if(ImGui::Combo("Radius Mapping Mode", (int*)&multiVarRadiusMappingMode,
+                                        MULTIVAR_RADIUSTYPE_DISPLAYNAMES,
+                                        IM_ARRAYSIZE(MULTIVAR_RADIUSTYPE_DISPLAYNAMES)))
+            {
+                reRender = true;
+            }
+        }
+
     }
 
     if (multiVarRenderMode == MULTIVAR_RENDERMODE_CHECKERBOARD)
@@ -1945,7 +1968,12 @@ void PixelSyncApp::renderMultiVarSettingsGUI()
 
     if (trajectoryType == TRAJECTORY_TYPE_MULTIVAR)
     {
-        if (ImGui::SliderFloat("Separator Width", &separatorWidth, 0.0, 1.0, "%.2f"));
+        if (ImGui::SliderFloat("Separator Width", &separatorWidth, 0.0, 1.0, "%.2f"))
+        {
+            reRender = true;
+        }
+
+        if (ImGui::SliderFloat("Min Color Intensity", &minColorIntensity, 0.0, 1.0, "%.2f"))
         {
             reRender = true;
         }
@@ -2350,6 +2378,11 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
                 transparencyShader->setUniform("mapTubeDiameter", mapTubeDiameter);
             }
 
+            if (transparencyShader->hasUniform("mapTubeDiameterMode"))
+            {
+                transparencyShader->setUniform("mapTubeDiameterMode", multiVarRadiusMappingMode);
+            }
+
             if (transparencyShader->hasUniform("rollWidth"))
             {
                 transparencyShader->setUniform("rollWidth", rollWidth);
@@ -2362,6 +2395,16 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             if (transparencyShader->hasUniform("fiberRadius"))
             {
                 transparencyShader->setUniform("fiberRadius", fiberRadius);
+            }
+
+            if (transparencyShader->hasUniform("minRadiusFactor"))
+            {
+                transparencyShader->setUniform("minRadiusFactor", minRadiusFactor);
+            }
+
+            if (transparencyShader->hasUniform("minColorIntensity"))
+            {
+                transparencyShader->setUniform("minColorIntensity", minColorIntensity);
             }
 
             if (transparencyShader->hasUniform("checkerboardWidth"))

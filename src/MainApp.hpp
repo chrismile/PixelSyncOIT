@@ -162,6 +162,7 @@ private:
     bool colorByPosition = false;
     bool useLinearRGB = true;
     float lineRadius = 0.001f;
+    float minRadiusFactor = 0.5f;
     float fiberRadius = 0.0005f;
     float pointRadius = 0.0002f;
     std::vector<float> fpsArray;
@@ -188,6 +189,7 @@ private:
     int32_t checkerboardIterator = 2;
 
     // Lighting settings
+    float minColorIntensity = 0.1;
     float materialConstantAmbient = 0.1;
     float materialConstantDiffuse = 0.85;
     float materialConstantSpecular = 0.05;
@@ -215,6 +217,7 @@ private:
     ImportanceCriterionTypeUCLA importanceCriterionTypeUCLA
             = IMPORTANCE_CRITERION_UCLA_MAGNITUDE;
     MultiVarRenderModeType  multiVarRenderMode = MULTIVAR_RENDERMODE_ROLLS;
+    MultiVarRadiusMappingModeType multiVarRadiusMappingMode = MULTIVAR_RADIUSMODE_GLOBAL;
     int importanceCriterionIndex = 0;
     float minCriterionValue = 0.0f, maxCriterionValue = 1.0f;
     std::vector<glm::vec2> criterionsMinMaxValues;

@@ -56,6 +56,11 @@ enum MultiVarRenderModeType {
     MULTIVAR_RENDERMODE_FIBERS
 };
 
+enum MultiVarRadiusMappingModeType {
+    MULTIVAR_RADIUSMODE_GLOBAL = 0,
+    MULTIVAR_RADIUSMODE_LINE
+};
+
 const char *const IMPORTANCE_CRITERION_ANEURYSM_DISPLAYNAMES[] = {
         "Vorticity", "Line Curvature"
 };
@@ -75,6 +80,11 @@ const char *const IMPORTANCE_CRITERION_CFD_DISPLAYNAMES[] = {
 const char *const MULTIVAR_RENDERTYPE_DISPLAYNAMES[] = {
 //        "Ribbons", "Fibers", "Star Glyphs", "Tube Rolls", "Line", "Line Instanced"
     "Rolls", "Twisted Rolls", "Color Bands", "Oriented Color Bands", "Checkerboard", "Fibers"
+};
+
+const char *const MULTIVAR_RADIUSTYPE_DISPLAYNAMES[] = {
+//        "Ribbons", "Fibers", "Star Glyphs", "Tube Rolls", "Line", "Line Instanced"
+        "Global", "Line"
 };
 
 

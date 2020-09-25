@@ -120,7 +120,7 @@ void main()
     nextPoint = nextPoint + (cos(thetaCur) * normalNext + sin(thetaCur) * binormalNext) * radius;
 
     // 0.5) Map diamter if enabled
-    float minRadius = 0.5 * fiberRadius;
+    float minRadius = minRadiusFactor * fiberRadius;
     float curRadius = fiberRadius;
     float nextRadius = fiberRadius;
 
@@ -128,6 +128,7 @@ void main()
     {
         curRadius = minRadius;
         nextRadius = minRadius;
+
         if (varID >= 0)
         {
             curRadius = computeRadius(lineID, varID, elementID, vertexOutput[0].vElementNextID,

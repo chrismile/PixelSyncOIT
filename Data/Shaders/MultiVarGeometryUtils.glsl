@@ -6,6 +6,8 @@
 #define NUM_LINESEGMENTS 10
 #endif
 
+uniform float minRadiusFactor;
+
 void createTubeSegments(inout vec3 positions[NUM_SEGMENTS], inout vec3 normals[NUM_SEGMENTS],
                         in vec3 center, in vec3 normal, in vec3 tangent, in float curRadius)
 {
@@ -224,6 +226,8 @@ void drawPartialCircleLids(inout vec3 circlePointsCurrent[NUM_CIRCLE_POINTS_PER_
     EndPrimitive();
 }
 
+uniform int mapTubeDiameterMode;
+
 float computeRadius(in int lineID, in int varID, in int elementID, in int elementNextID,
 in float minRadius, in float maxRadius, in float interpolant)
 {
@@ -233,7 +237,10 @@ in float minRadius, in float maxRadius, in float interpolant)
     vec2 lineVarMinMax = vec2(0);
     float variableValueOrig = 0;
     sampleVariableFromLineSSBO(lineID, varID, elementID , variableValueOrig, lineVarMinMax);
-    sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+    if (mapTubeDiameterMode == 1)
+    {
+        sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+    }
     if (lineVarMinMax.x != lineVarMinMax.y)
     {
         float interpolant = (variableValueOrig - lineVarMinMax.x) / (lineVarMinMax.y - lineVarMinMax.x);
@@ -242,7 +249,10 @@ in float minRadius, in float maxRadius, in float interpolant)
     }
 
     sampleVariableFromLineSSBO(lineID, varID, elementNextID , variableValueOrig, lineVarMinMax);
-    sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+    if (mapTubeDiameterMode == 1)
+    {
+        sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+    }
     //            float variableNextValue = (variableNextValueOrig - variableNextMinMax.x) / (variableNextMinMax.y - variableNextMinMax.x);
     if (lineVarMinMax.x != lineVarMinMax.y)
     {

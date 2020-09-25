@@ -178,6 +178,8 @@ vec4 determineVariableColor(in int varID)
     return surfaceColor;
 }
 
+uniform float minColorIntensity;
+
 vec4 determineColor(in int varID, in float variableValue)
 {
     // Determine variable color
@@ -187,7 +189,7 @@ vec4 determineColor(in int varID, in float variableValue)
     {
         vec3 hsvCol = rgbToHSV(surfaceColor.rgb);
         float rate = variableValue;
-        hsvCol.g = hsvCol.g * (0.25 + 0.75 * rate);
+        hsvCol.g = hsvCol.g * (minColorIntensity + (1.0 - minColorIntensity) * rate);
         surfaceColor.rgb = hsvCol.rgb;
         surfaceColor.rgb = hsvToRGB(surfaceColor.rgb);
     }
@@ -207,7 +209,8 @@ vec4 determineColorLinearInterpolate(in int varID, in float variableValue,
     float nextMapping = variableNextValue;
     float rate = mix(curMapping, nextMapping, interpolant);
     //
-    hsvCol.g = hsvCol.g * (0.25 + 0.75 * rate);
+    float ambientFactor = 0.1;
+    hsvCol.g = hsvCol.g * (minColorIntensity + (1.0 - minColorIntensity) * rate);
     surfaceColor.rgb = hsvCol.rgb;
     surfaceColor.rgb = hsvToRGB(surfaceColor.rgb);
 

@@ -142,17 +142,25 @@ void main()
 
     // 2.1) Radius mapping
     float curRadius = radius;
-    float minRadius = 0.8 * radius;
+    float minRadius = minRadiusFactor * radius;
     float histOffset = 0.0;
 
     if (mapTubeDiameter)
     {
-        minRadius = 0.5 * radius;
+        minRadius = minRadiusFactor * radius;
         curRadius = minRadius;
         if (varID >= 0)
         {
             vec2 lineVarMinMax = vec2(0);
-            sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+            if (mapTubeDiameterMode == 0)
+            {
+                lineVarMinMax = variableMinMax;
+            }
+            else
+            {
+                sampleVariableDistributionFromLineSSBO(lineID, varID, lineVarMinMax);
+            }
+
             if (lineVarMinMax.x != lineVarMinMax.y)
             {
                 float interpolant = (variableValueOrig - lineVarMinMax.x) / (lineVarMinMax.y - lineVarMinMax.x);
@@ -160,9 +168,9 @@ void main()
                 curRadius = mix(minRadius, radius, interpolant);
             }
 
-            float histValues[5];
-            sampleHistogramFromLineSSBO(lineID, varID, elementID, histValues);
-            histOffset = 0.8 * (1.0 - histValues[instanceID % 5]);
+//            float histValues[5];
+//            sampleHistogramFromLineSSBO(lineID, varID, elementID, histValues);
+//            histOffset = 0.8 * (1.0 - histValues[instanceID % 5]);
 //            curRadius = mix(minRadius, radius, histValues[instanceID % 5]);
         }
 

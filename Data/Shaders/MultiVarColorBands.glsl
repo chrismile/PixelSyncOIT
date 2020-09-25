@@ -141,7 +141,7 @@ void main()
     }
 
     // 2.1) Radius mapping
-    float minRadius = 0.5 * radius;
+    float minRadius = minRadiusFactor * radius;
     float curRadius = radius;
     float nextRadius = radius;
 
