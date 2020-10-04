@@ -191,7 +191,7 @@ void OIT_DepthComplexity::renderGUI()
         Color newColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, 1.0f);
         resolveShader->setUniform("color", newColor);
         intensity = 0.01+2*colorSelection.w;
-        numFragmentsMaxColor = std::max(maxComplexity, 4ul)/intensity;
+        numFragmentsMaxColor = std::max(maxComplexity, uint64_t(4ull))/intensity;
         //reRender = true;
     }
 }
@@ -247,7 +247,7 @@ void OIT_DepthComplexity::computeStatistics()
 
     if (!(performanceMeasureMode || recordingMode) || firstFrame) {
         firstFrame = false;
-        numFragmentsMaxColor = std::max(maxComplexity, 4ul)/intensity;
+        numFragmentsMaxColor = std::max(maxComplexity, uint64_t(4ull))/intensity;
     }
 
     if (performanceMeasureMode) {
