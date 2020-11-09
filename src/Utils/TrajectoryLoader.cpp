@@ -643,6 +643,7 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
         float lineRadius)
 {
     auto start = std::chrono::system_clock::now();
+    sgl::ShaderManager->invalidateShaderCache();
 
     unsigned int NUM_CIRCLE_SEGMENTS = 3;
     if (trajectoryType == TRAJECTORY_TYPE_RINGS) {
@@ -858,6 +859,9 @@ void convertTrajectoryDataToBinaryTriangleMeshGPU(
             + std::to_string(elapsedIndices.count()));
 
     sgl::ShaderManager->removePreprocessorDefine("WORK_GROUP_SIZE_1D");
+    sgl::ShaderManager->removePreprocessorDefine("NUM_CIRCLE_SEGMENTS");
+    sgl::ShaderManager->removePreprocessorDefine("CIRCLE_RADIUS");
+    sgl::ShaderManager->unbindShader();
 
 
 

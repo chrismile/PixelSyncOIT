@@ -73,7 +73,6 @@ public:
     void resolutionChanged(EventPtr event);
     void processSDLEvent(const SDL_Event &event);
 
-
 protected:
     // State changes
     void setRenderMode(RenderModeOIT newMode, bool forceReset = false);
@@ -152,6 +151,7 @@ private:
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
     std::string startupModelName = "Multi-Var";
+    //std::string startupModelName = "Aneurysm"; // TODO
     LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     Color bandingColor;
     Color clearColor;

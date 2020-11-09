@@ -10,10 +10,16 @@
 #include "OIT_Renderer.hpp"
 
 /**
- * An order independent transparency renderer using pixel sync.
+ * An order independent transparency renderer using pixel sync (i.e., ARB_fragment_shader_interlock).
  *
- * (To be precise, it doesn't use the Intel-specific Pixel Sync extension
- * INTEL_fragment_shader_ordering, but the vendor-independent ARB_fragment_shader_interlock).
+ * This is an improvement of the original MLAB technique presented in:
+ * M. Kern, C. Neuhauser, T. Maack, M. Han, W. Usher and R. Westermann, "A Comparison of Rendering Techniques for 3D
+ * Line Sets with Transparency," in IEEE Transactions on Visualization and Computer Graphics, doi:
+ * 10.1109/TVCG.2020.2975795.
+ *
+ * Original MLAB:
+ * M. Salvi and K. Vaidyanathan, “Multi-layer alpha blending,” in Proceedings of the 18th Meeting of the ACM SIGGRAPH
+ * Symposium on Interactive 3D Graphics and Games, ser. I3D ’14. New York, NY, USA: ACM, 2014, pp. 151–158
  */
 class OIT_MLABBucket : public OIT_Renderer {
 public:

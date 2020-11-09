@@ -26,10 +26,11 @@ struct HTFragmentTail_compressed
 };*/
 
 /**
- * An order independent transparency renderer using pixel sync.
+ * An order independent transparency renderer using pixel sync (i.e., ARB_fragment_shader_interlock).
  *
- * (To be precise, it doesn't use the Intel-specific Pixel Sync extension
- * INTEL_fragment_shader_ordering, but the vendor-independent ARB_fragment_shader_interlock).
+ * Marilena Maule, João Comba, Rafael Torchelsen, and Rui Bastos. 2013. Hybrid transparency. In Proceedings of the ACM
+ * SIGGRAPH Symposium on Interactive 3D Graphics and Games (I3D '13). Association for Computing Machinery, New York, NY,
+ * USA, 103–118. DOI:https://doi.org/10.1145/2448196.2448212
  */
 class OIT_HT : public OIT_Renderer {
 public:

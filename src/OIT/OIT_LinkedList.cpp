@@ -72,6 +72,16 @@ void OIT_LinkedList::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
 
     size_t fragmentBufferSize = expectedDepthComplexity * width * height;
     size_t fragmentBufferSizeBytes = sizeof(LinkedListFragmentNode) * fragmentBufferSize;
+    if (fragmentBufferSizeBytes >= (1ull << 32ull)) {
+        sgl::Logfile::get()->writeError(
+                std::string() + "Fragment buffer size was larger than or equal to 4GiB. Clamping to 4GiB.");
+        fragmentBufferSizeBytes = (1ull << 32ull) - sizeof(LinkedListFragmentNode);
+        fragmentBufferSize = fragmentBufferSizeBytes / sizeof(LinkedListFragmentNode);
+    } else {
+        sgl::Logfile::get()->writeInfo(
+                std::string() + "Fragment buffer size GiB: "
+                + std::to_string(fragmentBufferSizeBytes / 1024.0 / 1024.0 / 1024.0));
+    }
 
     std::cout << "LL: buffer size: " << (fragmentBufferSizeBytes / 1024.0 / 1024.0) << " MB" << std::endl << std::flush;
 

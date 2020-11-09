@@ -12,7 +12,7 @@
 
 const int NUM_OIT_MODES = 11;
 const char *const OIT_MODE_NAMES[] = {
-        "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT",
+        "K-Buffer", "Linked List", "Multi-layer Alpha Blending", "Hybrid Transparency", "Moment-Based OIT", "WBOIT",
         "Depth Complexity", "No OIT", "Depth Peeling", "MLAB (Buckets)", "Voxel Ray Casting (Lines)", "Ray Tracing"
 };
 enum RenderModeOIT {
@@ -21,6 +21,7 @@ enum RenderModeOIT {
     RENDER_MODE_OIT_MLAB, // Mutli-layer Alpha Blending
     RENDER_MODE_OIT_HT, // Hybrid Transparency
     RENDER_MODE_OIT_MBOIT, // Moment-Based Order-Independent Transparency
+    RENDER_MODE_OIT_WBOIT, // Weighted Blended Order-Independent Transparency
     RENDER_MODE_OIT_DEPTH_COMPLEXITY,
     RENDER_MODE_OIT_DUMMY,
     RENDER_MODE_OIT_DEPTH_PEELING,
@@ -67,6 +68,24 @@ const char *const MODEL_FILENAMES[] = {
 //        "Data/CFD/driven_cavity-streamlines.binlines",
 //        "Data/CFD/rayleigh_benard_convection_8-2-1-streamlines.binlines",
 //        "Data/Models/Ship_04.obj",
+        /*"Data/UCLA/UCLA_400k_100v.obj",
+        "Data/IsoSurfaces/rm-140-isosurface.bobj",
+        "Data/IsoSurfaces/rm-80-isosurface.bobj",
+        "Data/PointDatasets/0.000xv000.dat",
+        "Data/PointDatasets/0.000xv001.dat",
+        "Data/PointDatasets/OFC-wasatch-50Mpps.uda.001/t06002/timestep.xml",
+        "Data/Rings/rings.obj",
+        "Data/Trajectories/9213_streamlines.obj",
+        "Data/ConvectionRolls/output.obj",
+        "Data/ConvectionRolls/turbulence80000.obj",
+        "Data/ConvectionRolls/turbulence20000.obj",
+        "Data/Hair/ponytail.hair",
+        "Data/Trajectories/single_streamline.obj",
+        "Data/Trajectories/torus.obj",
+        "Data/Trajectories/tornado.obj",
+        "Data/CFD/driven_cavity-streamlines.binlines",
+        "Data/CFD/rayleigh_benard_convection_8-2-1-streamlines.binlines",
+        "Data/Models/Ship_04.obj",*/ // TODO
 
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06pressureDiff.nc",
 //        "Data/WCB/EUR_LL10/20121015_00_lagranto_ensemble_forecast__START_20121017_06.nc",
@@ -133,6 +152,24 @@ const char *const MODEL_DISPLAYNAMES[] = {
 //        "Driven Cavity",
 //        "Rayleigh-Benard Convection",
 //        "Ship",
+        /*"UCLA (400k)",
+        "Meshkov (140)",
+        "Meshkov (80)",
+        "Cosmic Web 0",
+        "Cosmic Web 1",
+        "Uintah Particle Data Set",
+        "Rings",
+        "Aneurysm",
+        "Convection Rolls",
+        "Turbulence",
+        "Convection Rolls Small",
+        "Hair",
+        "Single Streamline",
+        "Torus",
+        "Tornado",
+        "Driven Cavity",
+        "Rayleigh-Benard Convection",
+        "Ship",*/ // TODO
 
 //        "Ponytail",
 

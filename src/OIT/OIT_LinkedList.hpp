@@ -23,7 +23,7 @@ struct LinkedListFragmentNode
     uint32_t next;
 };
 
-const char * const sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
+const char *const sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Insertion Sort", "Shell Sort", "Max Heap"};
 
 /**
  * An order independent transparency renderer using a per-pixel linked list.
@@ -31,6 +31,10 @@ const char * const sortingModeStrings[] = {"Priority Queue", "Bubble Sort", "Ins
  * - The fragment-and-link buffer storing all rendered fragments in a linked list.
  * - The start-offset buffer storing the index of the first fragment in the buffer
  *   mentioned above for each pixel.
+ *
+ * J. C. Yang, J. Hensley, H. Grun, and N. Thibieroz, "Real-time concurrent linked list construction on the gpu", in
+ * Proceedings of the 21st Eurographics Conference on Rendering, ser. EGSR’10. Airela-Ville, Switzerland, Switzerland:
+ * Eurographics Association, 2010, pp. 1297–1304.
  */
 class OIT_LinkedList : public OIT_Renderer {
 public:

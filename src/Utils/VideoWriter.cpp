@@ -1,8 +1,29 @@
 /*
- * VideoWriter.cpp
+ * BSD 2-Clause License
  *
- *  Created on: 17.11.2017
- *      Author: Christoph Neuhauser
+ * Copyright (c) 2020, Christoph Neuhauser
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <cerrno>
@@ -18,11 +39,11 @@
 #include "VideoWriter.hpp"
 
 VideoWriter::VideoWriter(const char *filename, int frameW, int frameH, int framerate)
-        : frameW(frameW), frameH(frameH), framebuf(NULL) {
+        : frameW(frameW), frameH(frameH), framebuffer(NULL) {
     openFile(filename, framerate);
 }
 
-VideoWriter::VideoWriter(const char *filename, int framerate) : framebuf(NULL) {
+VideoWriter::VideoWriter(const char *filename, int framerate) : framebuffer(NULL) {
     sgl::Window *window = sgl::AppSettings::get()->getMainWindow();
     frameW = window->getWidth();
     frameH = window->getHeight();
@@ -43,8 +64,8 @@ void VideoWriter::openFile(const char *filename, int framerate) {
 }
 
 VideoWriter::~VideoWriter() {
-    if (framebuf != NULL) {
-        delete[] framebuf;
+    if (framebuffer != NULL) {
+        delete[] framebuffer;
     }
     if (avfile) {
         pclose(avfile);
@@ -66,9 +87,13 @@ void VideoWriter::pushWindowFrame() {
                 + ", but got " + sgl::toString(window->getWidth()) + "x" + sgl::toString(window->getHeight()) + ".");
         return;
     }
-    if (framebuf == NULL) {
-        framebuf = new uint8_t[frameW*frameH*3];
+    if (framebuffer == NULL) {
+        framebuffer = new uint8_t[frameW * frameH * 3];
     }
-    glReadPixels(0, 0, frameW, frameH, GL_RGB, GL_UNSIGNED_BYTE, framebuf);
-    pushFrame(framebuf);
+
+    if (frameW % 4 != 0) {
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    }
+    glReadPixels(0, 0, frameW, frameH, GL_RGB, GL_UNSIGNED_BYTE, framebuffer);
+    pushFrame(framebuffer);
 }

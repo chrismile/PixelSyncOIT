@@ -276,17 +276,21 @@ void TransferFunctionWindow::renderFileDialog()
 void TransferFunctionWindow::renderOpacityGraph()
 {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
+    float scaleFactor = sgl::ImGuiWrapper::get()->getScaleFactor();
     int regionWidth = ImGui::GetContentRegionAvailWidth();
     int graphHeight = 300;
-    int border = 1;
+    int border = 2*scaleFactor;
+    int areaWidth = regionWidth - 2.0f*border;
+    int areaHeight = graphHeight - 2.0f*border;
     opacityGraphBox.min = glm::vec2(ImGui::GetCursorScreenPos().x + border, ImGui::GetCursorScreenPos().y + border);
-    opacityGraphBox.max = opacityGraphBox.min + glm::vec2(regionWidth - 2.0f*border, graphHeight - 2.0f*border);
+    opacityGraphBox.max = opacityGraphBox.min + glm::vec2(areaWidth, areaHeight);
 
     ImColor backgroundColor(clearColor.getFloatR(), clearColor.getFloatG(), clearColor.getFloatB());
     ImColor borderColor(1.0f - clearColor.getFloatR(), 1.0f - clearColor.getFloatG(), 1.0f - clearColor.getFloatB());
 
     // First render the graph box
     ImVec2 startPos = ImGui::GetCursorScreenPos();
+    ImVec2 cursorPosHistogram = ImGui::GetCursorPos();
     drawList->AddRectFilled(ImVec2(startPos.x, startPos.y),
                             ImVec2(startPos.x + regionWidth, startPos.y + graphHeight),
                             borderColor,
@@ -295,41 +299,42 @@ void TransferFunctionWindow::renderOpacityGraph()
                             ImVec2(startPos.x + regionWidth - border, startPos.y + graphHeight - border),
                             backgroundColor,
                             ImGui::GetStyle().FrameRounding);
-    ImVec2 cursorPosHistogram = ImGui::GetCursorPos();
-    ImVec2 oldPadding = ImGui::GetStyle().FramePadding;
-    ImGui::GetStyle().FramePadding = ImVec2(1,1);
-    ImGui::PlotHistogram("##histogram", &histogram.front(), histogram.size(), 0, NULL, 0.0f, 1.0f,
-            ImVec2(regionWidth, graphHeight));
+
+    if (ImGui::ClickArea("##grapharea", ImVec2(regionWidth, graphHeight + 2), mouseReleased)) {
+        onOpacityGraphClick();
+    }
+    //ImGui::SetItemAllowOverlap();
     ImGui::SetCursorPos(cursorPosHistogram);
+
+    ImVec2 oldPadding = ImGui::GetStyle().FramePadding;
+    ImGui::GetStyle().FramePadding = ImVec2(1, 1);
+    ImGui::PlotHistogram(
+            "##histogram", &histogram.front(), histogram.size(), 0, NULL,
+            0.0f, 1.0f, ImVec2(regionWidth, graphHeight));
     ImGui::GetStyle().FramePadding = oldPadding;
 
     // Then render the graph itself
     for (int i = 0; i < (int)opacityPoints.size()-1; i++) {
-        float positionX0 = opacityPoints.at(i).position * regionWidth;
-        float positionX1 = opacityPoints.at(i+1).position * regionWidth;
-        float positionY0 = (1.0f - opacityPoints.at(i).opacity) * graphHeight;
-        float positionY1 = (1.0f - opacityPoints.at(i+1).opacity) * graphHeight;
+        float positionX0 = opacityPoints.at(i).position * areaWidth + border;
+        float positionX1 = opacityPoints.at(i+1).position * areaWidth + border;
+        float positionY0 = (1.0f - opacityPoints.at(i).opacity) * areaHeight + border;
+        float positionY1 = (1.0f - opacityPoints.at(i+1).opacity) * areaHeight + border;
         drawList->AddLine(
                 ImVec2(startPos.x + positionX0, startPos.y + positionY0),
                 ImVec2(startPos.x + positionX1, startPos.y + positionY1),
-                borderColor, 2.0f);
+                borderColor, 1.5f * scaleFactor);
     }
 
     // Finally, render the points
     for (int i = 0; i < (int)opacityPoints.size(); i++) {
-        ImVec2 centerPt = ImVec2(startPos.x + border + opacityPoints.at(i).position * (regionWidth - border),
-                startPos.y + border + (1.0f - opacityPoints.at(i).opacity) * (graphHeight - border));
-        float radius = 6;
+        ImVec2 centerPt = ImVec2(startPos.x + border + opacityPoints.at(i).position * areaWidth,
+                                 startPos.y + border + (1.0f - opacityPoints.at(i).opacity) * areaHeight);
+        float radius = 4*scaleFactor;
         if (selectedPointType == SELECTED_POINT_TYPE_OPACITY && i == currentSelectionIndex) {
-            radius = 8;
+            radius = 6*scaleFactor;
         }
         drawList->AddCircleFilled(centerPt, radius, backgroundColor, 24);
         drawList->AddCircle(centerPt, radius, borderColor, 24, 1.5f);
-    }
-
-
-    if (ImGui::ClickArea("##grapharea", ImVec2(regionWidth, graphHeight + 2), mouseReleased)) {
-        onOpacityGraphClick();
     }
 }
 
@@ -720,10 +725,12 @@ void TransferFunctionWindow::dragPoint()
 
 bool TransferFunctionWindow::selectNearestOpacityPoint(int &currentSelectionIndex, const glm::vec2 &mousePosWidget)
 {
+    float scaleFactor = sgl::ImGuiWrapper::get()->getScaleFactor();
+
     for (int i = 0; i < (int)opacityPoints.size(); i++) {
         glm::vec2 centerPt = glm::vec2(opacityPoints.at(i).position * opacityGraphBox.getWidth(),
                 (1.0f - opacityPoints.at(i).opacity) * opacityGraphBox.getHeight());
-        if (glm::length(centerPt - mousePosWidget) < 10.0f) {
+        if (glm::length(centerPt - mousePosWidget) < 10.0f * scaleFactor) {
             currentSelectionIndex = i;
             return true;
         }
@@ -733,10 +740,12 @@ bool TransferFunctionWindow::selectNearestOpacityPoint(int &currentSelectionInde
 
 bool TransferFunctionWindow::selectNearestColorPoint(int &currentSelectionIndex, const glm::vec2 &mousePosWidget)
 {
+    float scaleFactor = sgl::ImGuiWrapper::get()->getScaleFactor();
+
     for (int i = 0; i < (int)colorPoints.size(); i++) {
         ImVec2 centerPt = ImVec2(colorPoints.at(i).position * colorBarBox.getWidth(),
                 colorBarBox.getHeight()/2);
-        if (glm::abs(centerPt.x - mousePosWidget.x) < 10.0f) {
+        if (glm::abs(centerPt.x - mousePosWidget.x) < 10.0f * scaleFactor) {
             currentSelectionIndex = i;
             return true;
         }

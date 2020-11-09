@@ -20,10 +20,8 @@ struct FragmentNode
 };
 
 /**
- * An order independent transparency renderer using pixel sync.
- *
- * (To be precise, it doesn't use the Intel-specific Pixel Sync extension
- * INTEL_fragment_shader_ordering, but the vendor-independent ARB_fragment_shader_interlock).
+ * An order independent transparency renderer using pixel sync (i.e., ARB_fragment_shader_interlock).
+ * Gathers the first k layers and blends them in a resolve pass.
  */
 class OIT_KBuffer : public OIT_Renderer {
 public:

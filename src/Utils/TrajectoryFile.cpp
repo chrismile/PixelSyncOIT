@@ -2,6 +2,8 @@
 // Created by christoph on 04.06.19.
 //
 
+#define _FILE_OFFSET_BITS 64
+
 #include <cstdio>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -404,15 +406,22 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     uint8_t globalNumVars = 0;
     float globalNumBinsPerHisto = 0;
 
-    FILE *file = fopen(filename.c_str(), "r");
+    FILE *file = fopen64(filename.c_str(), "r");
     if (!file) {
         sgl::Logfile::get()->writeError(std::string() + "Error in convertObjTrajectoryDataToBinaryLineMesh: File \""
                                         + filename + "\" does not exist.");
         return trajectories;
     }
-    fseek(file, 0, SEEK_END);
-    size_t length = ftell(file);
-    fseek(file, 0, SEEK_SET);
+#if defined(_WIN32) && !defined(__MINGW32__)
+    _fseeki64(file, 0, SEEK_END);
+    size_t length = _ftelli64(file);
+    _fseeki64(file, 0, SEEK_SET);
+#else
+    fseeko(file, 0, SEEK_END);
+    size_t length = ftello(file);
+    fseeko(file, 0, SEEK_SET);
+#endif
+
     char *fileBuffer = new char[length];
     fread(fileBuffer, 1, length, file);
     fclose(file);

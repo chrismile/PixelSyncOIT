@@ -867,16 +867,15 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
             if (!useProgrammableFetch) {
                 if (meshAttribute.numComponents == 1) {
                     // Importance criterion attributes are bound to location 3 and onwards in vertex shader
-                    /*renderData->addGeometryBuffer(attributeBuffer, importanceCriterionLocationCounter,
-                            meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true); */
-
-                    //! TODO This is the point where we set optional buffers
-                    renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
-                            meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, true);
+                    renderData->addGeometryBufferOptional(
+                            attributeBuffer, meshAttribute.name.c_str(), meshAttribute.attributeFormat,
+                            meshAttribute.numComponents, 0, 0, 0, ATTRIB_CONVERSION_FLOAT_NORMALIZED);
                 } else {
                     bool isNormalizedColor = (meshAttribute.name == "vertexColor");
-                    renderData->addGeometryBufferOptional(attributeBuffer, meshAttribute.name.c_str(),
-                            meshAttribute.attributeFormat, meshAttribute.numComponents, 0, 0, 0, isNormalizedColor);
+                    renderData->addGeometryBufferOptional(
+                            attributeBuffer, meshAttribute.name.c_str(), meshAttribute.attributeFormat,
+                            meshAttribute.numComponents, 0, 0, 0,
+                            isNormalizedColor ? ATTRIB_CONVERSION_FLOAT_NORMALIZED : ATTRIB_CONVERSION_FLOAT);
                 }
                 meshRenderer.shaderAttributeNames.insert(meshAttribute.name);
             } else {
