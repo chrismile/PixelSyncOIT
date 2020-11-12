@@ -150,7 +150,7 @@ private:
     // User interface
     bool showSettingsWindow = true;
     int usedModelIndex = 0;
-    std::string startupModelName = "Multi-Var";
+    std::string startupModelName = "Cloud Simulation";
     //std::string startupModelName = "Aneurysm"; // TODO
     LineRenderingTechnique lineRenderingTechnique = LINE_RENDERING_TECHNIQUE_LINES;
     Color bandingColor;

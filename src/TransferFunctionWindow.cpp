@@ -173,7 +173,7 @@ void TransferFunctionWindow::setClearColor(const sgl::Color &clearColor)
 
 void TransferFunctionWindow::computeHistogram(const std::vector<float> &attributes, float minAttr, float maxAttr)
 {
-    const int histogramResolution = 50;
+    const int histogramResolution = 256;
     histogram.clear();
     histogram.resize(histogramResolution);
     for (float attr : attributes) {

@@ -192,8 +192,9 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
 
     if (perfMeasurementMode) {
         sgl::FileUtils::get()->ensureDirectoryExists("images");
-        measurer = new AutoPerfMeasurer(getTestModesPaper(), "performance.csv", "depth_complexity.csv",
-                                        [this](const InternalState &newState) { this->setNewState(newState); }, timeCoherence);
+        measurer = new AutoPerfMeasurer(
+                getTestModesPaper(), "performance.csv", "depth_complexity.csv",
+                [this](const InternalState &newState) { this->setNewState(newState); }, timeCoherence);
         measurer->setInitialFreeMemKilobytes(freeMemKilobytes);
         measurer->resolutionChanged(sceneFramebuffer);
 
