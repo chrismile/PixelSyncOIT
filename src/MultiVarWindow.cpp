@@ -134,16 +134,16 @@ void MultiVarWindow::renderVarChart()
 void MultiVarWindow::renderSettings()
 {
 //    ImGui::NewLine();
-    ImGui::ListBoxHeader("Variables", ImVec2(-1, 180));
-
-    for (auto n = 0; n < names.size(); ++n)
-    {
-        if (ImGui::Selectable(names[n].c_str(), variableIndex == n))
+    if (ImGui::ListBoxHeader("Variables", ImVec2(-1, 180))) {
+        for (auto n = 0; n < names.size(); ++n)
         {
-            variableIndex = n;
+            if (ImGui::Selectable(names[n].c_str(), variableIndex == n))
+            {
+                variableIndex = n;
+            }
         }
+        ImGui::ListBoxFooter();
     }
-    ImGui::ListBoxFooter();
 
     if (ImGui::SliderInt("Histogram Res.", &histogramRes, 1, 255))
     {
