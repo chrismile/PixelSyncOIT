@@ -364,12 +364,12 @@ flat in float fragVariableNextValue;
 in float fragElementInterpolant;
 
 #if !defined(DIRECT_BLIT_GATHER) || defined(SHADOW_MAPPING_MOMENTS_GENERATE)
-    #include OIT_GATHER_HEADER
+#include OIT_GATHER_HEADER
 #endif
 
 
 #ifdef DIRECT_BLIT_GATHER
-    out vec4 fragColor;
+out vec4 fragColor;
 #endif
 
 uniform vec3 lightDirection = vec3(1.0,0.0,0.0);

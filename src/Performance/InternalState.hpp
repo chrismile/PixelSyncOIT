@@ -33,6 +33,7 @@ enum RenderModeOIT {
 
 const char *const MODEL_FILENAMES[] = {
         "Data/MultiVar/test_clouds.obj",
+        "Data/MultiVar/test_nawdex.obj",
         "Data/MultiVar/test_clouds_2.obj",
         "Data/MultiVar/test_sep_20_00.obj",
         "Data/MultiVar/test_sep_20_12_case1.obj",
@@ -117,6 +118,7 @@ const char *const MODEL_FILENAMES[] = {
 const int NUM_MODELS = ((int)(sizeof(MODEL_FILENAMES)/sizeof(*MODEL_FILENAMES)));
 const char *const MODEL_DISPLAYNAMES[] = {
         "Cloud Simulation",
+        "Test NAWDEX",
         "Cloud Simulation 2",
         "Sep 20 2016 - 00 (Ascent / Descent)",
         "Sep 20 2016 - 12 (Front)",

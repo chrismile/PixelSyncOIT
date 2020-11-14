@@ -234,7 +234,6 @@ uniform float separatorWidth;
 #include "MultiVarGlobalVariables.glsl"
 #include "MultiVarShadingUtils.glsl"
 
-
 void main()
 {
     float variableValue;
@@ -244,8 +243,40 @@ void main()
     vec2 variableNextMinMax;
 
     // 1) Determine variable ID along tube geometry
-    const int varID = int(floor(fragTexCoord.y * numVariables));
-    float varFraction = fragTexCoord.y * numVariables - float(varID);
+    const vec3 n = normalize(fragNormal);
+    const vec3 v = normalize(cameraPosition - fragWorldPos);
+    const vec3 t = normalize(fragTangent);
+    // Project v into plane perpendicular to t to get newV.
+    vec3 helperVec = normalize(cross(t, v));
+    vec3 newV = normalize(cross(helperVec, t));
+    // Get the symmetric ribbon position (ribbon direction is perpendicular to line direction) between 0 and 1.
+    // NOTE: len(cross(a, b)) == area of parallelogram spanned by a and b.
+    vec3 crossProdVn = cross(newV, n);
+    float ribbonPosition = length(crossProdVn);
+
+    // Side note: We can also use the code below, as for a, b with length 1:
+    // sqrt(1 - dot^2(a,b)) = len(cross(a,b))
+    // Due to:
+    // - dot(a,b) = ||a|| ||b|| cos(phi)
+    // - len(cross(a,b)) = ||a|| ||b|| |sin(phi)|
+    // - sin^2(phi) + cos^2(phi) = 1
+    //ribbonPosition = dot(newV, n);
+    //ribbonPosition = sqrt(1 - ribbonPosition * ribbonPosition);
+
+    // Get the winding of newV relative to n, taking into account that t is the normal of the plane both vectors lie in.
+    // NOTE: dot(a, cross(b, c)) = det(a, b, c), which is the signed volume of the parallelepiped spanned by a, b, c.
+    if (dot(t, crossProdVn) < 0.0) {
+        ribbonPosition = -ribbonPosition;
+    }
+    // Normalize the ribbon position: [-1, 1] -> [0, 1].
+    ribbonPosition = ribbonPosition / 2.0 + 0.5;
+    // Compute the variable ID for this ribbon position and the variable fraction.
+    const int varID = int(floor(ribbonPosition * numVariables));
+    float varFraction = ribbonPosition * numVariables - float(varID);
+
+    // Old code:
+    //const int varID = int(floor(fragTexCoord.y * numVariables));
+    //float varFraction = fragTexCoord.y * numVariables - float(varID);
 
     // 2) Sample variables from buffers
     sampleVariableFromLineSSBO(fragLineID, sampleActualVarID(varID), fragElementID, variableValue, variableMinMax);
