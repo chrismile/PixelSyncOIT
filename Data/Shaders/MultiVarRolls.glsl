@@ -15,7 +15,6 @@ out VertexData
     int vElementID;// number of line element (original line vertex index)
     int vElementNextID; // number of next line element (original next line vertex index)
     float vElementInterpolant; // curve parameter t along curve between element and next element
-    int vInstanceID; // current instance ID for multi-instancing rendering
     vec4 lineVariable;
 };
 //} GeomOut; // does not work
@@ -33,7 +32,6 @@ void main()
     vVariableID = varID;
     vLineID = lineID;
     vElementID = elementID;
-    vInstanceID = gl_InstanceID;
 
     vElementNextID = int(variableDesc.z);
     vElementInterpolant = variableDesc.w;
@@ -74,7 +72,6 @@ in VertexData
     int vElementID;// number of line element (original line vertex index)
     int vElementNextID; // number of next line element (original next line vertex index)
     float vElementInterpolant; // curve parameter t along curve between element and next element
-    int vInstanceID; // current instance ID for multi-instancing rendering
     vec4 lineVariable;
 } vertexOutput[];
 
@@ -119,7 +116,7 @@ void main()
     vec3 tangentOrig = nextPoint - currentPoint;
 
     // 1) Sample variables at each tube roll
-    const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
+    const int instanceID = gl_InvocationID;
     const float mappedVarIDRatio = mod(float(vertexOutput[0].vVariableID) / float(rollWidth), 1.0);
     const int mappedVarID = (vertexOutput[0].vVariableID >= 0) ? vertexOutput[0].vVariableID / rollWidth : -1;
     const int varID = sampleActualVarID(mappedVarID); // instanceID % numVariables for stripes

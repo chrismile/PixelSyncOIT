@@ -95,15 +95,11 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
 
     // 2.5) Create buffer array with all variables and statistics
     std::vector<std::vector<float>> multiVarData(numLines);
-    std::vector<std::vector<float>> multiVarHistograms(numLines);
     std::vector<LineDesc> lineDescs(numLines);
     std::vector<std::vector<VarDesc>> lineMultiVarDescs(numLines);
-    std::vector<std::vector<VarDesc>> lineHistogramDescs(numLines);
 
     uint32_t lineOffset = 0;
     uint32_t lineID = 0;
-    uint32_t numBins = 0;
-    uint32_t histogramOffset = 0;
 
     for (const auto& trajectory : inTrajectories)
     {
@@ -130,19 +126,10 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
                 varDescPerLine.minMax.y = std::max(varDescPerLine.minMax.y, variable);
 
                 multiVarData[lineID].push_back(variable);
-                numBins = trajectory.numBins;
 
 
 
 //                vCounter++;
-            }
-
-            // Create histogram buffer
-            for (int v = 0; v < maxVertices - 1; ++v)
-            {
-                std::copy(trajectory.histograms[v].begin(),
-                          trajectory.histograms[v].end(),
-                          std::back_inserter(multiVarHistograms[lineID]));
             }
 
             lineMultiVarDescs[lineID].push_back(varDescPerLine);
@@ -150,9 +137,7 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
         }
         lineDescs[lineID].startIndex = lineOffset;
         lineDescs[lineID].numValues = varOffsetPerLine;
-        lineDescs[lineID].startHistogramIndex = histogramOffset;
 
-        histogramOffset += maxVertices * numBins * numVariables;
         lineOffset += varOffsetPerLine;
         lineID++;
     }
@@ -285,8 +270,6 @@ Trajectories convertTrajectoriesToBezierCurves(const Trajectories& inTrajectorie
 
         newTrajectory.lineDesc = lineDescs[traj];
         newTrajectory.multiVarData = multiVarData[traj];
-        newTrajectory.multiVarHistograms = multiVarHistograms[traj];
-        newTrajectory.numBins = numBins;
         newTrajectory.multiVarDescs = lineMultiVarDescs[traj];
         newTrajectory.multiVarNames = inTrajectories[traj].multiVarNames;
 
@@ -401,10 +384,8 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
-    std::vector<float> globalLineHistograms;
     std::vector<std::string> globalMultiVarNames;
     uint8_t globalNumVars = 0;
-    float globalNumBinsPerHisto = 0;
 
     FILE *file = fopen64(filename.c_str(), "r");
     if (!file) {
@@ -489,7 +470,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                 sscanf(lineBuffer.c_str() + 2, "%f", &attr);
                 globalLineVertexAttributes.push_back(attr);
             }
-        } else if (isMultiVar && (command == 'v' && command2 == 'g'))
+        } else if (isMultiVar && command == 'a')
         {
             std::stringstream lineStream(lineBuffer.c_str() + 2);
 //            uint8_t counter = 0;
@@ -505,24 +486,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             std::cout << "Found " << globalMultiVarNames.size()
                       << " variables\n";
 
-        } else if (isMultiVar && (command == 'v' && command2 == 'h'))
-        {
-            std::stringstream lineStream(lineBuffer.c_str() + 2);
-            lineStream >> globalNumBinsPerHisto;
-
-//            uint8_t counter = 0;
-            while (lineStream.good())
-            {
-                float value;
-                lineStream >> value;
-                globalLineHistograms.push_back(value);
-            }
-
-            std::cout << "Number of histogram bins: " << globalNumBinsPerHisto << "\n";
-
-
-            } else if (command == 'v' && command2 == 'n') {
-            // Not supported so far
         } else if (command == 'v') {
             // Path line vertex position
             glm::vec3 position;
@@ -564,7 +527,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 
             std::vector<float> pathLineVorticities;
             trajectory.positions.reserve(currentLineIndices.size());
-            trajectory.histograms.reserve(currentLineIndices.size());
             pathLineVorticities.reserve(currentLineIndices.size());
             for (size_t i = 0; i < currentLineIndices.size(); i++) {
                 glm::vec3 pos = globalLineVertices.at(currentLineIndices.at(i));
@@ -577,8 +539,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
 
                 const uint32_t currentLineIndex = currentLineIndices.at(i);
 
-                std::vector<float> histogramValues;
-
                 trajectory.positions.push_back(globalLineVertices.at(currentLineIndex));
 
                 uint8_t numVariables = (isMultiVar) ? globalNumVars : 1;
@@ -586,29 +546,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
                 {
                     pathLineVorticities.push_back(
                             globalLineVertexAttributes.at(currentLineIndex * numVariables + v));
-
-                    if (isMultiVar)
-                    {
-                        trajectory.numBins = globalNumBinsPerHisto;
-
-                        for (auto h = 0; h < globalNumBinsPerHisto; ++h)
-                        {
-//                            const uint8_t numBins = 5;
-                            const uint32_t index = currentLineIndex *   numVariables *
-                                                   globalNumBinsPerHisto + v * globalNumBinsPerHisto + h;
-
-                            histogramValues.push_back(
-                                globalLineHistograms.at(index));
-                        }
-
-
-                    }
-
-                }
-
-                if (isMultiVar)
-                {
-                    trajectory.histograms.push_back(histogramValues);
                 }
             }
 
@@ -649,10 +586,6 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     {
         byteSize += traj.positions.size() * sizeof(float) * 3;
         byteSize += traj.attributes[0].size() * sizeof(float);
-        if (isMultiVar)
-        {
-            byteSize += traj.histograms.size() * sizeof(float);
-        }
     }
 
     byteSize = byteSize / 1024 / 1024;

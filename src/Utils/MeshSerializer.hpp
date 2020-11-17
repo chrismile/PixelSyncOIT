@@ -101,8 +101,6 @@ struct BinaryLineVariable
     std::vector<uint8_t> varOffsets;
     std::vector<uint8_t> allMinValues;
     std::vector<uint8_t> allMaxValues;
-    std::vector<uint8_t> histogramData;
-    std::vector<uint8_t> startHistogramIndex;
 };
 
 struct BinaryVariableInfo

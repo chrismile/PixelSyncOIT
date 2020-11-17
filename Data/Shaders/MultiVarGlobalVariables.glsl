@@ -9,15 +9,9 @@ uniform uint numInstances;
 uniform float radius;
 
 // Structs for SSBOs
-struct VarData
-{
-    float value;
-};
-
 struct LineDescData
 {
     float startIndex;
-    float startHistogramIndex;
 //    vec2 dummy;
 };
 
@@ -38,11 +32,6 @@ struct LineVarDescData
 layout (std430, binding = 2) buffer VariableArray
 {
     float varArray[];
-};
-
-layout (std430, binding = 3) buffer HistogramArray
-{
-    float histArray[];
 };
 
 layout (std430, binding = 4) buffer LineDescArray
@@ -107,19 +96,6 @@ void sampleVariableFromLineSSBO(in uint lineID, in uint varID, in uint elementID
     // Output
     minMax = varDesc.info.gb;
     value = varArray[startIndex + varOffset + elementID];
-}
-
-void sampleHistogramFromLineSSBO(in uint lineID, in uint varID, in uint elementID,
-                                 out float[5] values)
-{
-    uint startIndex = uint(lineDescs[lineID].startHistogramIndex);
-    uint numBins = 5;
-    uint varOffset = varID * numBins + elementID * numBins * maxNumVariables;
-    // Output
-    for (int b = 0; b < 5; ++b)
-    {
-        values[b] = histArray[startIndex + varOffset + b];
-    }
 }
 
 // Function to sample distribution from SSBO

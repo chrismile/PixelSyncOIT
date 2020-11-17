@@ -15,7 +15,6 @@ out VertexData
     int vElementID;// number of line element (original line vertex index)
     int vElementNextID; // number of next line element (original next line vertex index)
     float vElementInterpolant; // curve parameter t along curve between element and next element
-    int vInstanceID; // current instance ID for multi-instancing rendering
     vec4 lineVariable; // not needed anymore actually
     int vVertexID;
 };
@@ -34,7 +33,6 @@ void main()
     vVariableID = varID;
     vLineID = lineID;
     vElementID = elementID;
-    vInstanceID = gl_InstanceID;
     vVertexID = gl_VertexID;
 
     vElementNextID = int(variableDesc.z);
@@ -76,7 +74,6 @@ in VertexData
     int vElementID;// number of line element (original line vertex index)
     int vElementNextID; // number of next line element (original next line vertex index)
     float vElementInterpolant; // curve parameter t along curve between element and next element
-    int vInstanceID; // current instance ID for multi-instancing rendering
     vec4 lineVariable; // not needed anymore
     int vVertexID;
 } vertexOutput[];
@@ -129,7 +126,7 @@ void main()
     vec3 tangent = normalize(nextPoint - currentPoint);
 
     // 1) Sample variables at each tube roll
-    const int instanceID = gl_InvocationID;//vertexOutput[0].vInstanceID;
+    const int instanceID = gl_InvocationID;
     const float curAreaHeight = float(instanceID) / checkerboardHeight;
     const float curAreaWidth = float(vertexOutput[0].vVertexID) / checkerboardWidth;
     const int varID = sampleActualVarID((int(curAreaHeight) + int(curAreaWidth) * checkerboardIterator) % numVariables);//vertexOutput[0].vVertexID % 2;

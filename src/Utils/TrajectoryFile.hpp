@@ -10,18 +10,11 @@
 #include <glm/glm.hpp>
 #include "Utils/ImportanceCriteria.hpp"
 
-// If nothing works --> pad data to vec4
-struct MultiVarArray
-{
-    float value;
-};
-
 // Describes the position of variables in the buffer and the total number of variable values for the entire line
 struct LineDesc
 {
     float startIndex; // pointer to index in array
     float numValues;     // number of variables along line after Bezier curve transformation
-    float startHistogramIndex; // original number of vertices
 };
 
 // Describes the range of values for each variable and the offset within each line
@@ -38,13 +31,10 @@ public:
 
     std::vector<glm::vec3> positions;
     std::vector<std::vector<float>> attributes;
-    std::vector<std::vector<float>> histograms;
     std::vector<glm::vec3> tangents;
     std::vector<uint32_t> segmentID;
 
     std::vector<float> multiVarData;
-    std::vector<float> multiVarHistograms;
-    uint8_t numBins;
     LineDesc lineDesc;
     std::vector<VarDesc> multiVarDescs;
     std::vector<std::string> multiVarNames;

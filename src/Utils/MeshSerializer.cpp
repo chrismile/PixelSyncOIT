@@ -98,14 +98,12 @@ void writeMesh3D(const std::string &filename, const BinaryMesh &mesh) {
             stream.write((uint32_t)variable.attributeFormat);
             stream.write((uint32_t)variable.numComponents);
             stream.writeArray(variable.data);
-            stream.writeArray(variable.histogramData);
             stream.writeArray(variable.minValues);
             stream.writeArray(variable.maxValues);
             stream.writeArray(variable.lineOffsets);
             stream.writeArray(variable.varOffsets);
             stream.writeArray(variable.allMinValues);
             stream.writeArray(variable.allMaxValues);
-            stream.writeArray(variable.startHistogramIndex);
         }
 
         // Write variables info
@@ -223,14 +221,12 @@ void readMesh3D(const std::string &filename, BinaryMesh &mesh) {
             lineVariables.attributeFormat = (sgl::VertexAttributeFormat)format;
             stream.read(lineVariables.numComponents);
             stream.readArray(lineVariables.data);
-            stream.readArray(lineVariables.histogramData);
             stream.readArray(lineVariables.minValues);
             stream.readArray(lineVariables.maxValues);
             stream.readArray(lineVariables.lineOffsets);
             stream.readArray(lineVariables.varOffsets);
             stream.readArray(lineVariables.allMinValues);
             stream.readArray(lineVariables.allMaxValues);
-            stream.readArray(lineVariables.startHistogramIndex);
         }
 
         uint32_t numVariablesParam = 0;
@@ -446,23 +442,15 @@ struct LinePointData
 struct LineDescData
 {
     float startIndex;
-    float startHistogramIndex;
-//    glm::vec2 dummy;
 };
 
 struct VarDescData
 {
-//    float startIndex;
-//    glm::vec2 minMax;
-//    float padding;
     glm::vec4 info;
 };
 
 struct LineVarDescData
 {
-//    float startIndex;
-//    glm::vec2 minMax;
-//    float padding;
     glm::vec4 minMax;
 };
 
@@ -561,9 +549,6 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
             float *allVariablesData = reinterpret_cast<float*>(&lineVariable.data.front());
             uint32_t numVariablesValues = lineVariable.data.size() / sizeof(float);
 
-            float *allHistogramsData = reinterpret_cast<float*>(&lineVariable.histogramData.front());
-            uint32_t numAllHistogramValues = lineVariable.histogramData.size() / sizeof(float);
-
             // Per variable
             float *minValues = reinterpret_cast<float*>(&lineVariable.minValues.front());
             float *maxValues = reinterpret_cast<float*>(&lineVariable.maxValues.front());
@@ -573,14 +558,12 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
             float *lineOffsets = reinterpret_cast<float*>(&lineVariable.lineOffsets.front());
             float *allMinValues = reinterpret_cast<float*>(&lineVariable.allMinValues.front());
             float *allMaxValues = reinterpret_cast<float*>(&lineVariable.allMaxValues.front());
-            float *startHistogramIndex = reinterpret_cast<float*>(&lineVariable.startHistogramIndex.front());
 
             uint32_t minMaxValues = lineVariable.allMinValues.size() / sizeof(float);
 
             uint32_t numLines = lineVariable.lineOffsets.size() / sizeof(float);
 
             std::vector<float> varData;
-            std::vector<float> histogramData;
             std::vector<LineDescData> lineDescData(numLines);
             std::vector<VarDescData> varDescData;
             std::vector<LineVarDescData> lineVarDescData;
@@ -591,15 +574,9 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
 //                varData.push_back(0);
             }
 
-            for (auto v = 0; v < numAllHistogramValues; ++v)
-            {
-                histogramData.push_back(allHistogramsData[v]);
-            }
-
             for (auto l = 0; l < numLines; ++l)
             {
                 lineDescData[l].startIndex = lineOffsets[l];
-                lineDescData[l].startHistogramIndex = startHistogramIndex[l];
             }
 
             for (auto var = 0; var < numLines * minMaxValues; ++var)
@@ -623,12 +600,6 @@ MeshRenderer parseMesh3D(const std::string &filename, sgl::ShaderProgramPtr shad
                     SHADER_STORAGE_BUFFER);
             meshRenderer.ssboEntries.push_back(SSBOEntry(2, "varArray" ,
                                                          varBuffer));
-
-            GeometryBufferPtr histogramBuffer = Renderer->createGeometryBuffer(
-                    histogramData.size() * sizeof(float), (void*)&histogramData.front(),
-                    SHADER_STORAGE_BUFFER);
-            meshRenderer.ssboEntries.push_back(SSBOEntry(3, "histArray" ,
-                                                         histogramBuffer));
 
             GeometryBufferPtr lineDescBuffer = Renderer->createGeometryBuffer(
                     lineDescData.size()*sizeof(LineDescData), (void*)&lineDescData.front(),
