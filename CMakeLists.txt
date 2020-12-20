@@ -48,7 +48,7 @@ find_package(OpenGL REQUIRED)
 find_package(Boost COMPONENTS system filesystem REQUIRED)
 find_package (NetCDF REQUIRED)
 target_link_libraries(PixelSyncOIT tinyxml2)
-target_link_libraries(PixelSyncOIT sgl ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${NETCDF_LIBRARIES})
+target_link_libraries(PixelSyncOIT sgl ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} GLEW::GLEW ${NETCDF_LIBRARIES})
 
 include_directories(${sgl_INCLUDES} ${Boost_INCLUDES} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDES} ${NETCDF_INCLUDES})
 
