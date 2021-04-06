@@ -28,7 +28,7 @@ public:
     virtual void gatherBegin() {}
     virtual void renderScene() {}
     virtual void gatherEnd() {}
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs) {}
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs) {}
 
     // Contains all logic in raytracing renderer
     virtual void renderToScreen();

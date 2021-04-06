@@ -65,7 +65,7 @@ void OIT_MBOIT::create()
     blitRenderData->addGeometryBuffer(geomBuffer, "vertexPosition", ATTRIB_FLOAT, 3);
 }
 
-void OIT_MBOIT::setGatherShaderList(const std::list<std::string> &shaderIDs)
+void OIT_MBOIT::setGatherShaderList(const std::vector<std::string> &shaderIDs)
 {
     gatherShaderIDs = shaderIDs;
     ShaderManager->invalidateShaderCache();

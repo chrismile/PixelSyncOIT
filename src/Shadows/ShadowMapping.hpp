@@ -23,7 +23,7 @@ public:
     virtual bool renderGUI();
 
     // Called by MainApp
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs);
 
 private:
     // For rendering to the shadow map
@@ -31,7 +31,7 @@ private:
     sgl::TexturePtr shadowMap;
 
     // Gather shader name used for shading
-    std::list<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
+    std::vector<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
 };
 
 

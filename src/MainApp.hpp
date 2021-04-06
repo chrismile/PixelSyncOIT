@@ -102,7 +102,7 @@ private:
     void updateColorSpaceMode();
 
     // Lighting & rendering
-    boost::shared_ptr<Camera> camera;
+    CameraPtr camera;
     float fovy;
     ShaderProgramPtr transparencyShader;
     ShaderProgramPtr gammaCorrectionShader;
@@ -130,7 +130,7 @@ private:
     ShaderMode shaderMode = SHADER_MODE_PSEUDO_PHONG;
     std::string modelFilenamePure;
     bool shuffleGeometry = false; // For testing order dependency of OIT algorithms on triangle order
-    std::list<std::string> gatherShaderIDs;
+    std::vector<std::string> gatherShaderIDs;
 
     // Off-screen rendering
     FramebufferObjectPtr sceneFramebuffer;

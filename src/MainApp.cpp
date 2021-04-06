@@ -420,7 +420,7 @@ void PixelSyncApp::loadCameraPositionFromFile(const std::string& filename)
 //    boundingBox = transparentObject.boundingBox;
 //    boundingBox = boundingBox.transformed(rotation * scaling);
 
-    camera = boost::shared_ptr<Camera>(new Camera());
+    camera = CameraPtr(new Camera());
     camera->setViewport(viewport);
     camera->setFOVy(fovy);
     camera->setNearClipDistance(0.01f);

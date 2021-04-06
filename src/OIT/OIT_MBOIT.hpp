@@ -32,7 +32,7 @@ public:
             return mboitPass2Shader;
         }
     }
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs);
 
     OIT_MBOIT();
     virtual void create();

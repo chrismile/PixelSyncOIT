@@ -26,7 +26,7 @@ public:
     virtual bool renderGUI();
 
     // Called by MainApp
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs);
     void setSceneBoundingBox(const sgl::AABB3 &sceneBB);
     // Called by MainApp if the direction of the directional light changes
     virtual void setLightDirection(const glm::vec3 &lightDirection, const sgl::AABB3 &sceneBoundingBox);
@@ -42,7 +42,7 @@ private:
     void updateDepthRange();
 
     // Gather shader name used for shading
-    std::list<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
+    std::vector<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
 
     // Additional shader for clearing moment textures
     sgl::ShaderProgramPtr clearShadowMapShader;

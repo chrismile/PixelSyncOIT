@@ -28,7 +28,7 @@ public:
      *  Its purpose is to store the fragments in an offscreen-buffer.
      */
     virtual sgl::ShaderProgramPtr getGatherShader();
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs);
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs);
 
     OIT_MLABBucket();
     virtual void create();

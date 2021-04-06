@@ -28,12 +28,6 @@
 
 #include "OIT_WBOIT.hpp"
 
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/case_conv.hpp>
-
 #include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
 #include <Graphics/Texture/TextureManager.hpp>
@@ -172,4 +166,3 @@ void OIT_WBOIT::renderToScreen()
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
 }
-

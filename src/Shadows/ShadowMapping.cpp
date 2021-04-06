@@ -25,7 +25,7 @@ void ShadowMapping::loadShaders()
 {
 }
 
-void ShadowMapping::setGatherShaderList(const std::list<std::string> &shaderIDs)
+void ShadowMapping::setGatherShaderList(const std::vector<std::string> &shaderIDs)
 {
     gatherShaderIDs = shaderIDs;
     sgl::ShaderManager->invalidateShaderCache();

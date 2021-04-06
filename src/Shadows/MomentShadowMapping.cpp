@@ -62,7 +62,7 @@ void MomentShadowMapping::loadShaders()
             {"ClearMomentShadowMap.Vertex", "ClearMomentShadowMap.Fragment"});
 }
 
-void MomentShadowMapping::setGatherShaderList(const std::list<std::string> &shaderIDs)
+void MomentShadowMapping::setGatherShaderList(const std::vector<std::string> &shaderIDs)
 {
     gatherShaderIDs = shaderIDs;
     sgl::ShaderManager->invalidateShaderCache();

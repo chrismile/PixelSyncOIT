@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <functional>
+
 #include <glm/glm.hpp>
 
 #include <Utils/AppSettings.hpp>
@@ -61,7 +62,7 @@ public:
         this->renderSceneFunction = renderSceneFunction;
     }
 
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs)
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs)
     {
         sgl::ShaderManager->invalidateShaderCache();
         gatherShaderIDs = shaderIDs;
@@ -80,7 +81,7 @@ protected:
 
     std::function<void()> renderSceneFunction;
     bool reRender = false;
-    std::list<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
+    std::vector<std::string> gatherShaderIDs = {"PseudoPhong.Vertex", "PseudoPhong.Fragment"};
 };
 
 #endif /* OIT_OIT_RENDERER_HPP_ */

@@ -32,7 +32,7 @@ public:
 
     virtual void renderGUI();
 
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs)
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs)
     {
         gatherShaderIDs = shaderIDs;
         sgl::ShaderManager->invalidateShaderCache();
@@ -44,7 +44,6 @@ public:
     }
 
 private:
-    void clear();
     void setUniformData();
     void computeDepthComplexity();
     uint64_t maxDepthComplexity = 1;

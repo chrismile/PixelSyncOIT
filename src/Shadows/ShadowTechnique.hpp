@@ -5,7 +5,8 @@
 #ifndef PIXELSYNCOIT_SHADOWTECHNIQUE_HPP
 #define PIXELSYNCOIT_SHADOWTECHNIQUE_HPP
 
-#include <list>
+#include <vector>
+#include <functional>
 #include <glm/glm.hpp>
 
 #include <Math/Geometry/AABB3.hpp>
@@ -49,7 +50,7 @@ public:
     inline bool isShadowMapCreatePass() { return preRenderPass; }
 
     // Called by MainApp. For shadow techniques that need access to the gather shader.
-    virtual void setGatherShaderList(const std::list<std::string> &shaderIDs) {}
+    virtual void setGatherShaderList(const std::vector<std::string> &shaderIDs) {}
 
 protected:
     // Geometry pass to generate the shadow map

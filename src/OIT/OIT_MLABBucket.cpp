@@ -224,7 +224,7 @@ sgl::ShaderProgramPtr OIT_MLABBucket::getGatherShader()
     }
 }
 
-void OIT_MLABBucket::setGatherShaderList(const std::list<std::string> &shaderIDs)
+void OIT_MLABBucket::setGatherShaderList(const std::vector<std::string> &shaderIDs)
 {
     gatherShaderIDs = shaderIDs;
     ShaderManager->invalidateShaderCache();
