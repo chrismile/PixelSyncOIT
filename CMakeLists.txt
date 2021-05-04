@@ -8,7 +8,18 @@ set (CMAKE_CXX_STANDARD 11)
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.c)
 include_directories(src)
 
-#make VERBOSE=1
+#if(MSVC)
+#	set(CMAKE_CXX_FLAGS "-W3 /EHsc")
+#elseif(CMAKE_COMPILER_IS_GNUCXX)
+#	set(CMAKE_CXX_FLAGS "-Wall")
+#elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+#	set(CMAKE_CXX_FLAGS "-Wall")
+#endif()
+
+# Prefer GLVND by default when available.
+if (${CMAKE_VERSION} VERSION_GREATER "3.11")
+	cmake_policy(SET CMP0072 NEW)
+endif()
 
 option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" OFF)
 
@@ -31,12 +42,15 @@ if(USE_RAYTRACING)
 	target_link_libraries(PixelSyncOIT ${OSPRAY_LIBRARIES})
 endif()
 
-IF(WIN32)
+set(FPHSA_NAME_MISMATCHED TRUE)
+find_package(SDL2 REQUIRED)
+find_package(SDL2_image REQUIRED)
+find_package(PNG REQUIRED)
+if((${CMAKE_GENERATOR} STREQUAL "MinGW Makefiles") OR (${CMAKE_GENERATOR} STREQUAL "MSYS Makefiles"))
 	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
-	target_link_libraries(PixelSyncOIT mingw32 SDL2main SDL2)
-ELSE()
-	target_link_libraries(PixelSyncOIT SDL2)
-ENDIF()
+	target_link_libraries(PixelSyncOIT mingw32)
+endif()
+target_link_libraries(PixelSyncOIT SDL2::Main)
 
 
 cmake_policy(SET CMP0012 NEW)
