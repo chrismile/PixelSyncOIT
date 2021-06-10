@@ -28,15 +28,14 @@ int main(int argc, char *argv[]) {
     AppSettings::get()->getSettings().addKeyValue("window-resizable", true);
     AppSettings::get()->setLoadGUI();
 
-    Window *window = AppSettings::get()->createWindow();
+    AppSettings::get()->createWindow();
     AppSettings::get()->initializeSubsystems();
 
     AppLogic *app = new PixelSyncApp();
     app->run();
-
     delete app;
+
     AppSettings::get()->release();
-    delete window;
 
     return 0;
 }
