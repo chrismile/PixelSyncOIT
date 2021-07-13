@@ -96,8 +96,6 @@ void OIT_WBOIT::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, s
     textureSettingsColor.internalFormat = GL_RGBA32F; // GL_RGBA16F?
     TextureSettings textureSettingsDepth;
     textureSettingsDepth.internalFormat = GL_DEPTH_COMPONENT;
-    textureSettingsDepth.pixelFormat = GL_DEPTH_COMPONENT;
-    textureSettingsDepth.pixelType = GL_FLOAT;
 
     gatherPassFBO = Renderer->createFBO();
     accumulationRenderTexture = TextureManager->createEmptyTexture(width, height, textureSettingsColor);

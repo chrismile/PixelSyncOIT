@@ -847,8 +847,6 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
 
     sgl::TextureSettings densityTextureSettings = sgl::TextureSettings();
     densityTextureSettings.type = sgl::TEXTURE_3D;
-    densityTextureSettings.pixelType = GL_FLOAT;
-    densityTextureSettings.pixelFormat = GL_RED;
     densityTextureSettings.internalFormat = GL_R32F;
     sgl::TexturePtr densityTexture = sgl::TextureManager->createEmptyTexture(
             gridResolution.x, gridResolution.y, gridResolution.z, densityTextureSettings);
@@ -922,8 +920,6 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createVoxelGridGPU(
 
     sgl::TextureSettings aoTextureSettings = sgl::TextureSettings();
     aoTextureSettings.type = sgl::TEXTURE_3D;
-    aoTextureSettings.pixelType = GL_FLOAT;
-    aoTextureSettings.pixelFormat = GL_RED;
     aoTextureSettings.internalFormat = GL_R32F;
     sgl::TexturePtr aoTexture = sgl::TextureManager->createEmptyTexture(
             gridResolution.x, gridResolution.y, gridResolution.z, aoTextureSettings);

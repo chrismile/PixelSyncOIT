@@ -210,8 +210,6 @@ void MomentShadowMapping::resolutionChanged()
 
     sgl::TextureSettings textureSettings;
     textureSettings.internalFormat = GL_DEPTH_COMPONENT;
-    textureSettings.pixelFormat = GL_DEPTH_COMPONENT;
-    textureSettings.pixelType = GL_FLOAT;
     shadowMap = sgl::TextureManager->createEmptyTexture(SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, textureSettings);
     shadowMapFBO->bindTexture(shadowMap, sgl::DEPTH_ATTACHMENT);
 }
@@ -332,24 +330,23 @@ void MomentShadowMapping::createMomentTextures()
 
     textureSettingsB0 = sgl::TextureSettings();
     textureSettingsB0.type = sgl::TEXTURE_2D_ARRAY;
-    textureSettingsB0.pixelType = GL_FLOAT;
-    textureSettingsB0.pixelFormat = pixelFormatB0;
     textureSettingsB0.internalFormat = internalFormatB0;
-    b0 = sgl::TextureManager->createTexture(emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, depthB0,
-                                            textureSettingsB0);
+    b0 = sgl::TextureManager->createTexture(
+            emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, depthB0,
+            sgl::PixelFormat(pixelFormatB0, GL_FLOAT), textureSettingsB0);
 
     textureSettingsB = textureSettingsB0;
-    textureSettingsB.pixelFormat = pixelFormatB;
     textureSettingsB.internalFormat = internalFormatB;
-    b = sgl::TextureManager->createTexture(emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, depthB,
-                                           textureSettingsB);
+    b = sgl::TextureManager->createTexture(
+            emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, depthB,
+            sgl::PixelFormat(pixelFormatB, GL_FLOAT), textureSettingsB);
 
     if (numMoments == 6 && USE_R_RG_RGBA_FOR_MBOIT6) {
         textureSettingsBExtra = textureSettingsB0;
-        textureSettingsBExtra.pixelFormat = pixelFormatBExtra;
         textureSettingsBExtra.internalFormat = internalFormatBExtra;
-        bExtra = sgl::TextureManager->createTexture(emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION,
-                                                    depthBExtra, textureSettingsBExtra);
+        bExtra = sgl::TextureManager->createTexture(
+                emptyData, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, depthBExtra,
+                sgl::PixelFormat(internalFormatBExtra, GL_FLOAT), textureSettingsBExtra);
     }
 
     free(emptyData);

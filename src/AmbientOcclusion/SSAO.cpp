@@ -21,14 +21,13 @@ void SSAOHelper::init()
     size_t rotationVectorKernelLength = 4;
     size_t rotationVectorKernelSize = rotationVectorKernelLength*rotationVectorKernelLength;
     // GL_RGB16F, GL_RGB, GL_FLOAT, GL_REPEAT (tile random rotation vectors over screen), GL_NEAREST
-    std::vector<glm::vec3> rotationVectors = generateRotationVectors(rotationVectorKernelSize);
+    std::vector<glm::vec3> rotationVectors = generateRotationVectors(int(rotationVectorKernelSize));
     sampleKernel = generateSSAOKernel(64); // TODO: Variable number
     TextureSettings rvecTextureSettings(GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
     rvecTextureSettings.internalFormat = GL_RGB16F;
-    rvecTextureSettings.pixelFormat = GL_RGB;
-    rvecTextureSettings.pixelType = GL_FLOAT;
-    rotationVectorTexture = TextureManager->createTexture((void*)&rotationVectors.front(),
-            rotationVectorKernelLength, rotationVectorKernelLength, rvecTextureSettings);
+    rotationVectorTexture = TextureManager->createTexture(
+            (void*)&rotationVectors.front(), int(rotationVectorKernelLength), int(rotationVectorKernelLength),
+            sgl::PixelFormat(GL_RGB, GL_FLOAT), rvecTextureSettings);
 
     loadShaders();
 
@@ -64,8 +63,6 @@ void SSAOHelper::resolutionChanged()
 
     TextureSettings textureSettings;
     textureSettings.internalFormat = GL_RGB16F;
-    textureSettings.pixelFormat = GL_RGB;
-    textureSettings.pixelType = GL_FLOAT;
     positionTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     gBufferFBO->bindTexture(positionTexture, COLOR_ATTACHMENT0);
 

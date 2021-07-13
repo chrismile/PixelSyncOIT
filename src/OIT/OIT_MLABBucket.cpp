@@ -76,8 +76,9 @@ void OIT_MLABBucket::create()
 
 }
 
-void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
-                                 sgl::RenderbufferObjectPtr &sceneDepthRBO)
+void OIT_MLABBucket::resolutionChanged(
+        sgl::FramebufferObjectPtr &sceneFramebuffer, sgl::TexturePtr &sceneTexture,
+        sgl::RenderbufferObjectPtr &sceneDepthRBO)
 {
     this->sceneFramebuffer = sceneFramebuffer;
     this->sceneTexture = sceneTexture;
@@ -108,32 +109,28 @@ void OIT_MLABBucket::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebuff
 
     boundingBoxesTextureSettings = TextureSettings();
     boundingBoxesTextureSettings.type = TEXTURE_2D_ARRAY;
-    boundingBoxesTextureSettings.pixelType = GL_FLOAT;
-    boundingBoxesTextureSettings.pixelFormat = GL_RGBA;
     boundingBoxesTextureSettings.internalFormat = GL_RGBA32F; // TODO: GL_RGBA16
     boundingBoxesTextureSettings.textureMinFilter = GL_NEAREST;
     boundingBoxesTextureSettings.textureMagFilter = GL_NEAREST;
 
     numUsedBucketsTextureSettings = TextureSettings();
     numUsedBucketsTextureSettings.type = TEXTURE_2D;
-    numUsedBucketsTextureSettings.pixelType = GL_UNSIGNED_INT;
-    numUsedBucketsTextureSettings.pixelFormat = GL_RED_INTEGER;
     numUsedBucketsTextureSettings.internalFormat = GL_R8UI; // GL_RGBA16
     numUsedBucketsTextureSettings.textureMinFilter = GL_NEAREST;
     numUsedBucketsTextureSettings.textureMagFilter = GL_NEAREST;
 
     transmittanceTextureSettings = TextureSettings();
     transmittanceTextureSettings.type = TEXTURE_2D;
-    transmittanceTextureSettings.pixelType = GL_FLOAT;
-    transmittanceTextureSettings.pixelFormat = GL_RED;
     transmittanceTextureSettings.internalFormat = GL_R32F;
     transmittanceTextureSettings.textureMinFilter = GL_NEAREST;
     transmittanceTextureSettings.textureMagFilter = GL_NEAREST;
 
-    boundingBoxesTexture = sgl::TextureManager->createTexture(NULL, width, height, numBuckets, boundingBoxesTextureSettings);
-    numUsedBucketsTexture = sgl::TextureManager->createTexture(NULL, width, height, numUsedBucketsTextureSettings);
-    transmittanceTexture = sgl::TextureManager->createTexture(NULL, width, height, transmittanceTextureSettings);
-
+    boundingBoxesTexture = sgl::TextureManager->createEmptyTexture(
+            width, height, numBuckets, boundingBoxesTextureSettings);
+    numUsedBucketsTexture = sgl::TextureManager->createEmptyTexture(
+            width, height, numUsedBucketsTextureSettings);
+    transmittanceTexture = sgl::TextureManager->createEmptyTexture(
+            width, height, transmittanceTextureSettings);
 
     // Buffer has to be cleared again
     clearBitSet = true;

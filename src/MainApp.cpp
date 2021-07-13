@@ -230,8 +230,6 @@ void PixelSyncApp::resolutionChanged(EventPtr event)
     } else {
         textureSettings.internalFormat = GL_RGBA8; // GL_RGBA8 For i965 driver to accept image load/store (legacy)
     }
-    textureSettings.pixelType = GL_UNSIGNED_BYTE;
-    textureSettings.pixelFormat = GL_RGB;
     sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     sceneFramebuffer->bindTexture(sceneTexture);
     sceneDepthRBO = Renderer->createRBO(width, height, sgl::RBO_DEPTH24_STENCIL8);
@@ -263,8 +261,6 @@ void PixelSyncApp::updateColorSpaceMode()
     } else {
         textureSettings.internalFormat = GL_RGBA8; // GL_RGBA8 For i965 driver to accept image load/store (legacy)
     }
-    textureSettings.pixelType = GL_UNSIGNED_BYTE;
-    textureSettings.pixelFormat = GL_RGB;
     sceneTexture = TextureManager->createEmptyTexture(width, height, textureSettings);
     sceneFramebuffer->bindTexture(sceneTexture);
     sceneDepthRBO = Renderer->createRBO(width, height, sgl::RBO_DEPTH24_STENCIL8);

@@ -88,8 +88,6 @@ void ShadowMapping::resolutionChanged()
 
     sgl::TextureSettings textureSettings;
     textureSettings.internalFormat = GL_DEPTH_COMPONENT;
-    textureSettings.pixelFormat = GL_DEPTH_COMPONENT;
-    textureSettings.pixelType = GL_FLOAT;
     shadowMap = sgl::TextureManager->createEmptyTexture(SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION, textureSettings);
     shadowMapFBO->bindTexture(shadowMap, sgl::DEPTH_ATTACHMENT);
 }

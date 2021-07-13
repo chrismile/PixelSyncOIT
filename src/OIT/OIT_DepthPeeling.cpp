@@ -58,8 +58,6 @@ void OIT_DepthPeeling::resolutionChanged(sgl::FramebufferObjectPtr &sceneFramebu
     textureSettingsColor.internalFormat = GL_RGBA32F;
     TextureSettings textureSettingsDepth;
     textureSettingsDepth.internalFormat = GL_DEPTH_COMPONENT;
-    textureSettingsDepth.pixelFormat = GL_DEPTH_COMPONENT;
-    textureSettingsDepth.pixelType = GL_FLOAT;
 
     accumulatorFBO = Renderer->createFBO();
     colorAccumulatorTexture = TextureManager->createEmptyTexture(width, height, textureSettingsColor);
