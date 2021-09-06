@@ -321,9 +321,9 @@ void RTRenderBackend::recommitColor()
         ospCommit(triangleGeo);
         ospCommit(world);
     } else {
-        if(use_Embree){
+        if (use_Embree){
             std::vector<ospcommon::vec4f> colors;
-            for(int i = 0; i < Tube.nodes.size(); i++){
+            for (int i = 0; i < Tube.nodes.size(); i++){
                 ospcommon::vec4f c;
                 c.x = Tube.colors[i].x;
                 c.y = Tube.colors[i].y;
@@ -349,7 +349,7 @@ void RTRenderBackend::recommitColor()
                     auto first_color = Tube.colors.begin() + start;
                     auto last_color = Tube.colors.begin() + end + 1;
                     std::vector<ospcommon::vec4f> sub_colors(first_color, last_color);
-                    OSPData colorData   = ospNewData(sub_colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, sub_colors.data());
+                    OSPData colorData = ospNewData(sub_colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, sub_colors.data());
                     ospCommit(colorData);
 
                     if (i == 0) {
@@ -362,7 +362,7 @@ void RTRenderBackend::recommitColor()
                 }
                 ospCommit(world);
             } else {
-                OSPData colorData   = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
+                OSPData colorData = ospNewData(Tube.colors.size() * sizeof(ospcommon::vec4f), OSP_RAW, Tube.colors.data());
                 ospSetData(tubeGeo, "colorData", colorData);
                 ospCommit(tubeGeo);
                 ospCommit(world);

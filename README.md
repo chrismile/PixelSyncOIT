@@ -1,4 +1,10 @@
-# OIT Rendering Tool (PixelSyncOIT)
+# NOTE
+
+**This program has been discontinued in favor of https://github.com/chrismile/LineVis. LineVis offers more rendering
+modes, has cleaner code and can be compiled on a larger range of compilers (e.g., using Microsoft Visual Studio).**
+
+## OIT Rendering Tool (PixelSyncOIT)
+
 [![DOI](https://zenodo.org/badge/133340475.svg)](https://zenodo.org/badge/latestdoi/133340475)
 
 A visualization tool for rendering triangle, line and point data sets using order independent transparency (OIT).

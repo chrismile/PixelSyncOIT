@@ -102,12 +102,12 @@ bool VoxelDiscretizer::addPossibleIntersections(const glm::vec3 &v1, const glm::
         if (intersectionNear) {
             glm::vec3 entrancePoint = v1 + tNear * (v2 - v1);
             float interpolatedAttribute = a1 + tNear * (a2 - a1);
-            currentCurveIntersections.push_back(AttributePoint(entrancePoint, interpolatedAttribute));
+            currentCurveIntersections.emplace_back(entrancePoint, interpolatedAttribute);
         }
         if (intersectionFar) {
             glm::vec3 exitPoint = v1 + tFar * (v2 - v1);
             float interpolatedAttribute = a1 + tFar * (a2 - a1);
-            currentCurveIntersections.push_back(AttributePoint(exitPoint, interpolatedAttribute));
+            currentCurveIntersections.emplace_back(exitPoint, interpolatedAttribute);
         }
         if (intersectionNear || intersectionFar) {
             return true; // Intersection found
