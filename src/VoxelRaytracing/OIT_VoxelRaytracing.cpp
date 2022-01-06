@@ -120,11 +120,16 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
     std::string modelFilenameVoxelGrid = modelFilenamePure + ".voxel";
 
     // Can be either hair dataset or trajectory dataset
-    isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
-    bool isRings = boost::starts_with(modelFilenamePure, "Data/Rings");
-    bool isAneurysm = boost::starts_with(modelFilenamePure, "Data/Trajectories");
-    bool isUCLA = boost::starts_with(modelFilenamePure, "Data/UCLA");
-    bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output");
+    isHairDataset = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "Hair");
+    bool isRings = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "Rings");
+    bool isAneurysm = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "Trajectories");
+    bool isUCLA = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "UCLA");
+    bool isConvectionRolls = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/output");
 
     uint16_t voxelRes = 256;
     uint16_t quantizationRes = 32;
@@ -158,9 +163,9 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
         useGPU = false;
     }
 
-    /*if (boost::starts_with(filename, "Data/WCB")) {
+    /*if (boost::starts_with(filename, sgl::AppSettings::get()->getDataDirectory() + "WCB")) {
         maxNumLinesPerVoxel = 128;
-    } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
+    } else if (boost::starts_with(filename, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/turbulence20000")){
         maxNumLinesPerVoxel = 64;
     }*/
 
@@ -224,14 +229,17 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION", sgl::toString(data.quantizationResolution.x));
     sgl::ShaderManager->addPreprocessorDefine("QUANTIZATION_RESOLUTION_LOG2",
             sgl::toString(sgl::intlog2(data.quantizationResolution.x)));
-    if (boost::starts_with(filename, "Data/WCB")) {
+    if (boost::starts_with(filename, sgl::AppSettings::get()->getDataDirectory() + "WCB")) {
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 16);
-    } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
+    } else if (boost::starts_with(
+            filename, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/turbulence20000")) {
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
     }
-    else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence80000")) {
+    else if (boost::starts_with(
+            filename, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/turbulence80000")) {
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
-    } else if (boost::starts_with(filename, "Data/ConvectionRolls/output")) {
+    } else if (boost::starts_with(
+            filename, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/output")) {
             sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
     } else {
         sgl::ShaderManager->addPreprocessorDefine("MAX_NUM_HITS", 8);
@@ -243,7 +251,8 @@ void OIT_VoxelRaytracing::fromFile(const std::string &filename, TrajectoryType t
         sgl::ShaderManager->removePreprocessorDefine("HAIR_RENDERING");
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+    if (boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/output")) {
         sgl::ShaderManager->addPreprocessorDefine("CONVECTION_ROLLS", "");
     } else {
         sgl::ShaderManager->removePreprocessorDefine("CONVECTION_ROLLS");

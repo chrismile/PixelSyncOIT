@@ -12,6 +12,7 @@
 #include <GL/glew.h>
 
 #include <Utils/Convert.hpp>
+#include <Utils/AppSettings.hpp>
 #include <Utils/File/Logfile.hpp>
 #include <Math/Math.hpp>
 #include <Graphics/Renderer.hpp>
@@ -195,9 +196,12 @@ VoxelGridDataCompressed VoxelCurveDiscretizer::createFromTrajectoryDataset(const
     uint64_t numLineSegments = 0;
     uint64_t numLines = 0;
 
-    bool isRings = boost::starts_with(filename, "Data/Rings");
-    bool isConvectionRolls = boost::starts_with(filename, "Data/ConvectionRolls/output");
-    bool isConvectionRollsSmall = boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000");
+    bool isRings = boost::starts_with(
+            filename, sgl::AppSettings::get()->getDataDirectory() + "Rings");
+    bool isConvectionRolls = boost::starts_with(
+            filename, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/output");
+    bool isConvectionRollsSmall = boost::starts_with(
+            filename, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/turbulence20000");
 
 
     Trajectories trajectories = loadTrajectoriesFromFile(filename, trajectoryType);

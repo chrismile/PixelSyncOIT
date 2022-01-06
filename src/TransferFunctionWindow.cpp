@@ -14,6 +14,7 @@
 #include <ImGui/imgui_stdlib.h>
 
 #include <Utils/XML.hpp>
+#include <Utils/AppSettings.hpp>
 #include <Utils/File/Logfile.hpp>
 #include <Utils/File/FileUtils.hpp>
 #include <Math/Math.hpp>
@@ -26,10 +27,11 @@ using namespace tinyxml2;
 
 const size_t TRANSFER_FUNCTION_TEXTURE_SIZE = 256;
 
-TransferFunctionWindow *g_TransferFunctionWindowHandle = NULL;
+TransferFunctionWindow *g_TransferFunctionWindowHandle = nullptr;
 
 TransferFunctionWindow::TransferFunctionWindow()
 {
+    saveDirectory = sgl::AppSettings::get()->getDataDirectory() + "TransferFunctions/";
     colorPoints = { ColorPoint_sRGB(sgl::Color(255, 255, 255), 0.0f), ColorPoint_sRGB(sgl::Color(255, 0, 0), 1.0f) };
     /*colorPoints = { ColorPoint(sgl::Color(255, 255, 255), 0.0f),
                     ColorPoint(sgl::Color(255, 255, 0), 0.5f),
@@ -54,7 +56,7 @@ TransferFunctionWindow::TransferFunctionWindow()
 bool TransferFunctionWindow::saveFunctionToFile(const std::string &filename)
 {
     FILE *file = fopen(filename.c_str(), "w");
-    if (file == NULL) {
+    if (file == nullptr) {
         sgl::Logfile::get()->writeError(std::string()
                 + "ERROR: TransferFunctionWindow::saveFunctionToFile: Couldn't create file \"" + filename + "\"!");
         return false;
@@ -102,14 +104,14 @@ bool TransferFunctionWindow::loadFunctionFromFile(const std::string &filename)
         return false;
     }
     XMLElement *tfNode = doc.FirstChildElement("TransferFunction");
-    if (tfNode == NULL) {
+    if (tfNode == nullptr) {
         sgl::Logfile::get()->writeError("TransferFunctionWindow::loadFunctionFromFile: No \"TransferFunction\" node found!");
         return false;
     }
 
     interpolationColorSpace = COLOR_SPACE_SRGB; // Standard
     const char *interpolationColorSpaceName = tfNode->Attribute("colorspace_interpolation");
-    if (interpolationColorSpaceName != NULL) {
+    if (interpolationColorSpaceName != nullptr) {
         for (int i = 0; i < 2; i++) {
             if (strcmp(interpolationColorSpaceName, COLOR_SPACE_NAMES[interpolationColorSpace]) == 0) {
                 interpolationColorSpace = (ColorSpace)i;
@@ -122,7 +124,7 @@ bool TransferFunctionWindow::loadFunctionFromFile(const std::string &filename)
 
     // Traverse all opacity points
     auto opacityPointsNode = tfNode->FirstChildElement("OpacityPoints");
-    if (opacityPointsNode != NULL) {
+    if (opacityPointsNode != nullptr) {
         for (sgl::XMLIterator it(opacityPointsNode, sgl::XMLNameFilter("OpacityPoint")); it.isValid(); ++it) {
             XMLElement *childElement = *it;
             float position = childElement->FloatAttribute("position");
@@ -133,7 +135,7 @@ bool TransferFunctionWindow::loadFunctionFromFile(const std::string &filename)
 
     // Traverse all color points
     auto colorPointsNode = tfNode->FirstChildElement("ColorPoints");
-    if (colorPointsNode != NULL) {
+    if (colorPointsNode != nullptr) {
         for (sgl::XMLIterator it(colorPointsNode, sgl::XMLNameFilter("ColorPoint")); it.isValid(); ++it) {
             XMLElement *childElement = *it;
             float position = childElement->FloatAttribute("position");
@@ -253,7 +255,7 @@ void TransferFunctionWindow::renderFileDialog()
     if (ImGui::ListBox("##availablefiles", &selectedFileIndex, [this](void *data, int idx, const char **out_text) -> bool {
         *out_text = availableFiles.at(idx).c_str();
         return true;
-    }, NULL, availableFiles.size(), 4)) {
+    }, nullptr, availableFiles.size(), 4)) {
         saveFileString = availableFiles.at(selectedFileIndex);
     } ImVec2 cursorPosEnd = ImGui::GetCursorPos(); ImGui::SameLine();
 
@@ -308,7 +310,7 @@ void TransferFunctionWindow::renderOpacityGraph()
     ImVec2 oldPadding = ImGui::GetStyle().FramePadding;
     ImGui::GetStyle().FramePadding = ImVec2(1, 1);
     ImGui::PlotHistogram(
-            "##histogram", &histogram.front(), histogram.size(), 0, NULL,
+            "##histogram", &histogram.front(), histogram.size(), 0, nullptr,
             0.0f, 1.0f, ImVec2(regionWidth, graphHeight));
     ImGui::GetStyle().FramePadding = oldPadding;
 

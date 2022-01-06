@@ -26,6 +26,11 @@ int main(int argc, char *argv[]) {
     AppSettings::get()->getSettings().addKeyValue("window-debugContext", true);
     AppSettings::get()->getSettings().addKeyValue("window-vSync", true);
     AppSettings::get()->getSettings().addKeyValue("window-resizable", true);
+#ifdef DATA_PATH
+    if (!sgl::FileUtils::get()->directoryExists("Data") && !sgl::FileUtils::get()->directoryExists("../Data")) {
+        sgl::AppSettings::get()->setDataDirectory(DATA_PATH);
+    }
+#endif
     AppSettings::get()->setLoadGUI();
 
     AppSettings::get()->createWindow();

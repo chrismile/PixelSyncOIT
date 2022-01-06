@@ -64,13 +64,13 @@ class PixelSyncApp : public AppLogic
 {
 public:
     PixelSyncApp();
-    ~PixelSyncApp();
-    void render(); // Calls renderOIT and renderGUI
+    ~PixelSyncApp() override;
+    void render() override; // Calls renderOIT and renderGUI
     void renderOIT(); // Uses renderScene and "oitRenderer" to render the scene
     void renderScene(); // Renders lighted scene
-    void update(float dt);
-    void resolutionChanged(EventPtr event);
-    void processSDLEvent(const SDL_Event &event);
+    void update(float dt) override;
+    void resolutionChanged(EventPtr event) override;
+    void processSDLEvent(const SDL_Event &event) override;
 
 protected:
     // State changes
@@ -79,14 +79,14 @@ protected:
         SHADER_MODE_UPDATE_NEW_OIT_RENDERER, SHADER_MODE_UPDATE_NEW_MODEL, SHADER_MODE_UPDATE_EFFECT_CHANGE
     };
     void updateShaderMode(ShaderModeUpdate modeUpdate);
-    void loadModel(const std::string &filename, bool resetCamera = true);
+    void loadModel(const std::string &relativeFilename, bool resetCamera = true);
     void loadCameraPositionFromFile(const std::string& filename);
 
     // For changing performance measurement modes
     void setNewState(const InternalState &newState);
 
     // Override screenshot function to exclude GUI (if wanted by the user)
-    void saveScreenshot(const std::string &filename);
+    void saveScreenshot(const std::string &filename) override;
     void saveScreenshotOnKey(const std::string &filename);
 
     void saveCameraPosition();
@@ -108,8 +108,8 @@ private:
     ShaderProgramPtr gammaCorrectionShader;
 
     // Screen space ambient occlusion
-    SSAOHelper *ssaoHelper = NULL;
-    VoxelAOHelper *voxelAOHelper = NULL;
+    SSAOHelper *ssaoHelper = nullptr;
+    VoxelAOHelper *voxelAOHelper = nullptr;
     AOTechniqueName currentAOTechnique = AO_TECHNIQUE_NONE;
     void updateAOMode();
 
@@ -169,6 +169,7 @@ private:
     float MOUSE_ROT_SPEED = 0.05f;
 
     TransferFunctionWindow transferFunctionWindow;
+    std::string transferFunctionDirectory;
 
     // Trajectory rendering
     //bool modelContainsTrajectories;
@@ -215,7 +216,7 @@ private:
 
     // Save video stream to file
     const int FRAME_RATE = 60;
-    float FRAME_TIME = 1.0f / FRAME_RATE;
+    float FRAME_TIME = 1.0f / float(FRAME_RATE);
     uint64_t recordingTimeStampStart;
     float recordingTime = 0.0f;
     float recordingTimeLast = 0.0f;
@@ -229,9 +230,9 @@ private:
 
     CameraPath cameraPath;
 
-    std::string saveDirectory = "Data/Cameras/";
+    std::string saveDirectory;
     std::string saveFilename = "Test";
-    std::string saveDirectoryScreenshots = "Data/Screenshots/";
+    std::string saveDirectoryScreenshots;
     std::string saveFilenameScreenshots = "Screenshot";
     uint32_t numScreenshots = 0;
 };

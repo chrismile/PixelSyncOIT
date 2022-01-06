@@ -481,9 +481,9 @@ void getTestModesVoxelRaytracing(std::vector<InternalState> &states, InternalSta
 
     int gridResolution = 128;
 
-    if (boost::starts_with(state.modelName, "Data/Rings")) { gridResolution = 128; }
-    if (boost::starts_with(state.modelName, "Data/ConvectionRolls/output")) { gridResolution = 256; }
-    if (boost::starts_with(state.modelName, "Data/UCLA")) { gridResolution = 512; }
+    if (boost::starts_with(state.modelName, "Rings")) { gridResolution = 128; }
+    if (boost::starts_with(state.modelName, "ConvectionRolls/output")) { gridResolution = 256; }
+    if (boost::starts_with(state.modelName, "UCLA")) { gridResolution = 512; }
 
 //    for (int gridResolution = 128; gridResolution <= 128; gridResolution *= 2) {
     state.name = std::string() + "Voxel Ray Casting (Grid " + sgl::toString(gridResolution) + ", Quantization 64, Neighbor Search)";

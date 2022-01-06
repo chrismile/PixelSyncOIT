@@ -21,6 +21,9 @@ if (${CMAKE_VERSION} VERSION_GREATER "3.11")
 	cmake_policy(SET CMP0072 NEW)
 endif()
 
+set(DATA_PATH "${CMAKE_SOURCE_DIR}/Data" CACHE PATH "Location of folder 'Data'")
+add_definitions(-DDATA_PATH=\"${DATA_PATH}\")
+
 option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" OFF)
 
 if(${USE_RAYTRACING})

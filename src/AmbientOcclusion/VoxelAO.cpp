@@ -5,6 +5,7 @@
 #include <chrono>
 #include <boost/algorithm/string/predicate.hpp>
 
+#include <Utils/AppSettings.hpp>
 #include <Utils/File/FileUtils.hpp>
 #include <Utils/File/Logfile.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>
@@ -23,10 +24,14 @@ void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename, Traj
     std::string modelFilenameVoxelGrid = modelFilenamePure + ".voxel";
 
     // Can be either hair dataset or trajectory dataset
-    bool isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
-    bool isRings = boost::starts_with(modelFilenamePure, "Data/Rings");
-    bool isConvectionRolls = boost::starts_with(modelFilenamePure, "Data/ConvectionRolls");
-    bool isAneurysm = boost::starts_with(modelFilenamePure, "Data/Trajectories");
+    bool isHairDataset = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "Hair");
+    bool isRings = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "Rings");
+    bool isConvectionRolls = boost::starts_with(
+            modelFilenamePure, "sgl::AppSettings::get()->getDataDirectory() + \"ConvectionRolls");
+    bool isAneurysm = boost::starts_with(
+            modelFilenamePure, sgl::AppSettings::get()->getDataDirectory() + "Trajectories");
 
     auto start = std::chrono::system_clock::now();
 
@@ -44,9 +49,10 @@ void VoxelAOHelper::loadAOFactorsFromVoxelFile(const std::string &filename, Traj
         VoxelCurveDiscretizer discretizer(glm::ivec3(voxelRes), glm::ivec3(64));
 
         int maxNumLinesPerVoxel = 32;
-        if (boost::starts_with(filename, "Data/WCB")) {
+        if (boost::starts_with(filename, sgl::AppSettings::get()->getDataDirectory() + "WCB")) {
             maxNumLinesPerVoxel = 128;
-        } else if (boost::starts_with(filename, "Data/ConvectionRolls/turbulence20000")){
+        } else if (boost::starts_with(
+                filename, sgl::AppSettings::get()->getDataDirectory() + "ConvectionRolls/turbulence20000")) {
             maxNumLinesPerVoxel = 64;
         }
 

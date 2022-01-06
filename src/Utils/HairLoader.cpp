@@ -220,8 +220,8 @@ void downscaleHairData(HairData &hairData, float scalingFactor)
     }
 
     // For some hair data files: Swap y-axis and z-axis
-    if (!boost::starts_with(hairData.filename, "Data/Hair/ponytail")
-            && !boost::starts_with(hairData.filename, "Data/Hair/bear")) {
+    if (!boost::ends_with(hairData.filename, "ponytail.hair")
+            && !boost::ends_with(hairData.filename, "bear.hair")) {
         glm::mat4 hairRotationMatrix = sgl::matrixRowMajor(
                 1.0f, 0.0f, 0.0f, 0.0f,
                 0.0f, 0.0f, 1.0f, 0.0f,

@@ -95,7 +95,11 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
         mode = RENDER_MODE_OIT_LINKED_LIST;
     }
 
-    sgl::FileUtils::get()->ensureDirectoryExists("Data/CameraPaths/");
+    transferFunctionDirectory = sgl::AppSettings::get()->getDataDirectory() + "TransferFunctions/";
+    saveDirectory = sgl::AppSettings::get()->getDataDirectory() + "Cameras/";
+    saveDirectoryScreenshots = sgl::AppSettings::get()->getDataDirectory() + "Screenshots/";
+
+    sgl::FileUtils::get()->ensureDirectoryExists(sgl::AppSettings::get()->getDataDirectory() + "CameraPaths/");
     sgl::FileUtils::get()->ensureDirectoryExists(saveDirectoryScreenshots);
 
     for (int i = 0; i < NUM_MODELS; i++) {
@@ -451,10 +455,10 @@ void PixelSyncApp::loadCameraPositionFromFile(const std::string& filename)
 
 
 
-void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
+void PixelSyncApp::loadModel(const std::string &relativeFilename, bool resetCamera)
 {
     // Pure filename without extension (to create compressed .binmesh filename)
-    modelFilenamePure = FileUtils::get()->removeExtension(filename);
+    modelFilenamePure = FileUtils::get()->removeExtension(relativeFilename);
 
     if (oitRenderer->isTestingMode()) {
         return;
@@ -464,40 +468,40 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (timeCoherence)
     {
-        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+        if (boost::starts_with(modelFilenamePure, "Rings")) {
             lineRadius = 0.002;
-        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+        } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output")) {
             lineRadius = 0.001;
-        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/tornado")) {
+        } else if (boost::starts_with(modelFilenamePure, "Trajectories/tornado")) {
             lineRadius = 0.1;
-        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+        } else if (boost::starts_with(modelFilenamePure, "Trajectories")) {
             lineRadius = 0.0005;
-        } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+        } else  if (boost::starts_with(modelFilenamePure, "UCLA")) {
             if (timeCoherence) { lineRadius = 0.0005; }
             else { lineRadius = 0.0008; }
         }
     }
 
     if (recording || testCameraFlight) {
-//        if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+//        if (boost::starts_with(modelFilenamePure, "Rings")) {
 //            lineRadius = 0.002;
-//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+//        } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output")) {
 //            lineRadius = 0.001;
-//        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+//        } else if (boost::starts_with(modelFilenamePure, "Trajectories")) {
 //            lineRadius = 0.0005;
-//        } else  if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+//        } else  if (boost::starts_with(modelFilenamePure, "UCLA")) {
 //            lineRadius = 0.0008;
-        if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
+        if (boost::starts_with(modelFilenamePure, "CFD/driven_cavity")) {
             lineRadius = 0.0045;
-        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
+        } else if (boost::starts_with(modelFilenamePure, "CFD/rayleigh")) {
             lineRadius = 0.002;
         } //else {
 //            lineRadius = 0.0007;
 //        }
     } else {
-        if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
+        if (boost::starts_with(modelFilenamePure, "CFD/driven_cavity")) {
             lineRadius = 0.0045;
-        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
+        } else if (boost::starts_with(modelFilenamePure, "CFD/rayleigh")) {
             lineRadius = 0.002;
         }
     }
@@ -508,55 +512,55 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     // Only load new TF if loading dataset-specific transfer functions isn't overwritten.
     if (transferFunctionName.empty()) {
-        if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && !perfMeasurementMode)
+        if (boost::starts_with(modelFilenamePure, "Trajectories") && !perfMeasurementMode)
         {
             transferFunctionWindow.loadFunctionFromFile(
-                    "Data/TransferFunctions/quality/9213_streamlines_semi.xml");
+                    transferFunctionDirectory + "quality/9213_streamlines_semi.xml");
         }
-        else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000") && !perfMeasurementMode)
+        else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/turbulence80000") && !perfMeasurementMode)
         {
             transferFunctionWindow.loadFunctionFromFile(
-                    "Data/TransferFunctions/quality/turbulence80000_semi.xml");
+                    transferFunctionDirectory + "quality/turbulence80000_semi.xml");
         }
-        else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output") && !perfMeasurementMode)
+        else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output") && !perfMeasurementMode)
         {
             transferFunctionWindow.loadFunctionFromFile(
-                    "Data/TransferFunctions/quality/output_semi.xml");
+                    transferFunctionDirectory + "quality/output_semi.xml");
         }
-        else if (boost::starts_with(modelFilenamePure, "Data/UCLA") && !perfMeasurementMode)
+        else if (boost::starts_with(modelFilenamePure, "UCLA") && !perfMeasurementMode)
         {
             transferFunctionWindow.loadFunctionFromFile(
-//                    "Data/TransferFunctions/quality/UCLA_400k_100v_semi.xml");
-                    "Data/TransferFunctions/UCLA_semi2.xml");
+//                    transferFunctionDirectory + "quality/UCLA_400k_100v_semi.xml");
+                    transferFunctionDirectory + "UCLA_semi2.xml");
         }
-//        if (boost::starts_with(modelFilenamePure, "Data/Rings") && perfMeasurementMode) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings_paper.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/Rings") && !perfMeasurementMode) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/rings.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/UCLA") && !perfMeasurementMode) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/UCLA.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories") && perfMeasurementMode) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/9213_streamlines_paper.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/ConvectionRolls01.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/turbulence80000_paper.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/WCB01.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/quality/output_semi.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/DrivenCavity.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/RayleighBenard.xml");
-//        } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
-//            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Hair.xml");
+//        if (boost::starts_with(modelFilenamePure, "Rings") && perfMeasurementMode) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "rings_paper.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Rings") && !perfMeasurementMode) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "rings.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "UCLA") && !perfMeasurementMode) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "UCLA.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Trajectories") && perfMeasurementMode) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "9213_streamlines_paper.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/turbulence20000")) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "ConvectionRolls01.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/turbulence80000")) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "turbulence80000_paper.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "WCB")) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "WCB01.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output")) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "quality/output_semi.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "CFD/driven_cavity")) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "DrivenCavity.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "CFD/rayleigh")) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "RayleighBenard.xml");
+//        } else if (boost::starts_with(modelFilenamePure, "Hair")) {
+//            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "Hair.xml");
         else {
-            transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/Standard.xml");
+            transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + "Standard.xml");
         }
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+    if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output")) {
         sgl::ShaderManager->addPreprocessorDefine("CONVECTION_ROLLS", "");
     } else {
         sgl::ShaderManager->removePreprocessorDefine("CONVECTION_ROLLS");
@@ -564,47 +568,47 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     modelType = MODEL_TYPE_TRIANGLE_MESH_NORMAL;
 
-    bool modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Data/Trajectories")
-            || boost::starts_with(modelFilenamePure, "Data/Rings")
-            || boost::starts_with(modelFilenamePure, "Data/Turbulence")
-            || boost::starts_with(modelFilenamePure, "Data/WCB")
-            || boost::starts_with(modelFilenamePure, "Data/ConvectionRolls")
-            || boost::starts_with(modelFilenamePure, "Data/UCLA")
-            || boost::starts_with(modelFilenamePure, "Data/CFD");
+    bool modelContainsTrajectories = boost::starts_with(modelFilenamePure, "Trajectories")
+            || boost::starts_with(modelFilenamePure, "Rings")
+            || boost::starts_with(modelFilenamePure, "Turbulence")
+            || boost::starts_with(modelFilenamePure, "WCB")
+            || boost::starts_with(modelFilenamePure, "ConvectionRolls")
+            || boost::starts_with(modelFilenamePure, "UCLA")
+            || boost::starts_with(modelFilenamePure, "CFD");
     if (modelContainsTrajectories) {
         modelType = MODEL_TYPE_TRAJECTORIES;
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+    if (boost::starts_with(modelFilenamePure, "Hair")) {
         modelType = MODEL_TYPE_HAIR;
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/Models")
-            || boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+    if (boost::starts_with(modelFilenamePure, "Models")
+            || boost::starts_with(modelFilenamePure, "IsoSurfaces")) {
         modelType = MODEL_TYPE_TRIANGLE_MESH_NORMAL;
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+    if (boost::starts_with(modelFilenamePure, "IsoSurfaces")) {
         modelType = MODEL_TYPE_TRIANGLE_MESH_SCIENTIFIC;
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/PointDatasets")) {
+    if (boost::starts_with(modelFilenamePure, "PointDatasets")) {
         modelType = MODEL_TYPE_POINTS;
     }
 
     if (modelType == MODEL_TYPE_TRAJECTORIES) {
-        if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+        if (boost::starts_with(modelFilenamePure, "Trajectories")) {
             trajectoryType = TRAJECTORY_TYPE_ANEURYSM;
-        } else if (boost::starts_with(modelFilenamePure, "Data/WCB"))
+        } else if (boost::starts_with(modelFilenamePure, "WCB"))
         {
             trajectoryType = TRAJECTORY_TYPE_WCB;
-        } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+        } else if (boost::starts_with(modelFilenamePure, "Rings")) {
             trajectoryType = TRAJECTORY_TYPE_RINGS;
-        } else if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+        } else if (boost::starts_with(modelFilenamePure, "UCLA")) {
             trajectoryType = TRAJECTORY_TYPE_UCLA;
-        } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+        } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output")) {
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS_NEW;
-        } else if (boost::starts_with(modelFilenamePure, "Data/CFD")) {
+        } else if (boost::starts_with(modelFilenamePure, "CFD")) {
             trajectoryType = TRAJECTORY_TYPE_CFD;
         } else {
             trajectoryType = TRAJECTORY_TYPE_CONVECTION_ROLLS;
@@ -612,7 +616,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         changeImportanceCriterionType();
     }
 
-    std::string modelFilenameOptimized = modelFilenamePure + ".binmesh";
+    std::string absoluteFilename = sgl::AppSettings::get()->getDataDirectory() + relativeFilename;
+    std::string modelFilenameOptimized = sgl::AppSettings::get()->getDataDirectory() + modelFilenamePure + ".binmesh";
     // Special mode for line trajectories: Trajectories loaded as line set or as triangle mesh
     if (modelType == MODEL_TYPE_TRAJECTORIES && lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_LINES) {
         modelFilenameOptimized += "_lines";
@@ -643,26 +648,29 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
 
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
         if (modelType == MODEL_TYPE_TRIANGLE_MESH_NORMAL) {
-            convertObjMeshToBinary(filename, modelFilenameOptimized);
+            convertObjMeshToBinary(absoluteFilename, modelFilenameOptimized);
         } else if (modelType == MODEL_TYPE_TRAJECTORIES) {
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
-                convertTrajectoryDataToBinaryLineMesh(trajectoryType, filename, modelFilenameOptimized);
+                convertTrajectoryDataToBinaryLineMesh(
+                        trajectoryType, absoluteFilename, modelFilenameOptimized);
             } else {
-                convertTrajectoryDataToBinaryTriangleMesh(trajectoryType, filename,
+                convertTrajectoryDataToBinaryTriangleMesh(
+                        trajectoryType, absoluteFilename,
                         modelFilenameOptimized, lineRadius);
-//                convertTrajectoryDataToBinaryTriangleMeshGPU(trajectoryType, filename,
+//                convertTrajectoryDataToBinaryTriangleMeshGPU(
+//                        trajectoryType, absoluteFilename,
 //                        modelFilenameOptimized, lineRadius);
             }
-        } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
-            convertHairDataToBinaryTriangleMesh(filename, modelFilenameOptimized);
-        } else if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
-            convertBinaryObjMeshToBinmesh(filename, modelFilenameOptimized);
-        } else if (boost::starts_with(modelFilenamePure, "Data/PointDatasets")) {
-            convertPointDataSetToBinmesh(filename, modelFilenameOptimized);
+        } else if (boost::starts_with(modelFilenamePure, "Hair")) {
+            convertHairDataToBinaryTriangleMesh(absoluteFilename, modelFilenameOptimized);
+        } else if (boost::starts_with(modelFilenamePure, "IsoSurfaces")) {
+            convertBinaryObjMeshToBinmesh(absoluteFilename, modelFilenameOptimized);
+        } else if (boost::starts_with(modelFilenamePure, "PointDatasets")) {
+            convertPointDataSetToBinmesh(absoluteFilename, modelFilenameOptimized);
         }
     }
 
-    if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+    if (boost::starts_with(modelFilenamePure, "IsoSurfaces")) {
         if (cullBackface) {
             cullBackface = false;
             glDisable(GL_CULL_FACE);
@@ -705,7 +713,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         }
         boundingBox = transparentObject.boundingBox;
 
-        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        if (boost::starts_with(modelFilenamePure, "Hair")) {
             bool changed = false;
             bool hasColorArray = transparentObject.hasAttributeWithName("vertexColor");
             if (hasColorArray && !colorArrayMode) {
@@ -731,7 +739,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         float maxVorticity = 0.0f;
         voxelRaytracer->loadModel(usedModelIndex, trajectoryType, lineAttributes, maxVorticity);
         // Hair stores own line thickness
-        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        if (boost::starts_with(modelFilenamePure, "Hair")) {
             lineRadius = voxelRaytracer->getLineRadius();
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
@@ -747,7 +755,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         bool useTriangleMesh = lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_TRIANGLES;
         raytracer->loadModel(usedModelIndex, trajectoryType, useTriangleMesh/*, lineAttributes, maxVorticity*/);
         // Hair stores own line thickness
-        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        if (boost::starts_with(modelFilenamePure, "Hair")) {
             lineRadius = raytracer->getLineRadius();
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
@@ -763,20 +771,20 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
         camera->setYaw(-sgl::PI / 2.0f);
         camera->setPitch(0.0f);
     }
-    if (modelFilenamePure == "Data/Models/Ship_04") {
+    if (modelFilenamePure == "Models/Ship_04") {
         transparencyShader->setUniform("bandedColorShading", 0);
         if (resetCamera) {
             camera->setPosition(glm::vec3(0.0f, 1.5f, 5.0f));
         }
     } else {
-        if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE && !boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE && !boost::starts_with(modelFilenamePure, "Hair")) {
             transparencyShader->setUniform("bandedColorShading", 1);
         }
 
         if (resetCamera) {
-            if (modelFilenamePure == "Data/Models/dragon") {
+            if (modelFilenamePure == "Models/dragon") {
                 camera->setPosition(glm::vec3(0.15f, 0.8f, 2.4f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/single_streamline")) {
+            } else if (boost::starts_with(modelFilenamePure, "Trajectories/single_streamline")) {
                 camera->setPosition(glm::vec3(0.72f, 0.215f, 0.2f));
                 // TODO
                 //ControlPoint(1, 0.723282, 0.22395, 0.079609, -4.74008, -0.35447),
@@ -787,58 +795,58 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 camera->setPosition(glm::vec3(0.604353f, 0.223011f, 0.144089f));
                 camera->setYaw(-5.23073f);
                 camera->setPitch(0.0232946f);
-            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/torus")) {
+            } else if (boost::starts_with(modelFilenamePure, "Trajectories/torus")) {
                 // ControlPoint(1, 1.94571, 0.761162, 2.9094, -1.61776, -0.0535428)
                 camera->setPosition(glm::vec3(1.94571f, 0.761162f, 2.9094f));
                 camera->setYaw(-1.61776f);
                 camera->setPitch(-0.0535428f);
-            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories/tornado")) {
+            } else if (boost::starts_with(modelFilenamePure, "Trajectories/tornado")) {
                 // ControlPoint(1, 13.4968, 17.7291, -20.9052, -4.57163, -0.299466)
                 camera->setPosition(glm::vec3(13.4968f, 17.7291f, -20.9052f));
                 camera->setYaw(-4.57163);
                 camera->setPitch(-0.299466);
-            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+            } else if (boost::starts_with(modelFilenamePure, "Trajectories")) {
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/WCB")) {
+            } else if (boost::starts_with(modelFilenamePure, "WCB")) {
                 // ControlPoint(1, 1.1286, 0.639969, 0.0575997, -2.98384, -0.411015),
                 camera->setPosition(glm::vec3(1.1286f, 0.639969f, 0.0575997f));
                 camera->setYaw(-2.98384f);
                 camera->setPitch(-0.411015f);
-            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence20000")) {
+            } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/turbulence20000")) {
                 // ControlPoint(0, 1.13824, 0.369338, 0.937429, -2.58216, -0.0342094),
                 camera->setPosition(glm::vec3(0.468071f, 0.324327f, 0.50661f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")) {
+            } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/turbulence80000")) {
                 // ControlPoint(0, 1.13824, 0.369338, 0.937429, -2.58216, -0.0342094),
                 camera->setPosition(glm::vec3(1.13824f, 0.369338f, 0.937429f));
                 camera->setYaw(-2.58216f);
                 camera->setPitch(-0.0342094f);
                 //camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            } else if (boost::starts_with(modelFilenamePure, "Hair")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.3f, 0.325f, 1.005f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+            } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output")) {
                 //camera->setPosition(glm::vec3(0.6f, 0.4f, 1.8f));
                 camera->setPosition(glm::vec3(0.0290112, 0.579268, 1.06786));
                 camera->setYaw(-1.56575f);
                 camera->setPitch(-0.643149f);
-            } else if (boost::starts_with(modelFilenamePure, "Data/CFD/driven_cavity")) {
+            } else if (boost::starts_with(modelFilenamePure, "CFD/driven_cavity")) {
                 //ControlPoint(0, -0.497002, -0.326444, 1.06027, -1.51539, -0.126569),
                 camera->setPosition(glm::vec3(-0.497002f, -0.326444f, 1.06027f));
                 camera->setYaw(-1.51539f);
                 camera->setPitch(-0.126569f);
-            } else if (boost::starts_with(modelFilenamePure, "Data/CFD/rayleigh")) {
+            } else if (boost::starts_with(modelFilenamePure, "CFD/rayleigh")) {
                 //ControlPoint(0, -0.508684, -1.85755, -0.273644, -1.5651, -0.0865055),
                 camera->setPosition(glm::vec3(-0.508684f, -1.85755f, -0.273644f));
                 camera->setYaw(-1.5651f);
                 camera->setPitch(-0.0865055f);
-            } else if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+            } else if (boost::starts_with(modelFilenamePure, "Rings")) {
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
                 camera->setPosition(glm::vec3(0.154441f, 0.0162448f, 0.483843f));
-            } else if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces")) {
+            } else if (boost::starts_with(modelFilenamePure, "IsoSurfaces")) {
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
 //                camera->setPosition(glm::vec3(1023, 1023, 977));
                 camera->setPosition(glm::vec3(0, 0.5, 0));
-            } else if (boost::starts_with(modelFilenamePure, "Data/UCLA")) {
+            } else if (boost::starts_with(modelFilenamePure, "UCLA")) {
                 // ControlPoint(1, 0.154441, 0.0162448, 0.483843, -1.58799, 0.101394),
 //                camera->setPosition(glm::vec3(1023, 1023, 977));
                 camera->setPosition(glm::vec3(0.5, 0.5, 1.6));
@@ -846,7 +854,7 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
                 camera->setPosition(glm::vec3(0.0f, -0.1f, 2.4f));
             }
         }
-        if (modelFilenamePure == "Data/Models/dragon") {
+        if (modelFilenamePure == "Models/dragon") {
             const float scalingFactor = 0.2f;
             scaling = matrixScaling(glm::vec3(scalingFactor));
         }
@@ -859,7 +867,8 @@ void PixelSyncApp::loadModel(const std::string &filename, bool resetCamera)
     shadowTechnique->setLightDirection(lightDirection, boundingBox);
 
     if (testCameraFlight) {
-        std::string cameraPathFilename = "Data/CameraPaths/"
+        std::string cameraPathFilename =
+                sgl::AppSettings::get()->getDataDirectory() + "CameraPaths/"
                 + sgl::FileUtils::get()->getPathAsList(modelFilenamePure).back() + ".binpath";
         //if (sgl::FileUtils::get()->exists(cameraPathFilename)) {
         //    cameraPath.fromBinaryFile(cameraPathFilename);
@@ -960,9 +969,9 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
             && !oitRenderer->isTestingMode()) {
         transparentObject.setNewShader(transparencyShader);
         if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
-            if (modelFilenamePure == "Data/Models/Ship_04") {
+            if (modelFilenamePure == "Models/Ship_04") {
                 transparencyShader->setUniform("bandedColorShading", 0);
-            } else if (!boost::starts_with(modelFilenamePure, "Data/Hair")) {
+            } else if (!boost::starts_with(modelFilenamePure, "Hair")) {
                 transparencyShader->setUniform("bandedColorShading", 1);
             }
         }
@@ -973,7 +982,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         float maxVorticity = 0.0f;
         voxelRaytracer->loadModel(usedModelIndex, trajectoryType, lineAttributes, maxVorticity);
         // Hair stores own line thickness
-        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        if (boost::starts_with(modelFilenamePure, "Hair")) {
             lineRadius = voxelRaytracer->getLineRadius();
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
@@ -987,7 +996,7 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         bool useTriangleMesh = lineRenderingTechnique == LINE_RENDERING_TECHNIQUE_TRIANGLES;
         raytracer->loadModel(usedModelIndex, trajectoryType, useTriangleMesh/*, lineAttributes, maxVorticity*/);
         // Hair stores own line thickness
-        if (boost::starts_with(modelFilenamePure, "Data/Hair")) {
+        if (boost::starts_with(modelFilenamePure, "Hair")) {
             lineRadius = raytracer->getLineRadius();
         }
         transferFunctionWindow.computeHistogram(lineAttributes, 0.0f, maxVorticity);
@@ -1009,11 +1018,11 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
         modelFilenamePure = FileUtils::get()->removeExtension(MODEL_FILENAMES[usedModelIndex]);
 
         if (recording || testCameraFlight) {
-            if (boost::starts_with(modelFilenamePure, "Data/Rings")) {
+            if (boost::starts_with(modelFilenamePure, "Rings")) {
                 lineRadius = 0.002;
-            } else if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output")) {
+            } else if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output")) {
                 lineRadius = 0.001;
-            } else if (boost::starts_with(modelFilenamePure, "Data/Trajectories")) {
+            } else if (boost::starts_with(modelFilenamePure, "Trajectories")) {
                 lineRadius = 0.0005;
             } else {
                 lineRadius = 0.0007;
@@ -1139,7 +1148,7 @@ void PixelSyncApp::setNewState(const InternalState &newState)
 
     // 2.2. If trajectory model: Load new transfer function if necessary
     if (!newState.transferFunctionName.empty() && this->transferFunctionName != newState.transferFunctionName) {
-        transferFunctionWindow.loadFunctionFromFile("Data/TransferFunctions/" + newState.transferFunctionName);
+        transferFunctionWindow.loadFunctionFromFile(transferFunctionDirectory + newState.transferFunctionName);
         this->transferFunctionName = newState.transferFunctionName;
     }
 
@@ -1209,8 +1218,8 @@ void PixelSyncApp::setNewState(const InternalState &newState)
     FRAME_TIME = 0.5f;
 
     if (perfMeasurementMode && !timeCoherence && mode == RENDER_MODE_OIT_DEPTH_PEELING) {
-        if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/turbulence80000")
-            || boost::starts_with(modelFilenamePure, "Data/WCB")) {
+        if (boost::starts_with(modelFilenamePure, "ConvectionRolls/turbulence80000")
+            || boost::starts_with(modelFilenamePure, "WCB")) {
             FRAME_TIME = 17.0f;
         }
     }
@@ -1631,7 +1640,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 {
     // Color selection in binning mode (if not showing all values in different color channels in mode 1)
     static ImVec4 colorSelection = ImColor(165, 220, 84, 120);
-    if (modelFilenamePure != "Data/Models/Ship_04" && mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
+    if (modelFilenamePure != "Models/Ship_04" && mode != RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
         int misc_flags = 0;
         if (ImGui::ColorEdit4("Model Color", (float*)&colorSelection, misc_flags)) {
             bandingColor = colorFromFloat(colorSelection.x, colorSelection.y, colorSelection.z, colorSelection.w);
@@ -1714,11 +1723,11 @@ void PixelSyncApp::renderSceneSettingsGUI()
             reRender = true;
         }
 
-//        if (boost::starts_with(modelFilenamePure, "Data/Rings"))
+//        if (boost::starts_with(modelFilenamePure, "Rings"))
 //        {
 //            lineRadius = 0.0025;
 //        }
-//        if (boost::starts_with(modelFilenamePure, "Data/ConvectionRolls/output"))
+//        if (boost::starts_with(modelFilenamePure, "ConvectionRolls/output"))
 //        {
 //            lineRadius = 0.0015;
 //        }
@@ -1870,7 +1879,7 @@ void PixelSyncApp::renderSceneSettingsGUI()
 sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 {
     ShaderProgramPtr transparencyShader;
-    bool isHairDataset = boost::starts_with(modelFilenamePure, "Data/Hair");
+    bool isHairDataset = boost::starts_with(modelFilenamePure, "Hair");
 
     if ((currentAOTechnique != AO_TECHNIQUE_SSAO || !ssaoHelper->isPreRenderPass())
             && (currentShadowTechnique == NO_SHADOW_MAPPING || !shadowTechnique->isShadowMapCreatePass())) {
@@ -1904,9 +1913,9 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
 
         if (shaderMode != SHADER_MODE_SCIENTIFIC_ATTRIBUTE) {
             // Hack for supporting multiple passes...
-            if (modelFilenamePure == "Data/Models/Ship_04") {
+            if (modelFilenamePure == "Models/Ship_04") {
                 transparencyShader->setUniform("bandedColorShading", 0);
-            } else if (boost::starts_with(modelFilenamePure, "Data/IsoSurfaces"))
+            } else if (boost::starts_with(modelFilenamePure, "IsoSurfaces"))
             {
                 transparencyShader->setUniform("bandedColorShading", 0);
             }

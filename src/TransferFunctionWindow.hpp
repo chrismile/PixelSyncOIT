@@ -115,7 +115,7 @@ private:
     sgl::Color clearColor;
     ColorSpace interpolationColorSpace;
 
-    std::string saveDirectory = "Data/TransferFunctions/";
+    std::string saveDirectory;
     std::string saveFileString = "WhiteRed.xml";
     std::vector<std::string> availableFiles;
     int selectedFileIndex = -1;
