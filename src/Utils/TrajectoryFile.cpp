@@ -108,7 +108,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
     std::vector<glm::vec3> globalLineVertices;
     std::vector<float> globalLineVertexAttributes;
 
-    FILE *file = fopen64(filename.c_str(), "r");
+    FILE *file = fopen64(filename.c_str(), "rb");
     if (!file) {
         sgl::Logfile::get()->writeError(std::string() + "Error in convertObjTrajectoryDataToBinaryLineMesh: File \""
                                         + filename + "\" does not exist.");
@@ -141,7 +141,7 @@ Trajectories loadTrajectoriesFromObj(const std::string &filename, TrajectoryType
             charPtr++;
         }
 
-        if (lineBuffer.size() == 0) {
+        if (lineBuffer.empty()) {
             continue;
         }
 

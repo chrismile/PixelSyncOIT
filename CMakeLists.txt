@@ -23,8 +23,10 @@ endif()
 
 option(USE_RAYTRACING "Build Ray Tracing Renderer with OSPRay" OFF)
 
-if(USE_RAYTRACING)
-	find_package(ospray REQUIRED)
+if(${USE_RAYTRACING})
+	find_package(ospray QUIET)
+endif()
+if (${USE_RAYTRACING} AND ospray_FOUND)
 	include_directories(${OSPRAY_INCLUDE_DIRS})
 	add_definitions(-DUSE_RAYTRACING)
 else()
@@ -38,7 +40,7 @@ ELSE()
 	add_executable(PixelSyncOIT ${SOURCES})
 ENDIF()
 
-if(USE_RAYTRACING)
+if (${USE_RAYTRACING} AND ospray_FOUND)
 	target_link_libraries(PixelSyncOIT ${OSPRAY_LIBRARIES})
 endif()
 
