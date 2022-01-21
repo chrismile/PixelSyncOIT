@@ -278,7 +278,7 @@ void TransferFunctionWindow::renderOpacityGraph()
 {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     float scaleFactor = sgl::ImGuiWrapper::get()->getScaleFactor();
-    int regionWidth = ImGui::GetContentRegionAvailWidth();
+    int regionWidth = ImGui::GetContentRegionAvail().x;
     int graphHeight = 300;
     int border = 2*scaleFactor;
     int areaWidth = regionWidth - 2.0f*border;
@@ -342,7 +342,7 @@ void TransferFunctionWindow::renderOpacityGraph()
 void TransferFunctionWindow::renderColorBar()
 {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    int regionWidth = ImGui::GetContentRegionAvailWidth() - 2;
+    int regionWidth = ImGui::GetContentRegionAvail().x - 2;
     int barHeight = 30;
     colorBarBox.min = glm::vec2(ImGui::GetCursorScreenPos().x + 1, ImGui::GetCursorScreenPos().y + 1);
     colorBarBox.max = colorBarBox.min + glm::vec2(regionWidth - 2, barHeight - 2);
