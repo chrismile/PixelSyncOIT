@@ -53,14 +53,13 @@ OIT_RayTracing::OIT_RayTracing(sgl::CameraPtr &camera, const sgl::Color &clearCo
     // ! Initialize OSPRay
     static bool ospray = false;
     int argc = sgl::FileUtils::get()->get_argc();
-    char **argv = sgl::FileUtils::get()->get_argv();
-    const char **av = const_cast<const char**>(argv);
-    if(!ospray){
-        OSPError init_error = ospInit(&argc, av);
+    const char **argv = const_cast<const char**>(sgl::FileUtils::get()->get_argv());
+    if (!ospray) {
+        OSPError init_error = ospInit(&argc, argv);
         if (init_error != OSP_NO_ERROR){
             std::cout << "== ospray initialization fail" << std::endl;
             exit (EXIT_FAILURE);
-        }else{
+        } else {
             std::cout << "== ospray initialized successfully" << std::endl;
         }
         ospLoadModule("tubes");
