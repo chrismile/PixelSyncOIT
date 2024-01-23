@@ -161,21 +161,6 @@ void OIT_DepthComplexity::renderToScreen()
 
 
 
-// Converts e.g. 123456789 to "123,456,789"
-std::string numberToCommaString(int number, bool attachLeadingZeroes = false) {
-    if (number < 0) {
-        return std::string() + "-" + numberToCommaString(-number, attachLeadingZeroes);
-    } else if (number < 1000) {
-        return toString(number);
-    } else {
-        std::string numberString = toString(number%1000);
-        while (attachLeadingZeroes && numberString.size() < 3) {
-            numberString = "0" + numberString;
-        }
-        return std::string() + numberToCommaString(number/1000, true) + "," + numberString;
-    }
-}
-
 static float intensity = 1.0f;
 void OIT_DepthComplexity::renderGUI()
 {
