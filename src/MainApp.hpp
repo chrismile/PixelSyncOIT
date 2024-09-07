@@ -119,7 +119,7 @@ private:
     float shadowFactor = 1.0f;
 
     // Shadow rendering
-    boost::shared_ptr<ShadowTechnique> shadowTechnique;
+    std::shared_ptr<ShadowTechnique> shadowTechnique;
     ShadowMappingTechniqueName currentShadowTechnique = NO_SHADOW_MAPPING;
     void updateShadowMode();
 
@@ -138,7 +138,7 @@ private:
     RenderbufferObjectPtr sceneDepthRBO;
 
     // Objects in the scene
-    boost::shared_ptr<OIT_Renderer> oitRenderer;
+    std::shared_ptr<OIT_Renderer> oitRenderer;
     MeshRenderer transparentObject;
     glm::mat4 rotation;
     glm::mat4 scaling;

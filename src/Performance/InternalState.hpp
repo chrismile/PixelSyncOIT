@@ -33,8 +33,8 @@ enum RenderModeOIT {
 
 const char *const MODEL_FILENAMES[] = {
         "UCLA/UCLA_400k_100v.obj",
-        "IsoSurfaces/rm-140-isosurface.bobj",
-        "IsoSurfaces/rm-80-isosurface.bobj",
+        "../../../../../../media/christoph/Elements/Datasets/Meshes/RichtmyerMeshkov/rm-140-isosurface.bobj",
+        "../../../../../../media/christoph/Elements/Datasets/Meshes/RichtmyerMeshkov/rm-80-isosurface.bobj",
         "PointDatasets/0.000xv000.dat",
         "PointDatasets/0.000xv001.dat",
         "PointDatasets/OFC-wasatch-50Mpps.uda.001/t06002/timestep.xml",

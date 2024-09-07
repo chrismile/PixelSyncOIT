@@ -172,7 +172,7 @@ PixelSyncApp::PixelSyncApp() : camera(new Camera()), measurer(NULL), videoWriter
 
     ShaderManager->addPreprocessorDefine("REFLECTION_MODEL", (int)reflectionModelType);
 
-    shadowTechnique = boost::shared_ptr<ShadowTechnique>(new NoShadowMapping);
+    shadowTechnique = std::shared_ptr<ShadowTechnique>(new NoShadowMapping);
     updateAOMode();
 
     setRenderMode(mode, true);
@@ -588,7 +588,8 @@ void PixelSyncApp::loadModel(const std::string &relativeFilename, bool resetCame
         modelType = MODEL_TYPE_TRIANGLE_MESH_NORMAL;
     }
 
-    if (boost::starts_with(modelFilenamePure, "IsoSurfaces")) {
+    if (boost::starts_with(modelFilenamePure, "IsoSurfaces")
+            || modelFilenamePure.find("isosurface") != std::string::npos) {
         modelType = MODEL_TYPE_TRIANGLE_MESH_SCIENTIFIC;
     }
 
@@ -647,7 +648,9 @@ void PixelSyncApp::loadModel(const std::string &relativeFilename, bool resetCame
     }
 
     if (!FileUtils::get()->exists(modelFilenameOptimized)) {
-        if (modelType == MODEL_TYPE_TRIANGLE_MESH_NORMAL) {
+        if (modelFilenamePure.find("isosurface") != std::string::npos) {
+            convertBinaryObjMeshToBinmesh(absoluteFilename, modelFilenameOptimized);
+        } else if (modelType == MODEL_TYPE_TRIANGLE_MESH_NORMAL) {
             convertObjMeshToBinary(absoluteFilename, modelFilenameOptimized);
         } else if (modelType == MODEL_TYPE_TRAJECTORIES) {
             if (boost::ends_with(modelFilenameOptimized, "_lines")) {
@@ -670,7 +673,8 @@ void PixelSyncApp::loadModel(const std::string &relativeFilename, bool resetCame
         }
     }
 
-    if (boost::starts_with(modelFilenamePure, "IsoSurfaces")) {
+    if (boost::starts_with(modelFilenamePure, "IsoSurfaces")
+            || modelFilenamePure.find("isosurface") != std::string::npos) {
         if (cullBackface) {
             cullBackface = false;
             glDisable(GL_CULL_FACE);
@@ -917,37 +921,37 @@ void PixelSyncApp::setRenderMode(RenderModeOIT newMode, bool forceReset)
     ShaderManager->invalidateShaderCache();
 
     mode = newMode;
-    oitRenderer = boost::shared_ptr<OIT_Renderer>();
+    oitRenderer = std::shared_ptr<OIT_Renderer>();
     if (mode == RENDER_MODE_OIT_KBUFFER) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_KBuffer);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_KBuffer);
     } else if (mode == RENDER_MODE_OIT_LINKED_LIST) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_LinkedList);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_LinkedList);
     } else if (mode == RENDER_MODE_OIT_MLAB) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLAB);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_MLAB);
     } else if (mode == RENDER_MODE_OIT_HT) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_HT);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_HT);
     } else if (mode == RENDER_MODE_OIT_MBOIT) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MBOIT);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_MBOIT);
     } else if (mode == RENDER_MODE_OIT_WBOIT) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_WBOIT);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_WBOIT);
     } else if (mode == RENDER_MODE_OIT_DEPTH_COMPLEXITY) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_DepthComplexity);
     } else if (mode == RENDER_MODE_OIT_DUMMY) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_Dummy);
     } else if (mode == RENDER_MODE_OIT_DEPTH_PEELING) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_DepthPeeling);
     } else if (mode == RENDER_MODE_OIT_MLAB_BUCKET) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_MLABBucket);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_MLABBucket);
     } else if (mode == RENDER_MODE_VOXEL_RAYTRACING_LINES) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_VoxelRaytracing(camera, clearColor));
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_VoxelRaytracing(camera, clearColor));
 #ifdef USE_RAYTRACING
     } else if (mode == RENDER_MODE_RAYTRACING) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_RayTracing(camera, clearColor));
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_RayTracing(camera, clearColor));
 #endif
     } else if (mode == RENDER_MODE_TEST_PIXEL_SYNC_PERFORMANCE) {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new TestPixelSyncPerformance);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new TestPixelSyncPerformance);
     } else {
-        oitRenderer = boost::shared_ptr<OIT_Renderer>(new OIT_Dummy);
+        oitRenderer = std::shared_ptr<OIT_Renderer>(new OIT_Dummy);
         Logfile::get()->writeError("PixelSyncApp::setRenderMode: Invalid mode.");
         mode = RENDER_MODE_OIT_DUMMY;
     }
@@ -1259,11 +1263,11 @@ void PixelSyncApp::updateAOMode()
 void PixelSyncApp::updateShadowMode()
 {
     if (currentShadowTechnique == NO_SHADOW_MAPPING) {
-        shadowTechnique = boost::shared_ptr<ShadowTechnique>(new NoShadowMapping);
+        shadowTechnique = std::shared_ptr<ShadowTechnique>(new NoShadowMapping);
     } else if (currentShadowTechnique == SHADOW_MAPPING) {
-        shadowTechnique = boost::shared_ptr<ShadowTechnique>(new ShadowMapping);
+        shadowTechnique = std::shared_ptr<ShadowTechnique>(new ShadowMapping);
     } else if (currentShadowTechnique == MOMENT_SHADOW_MAPPING) {
-        shadowTechnique = boost::shared_ptr<ShadowTechnique>(new MomentShadowMapping);
+        shadowTechnique = std::shared_ptr<ShadowTechnique>(new MomentShadowMapping);
     }
 
     shadowTechnique->setLightDirection(lightDirection, boundingBox);
@@ -1915,7 +1919,8 @@ sgl::ShaderProgramPtr PixelSyncApp::setUniformValues()
             // Hack for supporting multiple passes...
             if (modelFilenamePure == "Models/Ship_04") {
                 transparencyShader->setUniform("bandedColorShading", 0);
-            } else if (boost::starts_with(modelFilenamePure, "IsoSurfaces"))
+            } else if (boost::starts_with(modelFilenamePure, "IsoSurfaces")
+                    || modelFilenamePure.find("isosurface") != std::string::npos)
             {
                 transparencyShader->setUniform("bandedColorShading", 0);
             }
