@@ -59,17 +59,28 @@ IF NOT "%1"=="" (
     GOTO :loop
 )
 
-:: Build other configuration and copy sgl DLLs to the build directory.
+:: Clean the build artifacts if requested by the user.
 if %clean% == true (
     echo ------------------------
     echo  cleaning up old files
     echo ------------------------
-    rd /s /q "third_party\sgl"
     rd /s /q "third_party\vcpkg"
     for /d %%G in (".build*") do rd /s /q "%%~G"
     rd /s /q "Shipping"
+
     git submodule update --init --recursive
+
+:: https://stackoverflow.com/questions/5626879/how-to-find-if-a-file-contains-a-given-string-using-windows-command-line
+    find /c "sgl" .gitmodules >NUL
+    if %errorlevel% equ 1 goto sglnotfound
+    rd /s /q "third_party\sgl\install"
+    for /d %%G in ("third_party\sgl\.build*") do rd /s /q "%%~G"
 )
+goto cleandone
+:sglnotfound
+rd /s /q "third_party\sgl"
+goto cleandone
+:cleandone
 
 where cmake >NUL 2>&1 || echo cmake was not found but is required to build the program && exit /b 1
 
@@ -81,10 +92,27 @@ if defined VCINSTALLDIR (
 if defined VCINSTALLDIR (
     set "x=%VCINSTALLDIR_ESC:Microsoft Visual Studio\\=" & set "VsPathEnd=%"
 )
-if defined VCINSTALLDIR (
-    set cmake_generator=-G "Visual Studio %VisualStudioVersion:~0,2% %VsPathEnd:~0,4%"
+if defined VisualStudioVersion (
+    set "VsVersionNumber=%VisualStudioVersion:~0,2%"
+) else (
+    set VsVersionNumber=0
 )
-if not defined VCINSTALLDIR (
+if defined VisualStudioVersion (
+    if not defined VsPathEnd (
+        if %VsVersionNumber% == 14 (
+            set VsPathEnd=2015
+        ) else if %VsVersionNumber% == 15 (
+            set VsPathEnd=2017
+        ) else if %VsVersionNumber% == 16 (
+            set VsPathEnd=2019
+        ) else if %VsVersionNumber% == 17 (
+            set VsPathEnd=2022
+        )
+    )
+)
+if defined VsPathEnd (
+    set cmake_generator=-G "Visual Studio %VisualStudioVersion:~0,2% %VsPathEnd:~0,4%"
+) else (
     set cmake_generator=
 )
 
@@ -105,6 +133,7 @@ pushd third_party
 IF "%VULKAN_SDK%"=="" (
   for /D %%F in (C:\VulkanSDK\*) do (
     set VULKAN_SDK=%%F
+    set "PATH=%%F\Bin;%PATH%"
     goto vulkan_finished
   )
 )
@@ -130,9 +159,8 @@ if %use_vcpkg% == true (
         echo ------------------------
         echo    fetching vcpkg
         echo ------------------------
-        git clone --depth 1 -b fix-libarchive-rpath https://github.com/chrismile/vcpkg.git || exit /b 1
+        git clone --depth 1 https://github.com/microsoft/vcpkg.git || exit /b 1
         call vcpkg\bootstrap-vcpkg.bat -disableMetrics || exit /b 1
-        vcpkg\vcpkg install --triplet=%vcpkg_triplet% || exit /b 1
     )
 )
 

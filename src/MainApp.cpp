@@ -20,6 +20,11 @@
 #include <GL/glew.h>
 #include <boost/algorithm/string/predicate.hpp>
 
+#ifdef SUPPORT_SDL3
+#define SDL_ENABLE_OLD_NAMES
+#include <SDL3/SDL.h>
+#endif
+
 #include <Input/Keyboard.hpp>
 #include <Math/Math.hpp>
 #include <Math/Geometry/MatrixUtil.hpp>

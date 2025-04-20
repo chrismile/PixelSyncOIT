@@ -1,11 +1,18 @@
 //============================================================================
 // Name        : PixelSync.cpp
 // Author      : Christoph Neuhauser
-// Copyright   : GPLv3
+// Copyright   : BSD 2-Clause License
 //============================================================================
 
 #include <iostream>
+
+#ifdef SUPPORT_SDL2
 #include <SDL2/SDL.h>
+#endif
+#ifdef SUPPORT_SDL3
+#include <SDL3/SDL_main.h>
+#endif
+
 #include <Utils/File/FileUtils.hpp>
 #include <Utils/AppSettings.hpp>
 #include <Graphics/Window.hpp>
